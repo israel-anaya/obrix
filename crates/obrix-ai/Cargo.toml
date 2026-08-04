@@ -1,0 +1,10 @@
+[package]
+name = "obrix-ai"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+obrix-core = { path = "../obrix-core" }
+serde.workspace = true
+thiserror.workspace = true

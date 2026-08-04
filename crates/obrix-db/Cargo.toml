@@ -1,0 +1,21 @@
+[package]
+name = "obrix-db"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+obrix-core = { path = "../obrix-core" }
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "macros",
+    "migrate",
+    "uuid",
+    "chrono",
+] }
+uuid.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

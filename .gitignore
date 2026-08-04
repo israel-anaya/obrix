@@ -1,0 +1,26 @@
+# Rust
+/target
+**/target
+
+# Node
+node_modules
+dist
+apps/desktop/dist
+
+# Tauri
+apps/desktop/src-tauri/gen
+
+# Bases de datos locales de desarrollo
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Editor/OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Env
+.env
+.env.local

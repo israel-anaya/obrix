@@ -1,0 +1,20 @@
+[package]
+name = "obrix-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+obrix-core = { path = "../../../crates/obrix-core" }
+obrix-db = { path = "../../../crates/obrix-db" }
+tauri = { version = "2", features = [] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

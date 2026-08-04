@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 10%;
+  --border: 240 6% 88%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 234 89% 56%;
+  --accent-foreground: 0 0% 100%;
+}
+
+:root[data-theme="dark"] {
+  --background: 240 10% 6%;
+  --foreground: 0 0% 96%;
+  --border: 240 6% 20%;
+  --muted: 240 6% 12%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 234 89% 66%;
+  --accent-foreground: 240 10% 6%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: 240 10% 6%;
+    --foreground: 0 0% 96%;
+    --border: 240 6% 20%;
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 234 89% 66%;
+    --accent-foreground: 240 10% 6%;
+  }
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+.num {
+  @apply font-mono tabular-nums;
+}
