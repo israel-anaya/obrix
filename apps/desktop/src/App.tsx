@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { InsumosPage } from "@/features/catalogo-insumos/InsumosPage";
+import { ConceptosPage } from "@/features/catalogo-conceptos/ConceptosPage";
 
 const TABS = [
   { id: "insumos", label: "Insumos" },
@@ -37,6 +38,8 @@ export default function App() {
       <main className="flex-1 overflow-auto">
         {tab === "insumos" ? (
           <InsumosPage />
+        ) : tab === "conceptos" ? (
+          <ConceptosPage />
         ) : (
           <p className="p-4 text-sm text-muted-foreground">Próximamente.</p>
         )}

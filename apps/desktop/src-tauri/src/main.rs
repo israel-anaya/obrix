@@ -61,6 +61,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::insumos::list_insumos,
             commands::insumos::create_insumo,
+            commands::conceptos::list_conceptos,
+            commands::conceptos::create_concepto,
         ])
         .run(tauri::generate_context!())
         .expect("error corriendo la aplicación Tauri");
