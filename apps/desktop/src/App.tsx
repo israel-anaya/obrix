@@ -10,6 +10,7 @@ import { InsumoList } from "@/features/catalogo-insumos/InsumoList";
 import { ConceptosPage } from "@/features/catalogo-conceptos/ConceptosPage";
 import { ConceptoTree } from "@/features/catalogo-conceptos/ConceptoTree";
 import { ConceptoDetailTab } from "@/features/catalogo-conceptos/ConceptoDetailTab";
+import { SettingsPage } from "@/features/configuracion/SettingsPage";
 import { useInsumos } from "@/hooks/useInsumos";
 import { useConceptos } from "@/hooks/useConceptos";
 import { useTheme } from "@/hooks/useTheme";
@@ -65,6 +66,10 @@ export default function App() {
     });
   };
 
+  const openSettingsTab = () => {
+    openTab({ id: "settings", title: "Configuración", closable: true });
+  };
+
   const closeTab = (id: string) => {
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
@@ -100,6 +105,16 @@ export default function App() {
     if (activeTab.id.startsWith(CONCEPTO_TAB_PREFIX)) {
       const id = activeTab.id.slice(CONCEPTO_TAB_PREFIX.length);
       return <ConceptoDetailTab concepto={conceptosState.conceptos.find((c) => c.id === id)} />;
+    }
+    if (activeTab.id === "settings") {
+      return (
+        <SettingsPage
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          sidebarVisible={sidebarVisible}
+          onToggleSidebar={() => setSidebarVisible((v) => !v)}
+        />
+      );
     }
     return <p className="p-4 text-sm text-muted-foreground">Próximamente.</p>;
   };
@@ -186,7 +201,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col">
-      <MenuBar menus={menus} />
+      <MenuBar menus={menus} onOpenSettings={openSettingsTab} />
       <div className="flex flex-1 overflow-hidden">
         <ActivityBar activities={ACTIVITIES} active={activity} onSelect={openActivityTab} />
         {sidebarVisible && (

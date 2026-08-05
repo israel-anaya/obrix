@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Minus, Square, X } from "lucide-react";
+import { Minus, Settings, Square, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export interface MenuDef {
 
 const win = getCurrentWindow();
 
-export function MenuBar({ menus }: { menus: MenuDef[] }) {
+export function MenuBar({ menus, onOpenSettings }: { menus: MenuDef[]; onOpenSettings: () => void }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -77,6 +77,14 @@ export function MenuBar({ menus }: { menus: MenuDef[] }) {
       </div>
 
       <div data-tauri-drag-region className="h-full flex-1" />
+
+      <button
+        title="Configuración general"
+        onClick={onOpenSettings}
+        className="flex h-full w-10 items-center justify-center text-muted-foreground hover:bg-background/80 hover:text-foreground"
+      >
+        <Settings size={14} />
+      </button>
 
       <div className="flex h-full items-stretch">
         <button
