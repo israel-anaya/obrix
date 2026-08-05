@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { BarChart3, ListTree, Package, Percent, Ruler } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ActivityBar, type Activity } from "@/components/ActivityBar";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
+import { MenuBar, type MenuDef } from "@/components/MenuBar";
 import { StatusBar } from "@/components/StatusBar";
 import { InsumosPage } from "@/features/catalogo-insumos/InsumosPage";
 import { InsumoList } from "@/features/catalogo-insumos/InsumoList";
@@ -10,6 +12,7 @@ import { ConceptoTree } from "@/features/catalogo-conceptos/ConceptoTree";
 import { ConceptoDetailTab } from "@/features/catalogo-conceptos/ConceptoDetailTab";
 import { useInsumos } from "@/hooks/useInsumos";
 import { useConceptos } from "@/hooks/useConceptos";
+import { useTheme } from "@/hooks/useTheme";
 
 type ActivityId = "insumos" | "conceptos" | "generadores" | "indirectos" | "resumen";
 
@@ -34,8 +37,10 @@ const CONCEPTO_TAB_PREFIX = "concepto:";
 export default function App() {
   const insumosState = useInsumos();
   const conceptosState = useConceptos();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const [activity, setActivity] = useState<ActivityId>("insumos");
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [tabs, setTabs] = useState<EditorTabInfo[]>([
     { id: "insumos", title: "Insumos", closable: false },
   ]);
@@ -122,13 +127,73 @@ export default function App() {
     return <p className="p-2 text-xs text-muted-foreground">Próximamente.</p>;
   };
 
+  const menus: MenuDef[] = [
+    {
+      id: "file",
+      label: "File",
+      actions: [
+        { label: "Nuevo concepto", onClick: () => openActivityTab("conceptos") },
+        { label: "Nuevo insumo", onClick: () => openActivityTab("insumos") },
+        "separator",
+        { label: "Salir", onClick: () => getCurrentWindow().close() },
+      ],
+    },
+    {
+      id: "edit",
+      label: "Edit",
+      actions: [
+        { label: "Deshacer", shortcut: "Ctrl+Z", disabled: true },
+        { label: "Rehacer", shortcut: "Ctrl+Shift+Z", disabled: true },
+        "separator",
+        { label: "Cortar", shortcut: "Ctrl+X", disabled: true },
+        { label: "Copiar", shortcut: "Ctrl+C", disabled: true },
+        { label: "Pegar", shortcut: "Ctrl+V", disabled: true },
+      ],
+    },
+    {
+      id: "selection",
+      label: "Selection",
+      actions: [
+        { label: "Seleccionar todo", shortcut: "Ctrl+A", disabled: true },
+        { label: "Expandir selección", disabled: true },
+      ],
+    },
+    {
+      id: "view",
+      label: "View",
+      actions: [
+        {
+          label: sidebarVisible ? "Ocultar barra lateral" : "Mostrar barra lateral",
+          onClick: () => setSidebarVisible((v) => !v),
+        },
+        {
+          label: theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro",
+          onClick: toggleTheme,
+        },
+      ],
+    },
+    {
+      id: "help",
+      label: "Ayuda",
+      actions: [
+        {
+          label: "Acerca de Obrix",
+          onClick: () => alert("Obrix 0.1.0\nSoftware open source de precios unitarios para México.\nLicencia Apache-2.0."),
+        },
+      ],
+    },
+  ];
+
   return (
     <div className="flex h-screen flex-col">
+      <MenuBar menus={menus} />
       <div className="flex flex-1 overflow-hidden">
         <ActivityBar activities={ACTIVITIES} active={activity} onSelect={openActivityTab} />
-        <aside className="w-56 shrink-0 overflow-auto border-r border-border bg-muted/40">
-          {renderSidebar()}
-        </aside>
+        {sidebarVisible && (
+          <aside className="w-56 shrink-0 overflow-auto border-r border-border bg-muted/40">
+            {renderSidebar()}
+          </aside>
+        )}
         <div className="flex flex-1 flex-col overflow-hidden">
           <EditorTabs tabs={tabs} activeId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} />
           <main className="flex-1 overflow-auto">{renderTabContent()}</main>
