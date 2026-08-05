@@ -36,6 +36,9 @@
 
 body {
   @apply bg-background text-foreground antialiased;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", "Droid Sans", system-ui, sans-serif;
+  font-size: 13px;
   font-feature-settings: "tnum" 1;
 }
 

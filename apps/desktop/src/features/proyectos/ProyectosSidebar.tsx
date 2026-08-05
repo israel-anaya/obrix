@@ -26,7 +26,7 @@ export function ProyectosSidebar({
   return (
     <div className="flex flex-col py-1">
       <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Proyectos
         </span>
         <div className="flex items-center gap-0.5">
@@ -59,7 +59,7 @@ export function ProyectosSidebar({
                   onToggleExpand(p.id);
                 }}
                 className={cn(
-                  "flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-sm text-muted-foreground hover:bg-background/80 hover:text-foreground",
+                  "flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground",
                   seleccionado === p.id && "bg-background text-foreground",
                 )}
               >
@@ -71,14 +71,14 @@ export function ProyectosSidebar({
                 <div className="ml-4 flex flex-col border-l border-border pl-2">
                   <button
                     onClick={() => onOpenHoja(p.id)}
-                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
                   >
                     <FilePlus2 size={13} />
                     Hoja de presupuesto
                   </button>
                   <button
                     onClick={() => onOpenPrograma(p.id)}
-                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
                   >
                     <CalendarRange size={13} />
                     Programa de Obra
@@ -89,7 +89,7 @@ export function ProyectosSidebar({
           );
         })}
         {proyectos.length === 0 && (
-          <p className="px-2 py-2 text-xs text-muted-foreground">
+          <p className="px-2 py-2 text-[13px] text-muted-foreground">
             Sin proyectos. Usa el ícono de + para agregar uno.
           </p>
         )}
