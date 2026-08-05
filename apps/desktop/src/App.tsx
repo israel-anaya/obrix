@@ -32,7 +32,6 @@ export default function App() {
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<string | null>(null);
   const [proyectosExpandidos, setProyectosExpandidos] = useState<Set<string>>(new Set());
-  const [catalogosExpandidos, setCatalogosExpandidos] = useState<Set<string>>(new Set());
 
   const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
@@ -77,15 +76,6 @@ export default function App() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleCatalogoExpandido = (grupo: string) => {
-    setCatalogosExpandidos((prev) => {
-      const next = new Set(prev);
-      if (next.has(grupo)) next.delete(grupo);
-      else next.add(grupo);
       return next;
     });
   };
@@ -164,7 +154,7 @@ export default function App() {
         />
       );
     }
-    return <CatalogosSidebar expandidos={catalogosExpandidos} onToggle={(g) => { toggleCatalogoExpandido(g); openCatalogoTab(g); }} />;
+    return <CatalogosSidebar onOpenGrupo={openCatalogoTab} />;
   };
 
   const menus: MenuDef[] = [
