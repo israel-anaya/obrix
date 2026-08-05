@@ -1,40 +1,21 @@
-import { useEffect, useState } from "react";
-import { createConcepto, listConceptos } from "@/lib/tauri";
 import type { Concepto, NuevoConcepto } from "@/lib/types";
 import { ConceptoForm } from "./ConceptoForm";
 import { aplanarArbol } from "./tree";
 
-export function ConceptosPage() {
-  const [conceptos, setConceptos] = useState<Concepto[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  const cargar = async () => {
-    try {
-      setConceptos(await listConceptos());
-      setError(null);
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  useEffect(() => {
-    cargar();
-  }, []);
-
-  const handleCreate = async (nuevo: NuevoConcepto) => {
-    try {
-      await createConcepto(nuevo);
-      await cargar();
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
+export function ConceptosPage({
+  conceptos,
+  error,
+  onCreate,
+}: {
+  conceptos: Concepto[];
+  error: string | null;
+  onCreate: (concepto: NuevoConcepto) => Promise<void>;
+}) {
   const filas = aplanarArbol(conceptos);
 
   return (
     <div className="flex flex-col">
-      <ConceptoForm conceptos={conceptos} onSubmit={handleCreate} />
+      <ConceptoForm conceptos={conceptos} onSubmit={onCreate} />
       {error && <p className="px-3 py-2 text-sm text-red-500">{error}</p>}
       <table className="w-full text-left text-sm">
         <thead>

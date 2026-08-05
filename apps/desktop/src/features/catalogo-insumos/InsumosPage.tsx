@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { createInsumo, listInsumos } from "@/lib/tauri";
 import type { Insumo, NuevoInsumo, TipoInsumo } from "@/lib/types";
 import { InsumoForm } from "./InsumoForm";
 
@@ -9,35 +7,18 @@ const TIPO_LABEL: Record<TipoInsumo, string> = {
   equipo_herramienta: "Equipo/herramienta",
 };
 
-export function InsumosPage() {
-  const [insumos, setInsumos] = useState<Insumo[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  const cargar = async () => {
-    try {
-      setInsumos(await listInsumos());
-      setError(null);
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  useEffect(() => {
-    cargar();
-  }, []);
-
-  const handleCreate = async (nuevo: NuevoInsumo) => {
-    try {
-      await createInsumo(nuevo);
-      await cargar();
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
+export function InsumosPage({
+  insumos,
+  error,
+  onCreate,
+}: {
+  insumos: Insumo[];
+  error: string | null;
+  onCreate: (insumo: NuevoInsumo) => Promise<void>;
+}) {
   return (
     <div className="flex flex-col">
-      <InsumoForm onSubmit={handleCreate} />
+      <InsumoForm onSubmit={onCreate} />
       {error && <p className="px-3 py-2 text-sm text-red-500">{error}</p>}
       <table className="w-full text-left text-sm">
         <thead>
