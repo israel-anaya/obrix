@@ -6,6 +6,7 @@ import { MenuBar, type MenuDef } from "@/components/MenuBar";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
 import { StatusBar } from "@/components/StatusBar";
 import { Toolbar, type ToolbarItem } from "@/components/Toolbar";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
 import { ProyectosSidebar } from "@/features/proyectos/ProyectosSidebar";
@@ -222,18 +223,21 @@ export default function App() {
         sidebarVisible={sidebarVisible}
         onToggleSidebar={() => setSidebarVisible((v) => !v)}
       />
-      <div className="flex flex-1 overflow-hidden">
+      <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
         {sidebarVisible && (
-          <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-muted/40">
-            <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
-            <div className="flex-1 overflow-auto">{renderSidebar()}</div>
-          </aside>
+          <>
+            <ResizablePanel defaultSize={18} minSize={12} maxSize={40} className="flex flex-col bg-muted/40">
+              <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
+              <div className="flex-1 overflow-auto">{renderSidebar()}</div>
+            </ResizablePanel>
+            <ResizableHandle />
+          </>
         )}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <ResizablePanel className="flex flex-col overflow-hidden">
           <EditorTabs tabs={tabs} activeId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} />
           <main className="flex-1 overflow-auto">{renderTabContent()}</main>
-        </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
       <StatusBar proyecto="Boceto de interfaz · sin datos" conteo={`${proyectos.length} proyectos`} />
     </div>
   );
