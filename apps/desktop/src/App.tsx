@@ -226,12 +226,17 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col">
-      <MenuBar menus={menus} onOpenSettings={openSettingsTab} />
-      <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
+      <MenuBar
+        menus={menus}
+        onOpenSettings={openSettingsTab}
+        sidebarVisible={sidebarVisible}
+        onToggleSidebar={() => setSidebarVisible((v) => !v)}
+      />
       <div className="flex flex-1 overflow-hidden">
         {sidebarVisible && (
-          <aside className="w-56 shrink-0 overflow-auto border-r border-border bg-muted/40">
-            {renderSidebar()}
+          <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-muted/40">
+            <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
+            <div className="flex-1 overflow-auto">{renderSidebar()}</div>
           </aside>
         )}
         <div className="flex flex-1 flex-col overflow-hidden">

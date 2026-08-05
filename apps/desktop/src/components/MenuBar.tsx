@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Minus, Settings, Square, X } from "lucide-react";
+import { Minus, PanelLeft, Settings, Square, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,17 @@ export interface MenuDef {
 
 const win = getCurrentWindow();
 
-export function MenuBar({ menus, onOpenSettings }: { menus: MenuDef[]; onOpenSettings: () => void }) {
+export function MenuBar({
+  menus,
+  onOpenSettings,
+  sidebarVisible,
+  onToggleSidebar,
+}: {
+  menus: MenuDef[];
+  onOpenSettings: () => void;
+  sidebarVisible: boolean;
+  onToggleSidebar: () => void;
+}) {
   const [openId, setOpenId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -35,6 +45,17 @@ export function MenuBar({ menus, onOpenSettings }: { menus: MenuDef[]; onOpenSet
       ref={ref}
       className="flex h-8 shrink-0 items-center border-b border-border bg-muted/60 text-sm"
     >
+      <button
+        title={sidebarVisible ? "Ocultar panel lateral" : "Mostrar panel lateral"}
+        onClick={onToggleSidebar}
+        className={cn(
+          "mx-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-background/80 hover:text-foreground",
+          sidebarVisible && "text-foreground",
+        )}
+      >
+        <PanelLeft size={15} />
+      </button>
+
       <div className="flex items-center gap-0.5 px-1">
         {menus.map((menu) => (
           <div key={menu.id} className="relative">

@@ -17,21 +17,21 @@ export function Toolbar<T extends string>({
   onSelect: (id: T) => void;
 }) {
   return (
-    <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-muted/40 px-2">
+    <div className="flex h-9 shrink-0 items-center gap-0.5 border-b border-border px-1">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = item.id === active;
         return (
           <button
             key={item.id}
+            title={item.label}
             onClick={() => onSelect(item.id)}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground hover:bg-background/80 hover:text-foreground",
-              isActive && "bg-background text-foreground shadow-sm",
+              "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-background/80 hover:text-foreground",
+              isActive && "bg-background text-foreground",
             )}
           >
-            <Icon size={14} strokeWidth={2} />
-            {item.label}
+            <Icon size={15} strokeWidth={2} />
           </button>
         );
       })}
