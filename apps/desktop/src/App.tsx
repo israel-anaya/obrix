@@ -1,110 +1,130 @@
 import { useState } from "react";
-import { BarChart3, ListTree, Package, Percent, Ruler } from "lucide-react";
+import { BookOpen, FolderKanban } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ActivityBar, type Activity } from "@/components/ActivityBar";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
 import { MenuBar, type MenuDef } from "@/components/MenuBar";
+import { PlaceholderTab } from "@/components/PlaceholderTab";
 import { StatusBar } from "@/components/StatusBar";
-import { InsumosPage } from "@/features/catalogo-insumos/InsumosPage";
-import { InsumoList } from "@/features/catalogo-insumos/InsumoList";
-import { ConceptosPage } from "@/features/catalogo-conceptos/ConceptosPage";
-import { ConceptoTree } from "@/features/catalogo-conceptos/ConceptoTree";
-import { ConceptoDetailTab } from "@/features/catalogo-conceptos/ConceptoDetailTab";
+import { Toolbar, type ToolbarItem } from "@/components/Toolbar";
+import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
-import { useInsumos } from "@/hooks/useInsumos";
-import { useConceptos } from "@/hooks/useConceptos";
+import { ProyectosSidebar } from "@/features/proyectos/ProyectosSidebar";
+import type { Proyecto } from "@/features/proyectos/types";
 import { useTheme } from "@/hooks/useTheme";
 
-type ActivityId = "insumos" | "conceptos" | "generadores" | "indirectos" | "resumen";
+type SeccionId = "proyectos" | "catalogos";
 
-const ACTIVITIES: Activity<ActivityId>[] = [
-  { id: "insumos", label: "Insumos", icon: Package },
-  { id: "conceptos", label: "Conceptos", icon: ListTree },
-  { id: "generadores", label: "Generadores", icon: Ruler },
-  { id: "indirectos", label: "Indirectos", icon: Percent },
-  { id: "resumen", label: "Resumen", icon: BarChart3 },
+const SECCIONES: ToolbarItem<SeccionId>[] = [
+  { id: "proyectos", label: "Proyectos", icon: FolderKanban },
+  { id: "catalogos", label: "Catálogos", icon: BookOpen },
 ];
 
-const ACTIVITY_TITLE: Record<ActivityId, string> = {
-  insumos: "Insumos",
-  conceptos: "Conceptos",
-  generadores: "Generadores",
-  indirectos: "Indirectos",
-  resumen: "Resumen",
-};
-
-const CONCEPTO_TAB_PREFIX = "concepto:";
+const HOJA_PREFIX = "proyecto:hoja:";
+const PROGRAMA_PREFIX = "proyecto:programa:";
+const CATALOGO_PREFIX = "catalogo:";
 
 export default function App() {
-  const insumosState = useInsumos();
-  const conceptosState = useConceptos();
   const { theme, toggle: toggleTheme } = useTheme();
 
-  const [activity, setActivity] = useState<ActivityId>("insumos");
+  const [seccion, setSeccion] = useState<SeccionId>("proyectos");
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [tabs, setTabs] = useState<EditorTabInfo[]>([
-    { id: "insumos", title: "Insumos", closable: false },
-  ]);
-  const [activeTabId, setActiveTabId] = useState("insumos");
+
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState<string | null>(null);
+  const [proyectosExpandidos, setProyectosExpandidos] = useState<Set<string>>(new Set());
+  const [catalogosExpandidos, setCatalogosExpandidos] = useState<Set<string>>(new Set());
+
+  const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
+  const [activeTabId, setActiveTabId] = useState("");
 
   const openTab = (tab: EditorTabInfo) => {
     setTabs((prev) => (prev.some((t) => t.id === tab.id) ? prev : [...prev, tab]));
     setActiveTabId(tab.id);
   };
 
-  const openActivityTab = (id: ActivityId) => {
-    setActivity(id);
-    openTab({ id, title: ACTIVITY_TITLE[id], closable: false });
+  const closeTab = (id: string) => {
+    setTabs((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      if (activeTabId === id) {
+        setActiveTabId(next.length > 0 ? next[next.length - 1].id : "");
+      }
+      return next;
+    });
   };
 
-  const openConceptoTab = (conceptoId: string) => {
-    const concepto = conceptosState.conceptos.find((c) => c.id === conceptoId);
+  const agregarProyecto = () => {
+    const nombre = `Proyecto ${proyectos.length + 1}`;
+    const id = crypto.randomUUID();
+    setProyectos((prev) => [...prev, { id, nombre }]);
+    setProyectoSeleccionado(id);
+    setProyectosExpandidos((prev) => new Set(prev).add(id));
+  };
+
+  const eliminarProyectoSeleccionado = () => {
+    if (!proyectoSeleccionado) return;
+    setProyectos((prev) => prev.filter((p) => p.id !== proyectoSeleccionado));
+    setTabs((prev) =>
+      prev.filter(
+        (t) =>
+          !(t.id === `${HOJA_PREFIX}${proyectoSeleccionado}` || t.id === `${PROGRAMA_PREFIX}${proyectoSeleccionado}`),
+      ),
+    );
+    setProyectoSeleccionado(null);
+  };
+
+  const toggleProyectoExpandido = (id: string) => {
+    setProyectosExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleCatalogoExpandido = (grupo: string) => {
+    setCatalogosExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(grupo)) next.delete(grupo);
+      else next.add(grupo);
+      return next;
+    });
+  };
+
+  const openHojaTab = (proyectoId: string) => {
+    const proyecto = proyectos.find((p) => p.id === proyectoId);
     openTab({
-      id: `${CONCEPTO_TAB_PREFIX}${conceptoId}`,
-      title: concepto?.clave ?? conceptoId,
+      id: `${HOJA_PREFIX}${proyectoId}`,
+      title: `${proyecto?.nombre ?? "Proyecto"} · Hoja de presupuesto`,
       closable: true,
     });
+  };
+
+  const openProgramaTab = (proyectoId: string) => {
+    const proyecto = proyectos.find((p) => p.id === proyectoId);
+    openTab({
+      id: `${PROGRAMA_PREFIX}${proyectoId}`,
+      title: `${proyecto?.nombre ?? "Proyecto"} · Programa de Obra`,
+      closable: true,
+    });
+  };
+
+  const openCatalogoTab = (grupo: string) => {
+    openTab({ id: `${CATALOGO_PREFIX}${grupo}`, title: grupo, closable: true });
   };
 
   const openSettingsTab = () => {
     openTab({ id: "settings", title: "Configuración", closable: true });
   };
 
-  const closeTab = (id: string) => {
-    setTabs((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      if (activeTabId === id && next.length > 0) {
-        setActiveTabId(next[next.length - 1].id);
-      }
-      return next;
-    });
-  };
-
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
   const renderTabContent = () => {
-    if (!activeTab) return null;
-    if (activeTab.id === "insumos") {
+    if (!activeTab) {
       return (
-        <InsumosPage
-          insumos={insumosState.insumos}
-          error={insumosState.error}
-          onCreate={insumosState.crear}
-        />
+        <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">
+          Selecciona o agrega un proyecto para comenzar.
+        </div>
       );
-    }
-    if (activeTab.id === "conceptos") {
-      return (
-        <ConceptosPage
-          conceptos={conceptosState.conceptos}
-          error={conceptosState.error}
-          onCreate={conceptosState.crear}
-        />
-      );
-    }
-    if (activeTab.id.startsWith(CONCEPTO_TAB_PREFIX)) {
-      const id = activeTab.id.slice(CONCEPTO_TAB_PREFIX.length);
-      return <ConceptoDetailTab concepto={conceptosState.conceptos.find((c) => c.id === id)} />;
     }
     if (activeTab.id === "settings") {
       return (
@@ -116,30 +136,35 @@ export default function App() {
         />
       );
     }
-    return <p className="p-4 text-sm text-muted-foreground">Próximamente.</p>;
+    if (activeTab.id.startsWith(HOJA_PREFIX)) {
+      return <PlaceholderTab title={activeTab.title} subtitle="Aquí vivirá la hoja de presupuesto (catálogo de conceptos, matriz APU, resumen)." />;
+    }
+    if (activeTab.id.startsWith(PROGRAMA_PREFIX)) {
+      return <PlaceholderTab title={activeTab.title} subtitle="Aquí vivirá el programa de obra (calendario/Gantt)." />;
+    }
+    if (activeTab.id.startsWith(CATALOGO_PREFIX)) {
+      return <PlaceholderTab title={activeTab.title} />;
+    }
+    return null;
   };
 
   const renderSidebar = () => {
-    if (activity === "insumos") {
+    if (seccion === "proyectos") {
       return (
-        <InsumoList insumos={insumosState.insumos} onOpenCatalogo={() => openActivityTab("insumos")} />
-      );
-    }
-    if (activity === "conceptos") {
-      return (
-        <ConceptoTree
-          conceptos={conceptosState.conceptos}
-          activeId={
-            activeTabId.startsWith(CONCEPTO_TAB_PREFIX)
-              ? activeTabId.slice(CONCEPTO_TAB_PREFIX.length)
-              : null
-          }
-          onOpenCatalogo={() => openActivityTab("conceptos")}
-          onOpenConcepto={openConceptoTab}
+        <ProyectosSidebar
+          proyectos={proyectos}
+          seleccionado={proyectoSeleccionado}
+          expandidos={proyectosExpandidos}
+          onSelect={setProyectoSeleccionado}
+          onToggleExpand={toggleProyectoExpandido}
+          onAgregar={agregarProyecto}
+          onEliminar={eliminarProyectoSeleccionado}
+          onOpenHoja={openHojaTab}
+          onOpenPrograma={openProgramaTab}
         />
       );
     }
-    return <p className="p-2 text-xs text-muted-foreground">Próximamente.</p>;
+    return <CatalogosSidebar expandidos={catalogosExpandidos} onToggle={(g) => { toggleCatalogoExpandido(g); openCatalogoTab(g); }} />;
   };
 
   const menus: MenuDef[] = [
@@ -147,8 +172,7 @@ export default function App() {
       id: "file",
       label: "File",
       actions: [
-        { label: "Nuevo concepto", onClick: () => openActivityTab("conceptos") },
-        { label: "Nuevo insumo", onClick: () => openActivityTab("insumos") },
+        { label: "Nuevo proyecto", onClick: agregarProyecto },
         "separator",
         { label: "Salir", onClick: () => getCurrentWindow().close() },
       ],
@@ -193,7 +217,8 @@ export default function App() {
       actions: [
         {
           label: "Acerca de Obrix",
-          onClick: () => alert("Obrix 0.1.0\nSoftware open source de precios unitarios para México.\nLicencia Apache-2.0."),
+          onClick: () =>
+            alert("Obrix 0.1.0\nSoftware open source de precios unitarios para México.\nLicencia Apache-2.0."),
         },
       ],
     },
@@ -202,8 +227,8 @@ export default function App() {
   return (
     <div className="flex h-screen flex-col">
       <MenuBar menus={menus} onOpenSettings={openSettingsTab} />
+      <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
       <div className="flex flex-1 overflow-hidden">
-        <ActivityBar activities={ACTIVITIES} active={activity} onSelect={openActivityTab} />
         {sidebarVisible && (
           <aside className="w-56 shrink-0 overflow-auto border-r border-border bg-muted/40">
             {renderSidebar()}
@@ -214,10 +239,7 @@ export default function App() {
           <main className="flex-1 overflow-auto">{renderTabContent()}</main>
         </div>
       </div>
-      <StatusBar
-        proyecto="Proyecto demo · local"
-        conteo={`${conceptosState.conceptos.length} conceptos · ${insumosState.insumos.length} insumos`}
-      />
+      <StatusBar proyecto="Boceto de interfaz · sin datos" conteo={`${proyectos.length} proyectos`} />
     </div>
   );
 }
