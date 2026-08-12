@@ -83,9 +83,6 @@ importers:
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
-      zustand:
-        specifier: ^4
-        version: 4.5.7(@types/react@19.2.18)(react@19.2.8)
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.3.3
