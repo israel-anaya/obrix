@@ -2716,7 +2716,7 @@ version = "0.1.0"
 dependencies = [
  "obrix-core",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.19",
 ]
 
 [[package]]
@@ -2727,7 +2727,7 @@ dependencies = [
  "rust_decimal_macros",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.19",
  "uuid",
 ]
 
@@ -2741,7 +2741,7 @@ dependencies = [
  "sea-orm",
  "sea-orm-migration",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.19",
  "tokio",
  "uuid",
 ]
@@ -2774,7 +2774,7 @@ dependencies = [
  "sea-orm-migration",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.19",
  "tokio",
 ]
 
@@ -2788,7 +2788,7 @@ dependencies = [
  "rust_decimal",
  "sea-orm",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.19",
  "tokio",
  "uuid",
 ]
