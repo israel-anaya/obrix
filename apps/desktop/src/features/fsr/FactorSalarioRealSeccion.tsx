@@ -106,7 +106,7 @@ export function FactorSalarioRealSeccion({
             { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
             {
               icono: Calculator,
-              titulo: "Calcular / capturar parámetros",
+              titulo: "Calcular FSR",
               onClick: () => filaSeleccionada && onCalcular(filaSeleccionada.id, filaSeleccionada.nombre),
               disabled: !filaSeleccionada,
             },

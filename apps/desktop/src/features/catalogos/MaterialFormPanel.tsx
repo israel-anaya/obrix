@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { CAMPO_INPUT_CLASE, Campo } from "@/components/Campo";
 import { formatearFecha } from "@/lib/fecha";
 import { updateMaterial } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const INPUT_CLASE = "mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs";
 
 function aMaterialData(m: Material): MaterialData {
   return {
@@ -20,15 +18,6 @@ function aMaterialData(m: Material): MaterialData {
     marca: m.marca,
     activo: m.activo,
   };
-}
-
-function Campo({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block text-[11px] text-muted-foreground">
-      {label}
-      {children}
-    </label>
-  );
 }
 
 /**
@@ -126,7 +115,7 @@ export function MaterialFormPanel({
               <input
                 value={datos.clave}
                 onChange={(e) => setDatos({ ...datos, clave: e.target.value })}
-                className={INPUT_CLASE}
+                className={CAMPO_INPUT_CLASE}
               />
             </Campo>
             <Campo label="Descripción">
@@ -134,14 +123,14 @@ export function MaterialFormPanel({
                 value={datos.descripcion}
                 onChange={(e) => setDatos({ ...datos, descripcion: e.target.value })}
                 rows={2}
-                className={cn(INPUT_CLASE, "resize-none")}
+                className={cn(CAMPO_INPUT_CLASE, "resize-none")}
               />
             </Campo>
             <Campo label="Unidad">
               <select
                 value={datos.unidad_id}
                 onChange={(e) => setDatos({ ...datos, unidad_id: e.target.value })}
-                className={INPUT_CLASE}
+                className={CAMPO_INPUT_CLASE}
               >
                 {unidades.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -154,7 +143,7 @@ export function MaterialFormPanel({
               <select
                 value={datos.familia_id ?? ""}
                 onChange={(e) => setDatos({ ...datos, familia_id: e.target.value || null, sub_familia_id: null })}
-                className={INPUT_CLASE}
+                className={CAMPO_INPUT_CLASE}
               >
                 <option value="">— Sin familia —</option>
                 {raicesFamilia.map((f) => (
@@ -169,7 +158,7 @@ export function MaterialFormPanel({
                 value={datos.sub_familia_id ?? ""}
                 onChange={(e) => setDatos({ ...datos, sub_familia_id: e.target.value || null })}
                 disabled={hijas.length === 0}
-                className={cn(INPUT_CLASE, hijas.length === 0 && "opacity-50")}
+                className={cn(CAMPO_INPUT_CLASE, hijas.length === 0 && "opacity-50")}
               >
                 <option value="">— Sin sub familia —</option>
                 {hijas.map((h) => (
@@ -183,7 +172,7 @@ export function MaterialFormPanel({
               <select
                 value={datos.proveedor_id ?? ""}
                 onChange={(e) => setDatos({ ...datos, proveedor_id: e.target.value || null })}
-                className={INPUT_CLASE}
+                className={CAMPO_INPUT_CLASE}
               >
                 <option value="">— Sin proveedor —</option>
                 {proveedores.map((p) => (
@@ -197,7 +186,7 @@ export function MaterialFormPanel({
               <input
                 value={datos.marca ?? ""}
                 onChange={(e) => setDatos({ ...datos, marca: e.target.value || null })}
-                className={INPUT_CLASE}
+                className={CAMPO_INPUT_CLASE}
               />
             </Campo>
             <Campo label="Merma (%)">
@@ -207,7 +196,7 @@ export function MaterialFormPanel({
                 max="100"
                 value={datos.merma_porcentaje ?? 0}
                 onChange={(e) => setDatos({ ...datos, merma_porcentaje: Number(e.target.value) || 0 })}
-                className={INPUT_CLASE}
+                className={CAMPO_INPUT_CLASE}
               />
             </Campo>
             <label className="flex items-center gap-2 text-[11px] text-muted-foreground">

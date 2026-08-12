@@ -157,7 +157,6 @@ export function PruebaModeloCalculo({ parametros, calculados }: { parametros: Pa
   // una evaluación aparte con un salario ficticio (que puede fallar, p.ej. rango() con SBC=0).
   const resultadoBase = resultadosPrueba.find((r) => r.scope)?.scope ?? null;
   const parametrosRango = parametros.filter((p) => p.tipo === "rango");
-  const primeraPrueba = resultadosPrueba.find((r) => r.scope);
 
   const agregarFilaPrueba = () =>
     setFilasPrueba((fs) => [...fs, { id: crypto.randomUUID(), nombre: `Categoría ${fs.length + 1}`, salarioNominal: 400 }]);
@@ -233,7 +232,7 @@ export function PruebaModeloCalculo({ parametros, calculados }: { parametros: Pa
                     type="number"
                     value={fila.salarioNominal}
                     onChange={(e) => patchFilaPrueba(fila.id, { salarioNominal: Number(e.target.value) })}
-                    className="h-7 text-right text-xs num"
+                    className="campo-decimal h-7 text-right text-xs num"
                   />
                 </td>
                 {error ? (
@@ -336,10 +335,20 @@ export function PruebaModeloCalculo({ parametros, calculados }: { parametros: Pa
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td className="px-2 py-1 text-right num">{fmt(primeraPrueba?.scope?.monto_sp)}</td>
-              <td className="border-l border-border px-2 py-1 text-right num">{fmt(primeraPrueba?.scope?.ps, 5)}</td>
-            </tr>
+            {resultadosPrueba.map(({ fila, scope, error }) =>
+              error || !scope ? (
+                <tr key={fila.id} className="border-b border-border/60 last:border-0">
+                  <td colSpan={2} className="px-2 py-1 text-destructive">
+                    {error}
+                  </td>
+                </tr>
+              ) : (
+                <tr key={fila.id} className="border-b border-border/60 last:border-0">
+                  <td className="px-2 py-1 text-right num">{fmt(scope.monto_sp)}</td>
+                  <td className="border-l border-border px-2 py-1 text-right num">{fmt(scope.ps, 5)}</td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>

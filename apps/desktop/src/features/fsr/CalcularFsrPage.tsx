@@ -1,24 +1,25 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { AlertTriangle, Download, Save, Upload } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { AlertTriangle, Banknote, CalendarDays, Download, Landmark, Percent, Save, Settings2, Upload } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Input } from "@/components/ui/input";
+import { CAMPO_INPUT_CLASE } from "@/components/Campo";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RangoEditor } from "@/features/fsr/RangoEditor";
-import { ErrorFormula } from "@/lib/formulaEngine";
-import { evaluarModelo, validarModelo, type ValoresEntrada } from "@/lib/modeloCalculo";
-import {
-  escribirArchivoTexto,
-  getFactorSalarioReal,
-  leerArchivoTexto,
-  listCategoriasFsr,
-  updateFactorSalarioReal,
-} from "@/lib/tauri";
-import type { CampoCalculado, CategoriaFsr, FactorSalarioReal, ModeloCalculo, Parametro, ValorRango } from "@/lib/types";
+import { PruebaModeloCalculo } from "@/features/fsr/PruebaModeloCalculo";
+import { validarModelo, type ValoresEntrada } from "@/lib/modeloCalculo";
+import { escribirArchivoTexto, getFactorSalarioReal, leerArchivoTexto, updateFactorSalarioReal } from "@/lib/tauri";
+import type { CampoCalculado, FactorSalarioReal, ModeloCalculo, Parametro, ValorRango } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const FILTRO_JSON = [{ name: "JSON", extensions: ["json"] }];
+
+/** Icono por grupo de parámetro — misma idea que las pestañas de un expediente técnico. */
+const ICONOS_GRUPO: Record<string, LucideIcon> = {
+  Salariales: Banknote,
+  "Económicos": Landmark,
+  "Días": CalendarDays,
+  Tasas: Percent,
+};
 
 /** Nombre de archivo seguro a partir del nombre de la configuración FSR. */
 function nombreArchivo(nombre: string): string {
@@ -49,53 +50,69 @@ function CampoVariable({
   valor: number | boolean | ValorRango;
   onCambiar: (valor: number | boolean | ValorRango) => void;
 }) {
-  const ayuda = (variable.descripcion || variable.referencia_legal) && (
-    <span className="text-xs text-muted-foreground">
-      {variable.descripcion}
-      {variable.descripcion && variable.referencia_legal && " — "}
-      {variable.referencia_legal}
-    </span>
-  );
-
   if (variable.tipo === "booleano") {
     return (
-      <label className="flex flex-col gap-1">
-        <span className="text-sm">{variable.etiqueta}</span>
-        {ayuda}
-        <Select value={String(Boolean(valor))} onValueChange={(v) => onCambiar(v === "true")}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="true">Sí</SelectItem>
-            <SelectItem value="false">No</SelectItem>
-          </SelectContent>
-        </Select>
-      </label>
-    );
-  }
-  if (variable.tipo === "rango") {
-    return (
-      <div className="col-span-full flex flex-col gap-1">
-        <span className="text-sm">{variable.etiqueta}</span>
-        {ayuda}
-        <RangoEditor renglones={valor as ValorRango} onCambiar={onCambiar} />
+      <div className="grid grid-cols-[4fr_1fr] items-center gap-3">
+        <span className="text-[11px] text-muted-foreground">{variable.etiqueta}</span>
+        <select
+          value={String(Boolean(valor))}
+          onChange={(e) => onCambiar(e.target.value === "true")}
+          className={cn(CAMPO_INPUT_CLASE, "mt-0")}
+        >
+          <option value="true">Sí</option>
+          <option value="false">No</option>
+        </select>
       </div>
     );
   }
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm">{variable.etiqueta}</span>
-      {ayuda}
-      <Input
+    <div className="grid grid-cols-[4fr_1fr] items-center gap-3">
+      <span className="text-[11px] text-muted-foreground">{variable.etiqueta}</span>
+      <input
         type="number"
         step="any"
         value={typeof valor === "number" ? valor : 0}
         onChange={(e) => onCambiar(e.target.value === "" ? 0 : Number(e.target.value))}
+        className={cn(CAMPO_INPUT_CLASE, "mt-0 campo-decimal text-right")}
       />
-    </label>
+    </div>
   );
 }
 
-export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }) {
+/** Grupo de parámetros como ficha de un expediente técnico: encabezado con icono + campos. */
+function FichaGrupo({
+  grupo,
+  variables,
+  valores,
+  onCambiar,
+}: {
+  grupo: string;
+  variables: Parametro[];
+  valores: ValoresEntrada;
+  onCambiar: (id: string, valor: number | boolean | ValorRango) => void;
+}) {
+  const Icono = ICONOS_GRUPO[grupo] ?? Settings2;
+  return (
+    <div className="self-start overflow-hidden rounded border border-border">
+      <div className="flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+        <Icono size={13} className="shrink-0" />
+        {grupo}
+      </div>
+      <div className="flex flex-col gap-2 p-3">
+        {variables.map((v) => (
+          <CampoVariable
+            key={v.id}
+            variable={v}
+            valor={valores[v.id] ?? (v.tipo === "booleano" ? false : v.tipo === "rango" ? [] : 0)}
+            onCambiar={(valor) => onCambiar(v.id, valor)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CalcularFsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }) {
   const [fila, setFila] = useState<FactorSalarioReal | null>(null);
   const [parametros, setParametros] = useState<Parametro[]>([]);
   const [calculados, setCalculados] = useState<CampoCalculado[]>([]);
@@ -104,10 +121,6 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardadoAt, setGuardadoAt] = useState<string | null>(null);
-
-  const [categorias, setCategorias] = useState<CategoriaFsr[]>([]);
-  const [categoriaId, setCategoriaId] = useState<string>("");
-  const [salarioNominal, setSalarioNominal] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -123,9 +136,6 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
       })
       .catch((e) => setError(String(e)))
       .finally(() => !cancelado && setCargando(false));
-    listCategoriasFsr()
-      .then(setCategorias)
-      .catch(() => {});
     return () => {
       cancelado = true;
     };
@@ -136,7 +146,12 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
   };
 
   const errorModelo = useMemo(() => validarModelo(parametros, calculados), [parametros, calculados]);
-  const variablesEntrada = useMemo(() => parametros.filter((p) => p.id !== "salario_nominal"), [parametros]);
+  // Los tipo "rango" son tablas fijas por ley (ej. cesantía y vejez) — se editan en "Editar
+  // modelo de cálculo", no tiene caso volver a pedirlas por cada configuración de FSR.
+  const variablesEntrada = useMemo(
+    () => parametros.filter((p) => p.id !== "salario_nominal" && p.tipo !== "rango"),
+    [parametros],
+  );
   const idsVariablesNumero = useMemo(() => parametros.filter((p) => p.tipo === "numero").map((p) => p.id), [parametros]);
   const grupos = useMemo(() => {
     const orden: string[] = [];
@@ -151,6 +166,13 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
     });
     return orden.map((g) => ({ grupo: g, variables: porGrupo.get(g)! }));
   }, [variablesEntrada]);
+
+  // El bloque "Probar" abajo usa `valor_default` para todo salvo `salario_nominal` — se lo
+  // pisamos con lo capturado arriba para que la prueba refleje esta configuración, en vivo.
+  const parametrosConValoresCapturados = useMemo(
+    () => parametros.map((p) => (p.id === "salario_nominal" ? p : { ...p, valor_default: valores[p.id] ?? p.valor_default })),
+    [parametros, valores],
+  );
 
   const faltanDatosBase = idsVariablesNumero.some((id) => (valores[id] as number) <= 0 && (id === "uma" || id === "salario_minimo"));
 
@@ -200,15 +222,6 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
     }
   };
 
-  const resultado = useMemo(() => {
-    if (errorModelo || salarioNominal <= 0) return null;
-    try {
-      return evaluarModelo(parametros, calculados, { ...valores, salario_nominal: salarioNominal });
-    } catch (e) {
-      return e instanceof ErrorFormula ? { error: e.message } : null;
-    }
-  }, [parametros, calculados, valores, salarioNominal, errorModelo]);
-
   if (cargando) {
     return <div className="p-6 text-sm text-muted-foreground">Cargando parámetros de FSR…</div>;
   }
@@ -219,13 +232,7 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <div>
-          <h2 className="text-sm font-semibold">FRS · {fila.nombre}</h2>
-          <p className="text-xs text-muted-foreground">
-            Captura los datos oficiales del ejercicio (UMA, IMSS, días de la LFT) — para cambiar CÓMO se calcula, usa el
-            ícono "Editar modelo de cálculo" en la lista de Factores de Salario Real.
-          </p>
-        </div>
+        <h2 className="text-sm font-semibold">FRS · {fila.nombre}</h2>
         <div className="flex items-center gap-3">
           {guardadoAt && !guardando && <span className="text-xs text-muted-foreground">Guardado a las {guardadoAt}</span>}
           <BarraAcciones
@@ -253,106 +260,20 @@ export function FsrPage({ factorSalarioRealId }: { factorSalarioRealId: string }
         </div>
       )}
 
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        <ResizablePanel defaultSize="60" minSize="40" style={{ overflow: "auto" }}>
-          <Accordion type="multiple" defaultValue={grupos.map((g) => g.grupo)} className="py-2">
-            {grupos.map(({ grupo, variables: vs }) => (
-              <AccordionItem key={grupo} value={grupo} className="px-4">
-                <AccordionTrigger>{grupo}</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-1 gap-4 pb-4 sm:grid-cols-2">
-                    {vs.map((v) => (
-                      <CampoVariable
-                        key={v.id}
-                        variable={v}
-                        valor={valores[v.id] ?? (v.tipo === "booleano" ? false : v.tipo === "rango" ? [] : 0)}
-                        onCambiar={(valor) => set(v.id, valor)}
-                      />
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+      <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
+        <ResizablePanel defaultSize="50" minSize="25" style={{ overflow: "auto" }}>
+          <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
+            {grupos.map(({ grupo, variables }) => (
+              <FichaGrupo key={grupo} grupo={grupo} variables={variables} valores={valores} onCambiar={set} />
             ))}
-          </Accordion>
+          </div>
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
-        <ResizablePanel defaultSize="40" minSize="28" className="flex flex-col bg-muted/40" style={{ overflow: "auto" }}>
-          <div className="flex flex-col gap-4 p-4">
-            <h3 className="text-sm font-semibold">Calculadora rápida</h3>
-            <p className="text-xs text-muted-foreground">
-              Prueba el efecto de estos parámetros sobre un salario, sin salir de esta pantalla.
-            </p>
-
-            {categorias.length > 0 && (
-              <label className="flex flex-col gap-1">
-                <span className="text-sm">Categoría (opcional, solo de referencia)</span>
-                <Select value={categoriaId} onValueChange={setCategoriaId}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-                  <SelectContent>
-                    {categorias.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            )}
-
-            <label className="flex flex-col gap-1">
-              <span className="text-sm">Salario nominal diario</span>
-              <span className="text-xs text-muted-foreground">Lo que se pacta con el trabajador, antes de integrar prestaciones.</span>
-              <div className="flex items-center gap-2">
-                <Input type="number" step="any" value={salarioNominal} onChange={(e) => setSalarioNominal(Number(e.target.value))} />
-                <span className="w-14 shrink-0 text-xs text-muted-foreground">MXN</span>
-              </div>
-            </label>
-
-            {resultado && "error" in resultado && <p className="text-xs text-destructive">{resultado.error}</p>}
-
-            {resultado && !("error" in resultado) && (
-              <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Factor de Salario Real</p>
-                    <p className="text-2xl font-semibold num">{Number(resultado.scope.fsr).toFixed(6)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Salario real diario</p>
-                    <p className="text-2xl font-semibold num">
-                      ${Number(resultado.scope.monto_salario_real).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-
-                {resultado.scope.es_salario_minimo === true && (
-                  <p className="rounded-md bg-amber-500/10 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-400">
-                    Este salario es igual o menor al mínimo: el patrón absorbe toda la cuota IMSS del trabajador
-                    (Art. 36 LSS).
-                  </p>
-                )}
-
-                <div>
-                  <p className="mb-1 text-xs font-medium">Campos calculados</p>
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    {calculados
-                      .filter((v) => v.id !== "fsr" && v.id !== "monto_salario_real")
-                      .map((v) => (
-                        <Fragment key={v.id}>
-                          <dt className="truncate text-muted-foreground" title={v.etiqueta}>
-                            {v.etiqueta}
-                          </dt>
-                          <dd className="text-right num">
-                            {typeof resultado.scope[v.id] === "boolean" ? (resultado.scope[v.id] ? "Sí" : "No") : String(resultado.scope[v.id])}
-                          </dd>
-                        </Fragment>
-                      ))}
-                  </dl>
-                </div>
-              </div>
-            )}
+        <ResizablePanel defaultSize="50" minSize="25" className="bg-muted/40" style={{ overflow: "auto" }}>
+          <div className="p-4">
+            <PruebaModeloCalculo parametros={parametrosConValoresCapturados} calculados={calculados} />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

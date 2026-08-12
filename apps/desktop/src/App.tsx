@@ -31,7 +31,7 @@ import { ArbolDemo } from "@/features/demo/ArbolDemo";
 import { MaestroDetalleDemo } from "@/features/demo/MaestroDetalleDemo";
 import { TableDemo } from "@/features/demo/TableDemo";
 import { HojaCalculoPage } from "@/features/hoja-calculo/HojaCalculoPage";
-import { FsrPage } from "@/features/fsr/FsrPage";
+import { CalcularFsrPage } from "@/features/fsr/CalcularFsrPage";
 import { FactorSalarioRealSeccion } from "@/features/fsr/FactorSalarioRealSeccion";
 import { ModeloCalculoPage } from "@/features/fsr/ModeloCalculoPage";
 import { OrganizacionContext } from "@/features/organizacion/OrganizacionContext";
@@ -335,7 +335,7 @@ export default function App() {
       return <HojaCalculoPage theme={theme} />;
     }
     if (activeTab.id.startsWith(FSR_PREFIX)) {
-      return <FsrPage factorSalarioRealId={activeTab.id.slice(FSR_PREFIX.length)} />;
+      return <CalcularFsrPage factorSalarioRealId={activeTab.id.slice(FSR_PREFIX.length)} />;
     }
     if (activeTab.id.startsWith(MODELO_CALCULO_PREFIX)) {
       return <ModeloCalculoPage factorSalarioRealId={activeTab.id.slice(MODELO_CALCULO_PREFIX.length)} />;
