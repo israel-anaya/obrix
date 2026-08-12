@@ -1,0 +1,506 @@
+{
+  "parametros": [
+    {
+      "id": "salario_nominal",
+      "etiqueta": "Salario nominal diario (Sn)",
+      "grupo": "Salariales",
+      "tipo": "numero",
+      "referencia_legal": "Art. 160 RLOPSRM",
+      "descripcion": "Salario diario que se cotiza para la categoría.",
+      "valor_default": 0
+    },
+    {
+      "id": "salario_minimo",
+      "etiqueta": "Salario mínimo",
+      "grupo": "Salariales",
+      "tipo": "numero",
+      "referencia_legal": "Art. 90 LFT y Art. 36 LSS",
+      "descripcion": "Determina el supuesto del Art. 36 LSS (el patrón absorbe la cuota obrera) y es la unidad de medida de los primeros escalones de cesantía. Debe corresponder a la zona del centro de trabajo (General o Zona Libre de la Frontera Norte). Fuente: CONASAMI, vigente al ejercicio.",
+      "valor_default": 248.93
+    },
+    {
+      "id": "uma",
+      "etiqueta": "Unidad de Medida y Actualización",
+      "grupo": "Económicos",
+      "tipo": "numero",
+      "referencia_legal": "INEGI - vigente al ejercicio del cálculo",
+      "descripcion": "Valor diario de la UMA vigente al ejercicio. Base de los topes de cotización y de la cuota fija de enfermedad y maternidad.",
+      "valor_default": 103.74
+    },
+    {
+      "id": "porcentaje_prima_riesgo_trabajo",
+      "etiqueta": "Prima de riesgo de trabajo de la empresa (%)",
+      "grupo": "Económicos",
+      "tipo": "numero",
+      "referencia_legal": "Art. 73 y 74 LSS",
+      "descripcion": "Prima de la empresa, en porcentaje (el motor divide entre 100). Nuevo registro: prima media de su clase (Art. 73 LSS); ejercicios posteriores: la declarada (Art. 74 LSS).",
+      "valor_default": 7.58875
+    },
+    {
+      "id": "impuesto_sobre_nomina",
+      "etiqueta": "Impuesto sobre nómina",
+      "grupo": "Económicos",
+      "tipo": "numero",
+      "descripcion": "Tasa efectiva de la entidad federativa, ya neta de subsidios si aplican. Varía por estado.",
+      "valor_default": 0
+    },
+    {
+      "id": "limite_veces_uma",
+      "etiqueta": "Límite cotización × UMA",
+      "grupo": "Económicos",
+      "tipo": "numero",
+      "referencia_legal": "Art. 28 LSS",
+      "descripcion": "Tope de cotización en veces UMA para todas las ramas (enfermedad y maternidad, riesgos, guarderías, retiro, invalidez/vida, cesantía e INFONAVIT). Topado en 25 desde 2007.",
+      "valor_default": 25
+    },
+    {
+      "id": "dical",
+      "etiqueta": "Días calendario (DICAL)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "descripcion": "Días del año. Base tanto de Tl como del denominador del FSBC.",
+      "valor_default": 366
+    },
+    {
+      "id": "diagi",
+      "etiqueta": "Días de aguinaldo (DIAGI)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 87 LFT",
+      "descripcion": "Días de aguinaldo. Mínimo legal 15; puede ser mayor por contrato.",
+      "valor_default": 15
+    },
+    {
+      "id": "didom",
+      "etiqueta": "Días de descanso obligatorio (DIDOM)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 69 LFT",
+      "descripcion": "Días de descanso semanal al año. Si es menor a 52 se generan días de prima dominical.",
+      "valor_default": 52
+    },
+    {
+      "id": "divac",
+      "etiqueta": "Días de vacaciones (DIVAC)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 76 LFT",
+      "descripcion": "Días de vacaciones que correspondan a la antigüedad de la categoría. Mínimo legal 12 desde 2023.",
+      "valor_default": 12
+    },
+    {
+      "id": "difeo",
+      "etiqueta": "Días festivos por ley (DIFEO)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 74 LFT",
+      "descripcion": "Días festivos de ley no laborados.",
+      "valor_default": 7
+    },
+    {
+      "id": "dipec",
+      "etiqueta": "Días perdidos por clima (DIPEC)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 23 RLOPSRM y Contrato colectivo de trabajo",
+      "descripcion": "Días perdidos por lluvia u otras condiciones. El Art. 23 RLOPSRM exige que los programas de ejecución consideren las condiciones climáticas de la zona; el número concreto de días se estima y suele pactarse con el cliente o en contrato colectivo.",
+      "valor_default": 7
+    },
+    {
+      "id": "dipco",
+      "etiqueta": "Días por costumbre (DIPCO)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Contrato colectivo de trabajo",
+      "descripcion": "Días no laborados por costumbre regional o de la obra.",
+      "valor_default": 6
+    },
+    {
+      "id": "dipen",
+      "etiqueta": "Días por permisos y enfermedad no profesional (DIPEN)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 42 fracc. II LFT, Art. 92 LSS y Contrato colectivo",
+      "descripcion": "Días no laborados por permisos y por incapacidad temporal por accidente o enfermedad que no constituya riesgo de trabajo (Art. 42 fracc. II LFT; subsidio IMSS en Art. 92 LSS). El número de días se estima; los permisos suelen pactarse en contrato colectivo.",
+      "valor_default": 3
+    },
+    {
+      "id": "factor_prima_vacacional",
+      "etiqueta": "Porcentaje de prima vacacional (%)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 80 LFT",
+      "descripcion": "Proporción de prima vacacional sobre los días de vacaciones. Mínimo legal 25%; puede ser mayor por contrato colectivo.",
+      "valor_default": 25
+    },
+    {
+      "id": "factor_prima_adicional",
+      "etiqueta": "Porcentaje de prima adicional (%)",
+      "grupo": "Días",
+      "tipo": "numero",
+      "referencia_legal": "Art. 71 LFT",
+      "descripcion": "Proporción de prima adicional dominical sobre los días de descanso trabajados. Mínimo legal 25%; puede ser mayor por contrato colectivo.",
+      "valor_default": 25
+    },
+    {
+      "id": "tasa_variable_em_patronal",
+      "etiqueta": "Tasa variable — patronal (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 106 LSS fracc. II",
+      "descripcion": "Cuota patronal variable de enfermedad y maternidad, aplicada sobre el excedente del SBC por arriba de 3 UMA.",
+      "valor_default": 1.1
+    },
+    {
+      "id": "tasa_variable_em_integra",
+      "etiqueta": "Tasa variable — íntegra (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 106 LSS fracc. II",
+      "descripcion": "Cuota íntegra (el patrón absorbe también la parte obrera) de enfermedad y maternidad para trabajadores con salario mínimo, aplicada sobre el excedente del SBC por arriba de 3 UMA.",
+      "valor_default": 1.5
+    },
+    {
+      "id": "tasa_fija_em",
+      "etiqueta": "Tasa fija (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 106 LSS fracc. I",
+      "descripcion": "Cuota fija patronal de enfermedad y maternidad, aplicada sobre la UMA (no sobre el SBC) por cada trabajador asegurado.",
+      "valor_default": 20.4
+    },
+    {
+      "id": "tasa_em_especie_pensionados_patronal",
+      "etiqueta": "Prestaciones en especie de pensionados — patronal (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 25 LSS",
+      "descripcion": "Cuota patronal por prestaciones en especie a pensionados y sus beneficiarios, aplicada sobre el SBC topado.",
+      "valor_default": 1.05
+    },
+    {
+      "id": "tasa_em_especie_pensionados_integra",
+      "etiqueta": "Prestaciones en especie de pensionados — íntegra (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 25 LSS",
+      "descripcion": "Cuota íntegra por prestaciones en especie a pensionados para trabajadores con salario mínimo, aplicada sobre el SBC topado.",
+      "valor_default": 1.425
+    },
+    {
+      "id": "tasa_em_prestaciones_dinero_patronal",
+      "etiqueta": "Prestaciones en dinero — patronal (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 107 LSS fracc. I y II",
+      "descripcion": "Cuota patronal por prestaciones en dinero (subsidios por incapacidad) de enfermedad y maternidad, aplicada sobre el SBC topado.",
+      "valor_default": 0.7
+    },
+    {
+      "id": "tasa_em_prestaciones_dinero_integra",
+      "etiqueta": "Prestaciones en dinero — íntegra (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 107 LSS fracc. I y II",
+      "descripcion": "Cuota íntegra por prestaciones en dinero para trabajadores con salario mínimo, aplicada sobre el SBC topado.",
+      "valor_default": 0.95
+    },
+    {
+      "id": "tasa_em_guarderias",
+      "etiqueta": "Guarderías (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 211 y 212 LSS",
+      "descripcion": "Cuota patronal por guarderías y prestaciones sociales, aplicada sobre el SBC topado.",
+      "valor_default": 1
+    },
+    {
+      "id": "tasa_em_sar_retiro",
+      "etiqueta": "S.A.R. (Retiro) (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 168 fracc. I LSS",
+      "descripcion": "Cuota patronal del Sistema de Ahorro para el Retiro (SAR), aplicada sobre el SBC topado.",
+      "valor_default": 2
+    },
+    {
+      "id": "tasa_invalidez_vida_patronal",
+      "etiqueta": "Invalidez y vida — patronal (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 147 LSS",
+      "descripcion": "Cuota patronal del seguro de invalidez y vida, aplicada sobre el SBC topado.",
+      "valor_default": 1.75
+    },
+    {
+      "id": "tasa_invalidez_vida_integra",
+      "etiqueta": "Invalidez y vida — íntegra (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 147 LSS",
+      "descripcion": "Cuota íntegra de invalidez y vida para trabajadores con salario mínimo, aplicada sobre el SBC topado.",
+      "valor_default": 2.375
+    },
+    {
+      "id": "tasa_infonavit",
+      "etiqueta": "INFONAVIT (%)",
+      "grupo": "Tasas",
+      "tipo": "numero",
+      "referencia_legal": "Art. 29 Ley INFONAVIT fracc. II",
+      "descripcion": "Aportación patronal al INFONAVIT, aplicada sobre el SBC topado.",
+      "valor_default": 5
+    },
+    {
+      "id": "tasa_cesantia_vejez",
+      "etiqueta": "Cesantía en edad avanzada y vejez",
+      "grupo": "Tasas",
+      "tipo": "rango",
+      "referencia_legal": "Art. 168 LSS fracc. II",
+      "descripcion": "Tabla de cuotas patronales del año en curso (Segundo Transitorio DOF 16/12/2020). Cada renglón trae clasificación, límites en pesos y valor en porcentaje (el motor divide entre 100).",
+      "valor_default": [
+        {
+          "clasificacion": "1.00 SM",
+          "inferior": 0.01,
+          "superior": 248.93,
+          "valor": 3.15
+        },
+        {
+          "clasificacion": "1.01 SM a 1.50 UMA",
+          "inferior": 251.42,
+          "superior": 155.61,
+          "valor": 3.413
+        },
+        {
+          "clasificacion": "1.51 a 2.00 UMA",
+          "inferior": 156.65,
+          "superior": 207.48,
+          "valor": 4
+        },
+        {
+          "clasificacion": "2.01 a 2.50 UMA",
+          "inferior": 208.52,
+          "superior": 259.35,
+          "valor": 4.353
+        },
+        {
+          "clasificacion": "2.51 a 3.00 UMA",
+          "inferior": 260.39,
+          "superior": 311.22,
+          "valor": 4.588
+        },
+        {
+          "clasificacion": "3.01 a 3.50 UMA",
+          "inferior": 312.26,
+          "superior": 363.09,
+          "valor": 4.756
+        },
+        {
+          "clasificacion": "3.51 a 4.00 UMA",
+          "inferior": 364.13,
+          "superior": 414.96,
+          "valor": 4.882
+        },
+        {
+          "clasificacion": "4.01 UMA en adelante",
+          "inferior": 416,
+          "superior": null,
+          "valor": 5.331
+        }
+      ]
+    }
+  ],
+  "calculados": [
+    {
+      "id": "monto_tres_uma",
+      "etiqueta": "Monto tres veces la UMA",
+      "tipo": "formula",
+      "referencia_legal": "Art. 106 LSS fracc. II",
+      "formula": "uma * 3"
+    },
+    {
+      "id": "monto_limite_veces_uma",
+      "etiqueta": "Monto límite (veces UMA)",
+      "tipo": "formula",
+      "formula": "uma * limite_veces_uma"
+    },
+    {
+      "id": "pivac",
+      "etiqueta": "Días por prima vacacional (PIVAC)",
+      "tipo": "formula",
+      "referencia_legal": "Art. 80 LFT",
+      "formula": "(factor_prima_vacacional / 100) * divac"
+    },
+    {
+      "id": "prima_adicional_dias",
+      "etiqueta": "Días por prima adicional (dominical)",
+      "tipo": "formula",
+      "referencia_legal": "Art. 71 LFT",
+      "formula": "(52 - didom) * (factor_prima_adicional / 100)"
+    },
+    {
+      "id": "tp",
+      "etiqueta": "Total de días realmente pagados al año (Tp)",
+      "tipo": "formula",
+      "formula": "dical + diagi + pivac + prima_adicional_dias"
+    },
+    {
+      "id": "dinla",
+      "etiqueta": "Días no laborados al año (DINLA)",
+      "tipo": "formula",
+      "formula": "didom + divac + difeo + dipec + dipco + dipen"
+    },
+    {
+      "id": "tl",
+      "etiqueta": "Total de días realmente laborados al año (Tl)",
+      "tipo": "formula",
+      "formula": "dical - dinla"
+    },
+    {
+      "id": "tp_tl",
+      "etiqueta": "Días pagados / días laborados (Tp/Tl)",
+      "tipo": "formula",
+      "formula": "if(tl > 0, round(tp / tl, 5), 0)"
+    },
+    {
+      "id": "fsbc",
+      "etiqueta": "Factor de salario base de cotización (FSBC)",
+      "tipo": "formula",
+      "referencia_legal": "Art. 27 y 30 LSS",
+      "formula": "round(tp / dical, 5)"
+    },
+    {
+      "id": "monto_sn",
+      "etiqueta": "Sn — Salario nominal diario redondeado",
+      "tipo": "formula",
+      "formula": "round(salario_nominal, 2)"
+    },
+    {
+      "id": "monto_sbc",
+      "etiqueta": "SBC — Salario base de cotización",
+      "tipo": "formula",
+      "referencia_legal": "Art. 27 LSS",
+      "formula": "round(monto_sn * fsbc, 2)"
+    },
+    {
+      "id": "es_salario_minimo",
+      "etiqueta": "El trabajador percibe el salario mínimo",
+      "tipo": "formula",
+      "referencia_legal": "Art. 36 LSS",
+      "formula": "monto_sn <= salario_minimo"
+    },
+    {
+      "id": "monto_sbc_topado",
+      "etiqueta": "SBC topado al límite UMA",
+      "tipo": "formula",
+      "formula": "if(es_salario_minimo, monto_sbc, min(monto_sbc, monto_limite_veces_uma))"
+    },
+    {
+      "id": "monto_cuota_em_variable",
+      "etiqueta": "Cuota variable",
+      "tipo": "formula",
+      "referencia_legal": "Art. 106 LSS fracc. II",
+      "descripcion": "Se calcula solo sobre el excedente de 3 UMA y hasta el tope de 25 UMA. No aplica para el caso de salario mínimo (queda en 0 porque el SBC no rebasa 3 UMA).",
+      "formula": "if(monto_sbc > monto_tres_uma, (if(es_salario_minimo, tasa_variable_em_integra, tasa_variable_em_patronal) / 100) * (min(monto_sbc, monto_limite_veces_uma) - monto_tres_uma), 0)"
+    },
+    {
+      "id": "monto_cuota_em_fija",
+      "etiqueta": "Cuota fija",
+      "tipo": "formula",
+      "referencia_legal": "Art. 106 LSS fracc. I",
+      "descripcion": "IMPORTANTE: la base es la UMA, no el SBC. Es un monto igual para todas las categorías.",
+      "formula": "if(monto_sbc > 0, (tasa_fija_em / 100) * uma, 0)"
+    },
+    {
+      "id": "monto_cuota_em_especie_pensionados",
+      "etiqueta": "Prestaciones en especie de pensionados",
+      "tipo": "formula",
+      "referencia_legal": "Art. 25 LSS",
+      "formula": "(if(es_salario_minimo, tasa_em_especie_pensionados_integra, tasa_em_especie_pensionados_patronal) / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "tasa_em_prestaciones_dinero",
+      "etiqueta": "Prestaciones en dinero",
+      "tipo": "formula",
+      "referencia_legal": "Art. 107 LSS fracc. I y II",
+      "formula": "(if(es_salario_minimo, tasa_em_prestaciones_dinero_integra, tasa_em_prestaciones_dinero_patronal) / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_riesgos_trabajo",
+      "etiqueta": "Riesgos de trabajo",
+      "tipo": "formula",
+      "referencia_legal": "Art. 73 y 74 LSS",
+      "formula": "(porcentaje_prima_riesgo_trabajo / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_em_guarderias",
+      "etiqueta": "Guarderías",
+      "tipo": "formula",
+      "referencia_legal": "Art. 211 y 212 LSS",
+      "formula": "(tasa_em_guarderias / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_sar_retiro",
+      "etiqueta": "S.A.R.",
+      "tipo": "formula",
+      "referencia_legal": "Art. 168 fracc. I LSS",
+      "formula": "(tasa_em_sar_retiro / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_invalidez_vida",
+      "etiqueta": "Invalidez y vida",
+      "tipo": "formula",
+      "referencia_legal": "Art. 147 LSS",
+      "formula": "(if(es_salario_minimo, tasa_invalidez_vida_integra, tasa_invalidez_vida_patronal) / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_cesantia_vejez",
+      "etiqueta": "Cesantía en edad avanzada y vejez",
+      "tipo": "formula",
+      "referencia_legal": "Art. 168 LSS fracc. II",
+      "descripcion": "El renglón se elige con el SBC sin topar (límites en pesos); la cuota se calcula sobre el SBC topado. Son dos usos distintos del mismo salario y no deben confundirse. Detalle: renglón = primer elemento de tasa_cesantia_vejez con inferior <= monto_sbc <= (superior ?? +inf); cuota = renglón.valor / 100.",
+      "formula": "(rango('tasa_cesantia_vejez', monto_sbc) / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_infonavit",
+      "etiqueta": "INFONAVIT",
+      "tipo": "formula",
+      "referencia_legal": "Art. 29 Ley INFONAVIT fracc. II",
+      "formula": "(tasa_infonavit / 100) * monto_sbc_topado"
+    },
+    {
+      "id": "monto_cuota_isn",
+      "etiqueta": "Impuesto sobre nómina",
+      "tipo": "formula",
+      "descripcion": "Sin tope: se aplica sobre el SBC completo.",
+      "formula": "impuesto_sobre_nomina * monto_sbc"
+    },
+    {
+      "id": "monto_sp",
+      "etiqueta": "Suma prestaciones SP",
+      "tipo": "formula",
+      "formula": "monto_cuota_em_variable + monto_cuota_em_fija + monto_cuota_em_especie_pensionados + tasa_em_prestaciones_dinero + monto_cuota_riesgos_trabajo + monto_cuota_em_guarderias + monto_cuota_sar_retiro + monto_cuota_invalidez_vida + monto_cuota_cesantia_vejez + monto_cuota_infonavit + monto_cuota_isn",
+      "descripcion": "Suma de prestaciones y obligaciones (monto diario)"
+    },
+    {
+      "id": "ps",
+      "etiqueta": "Ps = SP / SBC",
+      "tipo": "formula",
+      "referencia_legal": "Art. 160 RLOPSRM",
+      "formula": "if(monto_sn != 0, round(monto_sp / monto_sbc, 5), 0)",
+      "descripcion": "Obligaciones obrero-patronales como proporción del SBC"
+    },
+    {
+      "id": "fsr",
+      "etiqueta": "FSR — Factor de Salario Real",
+      "tipo": "formula",
+      "referencia_legal": "Art. 160 RLOPSRM: Fsr = Ps(Tp/Tl) + (Tp/Tl)",
+      "formula": "round((ps * tp_tl) + tp_tl, 6)"
+    },
+    {
+      "id": "monto_salario_real",
+      "etiqueta": "Sr — Salario Real diario",
+      "tipo": "formula",
+      "formula": "round(monto_sn * fsr, 2)"
+    }
+  ]
+}

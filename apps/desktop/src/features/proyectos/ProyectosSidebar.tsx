@@ -24,7 +24,7 @@ export function ProyectosSidebar({
   onOpenPrograma: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-col py-1">
+    <div className="flex h-full flex-col overflow-auto py-1">
       <div className="flex items-center justify-between px-2 py-1">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Proyectos

@@ -1,0 +1,17 @@
+[package]
+name = "obrix-plugins"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+obrix-db = { path = "../obrix-db" }
+sea-orm.workspace = true
+sea-orm-migration.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

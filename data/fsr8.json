@@ -1,0 +1,36 @@
+{
+  "salario_minimo": 288,
+  "uma": 103,
+  "porcentaje_prima_riesgo_trabajo": 0,
+  "impuesto_sobre_nomina": 0,
+  "dias_calendario": 365,
+  "dias_aguinaldo": 15,
+  "dias_descanso_obligatorio": 52,
+  "dias_vacaciones": 12,
+  "dias_festivos": 7,
+  "dias_clima": 0,
+  "dias_costumbre": 0,
+  "dias_permisos_enfermedad": 0,
+  "factor_prima_vacacional": 0.25,
+  "factor_prima_dominical": 0.25,
+  "tasa_em_especie_pensionados_patronal": 0.0105,
+  "tasa_em_especie_pensionados_integra": 0.01425,
+  "tasa_em_dinero_patronal": 0.007,
+  "tasa_em_dinero_integra": 0.0095,
+  "tasa_guarderias": 0.01,
+  "tasa_sar_retiro": 0.02,
+  "tasa_invalidez_vida_patronal": 0.0175,
+  "tasa_invalidez_vida_integra": 0.02375,
+  "tasa_infonavit": 0.05,
+  "cesantia_vejez_cuota_obrera": 0.01125,
+  "cesantia_vejez_escalones": [
+    {
+      "hasta": null,
+      "unidad": "UMA",
+      "patronal": 0.0315
+    }
+  ],
+  "cuota_fija_em": 0.204,
+  "cuota_variable_em": 0.011,
+  "limite_veces_uma": 25
+}

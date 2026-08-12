@@ -1,0 +1,852 @@
+# Diccionario de datos
+
+Convenciones generales:
+
+- Todas las tablas usan `id UUID` como llave primaria.
+- Campos monetarios y de cantidad usan tipo `decimal` (precisión exacta, nunca
+  float) — porcentajes se expresan en base 100 (`8` = 8%), no en fracción.
+- Toda tabla lleva campos de control: `created_at` / `updated_at` (timestamp)
+  y `created_by` / `updated_by` (FK → `usuario`, quién la creó y quién hizo
+  el último cambio) — para colaboración y auditoría. Excepciones: 
+  `historial_cambio` (append-only por diseño, ya lleva su propio `usuario_id`
+  como autor, no se actualiza nunca).
+- Los enums se listan con sus valores permitidos entre paréntesis.
+
+---
+
+## 1. Organización y colaboración
+
+### `organizacion`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| razon_social | text | |
+| rfc | text | RFC de la persona moral u física titular del despacho/constructora |
+| tipo | enum | `despacho`, `constructora`, `dependencia_publica` |
+| moneda_default_id | uuid | FK → moneda, requerido — moneda con la que arranca la UI al capturar precios (ej. `precio_material`); siempre sembrada con MXN al crear la organización |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `usuario`
+
+**Identidad global**, no pertenece a una sola organización — un mismo
+correo puede colaborar en varios despachos/constructoras (ej. un
+freelancer que hace costos para dos clientes distintos). El rol es
+propio del usuario (no varía por organización); qué organizaciones puede
+ver vive en `organizacion_usuario`.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| nombre | text | |
+| correo | text | único |
+| rol | enum | `admin`, `propietario`, `editor`, `lector` |
+| activo | bool | cuenta global habilitada para iniciar sesión |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `organizacion_usuario`
+
+**Membresía** — qué organizaciones puede ver un usuario.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| usuario_id | uuid | FK → usuario |
+| activo | bool | default true — acceso a esta organización revocable sin borrar la cuenta ni la membresía |
+| created_at / updated_at / created_by / updated_by | | `created_by` = quién invitó al usuario |
+
+Restricción: única `(organizacion_id, usuario_id)`.
+
+### `cliente`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| razon_social | text | |
+| rfc | text | |
+| tipo | enum | `privado`, `dependencia_publica` |
+| contacto_nombre | text | nullable |
+| contacto_correo | text | nullable |
+| contacto_telefono | text | nullable |
+| domicilio_fiscal | text | nullable |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `historial_cambio`
+
+Auditoría append-only. No se actualiza ni se borra.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| entidad | text | nombre de la tabla afectada, ej. `proyecto_presupuesto` |
+| entidad_id | uuid | id del registro afectado |
+| accion | enum | `crear`, `actualizar`, `eliminar` |
+| usuario_id | uuid | FK → usuario, autor del cambio |
+| diff_json | json | snapshot de campos cambiados (antes/después) |
+| created_at | timestamp | |
+
+### `comentario`
+
+Polimórfico, estilo colaboración Notion/Linear sobre cualquier entidad.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| entidad | text | ej. `proyecto_presupuesto`, `insumo`, `estimacion` |
+| entidad_id | uuid | id del registro comentado |
+| usuario_id | uuid | FK → usuario, autor (equivalente a `created_by`) |
+| texto | text | |
+| resuelto | bool | default false |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 2. Catálogos generales
+
+### `unidad_medida`
+
+Catálogo maestro de unidades, con su clave SAT correspondiente para eventual
+conciliación con CFDI de proveedores (catálogo `c_ClaveUnidad` del SAT).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| simbolo | text | ej. `M2`, `M3`, `PZA`, `KG`, `JOR` (jornal) |
+| simbolo_impresion | text | símbolo a usar en documentos impresos — por defecto igual a `simbolo`, editable independientemente |
+| clave_sat | text | nullable — clave del catálogo SAT c_ClaveUnidad |
+| descripcion | text | ej. "Metro cuadrado" |
+| tipo_magnitud | enum | `longitud`, `area`, `volumen`, `masa`, `pieza`, `tiempo`, `otro` |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `moneda`
+
+Catálogo global de monedas (ISO 4217), para proyectos u organizaciones que
+operan con moneda distinta al peso mexicano (ej. presupuestos en dólares
+para insumos importados).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| codigo | text | código ISO 4217, ej. `MXN`, `USD`, `EUR` — único |
+| nombre | text | ej. "Peso mexicano" |
+| simbolo | text | ej. `$`, `US$` |
+| decimales | int | número de decimales de la moneda, default 2 |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `region`
+
+Zonificación geográfica para ajustar precios de bancos de referencia — el
+costo de insumos en México varía fuerte entre zona metropolitana, frontera
+norte y sureste.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| nombre | text | ej. "Zona Metropolitana CDMX", "Frontera Norte", "Sureste" |
+| estado | text | entidad federativa |
+| factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `familia_insumo`
+
+Clasificación jerárquica de insumos (ej. "Cementos y concretos" → "Concreto
+premezclado").
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| parent_id | uuid | FK → familia_insumo, nullable |
+| nombre | text | |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 3. Catálogo de insumos y precios
+
+### `proveedor`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| razon_social | text | |
+| rfc | text | |
+| contacto | text | nullable |
+| calificacion | decimal | nullable — rating interno de confiabilidad, 0–5 |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `insumo`
+
+Catálogo maestro a nivel organización — se reutiliza entre proyectos.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| clave | text | única dentro de la organización |
+| tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` |
+| descripcion | text | |
+| unidad_id | uuid | FK → unidad_medida |
+| familia_id | uuid | FK → familia_insumo, nullable |
+| sub_familia_id | uuid | FK → familia_insumo, nullable — debe ser hijo (`parent_id`) de `familia_id` |
+| tags | json | nullable — lista de pares llave/valor libres, definidos por el usuario (ej. `{"norma": "NMX-C-155", "obra_tipo": "hidraulica"}`), sin esquema fijo — no participa en ningún cálculo, solo filtrado/búsqueda en catálogo |
+| activo | bool | default true |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+### Extensiones de `insumo`
+
+`insumo` es un pivote sin precio ni comportamiento propio — cada fila
+adquiere su función real mediante **exactamente una** tabla de extensión
+1:1 (`insumo_id` como PK/FK), elegida según `insumo.tipo` y, dentro de
+`mano_obra` y `equipo_herramienta`, según la naturaleza específica del
+insumo:
+
+| `insumo.tipo` | Extensión posible | Cuándo aplica |
+|---|---|---|
+| `material` | `material` (+ `flete` opcional) | siempre |
+| `mano_obra` | `salario` | trabajador individual/atómico |
+| `mano_obra` | `cuadrilla` | equipo de trabajo compuesto por varios integrantes |
+| `equipo_herramienta` | `equipo_costo_horario` | equipo propio, costo calculado por depreciación/consumo |
+| `equipo_herramienta` | `herramienta` | herramienta mayor/con motor, precio propio simple, sin cálculo de depreciación |
+| `equipo_herramienta` | `equipo_rentado` | equipo de terceros, tarifa de renta |
+| `basico_auxiliar` | `basico_auxiliar` | material compuesto, mezcla o sistema con matriz propia recursiva |
+
+
+### `material`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = material`. Sin columnas de
+auditoría propias — comparte el ciclo de vida de su `insumo` (mismo
+`insumo_id`), cuyo `created_at`/`updated_at`/`created_by`/`updated_by` ya
+cubren la fila completa.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| proveedor_id | uuid | FK → proveedor, nullable |
+| merma_porcentaje | integer | default 0 — % de merma típico, 0 a 100 |
+| marca | text | nullable |
+
+### `precio_material`
+
+Historial de precios — nunca se sobrescribe un precio, se agrega un nuevo
+registro con su vigencia. **Acotado exclusivamente a `material`** — es la
+única extensión cuyo precio se historiza con vigencias.
+
+`region_id` sí es **nullable** — el precio de un material no siempre se
+cotiza a nivel regional, así que la llave admite ambos grados de
+especificidad en vez de forzar capturar una fila por región. El precio
+vigente para un material en un proyecto se resuelve con prioridad
+descendente:
+
+1. `(material, region_id = región del proyecto)` — precio regional específico.
+2. `(material, region_id = NULL)` — nacional por defecto, fallback final.
+
+`moneda` es parte de esa misma llave de vigencia: `(insumo_id, region_id,
+moneda)`. Un material puede tener, al mismo tiempo, un precio vigente en MXN
+y otro en USD para la misma región — son vigencias independientes, y
+registrar uno nuevo solo cierra el anterior que comparta exactamente su
+`region_id` **y** su `moneda`. La UI lo trata como "qué se está viendo y
+configurando": un combo de moneda filtra tanto la lista de vigentes como el
+histórico, y decide en cuál moneda se registra el precio nuevo.
+
+Nota de implementación: `NULL` no cuenta como igual a `NULL` en una
+restricción `UNIQUE` estándar, así que la unicidad de "un solo vigente por
+región+moneda" (incluyendo cuando `region_id IS NULL`) debe reforzarse con
+un índice único parcial o a nivel de aplicación, no queda garantizada solo
+por declarar la llave.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| insumo_id | uuid | FK → material (insumo_id) |
+| region_id | uuid | FK → region, nullable — ver prioridad de resolución arriba |
+| moneda | text | default `MXN` |
+| precio | decimal | |
+| fecha_vigencia_desde | date | |
+| fecha_vigencia_hasta | date | nullable — null = vigente |
+| created_at / updated_at / created_by / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar el siguiente precio |
+
+### `flete`
+
+**Catálogo, sin precio propio** — orígenes de transporte (planta, cantera,
+almacén) a nivel organización, reutilizable entre materiales distintos que
+se abastecen del mismo lugar. No calcula ni guarda costo: el costo de flete
+ya viene integrado en `precio_material.precio` (el precio "puesto en obra"
+incluye lo que costó traerlo); `flete` solo documenta **de dónde** vino ese
+precio, para trazabilidad/filtrado.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| nombre | text | ej. "Planta X", "Cantera Y" |
+| distancia_km | decimal | nullable |
+| notas | text | nullable |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `categoria_fsr`
+
+Catálogo de categorías de Factor de Salario Real (ej. "Personal de campo",
+"Personal de oficina", "Operadores de maquinaria"), para agrupar/filtrar
+los distintos `factor_salario_real` de una organización.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| nombre | text | |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `factor_salario_real`
+
+Factor de Salario Real (FSR): integra al salario base diario las
+prestaciones y cargas patronales obligatorias en México, para obtener el
+costo real de la mano de obra — nunca se usa el salario nominal directo en
+un APU. Reutilizable entre varios insumos de mano de obra (ej. un mismo FSR
+para todo el personal de campo con la misma configuración).
+
+A diferencia de un primer bosquejo con columnas de porcentaje sueltas
+(prestaciones, IMSS patronal, INFONAVIT, ISN...), el modelo de cálculo — qué
+variables existen y cómo se combinan (`VariableCalculo[]`) — vive en
+`modelo_calculo_json`, editable con el ícono "Editar modelo de cálculo" (ver
+`apps/desktop/src/lib/formulaEngine.ts` y `modeloCalculo.ts` para el
+intérprete; `data/modelo-calculo-fasar.json` es el modelo estándar con el
+que se siembra un renglón nuevo). `parametros_json` trae, por separado, los
+valores concretos de las variables de entrada que ese modelo declara para
+este renglón (UMA, salario mínimo, tasas IMSS, días LFT, tabla de
+cesantía-vejez...).
+
+https://www.youtube.com/watch?v=YFUh-bf7nHQ
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| nombre | text | ej. "FSR construcción — riesgo clase V, 2026" |
+| region_id | uuid | FK → region, nullable — `null` = nacional (sin región específica) |
+| modelo_calculo_json | json | `VariableCalculo[]` — CÓMO se calcula (variables y fórmulas) |
+| parametros_json | json | valores concretos de las variables de entrada que declara `modelo_calculo_json` — QUÉ se captura |
+| vigencia_desde | date | |
+| vigencia_hasta | date | nullable |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `salario`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.
+
+Representa un **trabajador atómico** (no una cuadrilla). Separa el salario que se negocia
+(`salario_base_diario`) del costo real que efectivamente carga el concepto
+(`salario_real_diario`). 
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| organizacion_id | uuid | FK → organizacion |
+| salario_base_diario | decimal | salario nominal pactado — campo simple, sin historial de vigencias |
+| factor_salario_real_id | uuid | FK → factor_salario_real |
+| factor_salario_real | decimal | factor_salario_real calculado |
+| salario_real_diario | decimal | cache = salario_base_diario × factor_salario_real |
+
+Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+### `cuadrilla`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.
+
+Representa un **equipo de trabajo compuesto** (ej. "Cuadrilla de albañilería tipo A" = 1
+oficial + 2 ayudantes; o una cuadrilla de topografía = topógrafo + cadenero
++ equipo de medición).
+El calculo de un cuadrilla es complejo, pasos de calculo:
+- Primero se calcula sub_total_mano_obra, este es necesario para poder calcular los elementos tipo = equipo_herramienta 
+  (Si cuadrilla_detalle = equipo_herramienta cuadrilla_detalle.costo = sub_total_mano_obra)
+- Segundo se calcula sub_total_herramienta.
+- Finalmente se calcula el costo_total = sub_total_mano_obra + sub_total_herramienta
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| sub_total_mano_obra | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = salario |
+| sub_total_herramienta | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = equipo_herramienta |
+| costo_total | decimal | cache = sub_total_mano_obra + sub_total_herramienta (= Σ cuadrilla_detalle.importe) |
+
+Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+
+### `cuadrilla_detalle`
+
+Composición **plana, no recursiva** 
+Mantiene las cuadrillas simples y reflejando la realidad
+de campo: un equipo de trabajo es gente y equipo, nunca "un equipo que contiene otro equipo".
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| cuadrilla_insumo_id | uuid | FK → cuadrilla (insumo_id) |
+| detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `salario`) o `equipo_herramienta` |
+| tipo | enum | `salario`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla.sub_total_mano_obra` de `cuadrilla.sub_total_herramienta` sin join |
+| orden | int | orden de visualización dentro de la cuadrilla |
+| cantidad | decimal | Si tipo = equipo_herramienta, se espera un porcentaje |
+| costo | decimal | referenciado: Si tipo = salario costo = salario.salario_real_diario, Si tipo = equipo_herramienta costo = cuadrilla.sub_total_mano_obra |
+| importe | decimal | cantidad * costo |
+
+| created_at / updated_at / created_by / updated_by | | |
+
+### `herramienta`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta` 
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| porcentaje_mano_obra | int | porcentaje por default |
+
+Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+### `equipo_costo_horario`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta`
+
+Equipo **propio**. Descompone el costo por hora en cargos fijos (existen
+aunque la máquina no trabaje, calculados sobre el valor de la máquina) y
+cargos variables (consumos y operación, que dependen del uso) — metodología
+estándar en México (SCT, CMIC): nunca se toma solo la depreciación lineal
+como costo horario.
+
+Los cargos fijos se calculan sobre `valor_maquina` (el costo de adquisición
+**sin** llantas ni piezas especiales, que se deprecian aparte por su propio
+desgaste — las llantas de hecho se cargan como consumo, ver
+`equipo_costo_horario_detalle`), no sobre el costo total de la máquina.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| costo_maquina | decimal | precio de la máquina nueva, todo incluido (Cm) |
+| valor_llantas | decimal | default 0 — valor de las llantas incluido en `costo_maquina` (Pn), se resta porque se deprecia por desgaste, no por tiempo |
+| valor_piezas_especiales | decimal | default 0 — valor de piezas especiales incluido en `costo_maquina` (Pa) |
+| valor_maquina | decimal | cache = costo_maquina − valor_llantas − valor_piezas_especiales (Vm) |
+| valor_rescate_porcentaje | decimal | % de valor de rescate al final de su vida económica (r) |
+| valor_rescate | decimal | cache = valor_maquina × valor_rescate_porcentaje / 100 (Vr) |
+| vida_economica_anios | decimal | vida económica estimada, en años |
+| horas_uso_anual | decimal | horas efectivas de uso al año (Hea), para prorratear cargos fijos |
+| vida_util_horas | decimal | cache = vida_economica_anios × horas_uso_anual (Ve) |
+| tasa_interes_anual_porcentaje | decimal | costo de capital/oportunidad de la inversión (i) |
+| tasa_seguros_anual_porcentaje | decimal | (s) |
+| mantenimiento_porcentaje | decimal | % de la depreciación que representa el cargo de mantenimiento (Ko) |
+| depreciacion_hora | decimal | cache = (valor_maquina − valor_rescate) / vida_util_horas (D) |
+| inversion_hora | decimal | cache = (valor_maquina + valor_rescate) × tasa_interes_anual_porcentaje/100 / (2 × horas_uso_anual) (Im) |
+| seguro_hora | decimal | cache = (valor_maquina + valor_rescate) × tasa_seguros_anual_porcentaje/100 / (2 × horas_uso_anual) (Sm) |
+| mantenimiento_hora | decimal | cache = mantenimiento_porcentaje/100 × depreciacion_hora (Mn) |
+| cargo_fijo_hora | decimal | cache = depreciacion_hora + inversion_hora + seguro_hora + mantenimiento_hora |
+| cargo_variable_hora | decimal | cache = Σ `equipo_costo_horario_detalle`.importe (consumo + operación) |
+| costo_horario_total | decimal | cache = cargo_fijo_hora + cargo_variable_hora |
+
+Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+### `equipo_costo_horario_detalle`
+
+Matriz de cargos variables (insumo, cantidad
+por hora, costo, importe), unificada en una sola tabla con `tipo` para
+distinguir **consumo** (diesel, aceites, llantas — insumos `material`) de
+**operación** (el operador, como `salario` o `cuadrilla`, con su cantidad en
+jornales u horas consumidos por hora de máquina).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| equipo_costo_horario_insumo_id | uuid | FK → equipo_costo_horario (insumo_id) |
+| detalle_insumo_id | uuid | FK → insumo — `material` si `tipo = consumo`; `mano_obra`/`cuadrilla` si `tipo = operacion` |
+| tipo | enum | `consumo`, `operacion` |
+| orden | int | orden de visualización |
+| cantidad | decimal | cantidad consumida (o jornales/horas de operador) por hora de máquina |
+| costo | decimal | precio/costo vigente del insumo referenciado |
+| importe | decimal | cache = cantidad × costo |
+| created_at / updated_at / created_by / updated_by | | |
+
+
+### `equipo_rentado`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta` y el
+equipo es de un **proveedor externo** — tarifa de renta en vez de cálculo de
+depreciación propia. La tarifa es un campo simple, sin historial de
+vigencias (igual que `salario`/`herramienta`).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| tarifa_hora | decimal | campo simple, sin historial de vigencias |
+| incluye_operador | bool | default false |
+| operador_insumo_id | uuid | FK → insumo, nullable — si el operador viene incluido en la renta pero se factura como insumo aparte |
+| tipo_propiedad | enum | `rentado`, `rentado_a_compra` — arrendamiento puro vs. arrendamiento con opción a compra |
+| procedencia | enum | `nacional`, `extranjero` |
+| marca | text | nullable |
+| modelo | text | nullable |
+| placas | text | nullable |
+| numero_serie | text | nullable |
+| pais | text | nullable — país de origen del equipo, relevante si `procedencia = extranjero` |
+| anio | int | nullable — año de fabricación |
+| ubicacion_actual | text | nullable |
+| uso_actual | text | nullable |
+| capacidad | text | nullable — ej. "7.00 m3", "13.00 toneladas" |
+| vida_util | text | nullable |
+| propietario | text | nullable — nombre del propietario legal del equipo, si difiere del proveedor que lo renta |
+
+Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+### `basico_auxiliar`
+
+Extensión 1:1 de `insumo` cuando `insumo.tipo = basico_auxiliar`.
+
+Material compuesto, mezcla o sistema con su propia matriz de insumos (ej.
+concreto premezclado, mortero, cimbra común, sistema de impermeabilización).
+A diferencia de `cuadrilla`, **sí permite composición recursiva** — un
+auxiliar puede tener como componente a otro auxiliar (ej. un "aplanado" que
+usa "mortero" como componente).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| insumo_id | uuid | PK, FK → insumo |
+| sub_total_material | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = material |
+| sub_total_mano_obra | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = mano_obra |
+| sub_total_equipo | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = equipo_herramienta |
+| sub_total_basico_auxiliar | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = basico_auxiliar |
+| costo_total | decimal | cache = sub_total_material + sub_total_mano_obra + sub_total_equipo + sub_total_basico_auxiliar (= Σ basico_auxiliar_componente.importe) |
+
+Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+### `basico_auxiliar_componente`
+
+Composición **recursiva** de un `basico_auxiliar` — a diferencia de
+`cuadrilla_detalle`, aquí sí se permite que un componente sea otro
+`basico_auxiliar` (o una `cuadrilla`), ya que un material compuesto puede
+usar otro material compuesto como parte de su receta (ej. un "aplanado" que
+usa "mortero" como componente, y "mortero" a su vez es otro auxiliar).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| basico_auxiliar_insumo_id | uuid | FK → basico_auxiliar (insumo_id) |
+| componente_insumo_id | uuid | FK → insumo — cualquier tipo, incluyendo otro `basico_auxiliar` o `cuadrilla` (permite recursión) |
+| tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — denormalizado desde `insumo.tipo` del componente, evita un join para saber qué naturaleza tiene la línea |
+| cantidad | decimal | rendimiento del componente por unidad del auxiliar |
+| importe | decimal | cache = cantidad × precio/costo vigente del componente |
+| created_at / updated_at / created_by / updated_by | | |
+
+
+### `concepto`
+
+**Catálogo maestro** de partidas de obra, a nivel organización — igual que
+`insumo`, se define una vez y se reutiliza entre proyectos (ej. "Excavación a
+máquina en material tipo II" con su clave y unidad estándar del despacho o
+banco de precios de origen). No lleva cantidad ni pertenece a un proyecto:
+eso es responsabilidad de `proyecto_presupuesto`.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| clave | text | única dentro de la organización — clave de catálogo (interna o de banco de precios de origen) |
+| descripcion | text | |
+| unidad_id | uuid | FK → unidad_medida — unidad por defecto |
+| sub_total_material | decimal | cache = Σ concepto_componente.importe donde concepto_componente.tipo = material |
+| sub_total_mano_obra | decimal | cache = Σ concepto_componente.importe donde concepto_componente.tipo = mano_obra |
+| sub_total_equipo | decimal | cache = Σ concepto_componente.importe donde concepto_componente.tipo = equipo_herramienta |
+| sub_total_basico_auxiliar | decimal | cache = Σ concepto_componente.importe donde concepto_componente.tipo = basico_auxiliar |
+| costo_total | decimal | cache = sub_total_material + sub_total_mano_obra + sub_total_equipo + sub_total_basico_auxiliar (= Σ concepto_componente.importe) — costo de catálogo, orientativo; no es el costo real de ningún proyecto |
+| activo | bool | default true |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `concepto_componente`
+
+**Matriz de insumos a nivel catálogo** — mismo patrón que
+`basico_auxiliar_componente` (un renglón por insumo con su rendimiento y
+costo), pero cuelga de `concepto` en lugar de un `insumo`: un concepto **no
+es un insumo**, no tiene `insumo_id` ni puede usarse como componente de otro
+concepto, otra cuadrilla o otro básico/auxiliar. Es la única matriz de
+insumos de un concepto — su `costo_total` es lo que se copia a
+`proyecto_presupuesto.precio_unitario` al instanciar el concepto en un nodo
+`partida`; el proyecto no tiene su propia matriz de insumos, solo puede
+editar el `precio_unitario` copiado.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| concepto_id | uuid | FK → concepto |
+| insumo_id | uuid | FK → insumo  |
+| tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — denormalizado de `insumo.tipo` |
+| orden | int | |
+| cantidad | decimal | cantidad de insumo por unidad de concepto |
+| precio_unitario | decimal | precio/costo vigente del insumo al momento de consultar — no historizado, se recalcula (a diferencia de `proyecto_presupuesto.precio_unitario`, que sí se congela por proyecto una vez copiado) |
+| importe | decimal | cache = cantidad × precio_unitario |
+
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 4. Estructura del presupuesto y APU
+
+### `proyecto_presupuesto`
+
+**Árbol del presupuesto de un proyecto** — estructura de profundidad libre
+(no ceñida a los 3 niveles fijos capítulo/subcapítulo/partida de un
+clasificador normado, aunque puede modelarlos si se necesita). Cada nodo es
+o bien un **agrupador** (`tipo = grupo`, ej. capítulo/subcapítulo/frente de
+obra, sin `concepto_id`) o una **instancia de un concepto de catálogo**
+(`tipo = partida`, hoja del árbol, con `concepto_id` obligatorio). Un mismo
+`concepto` de catálogo puede instanciarse en muchos nodos/proyectos con
+cantidad y precio distintos (los precios de insumo varían por
+región/proyecto aunque el concepto de catálogo sea el mismo).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| parent_id | uuid | FK → proyecto_presupuesto, nullable — nulo en los nodos raíz |
+| tipo | enum | `grupo`, `partida` |
+| orden | int | orden de presentación entre hermanos |
+| clave | text | clave de presupuesto del nodo (ej. "1", "1.03") — única dentro del proyecto |
+| nombre | text | nullable — solo si `tipo = grupo`; en `partida` la descripción viene de `concepto` (u `descripcion_override`) |
+| concepto_id | uuid | FK → concepto, nullable — obligatorio si `tipo = partida`, debe ser nulo si `tipo = grupo` |
+| descripcion_override | text | nullable — solo si `tipo = partida` y el proyecto necesita ajustar la redacción sin tocar el catálogo |
+| unidad_id | uuid | FK → unidad_medida, nullable — solo si `tipo = partida`, copiada de `concepto.unidad_id` al agregarlo, editable |
+| cantidad | decimal | nullable — solo si `tipo = partida`, cantidad contratada de este concepto en el proyecto |
+| precio_unitario | decimal | nullable — solo si `tipo = partida`, copiado de `concepto.costo_total` al instanciar; editable si el proyecto necesita ajustarlo sin tocar el catálogo — no hay matriz de insumos a nivel proyecto, el detalle vive en `concepto_componente` |
+| importe | decimal | nullable — solo si `tipo = partida`, cache = cantidad × precio_unitario |
+| created_at / updated_at / created_by / updated_by | | |
+| importe | decimal | cache = rendimiento × precio_unitario |
+| importe_herramienta_menor | decimal | cache, solo si el insumo referenciado es `mano_obra`/`cuadrilla` = importe × `porcentaje_herramienta_menor` del insumo — línea visible aparte, no requiere insumo de herramienta en catálogo |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `numero_generador_hoja`
+
+Agrupador de la hoja de números generadores por concepto instanciado en el
+proyecto — permite separar la cuantificación por eje, nivel o frente de
+obra.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_presupuesto_id | uuid | FK → proyecto_presupuesto — debe apuntar a un nodo con `tipo = partida` |
+| nombre | text | ej. "Eje A-B, Nivel 1" |
+| orden | int | |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `numero_generador_renglon`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| hoja_id | uuid | FK → numero_generador_hoja |
+| descripcion | text | |
+| cantidad | decimal | default 1 |
+| largo / ancho / alto | decimal | nullable — dimensión no usada equivale a factor 1 |
+| subtotal | decimal | cache = cantidad × largo × ancho × alto |
+| orden | int | |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 5. Parámetros financieros
+
+### `indirecto_item`
+
+Desglose itemizado de los indirectos — la práctica mexicana no captura un
+porcentaje a ojo, sino que arma un "análisis de indirectos" con cada renglón
+de costo de campo y de oficina central, prorrateado sobre la duración de la
+obra. Es la fuente de donde se calculan los porcentajes cacheados en
+`parametros_indirectos`.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| categoria | enum | `administracion_campo` (residente, superintendente, laboratorista, veladores, oficina de campo...) o `administracion_central` (oficinas centrales, depreciación de mobiliario, capacitación, seguros corporativos...) |
+| concepto | text | ej. "Sueldo de residente de obra", "Renta de campamento" |
+| tipo_costo | enum | `sueldo_personal`, `renta_arrendamiento`, `servicios`, `papeleria_comunicaciones`, `depreciacion_mobiliario`, `seguros_fianzas`, `capacitacion`, `otro` |
+| insumo_relacionado_id | uuid | FK → insumo, nullable — si el renglón es personal ya dado de alta como insumo `mano_obra` (ej. residente de obra) |
+| monto_mensual | decimal | |
+| cantidad_meses | decimal | duración estimada de la obra usada para prorratear |
+| importe_total | decimal | cache = monto_mensual × cantidad_meses |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `parametros_indirectos`
+
+Uno por proyecto. Los porcentajes de administración son un **caché
+calculado** desde `indirecto_item` (Σ importe_total de la categoría ÷ costo
+directo total del presupuesto × 100) — se guardan aquí porque la cascada de
+cálculo del presupuesto (costo directo → indirectos → financiamiento →
+utilidad → cargos adicionales) los consume como porcentaje, no como lista de
+renglones. También admiten captura manual directa cuando no se itemiza.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto, único |
+| porcentaje_administracion_campo | decimal | default 0 — cache desde indirecto_item o captura manual |
+| porcentaje_administracion_central | decimal | default 0 — cache desde indirecto_item o captura manual |
+| porcentaje_financiamiento | decimal | default 0 |
+| tasa_referencia_financiamiento | decimal | nullable — ej. TIIE usada para calcular financiamiento |
+| porcentaje_utilidad | decimal | default 0 |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `cargo_adicional`
+
+Catálogo de cargos normativos aplicables sobre el costo directo o
+directo+indirectos (ej. "5 al millar" de vigilancia SFP en obra pública,
+derechos locales de supervisión). Modelado como catálogo, no como campo fijo,
+porque varía por dependencia y contrato.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| nombre | text | |
+| porcentaje | decimal | |
+| base_calculo | enum | `costo_directo`, `costo_directo_mas_indirectos` |
+| obligatorio | bool | true si es requisito de ley (ej. obra pública federal) |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 6. Ejecución y pagos (obra pública)
+
+Específico del mecanismo de pago de obra pública mexicana: avances
+periódicos facturados vía "estimaciones", con anticipo amortizable y fianzas
+obligatorias (Art. 48 LOPSRM).
+
+### `estimacion`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| numero | int | consecutivo |
+| periodo_inicio / periodo_fin | date | |
+| fecha_presentacion | date | nullable |
+| estatus | enum | `borrador`, `presentada`, `autorizada`, `pagada` |
+| monto_bruto | decimal | cache = Σ estimacion_concepto.importe |
+| amortizacion_anticipo | decimal | cache |
+| retencion_garantia | decimal | cache |
+| monto_neto | decimal | cache = bruto − amortización − retenciones |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `estimacion_concepto`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| estimacion_id | uuid | FK → estimacion |
+| proyecto_presupuesto_id | uuid | FK → proyecto_presupuesto — debe apuntar a un nodo con `tipo = partida` |
+| cantidad_periodo | decimal | avance de este periodo |
+| cantidad_acumulada | decimal | avance acumulado a la fecha, no puede exceder `proyecto_presupuesto.cantidad` |
+| importe | decimal | cache = cantidad_periodo × precio unitario congelado del concepto |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `anticipo`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| monto | decimal | |
+| porcentaje_del_contrato | decimal | típicamente hasta 30% en obra pública federal |
+| fecha_entrega | date | |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `garantia_fianza`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| proyecto_id | uuid | FK → proyecto |
+| tipo | enum | `anticipo`, `cumplimiento`, `vicios_ocultos`, `calidad` |
+| afianzadora | text | |
+| numero_poliza | text | |
+| monto | decimal | |
+| fecha_emision | date | |
+| fecha_vigencia | date | |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 7. Bancos de precios de referencia
+
+### `banco_precios`
+
+Catálogos externos importables — nunca referenciados en vivo desde un
+concepto.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| fuente | enum | `indaabin`, `cmic`, `cfe`, `pemex`, `sct`, `estatal`, `otro` |
+| nombre | text | |
+| version | text | |
+| fecha_publicacion | date | |
+| licencia | text | nullable |
+| region_id | uuid | FK → region, nullable — algunos bancos son regionales |
+| created_at / updated_at / created_by / updated_by | | |
+
+### `banco_precios_item`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| banco_precios_id | uuid | FK → banco_precios |
+| clave | text | |
+| tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — alineado a `insumo.tipo` |
+| descripcion | text | |
+| unidad_id | uuid | FK → unidad_medida |
+| precio | decimal | |
+| matriz_json | json | nullable — si el banco trae análisis detallado de insumos, no solo precio unitario |
+| created_at / updated_at / created_by / updated_by | | |
+
+---
+
+## 8. Adjuntos (polimórfico)
+
+### `adjunto`
+
+Archivos ligados a cualquier entidad — planos, fotos de campo que sustentan
+un renglón de números generadores, evidencia fotográfica de una estimación,
+cotizaciones en PDF de un proveedor.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| entidad | text | ej. `proyecto_presupuesto`, `numero_generador_renglon`, `estimacion` |
+| entidad_id | uuid | id del registro al que se adjunta |
+| nombre_archivo | text | |
+| ruta_o_url | text | |
+| tipo_mime | text | |
+| tamano_bytes | int | |
+| created_at / updated_at / created_by / updated_by | | `created_by` = quién subió el archivo; `updated_by` solo cambia si se reemplaza el archivo |
+
+---
+
+## Proyecto (entidad raíz — referenciada por todos los módulos)
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| cliente_id | uuid | FK → cliente, nullable |
+| region_id | uuid | FK → region, nullable |
+| folio | text | |
+| nombre | text | |
+| descripcion | text | nullable |
+| tipo_obra | enum | `publica`, `privada` |
+| numero_contrato | text | nullable |
+| fecha_contrato | date | nullable |
+| dependencia | text | nullable — ej. "SCT", "CFE", gobierno estatal, solo si `tipo_obra = publica` |
+| ubicacion | text | nullable |
+| moneda | text | default `MXN` |
+| fecha_inicio | date | nullable |
+| fecha_termino_contractual | date | nullable |
+| estatus | enum | `borrador`, `en_proceso`, `cerrado`, `cancelado` |
+| modo | enum | `local`, `compartido` — local = archivo aislado, compartido = sincronizado entre colaboradores |
+| created_at / updated_at / created_by / updated_by | | |

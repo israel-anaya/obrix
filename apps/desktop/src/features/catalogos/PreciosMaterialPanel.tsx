@@ -1,0 +1,371 @@
+import { useEffect, useMemo, useState } from "react";
+import { Plus, X } from "lucide-react";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
+import { createPrecioMaterial, listMonedas, listPreciosMaterial, listRegiones, listUsuarios } from "@/lib/tauri";
+import type { Moneda, PrecioMaterial, Region } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+const NACIONAL = "Nacional";
+
+function formatearPrecio(p: PrecioMaterial): string {
+  return `$${p.precio} ${p.moneda}`;
+}
+
+/** Moneda default cuando el catálogo todavía no cargó o no trae "MXN". */
+const MONEDA_FALLBACK = "MXN";
+
+function hoy(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** "YYYY-MM-DD" (formato de la BD) -> "dd/mm/yy" para mostrar. */
+function formatearFecha(fecha: string): string {
+  const [anio, mes, dia] = fecha.split("-");
+  if (!anio || !mes || !dia) return fecha;
+  return `${dia}/${mes}/${anio.slice(2)}`;
+}
+
+/**
+ * Panel: precio vigente + formulario para registrar uno nuevo arriba,
+ * historial completo abajo. Se sincroniza con `materialId` — pensado para
+ * vivir junto al grid de Materiales, mostrando los precios del material
+ * seleccionado en la fila. Registrar un precio nuevo cierra automáticamente
+ * el anterior (lo resuelve el backend) y avisa al padre vía
+ * `onPrecioRegistrado` para que refresque la columna "Costo actual" del grid.
+ */
+export function PreciosMaterialPanel({
+  materialId,
+  materialClave,
+  materialDescripcion,
+  onCerrar,
+  onPrecioRegistrado,
+}: {
+  materialId: string | null;
+  materialClave?: string;
+  materialDescripcion?: string;
+  onCerrar: () => void;
+  onPrecioRegistrado?: () => void;
+}) {
+  const { organizaciones, organizacionActivaId } = useOrganizacionActiva();
+  const organizacionActiva = organizaciones.find((o) => o.id === organizacionActivaId) ?? null;
+
+  const [precios, setPrecios] = useState<PrecioMaterial[]>([]);
+  const [regiones, setRegiones] = useState<Region[]>([]);
+  const [monedas, setMonedas] = useState<Moneda[]>([]);
+  const [monedaSeleccionada, setMonedaSeleccionada] = useState(MONEDA_FALLBACK);
+  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [precioNuevo, setPrecioNuevo] = useState("");
+  const [fechaNueva, setFechaNueva] = useState(hoy());
+  const [regionNueva, setRegionNueva] = useState(""); // "" = nacional (sin región), el default
+  const [guardando, setGuardando] = useState(false);
+
+  const cargarPrecios = (id: string) => {
+    setCargando(true);
+    setError(null);
+    return listPreciosMaterial(id)
+      .then(setPrecios)
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
+  };
+
+  useEffect(() => {
+    listRegiones().then(setRegiones).catch(() => {});
+    listUsuarios().then((usuarios) => {
+      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
+    });
+    listMonedas().then(setMonedas).catch(() => {});
+  }, []);
+
+  // Separado del `useEffect` de arriba: `organizacionActiva` normalmente
+  // todavía es `null` en el primer render (el contexto la carga async), así
+  // que fijar el default una sola vez al montar lo dejaba en el fallback casi
+  // siempre. Este efecto reacciona cuando monedas/organización realmente
+  // están listas — y también si la organización activa cambia.
+  const monedaDefaultOrgId = organizacionActiva?.moneda_default_id ?? null;
+  useEffect(() => {
+    if (monedas.length === 0) return;
+    // El combo arranca en la moneda default de la organización activa si
+    // está definida; si no, en MXN si existe en el catálogo; si no, en la
+    // primera moneda disponible — el usuario puede cambiarlo después.
+    const monedaOrg = monedaDefaultOrgId ? monedas.find((m) => m.id === monedaDefaultOrgId)?.codigo : undefined;
+    if (monedaOrg) setMonedaSeleccionada(monedaOrg);
+    else if (monedas.some((m) => m.codigo === MONEDA_FALLBACK)) setMonedaSeleccionada(MONEDA_FALLBACK);
+    else if (monedas[0]) setMonedaSeleccionada(monedas[0].codigo);
+  }, [monedas, monedaDefaultOrgId]);
+
+  // Igual que en VistaMaestroDetalle: se espera un momento a que la
+  // selección se quede quieta antes de cargar, para que navegar con
+  // flechas por el grid no dispare una consulta por cada fila de paso.
+  useEffect(() => {
+    setFormAbierto(false);
+    if (!materialId) {
+      setPrecios([]);
+      setError(null);
+      return;
+    }
+    let cancelado = false;
+    setCargando(true);
+    setError(null);
+    const espera = setTimeout(() => {
+      listPreciosMaterial(materialId)
+        .then((r) => {
+          if (!cancelado) setPrecios(r);
+        })
+        .catch((e) => {
+          if (!cancelado) setError(String(e));
+        })
+        .finally(() => {
+          if (!cancelado) setCargando(false);
+        });
+    }, 200);
+    return () => {
+      cancelado = true;
+      clearTimeout(espera);
+    };
+  }, [materialId]);
+
+  const registrarPrecio = async () => {
+    if (!materialId) return;
+    const numero = Number(precioNuevo);
+    if (!Number.isFinite(numero) || numero <= 0) {
+      setError("El precio debe ser un número mayor a 0.");
+      return;
+    }
+    if (!fechaNueva) {
+      setError("La fecha de vigencia es requerida.");
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    try {
+      await createPrecioMaterial(materialId, {
+        precio: precioNuevo.trim(),
+        moneda: monedaSeleccionada,
+        region_id: regionNueva || null,
+        fecha_vigencia_desde: fechaNueva,
+      });
+      await cargarPrecios(materialId);
+      onPrecioRegistrado?.();
+      setFormAbierto(false);
+      setPrecioNuevo("");
+      setFechaNueva(hoy());
+      setRegionNueva("");
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
+
+  // El combo de moneda filtra tanto lo que se ve (vigentes + histórico) como
+  // lo que se configura (el form de "Nuevo precio") — un material puede
+  // haber tenido precios registrados en más de una moneda a lo largo del tiempo.
+  const preciosMoneda = useMemo(() => precios.filter((p) => p.moneda === monedaSeleccionada), [precios, monedaSeleccionada]);
+
+  // Puede haber un vigente por región a la vez (más el nacional, sin región,
+  // que es el default cuando un proyecto no tiene uno propio) — no es un
+  // solo valor, es una lista.
+  const vigentes = useMemo(
+    () =>
+      preciosMoneda
+        .filter((p) => p.fecha_vigencia_hasta === null)
+        .sort((a, b) => {
+          if ((a.region_id === null) !== (b.region_id === null)) return a.region_id === null ? -1 : 1;
+          const nombreA = a.region_id ? (nombrePorRegionId[a.region_id] ?? "") : "";
+          const nombreB = b.region_id ? (nombrePorRegionId[b.region_id] ?? "") : "";
+          return nombreA.localeCompare(nombreB);
+        }),
+    [preciosMoneda, nombrePorRegionId],
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border px-3 py-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="truncate text-xs font-semibold text-muted-foreground">
+            Precios{materialClave ? ` — ${materialClave}` : ""}
+          </h3>
+          <button
+            type="button"
+            title="Cerrar"
+            onClick={onCerrar}
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        {materialDescripcion && <p className="mt-0.5 text-xs text-foreground">{materialDescripcion}</p>}
+      </div>
+
+      {!materialId ? (
+        <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un material para ver sus precios.</p>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
+
+          <section className="border-b border-border p-3">
+            <label className="mb-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+              Moneda
+              <select
+                value={monedaSeleccionada}
+                onChange={(e) => setMonedaSeleccionada(e.target.value)}
+                className="rounded border border-border bg-background px-1.5 py-1 text-xs text-foreground"
+              >
+                {monedas.length === 0 && <option value={MONEDA_FALLBACK}>{MONEDA_FALLBACK}</option>}
+                {monedas.map((m) => (
+                  <option key={m.id} value={m.codigo}>
+                    {m.codigo} — {m.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Precio vigente
+              </h4>
+              {!formAbierto && (
+                <button
+                  type="button"
+                  title="Registrar un precio nuevo"
+                  onClick={() => setFormAbierto(true)}
+                  className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Plus size={13} />
+                  <span className="text-[11px]">Nuevo precio</span>
+                </button>
+              )}
+            </div>
+
+            {formAbierto && (
+              <div className="mb-3 flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-2">
+                <div className="flex gap-2">
+                  <label className="flex-1 text-[11px] text-muted-foreground">
+                    Precio ({monedaSeleccionada})
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      autoFocus
+                      value={precioNuevo}
+                      onChange={(e) => setPrecioNuevo(e.target.value)}
+                      className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                    />
+                  </label>
+                  <label className="flex-1 text-[11px] text-muted-foreground">
+                    Vigente desde
+                    <input
+                      type="date"
+                      value={fechaNueva}
+                      onChange={(e) => setFechaNueva(e.target.value)}
+                      className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                    />
+                  </label>
+                </div>
+                <label className="text-[11px] text-muted-foreground">
+                  Región
+                  <select
+                    value={regionNueva}
+                    onChange={(e) => setRegionNueva(e.target.value)}
+                    className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                  >
+                    <option value="">{NACIONAL} (default)</option>
+                    {regiones.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormAbierto(false);
+                      setPrecioNuevo("");
+                      setRegionNueva("");
+                      setError(null);
+                    }}
+                    className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void registrarPrecio()}
+                    disabled={guardando}
+                    className={cn(
+                      "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
+                      guardando && "opacity-50",
+                    )}
+                  >
+                    {guardando ? "Guardando…" : "Guardar"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {cargando && precios.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Cargando…</p>
+            ) : vigentes.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {vigentes.map((p) => (
+                  <li key={p.id} className="rounded-md border border-border p-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
+                      </span>
+                      <span className="font-medium">{formatearPrecio(p)}</span>
+                    </div>
+                    <div className="mt-0.5 text-muted-foreground">Desde {formatearFecha(p.fecha_vigencia_desde)}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin precio registrado.</p>
+            )}
+          </section>
+
+          <section className="min-h-0 flex-1 overflow-auto p-3">
+            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Histórico de precios ({monedaSeleccionada})
+            </h4>
+            {preciosMoneda.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin historial.</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="py-1 pr-2 font-medium">Región</th>
+                    <th className="py-1 pr-2 text-right font-medium">Precio</th>
+                    <th className="py-1 pr-2 font-medium">Usuario</th>
+                    <th className="py-1 pr-2 text-right font-medium">Desde</th>
+                    <th className="py-1 text-right font-medium">Hasta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preciosMoneda.map((p) => (
+                    <tr key={p.id} className="border-b border-border/50 last:border-none">
+                      <td className="py-1 pr-2">{p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}</td>
+                      <td className="py-1 pr-2 text-right tabular-nums">${p.precio}</td>
+                      <td className="py-1 pr-2">{nombresPorUsuarioId[p.created_by] ?? p.created_by}</td>
+                      <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(p.fecha_vigencia_desde)}</td>
+                      <td className="py-1 text-right tabular-nums text-muted-foreground">
+                        {p.fecha_vigencia_hasta ? formatearFecha(p.fecha_vigencia_hasta) : "vigente"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}

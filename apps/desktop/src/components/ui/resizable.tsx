@@ -18,8 +18,18 @@ function ResizablePanelGroup({
   )
 }
 
-function ResizablePanel({ ...props }: ResizablePrimitive.PanelProps) {
-  return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />
+function ResizablePanel({ style, ...props }: ResizablePrimitive.PanelProps) {
+  // `Panel` aplica `overflow: "auto"` inline por defecto (gana sobre cualquier
+  // `overflow-hidden` en className), creando un scroll propio que compite con
+  // el de contenido que ya maneja el suyo (p. ej. ag-Grid) y corta la última
+  // fila — se sobreescribe a "hidden" salvo que el caller pida lo contrario.
+  return (
+    <ResizablePrimitive.Panel
+      data-slot="resizable-panel"
+      style={{ overflow: "hidden", ...style }}
+      {...props}
+    />
+  )
 }
 
 function ResizableHandle({
@@ -33,13 +43,14 @@ function ResizableHandle({
     <ResizablePrimitive.Separator
       data-slot="resizable-handle"
       className={cn(
-        "relative flex w-px items-center justify-center bg-border ring-offset-background after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none aria-[orientation=horizontal]:h-px aria-[orientation=horizontal]:w-full aria-[orientation=horizontal]:after:left-0 aria-[orientation=horizontal]:after:h-1 aria-[orientation=horizontal]:after:w-full aria-[orientation=horizontal]:after:translate-x-0 aria-[orientation=horizontal]:after:-translate-y-1/2 [&[aria-orientation=horizontal]>div]:rotate-90",
+        "group/handle relative flex w-1.5 shrink-0 cursor-col-resize items-center justify-center bg-transparent outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-hidden aria-[orientation=horizontal]:h-1.5 aria-[orientation=horizontal]:w-full aria-[orientation=horizontal]:cursor-row-resize",
         className
       )}
       {...props}
     >
+      <div className="pointer-events-none h-full w-0.5 bg-border group-hover/handle:bg-ring/60 group-aria-[orientation=horizontal]/handle:h-0.5 group-aria-[orientation=horizontal]/handle:w-full" />
       {withHandle && (
-        <div className="z-10 flex h-6 w-1 shrink-0 rounded-lg bg-border" />
+        <div className="pointer-events-none absolute z-10 flex h-6 w-1 shrink-0 rounded-lg bg-border group-aria-[orientation=horizontal]/handle:h-1 group-aria-[orientation=horizontal]/handle:w-6" />
       )}
     </ResizablePrimitive.Separator>
   )

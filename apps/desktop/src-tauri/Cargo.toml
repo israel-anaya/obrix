@@ -8,13 +8,14 @@ license.workspace = true
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-obrix-core = { path = "../../../crates/obrix-core" }
 obrix-db = { path = "../../../crates/obrix-db" }
+obrix-plugins = { path = "../../../crates/obrix-plugins" }
+obrix-services = { path = "../../../crates/obrix-services" }
 tauri = { version = "2", features = [] }
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
-rust_decimal.workspace = true
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+sea-orm.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
-chrono.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

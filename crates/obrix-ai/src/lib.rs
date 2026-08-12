@@ -22,5 +22,9 @@ pub trait ApuGenerator {
 
 /// Fase 3: extrae renglones de números generadores a partir de un plano.
 pub trait PlanQuantifier {
-    fn cuantificar(&self, concepto: &Concepto, plano_bytes: &[u8]) -> Result<Vec<NumeroGeneradorRenglon>, AiError>;
+    fn cuantificar(
+        &self,
+        concepto: &Concepto,
+        plano_bytes: &[u8],
+    ) -> Result<Vec<NumeroGeneradorRenglon>, AiError>;
 }

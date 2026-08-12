@@ -34,7 +34,8 @@ pub fn calcular_precio_unitario(
     let base_cargos = costo_directo + indirectos;
     let cargos_adicionales = base_cargos * params.pct_cargos_adicionales / cien;
 
-    let precio_unitario = costo_directo + indirectos + financiamiento + utilidad + cargos_adicionales;
+    let precio_unitario =
+        costo_directo + indirectos + financiamiento + utilidad + cargos_adicionales;
 
     PrecioUnitarioDesglose {
         costo_directo,

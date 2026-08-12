@@ -1,0 +1,16 @@
+pub mod categoria_fsr;
+pub mod cliente;
+pub mod comentario;
+pub mod factor_salario_real;
+pub mod familia_insumo;
+pub mod historial_cambio;
+pub mod insumo;
+pub mod material;
+pub mod moneda;
+pub mod organizacion;
+pub mod organizacion_usuario;
+pub mod precio_material;
+pub mod proveedor;
+pub mod region;
+pub mod unidad_medida;
+pub mod usuario;
