@@ -6,12 +6,20 @@ import type { CatalogoGeneralDescriptor } from "@/features/configuracion/catalog
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listUsuarios } from "@/lib/tauri";
+import { cn } from "@/lib/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGeneralDescriptor<any, any> }) {
   const gridRef = useRef<CatalogoGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
-  const { items, error, crear, actualizar, eliminar, reload } = useCatalogoGeneral(descriptor.api);
+  const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(descriptor.api);
+  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+
+  useEffect(() => {
+    if (!guardadoExitoso) return;
+    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
+    return () => clearTimeout(espera);
+  }, [guardadoExitoso]);
 
   // La vista abierta se recarga sola cuando cambia la organización activa
   // (evento emitido por `OrganizacionContext` — ver `App.handleCambiarOrganizacion`).
@@ -46,7 +54,17 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <h2 className="text-sm font-semibold">{descriptor.titulo}</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold">{descriptor.titulo}</h2>
+          <p
+            className={cn(
+              "text-xs font-medium",
+              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
+            )}
+          >
+            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
+          </p>
+        </div>
         <BarraAcciones
           acciones={[
             { icono: RefreshCcw, titulo: "Recargar", onClick: () => reload() },
@@ -60,7 +78,6 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
           ]}
         />
       </div>
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
         <CatalogoGrid
           ref={gridRef}
@@ -71,6 +88,11 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
           onAgregarFila={(fila) => crear(descriptor.filaANuevo(fila))}
           onEliminarFilas={(ids) => eliminar(ids)}
           onCeldaEditada={(fila) => actualizar(fila._id, descriptor.filaANuevo(fila))}
+          onGuardadoExitoso={() => setGuardadoExitoso(true)}
+          onEdicionCancelada={() => {
+            limpiarError();
+            setGuardadoExitoso(false);
+          }}
         />
       </div>
     </div>

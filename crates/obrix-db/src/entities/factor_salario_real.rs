@@ -23,8 +23,6 @@ pub struct Model {
     pub modelo_calculo_json: String,
     /// Valores de las variables de entrada que ese modelo declara.
     pub parametros_json: String,
-    pub vigencia_desde: String,
-    pub vigencia_hasta: Option<String>,
     pub created_at: String,
     pub updated_at: Option<String>,
     pub created_by: String,

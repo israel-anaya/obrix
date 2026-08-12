@@ -177,8 +177,6 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
       const actualizado = await updateFactorSalarioReal(factorSalarioRealId, {
         nombre: fila.nombre,
         region_id: fila.region_id,
-        vigencia_desde: fila.vigencia_desde,
-        vigencia_hasta: fila.vigencia_hasta,
         parametros_json: fila.parametros_json,
         modelo_calculo_json: JSON.stringify(modelo),
       });
@@ -198,10 +196,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <div>
-          <h2 className="text-sm font-semibold">Modelo de cálculo · {fila.nombre}</h2>
-        </div>
+      <div className="flex items-center justify-end border-b border-border px-4 py-2">
         <div className="flex items-center gap-3">
           {guardadoAt && !guardando && <span className="text-xs text-muted-foreground">Guardado a las {guardadoAt}</span>}
           <BarraAcciones

@@ -104,6 +104,13 @@ export interface ResultadoEvaluacion {
  * (`parametros_json` + el salario nominal de la calculadora). Lanza
  * `ErrorFormula` si alguna fórmula falla en tiempo de evaluación (ej. una
  * variable de rango referida no existe, o ningún renglón cubre el valor).
+ *
+ * Los parámetros tipo `rango` (ej. la tabla de cesantía-vejez) no son
+ * capturables por configuración de FSR — su único valor vive en
+ * `valor_default` dentro del propio modelo (`modelo_calculo_json`), editable
+ * solo desde "Editar modelo de cálculo". Por eso `valoresEntrada` (lo que
+ * trae `parametros_json`) se ignora por completo para ellos, a diferencia de
+ * los parámetros `numero`/`booleano`.
  */
 export function evaluarModelo(parametros: Parametro[], calculados: CampoCalculado[], valoresEntrada: ValoresEntrada): ResultadoEvaluacion {
   const ordenResultado = ordenTopologico(calculados);
@@ -113,10 +120,10 @@ export function evaluarModelo(parametros: Parametro[], calculados: CampoCalculad
   const rangos: Record<string, ValorRango> = {};
 
   for (const p of parametros) {
-    const valor = valoresEntrada[p.id] ?? p.valor_default;
     if (p.tipo === "rango") {
-      rangos[p.id] = (valor as ValorRango) ?? [];
+      rangos[p.id] = (p.valor_default as ValorRango) ?? [];
     } else {
+      const valor = valoresEntrada[p.id] ?? p.valor_default;
       scope[p.id] = (valor as number | boolean) ?? (p.tipo === "booleano" ? false : 0);
     }
   }

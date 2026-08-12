@@ -27,6 +27,24 @@ function nombreArchivo(nombre: string): string {
   return `${slug || "fsr"}.json`;
 }
 
+/** Formato portable de exportación/importación: modelo de cálculo + parámetros capturados juntos en un solo archivo. */
+interface ExportacionFsr {
+  modelo: ModeloCalculo;
+  valores_parametros: ValoresEntrada;
+}
+
+/** `valores` listo para exportar/guardar — nunca incluye parámetros tipo `rango` (ver nota en `valoresIniciales`). */
+function capturablesSinRango(parametros: Parametro[], valores: ValoresEntrada): ValoresEntrada {
+  const idsRango = new Set(parametros.filter((p) => p.tipo === "rango").map((p) => p.id));
+  return Object.fromEntries(Object.entries(valores).filter(([id]) => !idsRango.has(id)));
+}
+
+/**
+ * Solo para parámetros `numero`/`booleano` — los `rango` (ej. tabla de
+ * cesantía-vejez) no son capturables por configuración de FSR, su valor
+ * siempre sale de `valor_default` en el propio modelo (editable solo desde
+ * "Editar modelo de cálculo"), nunca de `parametros_json`.
+ */
 function valoresIniciales(parametros: Parametro[], parametrosJson: string): ValoresEntrada {
   let capturados: ValoresEntrada = {};
   try {
@@ -36,7 +54,8 @@ function valoresIniciales(parametros: Parametro[], parametrosJson: string): Valo
   }
   const valores: ValoresEntrada = {};
   for (const p of parametros) {
-    valores[p.id] = capturados[p.id] ?? p.valor_default ?? (p.tipo === "booleano" ? false : p.tipo === "rango" ? [] : 0);
+    if (p.tipo === "rango") continue;
+    valores[p.id] = capturados[p.id] ?? p.valor_default ?? (p.tipo === "booleano" ? false : 0);
   }
   return valores;
 }
@@ -185,9 +204,7 @@ export function CalcularFsrPage({ factorSalarioRealId }: { factorSalarioRealId: 
         nombre: fila.nombre,
         region_id: fila.region_id,
         modelo_calculo_json: fila.modelo_calculo_json,
-        vigencia_desde: fila.vigencia_desde,
-        vigencia_hasta: fila.vigencia_hasta,
-        parametros_json: JSON.stringify(valores),
+        parametros_json: JSON.stringify(capturablesSinRango(parametros, valores)),
       });
       setFila(actualizado);
       setGuardadoAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }));
@@ -203,7 +220,11 @@ export function CalcularFsrPage({ factorSalarioRealId }: { factorSalarioRealId: 
     const path = await save({ filters: FILTRO_JSON, defaultPath: nombreArchivo(fila.nombre) });
     if (!path) return;
     try {
-      await escribirArchivoTexto(path, JSON.stringify(valores, null, 2));
+      const exportado: ExportacionFsr = {
+        modelo: { parametros, calculados },
+        valores_parametros: capturablesSinRango(parametros, valores),
+      };
+      await escribirArchivoTexto(path, JSON.stringify(exportado, null, 2));
     } catch (e) {
       setError(String(e));
     }
@@ -214,11 +235,23 @@ export function CalcularFsrPage({ factorSalarioRealId }: { factorSalarioRealId: 
     if (!path || typeof path !== "string") return;
     try {
       const contenido = await leerArchivoTexto(path);
-      const importado = { ...valores, ...JSON.parse(contenido) } as ValoresEntrada;
-      setValores(importado);
+      const datos = JSON.parse(contenido) as Partial<ExportacionFsr>;
+      if (!datos.modelo?.parametros || !datos.modelo?.calculados) {
+        setError("El archivo no tiene la forma esperada (falta 'modelo' con 'parametros'/'calculados').");
+        return;
+      }
+      const errorModeloImportado = validarModelo(datos.modelo.parametros, datos.modelo.calculados);
+      if (errorModeloImportado) {
+        setError(`El modelo del archivo no es válido: ${errorModeloImportado}`);
+        return;
+      }
+      setParametros(datos.modelo.parametros);
+      setCalculados(datos.modelo.calculados);
+      setFila((f) => (f ? { ...f, modelo_calculo_json: JSON.stringify(datos.modelo) } : f));
+      setValores(valoresIniciales(datos.modelo.parametros, JSON.stringify(datos.valores_parametros ?? {})));
       setError(null);
     } catch {
-      setError("No se pudo leer el archivo — verifica que sea un JSON de parámetros FSR válido.");
+      setError("No se pudo leer el archivo — verifica que sea un JSON de FSR (modelo + parámetros) válido.");
     }
   };
 
@@ -231,15 +264,14 @@ export function CalcularFsrPage({ factorSalarioRealId }: { factorSalarioRealId: 
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <h2 className="text-sm font-semibold">FRS · {fila.nombre}</h2>
+      <div className="flex items-center justify-end border-b border-border px-4 py-2">
         <div className="flex items-center gap-3">
           {guardadoAt && !guardando && <span className="text-xs text-muted-foreground">Guardado a las {guardadoAt}</span>}
           <BarraAcciones
             acciones={[
               { icono: Save, titulo: guardando ? "Guardando…" : "Guardar cambios", onClick: guardar, disabled: guardando || !!errorModelo },
-              { icono: Download, titulo: "Exportar JSON portable", onClick: exportarJson },
-              { icono: Upload, titulo: "Importar JSON portable", onClick: importarJson },
+              { icono: Download, titulo: "Exportar modelo y parámetros (JSON)", onClick: exportarJson },
+              { icono: Upload, titulo: "Importar modelo y parámetros (JSON)", onClick: importarJson },
             ]}
           />
         </div>

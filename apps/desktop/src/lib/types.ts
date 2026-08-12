@@ -117,15 +117,6 @@ export interface RegionData {
   factor_ajuste: string | null;
 }
 
-export interface CategoriaFsr extends CamposControl {
-  id: string;
-  nombre: string;
-}
-
-export interface CategoriaFsrData {
-  nombre: string;
-}
-
 export interface FamiliaInsumo extends CamposControl {
   id: string;
   parent_id: string | null;
@@ -211,6 +202,68 @@ export interface MaterialData {
   merma_porcentaje: number | null;
   marca: string | null;
   activo: boolean;
+}
+
+/**
+ * Extensión de `insumo` cuando `tipo = mano_obra` (trabajador atómico, no
+ * cuadrilla) — ver `categoria_fasar`/`salario_categoria_fasar` en el
+ * diccionario de datos. `salario_vigente` es la vigencia nacional
+ * (`region_id` nulo) de `salario_categoria_fasar` — `null` si nunca se le
+ * registró un salario.
+ */
+export interface CategoriaFasar extends CamposControl {
+  id: string;
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  /** Debe ser hija (`parent_id`) de `familia_id`. */
+  sub_familia_id: string | null;
+  activo: boolean;
+  salario_vigente: SalarioCategoriaFasar | null;
+}
+
+export interface CategoriaFasarData {
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  sub_familia_id: string | null;
+  activo: boolean;
+}
+
+/**
+ * Vigencia de salario+FSR de una `categoria_fasar` — historizada por
+ * región, nunca se sobrescribe. `factor_salario_real` y
+ * `salario_real_diario` los calcula el cliente (`modeloCalculo.ts`, campo
+ * `fsr`/`monto_salario_real` de `evaluarModelo`) a partir del
+ * `factor_salario_real` elegido — el backend solo los guarda.
+ */
+export interface SalarioCategoriaFasar {
+  id: string;
+  insumo_id: string;
+  region_id: string | null;
+  /** Serializados como texto para no perder precisión. */
+  salario_base_diario: string;
+  factor_salario_real_id: string;
+  factor_salario_real: string;
+  salario_real_diario: string;
+  fecha_vigencia_desde: string;
+  /** `null` = sigue vigente. */
+  fecha_vigencia_hasta: string | null;
+  created_at: string;
+  updated_at: string | null;
+  created_by: string;
+  updated_by: string | null;
+}
+
+export interface SalarioCategoriaFasarData {
+  salario_base_diario: string;
+  factor_salario_real_id: string;
+  factor_salario_real: string;
+  salario_real_diario: string;
+  region_id: string | null;
+  fecha_vigencia_desde: string;
 }
 
 /**
@@ -300,8 +353,6 @@ export interface FactorSalarioReal extends CamposControl {
   /** `ModeloCalculo` serializado. */
   modelo_calculo_json: string;
   parametros_json: string;
-  vigencia_desde: string;
-  vigencia_hasta: string | null;
 }
 
 export interface FactorSalarioRealData {
@@ -309,8 +360,6 @@ export interface FactorSalarioRealData {
   region_id: string | null;
   modelo_calculo_json: string;
   parametros_json: string;
-  vigencia_desde: string;
-  vigencia_hasta: string | null;
 }
 
 export interface Moneda extends CamposControl {

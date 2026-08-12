@@ -9,6 +9,7 @@ obrix-db = { path = "../obrix-db" }
 sea-orm.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 chrono.workspace = true
 uuid.workspace = true
 rust_decimal.workspace = true

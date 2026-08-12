@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface EditorTabInfo {
@@ -7,6 +7,8 @@ export interface EditorTabInfo {
   title: string;
   closable: boolean;
 }
+
+const SCROLL_STEP = 160;
 
 export function EditorTabs({
   tabs,
@@ -21,9 +23,58 @@ export function EditorTabs({
   onClose: (id: string) => void;
   actions?: ReactNode;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    resizeObserver.observe(el);
+    el.addEventListener("scroll", updateScrollState);
+    return () => {
+      resizeObserver.disconnect();
+      el.removeEventListener("scroll", updateScrollState);
+    };
+  }, [tabs.length]);
+
+  const scrollBy = (delta: number) => {
+    scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
   return (
     <div className="flex items-stretch border-b border-border bg-muted/20">
-      <div className="flex min-w-0 flex-1 overflow-x-auto">
+      {(canScrollLeft || canScrollRight) && (
+        <div className="flex shrink-0 items-center border-r border-border">
+          <button
+            onClick={() => scrollBy(-SCROLL_STEP)}
+            disabled={!canScrollLeft}
+            className="flex items-center px-1 py-2 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+            aria-label="Desplazar pestañas a la izquierda"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            onClick={() => scrollBy(SCROLL_STEP)}
+            disabled={!canScrollRight}
+            className="flex items-center px-1 py-2 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+            aria-label="Desplazar pestañas a la derecha"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+      <div ref={scrollRef} className="no-scrollbar flex min-w-0 flex-1 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = tab.id === activeId;
           return (

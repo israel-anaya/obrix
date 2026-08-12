@@ -2,8 +2,6 @@ import type { CatalogoColumnaDef, CatalogoGridConfig } from "@/features/catalogo
 import type { Fila } from "@/features/catalogos/CatalogoGrid";
 import * as api from "@/lib/tauri";
 import type {
-  CategoriaFsr,
-  CategoriaFsrData,
   Cliente,
   FamiliaInsumo,
   FamiliaInsumoData,
@@ -272,30 +270,6 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
   }),
 };
 
-/**
- * `grid`/`aFila` no se usan para renderizar — `SettingsPage` intercepta este
- * id y muestra `FamiliasInsumoSeccion` (vista maestro/detalle) en su lugar.
- * Se dejan aquí solo para satisfacer `CatalogoGeneralDescriptor`, ya que
- * `ConfiguracionSidebar` recorre `CATALOGOS_GENERALES` únicamente por `id`/`titulo`.
- */
-const categoriasFsr: CatalogoGeneralDescriptor<CategoriaFsr, CategoriaFsrData> = {
-  id: "categorias-fsr",
-  titulo: "Categorías FSR",
-  grid: {
-    titulo: "Categorías FSR",
-    columnas: [{ campo: "nombre", encabezado: "Nombre" }, ...COLUMNAS_CONTROL],
-  },
-  api: {
-    list: api.listCategoriasFsr,
-    crear: api.createCategoriaFsr,
-    actualizar: api.updateCategoriaFsr,
-    eliminar: api.deleteCategoriaFsr,
-  },
-  aFila: (m) => ({ _id: m.id, nombre: m.nombre, ...filaControl(m) }),
-  vacio: { nombre: "Nueva categoría" },
-  filaANuevo: (f) => ({ nombre: String(f.nombre) }),
-};
-
 const familiasInsumo: CatalogoGeneralDescriptor<FamiliaInsumo, FamiliaInsumoData> = {
   id: "familias-insumo",
   titulo: "Familias de insumo",
@@ -358,5 +332,4 @@ export const CATALOGOS_GENERALES = [
   regiones,
   familiasInsumo,
   monedas,
-  categoriasFsr,
 ] as const;

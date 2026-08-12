@@ -34,12 +34,6 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(FactorSalarioReal::VigenciaDesde)
-                            .text()
-                            .not_null(),
-                    )
-                    .col(ColumnDef::new(FactorSalarioReal::VigenciaHasta).text())
                     .col(ColumnDef::new(FactorSalarioReal::CreatedAt).text().not_null())
                     .col(ColumnDef::new(FactorSalarioReal::UpdatedAt).text())
                     .col(ColumnDef::new(FactorSalarioReal::CreatedBy).text().not_null())
@@ -86,8 +80,6 @@ enum FactorSalarioReal {
     RegionId,
     ModeloCalculoJson,
     ParametrosJson,
-    VigenciaDesde,
-    VigenciaHasta,
     CreatedAt,
     UpdatedAt,
     CreatedBy,

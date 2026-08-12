@@ -18,6 +18,7 @@ import {
   updateMaterial,
 } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, ResultadoImportacion, UnidadMedida } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const SIN_PROVEEDOR = "— Sin proveedor —";
 const SIN_FAMILIA = "— Sin familia —";
@@ -45,6 +46,13 @@ export function MaterialesSeccion() {
   const [panelPreciosAbierto, setPanelPreciosAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [materialSeleccionadoId, setMaterialSeleccionadoId] = useState<string | null>(null);
+  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+
+  useEffect(() => {
+    if (!guardadoExitoso) return;
+    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
+    return () => clearTimeout(espera);
+  }, [guardadoExitoso]);
 
   const recargarMateriales = () => listMateriales().then(setMateriales).catch((e) => setError(String(e)));
 
@@ -218,13 +226,29 @@ export function MaterialesSeccion() {
       onAgregarFila={(fila) => createMaterial(filaAMaterialData(fila)).then(recargarMateriales)}
       onCeldaEditada={(fila) => updateMaterial(fila._id, filaAMaterialData(fila)).then(recargarMateriales)}
       onEliminarFilas={(ids) => Promise.all(ids.map((id) => deleteMaterial(id))).then(recargarMateriales)}
+      onErrorGuardado={(mensaje) => setError(mensaje)}
+      onGuardadoExitoso={() => setGuardadoExitoso(true)}
+      onEdicionCancelada={() => {
+        setError(null);
+        setGuardadoExitoso(false);
+      }}
     />
   );
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <h2 className="text-sm font-semibold">Materiales</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold">Materiales</h2>
+          <p
+            className={cn(
+              "text-xs font-medium",
+              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
+            )}
+          >
+            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
+          </p>
+        </div>
         <BarraAcciones
           acciones={[
             { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
@@ -262,7 +286,6 @@ export function MaterialesSeccion() {
           ]}
         />
       </div>
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       {resultadoImportacion && (
         <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs">
           <div className="flex items-start justify-between gap-2">

@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AccountInfo,
-  CategoriaFsr,
-  CategoriaFsrData,
+  CategoriaFasar,
+  CategoriaFasarData,
   Cliente,
   FactorSalarioReal,
   FactorSalarioRealData,
@@ -18,6 +18,8 @@ import type {
   RegionData,
   ResultadoAbrirPortafolio,
   ResultadoImportacion,
+  SalarioCategoriaFasar,
+  SalarioCategoriaFasarData,
   UnidadMedidaData,
   ClienteData,
   MonedaData,
@@ -123,19 +125,6 @@ export function deleteRegion(id: string): Promise<void> {
   return invoke("delete_region", { id });
 }
 
-export function listCategoriasFsr(): Promise<CategoriaFsr[]> {
-  return invoke("list_categorias_fsr");
-}
-export function createCategoriaFsr(categoria: CategoriaFsrData): Promise<CategoriaFsr> {
-  return invoke("create_categoria_fsr", { categoria });
-}
-export function updateCategoriaFsr(id: string, categoria: CategoriaFsrData): Promise<CategoriaFsr> {
-  return invoke("update_categoria_fsr", { id, categoria });
-}
-export function deleteCategoriaFsr(id: string): Promise<void> {
-  return invoke("delete_categoria_fsr", { id });
-}
-
 export function listFamiliasInsumo(): Promise<FamiliaInsumo[]> {
   return invoke("list_familias_insumo");
 }
@@ -198,6 +187,28 @@ export function updateFactorSalarioReal(id: string, factor: FactorSalarioRealDat
 }
 export function deleteFactorSalarioReal(id: string): Promise<void> {
   return invoke("delete_factor_salario_real", { id });
+}
+
+export function listCategoriasFasar(): Promise<CategoriaFasar[]> {
+  return invoke("list_categorias_fasar");
+}
+export function createCategoriaFasar(categoria: CategoriaFasarData): Promise<CategoriaFasar> {
+  return invoke("create_categoria_fasar", { categoria });
+}
+export function updateCategoriaFasar(id: string, categoria: CategoriaFasarData): Promise<CategoriaFasar> {
+  return invoke("update_categoria_fasar", { id, categoria });
+}
+export function deleteCategoriaFasar(id: string): Promise<void> {
+  return invoke("delete_categoria_fasar", { id });
+}
+export function listSalariosCategoriaFasar(insumoId: string): Promise<SalarioCategoriaFasar[]> {
+  return invoke("list_salarios_categoria_fasar", { insumoId });
+}
+export function createSalarioCategoriaFasar(
+  insumoId: string,
+  salario: SalarioCategoriaFasarData,
+): Promise<SalarioCategoriaFasar> {
+  return invoke("create_salario_categoria_fasar", { insumoId, salario });
 }
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {

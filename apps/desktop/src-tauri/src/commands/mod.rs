@@ -1,6 +1,6 @@
 pub mod archivo_json;
 pub mod auth;
-pub mod categorias_fsr;
+pub mod categorias_fasar;
 pub mod clientes;
 pub mod factores_salario_real;
 pub mod familias_insumo;
@@ -11,5 +11,6 @@ pub mod portafolio;
 pub mod precios_material;
 pub mod proveedores;
 pub mod regiones;
+pub mod salarios_categoria_fasar;
 pub mod unidades_medida;
 pub mod usuarios;

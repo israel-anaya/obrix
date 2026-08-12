@@ -210,7 +210,7 @@ insumo:
 | `insumo.tipo` | Extensión posible | Cuándo aplica |
 |---|---|---|
 | `material` | `material` (+ `flete` opcional) | siempre |
-| `mano_obra` | `salario` | trabajador individual/atómico |
+| `mano_obra` | `categoria_fasar` | trabajador individual/atómico |
 | `mano_obra` | `cuadrilla` | equipo de trabajo compuesto por varios integrantes |
 | `equipo_herramienta` | `equipo_costo_horario` | equipo propio, costo calculado por depreciación/consumo |
 | `equipo_herramienta` | `herramienta` | herramienta mayor/con motor, precio propio simple, sin cálculo de depreciación |
@@ -290,18 +290,6 @@ precio, para trazabilidad/filtrado.
 | notas | text | nullable |
 | created_at / updated_at / created_by / updated_by | | |
 
-### `categoria_fsr`
-
-Catálogo de categorías de Factor de Salario Real (ej. "Personal de campo",
-"Personal de oficina", "Operadores de maquinaria"), para agrupar/filtrar
-los distintos `factor_salario_real` de una organización.
-
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| nombre | text | |
-| created_at / updated_at / created_by / updated_by | | |
-
 ### `factor_salario_real`
 
 Factor de Salario Real (FSR): integra al salario base diario las
@@ -317,9 +305,16 @@ variables existen y cómo se combinan (`VariableCalculo[]`) — vive en
 `apps/desktop/src/lib/formulaEngine.ts` y `modeloCalculo.ts` para el
 intérprete; `data/modelo-calculo-fasar.json` es el modelo estándar con el
 que se siembra un renglón nuevo). `parametros_json` trae, por separado, los
-valores concretos de las variables de entrada que ese modelo declara para
-este renglón (UMA, salario mínimo, tasas IMSS, días LFT, tabla de
-cesantía-vejez...).
+valores concretos de los parámetros tipo `numero`/`booleano` que ese modelo
+declara para este renglón (UMA, salario mínimo, tasas IMSS, días LFT...).
+
+Los parámetros tipo `rango` (ej. la tabla de cesantía-vejez) también son
+`Parametro[]` dentro de `modelo_calculo_json`, pero **no** son capturables
+por renglón ni viven en `parametros_json` — su único valor es el
+`valor_default` declarado en el propio modelo, editable solo desde "Editar
+modelo de cálculo" (mismo para todos los renglones que compartan ese
+modelo). `evaluarModelo` (`apps/desktop/src/lib/modeloCalculo.ts`) los
+resuelve siempre así, ignorando `parametros_json` para ellos.
 
 https://www.youtube.com/watch?v=YFUh-bf7nHQ
 
@@ -330,29 +325,65 @@ https://www.youtube.com/watch?v=YFUh-bf7nHQ
 | nombre | text | ej. "FSR construcción — riesgo clase V, 2026" |
 | region_id | uuid | FK → region, nullable — `null` = nacional (sin región específica) |
 | modelo_calculo_json | json | `VariableCalculo[]` — CÓMO se calcula (variables y fórmulas) |
-| parametros_json | json | valores concretos de las variables de entrada que declara `modelo_calculo_json` — QUÉ se captura |
-| vigencia_desde | date | |
-| vigencia_hasta | date | nullable |
+| parametros_json | json | valores concretos de los parámetros `numero`/`booleano` que declara `modelo_calculo_json` — QUÉ se captura. Nunca incluye parámetros `rango`, ver nota arriba |
 | created_at / updated_at / created_by / updated_by | | |
 
-### `salario`
+### `categoria_fasar`
 
 Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.
 
-Representa un **trabajador atómico** (no una cuadrilla). Separa el salario que se negocia
-(`salario_base_diario`) del costo real que efectivamente carga el concepto
-(`salario_real_diario`). 
+Representa un **trabajador atómico** (no una cuadrilla) — una categoría de mano de obra
+como "Oficial albañil" u "Operador de retroexcavadora". Tabla delgada, sin
+columnas propias más allá del vínculo: toda la variación (salario, FSR,
+vigencia, región) vive en `salario_categoria_fasar` — mismo patrón que
+`material`/`precio_material`.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| organizacion_id | uuid | FK → organizacion |
-| salario_base_diario | decimal | salario nominal pactado — campo simple, sin historial de vigencias |
-| factor_salario_real_id | uuid | FK → factor_salario_real |
-| factor_salario_real | decimal | factor_salario_real calculado |
-| salario_real_diario | decimal | cache = salario_base_diario × factor_salario_real |
 
 Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+### `salario_categoria_fasar`
+
+Historial de salario+FSR de una `categoria_fasar` — nunca se sobrescribe,
+se agrega un nuevo registro con su vigencia. Separa el salario que se
+negocia (`salario_base_diario`) del costo real que efectivamente carga el
+concepto (`salario_real_diario`).
+
+`region_id` es **nullable**, igual que en `precio_material`: el salario de
+una categoría no siempre se pacta a nivel regional. El salario vigente para
+una `categoria_fasar` en un proyecto se resuelve con la misma prioridad
+descendente que `precio_material`:
+
+1. `(categoria_fasar, region_id = región del proyecto)` — salario regional específico.
+2. `(categoria_fasar, region_id = NULL)` — nacional por defecto, fallback final.
+
+`factor_salario_real` (el número) y `salario_real_diario` no los calcula el
+backend — el cálculo del FSR vive en el cliente
+(`apps/desktop/src/lib/formulaEngine.ts` + `modeloCalculo.ts`, a partir de
+`factor_salario_real.modelo_calculo_json`/`parametros_json`). El cliente
+calcula ambos valores y los envía al registrar una vigencia nueva; el
+backend solo los guarda, igual que `precio_material.precio` es "lo que se
+entró" sin que el backend lo derive.
+
+Nota de implementación: igual que en `precio_material`, `NULL` no cuenta
+como igual a `NULL` en una restricción `UNIQUE` estándar, así que la
+unicidad de "un solo vigente por región" (incluyendo cuando `region_id IS
+NULL`) debe reforzarse con un índice único parcial o a nivel de aplicación.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| insumo_id | uuid | FK → categoria_fasar (insumo_id) |
+| region_id | uuid | FK → region, nullable — ver prioridad de resolución arriba |
+| salario_base_diario | decimal | salario nominal pactado para esta vigencia/región |
+| factor_salario_real_id | uuid | FK → factor_salario_real elegido para esta vigencia |
+| factor_salario_real | decimal | valor numérico del factor, calculado y enviado por el cliente |
+| salario_real_diario | decimal | = salario_base_diario × factor_salario_real, también enviado por el cliente |
+| fecha_vigencia_desde | date | |
+| fecha_vigencia_hasta | date | nullable — null = vigente |
+| created_at / updated_at / created_by / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar la siguiente vigencia |
 
 ### `cuadrilla`
 
@@ -370,7 +401,7 @@ El calculo de un cuadrilla es complejo, pasos de calculo:
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| sub_total_mano_obra | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = salario |
+| sub_total_mano_obra | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = categoria_fasar |
 | sub_total_herramienta | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = equipo_herramienta |
 | costo_total | decimal | cache = sub_total_mano_obra + sub_total_herramienta (= Σ cuadrilla_detalle.importe) |
 
@@ -387,11 +418,11 @@ de campo: un equipo de trabajo es gente y equipo, nunca "un equipo que contiene 
 |---|---|---|
 | id | uuid | PK |
 | cuadrilla_insumo_id | uuid | FK → cuadrilla (insumo_id) |
-| detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `salario`) o `equipo_herramienta` |
-| tipo | enum | `salario`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla.sub_total_mano_obra` de `cuadrilla.sub_total_herramienta` sin join |
+| detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `categoria_fasar`) o `equipo_herramienta` |
+| tipo | enum | `categoria_fasar`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla.sub_total_mano_obra` de `cuadrilla.sub_total_herramienta` sin join |
 | orden | int | orden de visualización dentro de la cuadrilla |
 | cantidad | decimal | Si tipo = equipo_herramienta, se espera un porcentaje |
-| costo | decimal | referenciado: Si tipo = salario costo = salario.salario_real_diario, Si tipo = equipo_herramienta costo = cuadrilla.sub_total_mano_obra |
+| costo | decimal | referenciado: Si tipo = categoria_fasar costo = salario_categoria_fasar.salario_real_diario vigente, Si tipo = equipo_herramienta costo = cuadrilla.sub_total_mano_obra |
 | importe | decimal | cantidad * costo |
 
 | created_at / updated_at / created_by / updated_by | | |

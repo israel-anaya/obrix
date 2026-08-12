@@ -9,8 +9,8 @@
 
 use obrix_db::PortafolioRepository;
 
-use crate::categoria_fsr::CategoriaFsrService;
 use crate::cliente::ClienteService;
+use crate::factor_salario_real::FactorSalarioRealService;
 use crate::familia_insumo::FamiliaInsumoService;
 use crate::moneda::MonedaService;
 use crate::organizacion::OrganizacionService;
@@ -31,6 +31,7 @@ pub async fn sembrar_catalogos_generales(
     FamiliaInsumoService::sembrar(repo).await?;
     ClienteService::sembrar(repo).await?;
     ProveedorService::sembrar(repo).await?;
-    CategoriaFsrService::sembrar(repo).await?;
+    // Depende de `region` y `organizacion`, ya sembradas arriba.
+    FactorSalarioRealService::sembrar(repo).await?;
     Ok(())
 }

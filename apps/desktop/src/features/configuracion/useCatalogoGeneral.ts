@@ -70,5 +70,7 @@ export function useCatalogoGeneral<T extends { id: string }, Nuevo>(api: Catalog
     [api, reload],
   );
 
-  return { items, error, crear, actualizar, eliminar, reload };
+  const limpiarError = useCallback(() => setError(null), []);
+
+  return { items, error, crear, actualizar, eliminar, reload, limpiarError };
 }

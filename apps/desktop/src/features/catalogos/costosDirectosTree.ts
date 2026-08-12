@@ -12,7 +12,7 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     label: "Mano de Obra",
     hijos: [
       { id: "factores-salario-real", label: "Factores de Salario Real" },
-      { id: "tabuladores-salario-integrado", label: "Tabuladores de Salario Integrado" },
+      { id: "tabuladores-salario", label: "Tabuladores de Salario" },
       { id: "cuadrillas-trabajo", label: "Cuadrillas de trabajo" },
     ],
   },
@@ -46,16 +46,6 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
       { campo: "concepto", encabezado: "Concepto" },
       { campo: "diasNoLaborados", encabezado: "Días no laborados", numero: true, ancho: 160 },
       { campo: "factor", encabezado: "Factor", numero: true, ancho: 110 },
-    ],
-  },
-  "tabuladores-salario-integrado": {
-    titulo: "Tabuladores de Salario Integrado",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "categoria", encabezado: "Categoría" },
-      { campo: "salarioBase", encabezado: "Salario base", numero: true, ancho: 130 },
-      { campo: "prestaciones", encabezado: "Prestaciones", numero: true, ancho: 130 },
-      { campo: "salarioIntegrado", encabezado: "Salario integrado", numero: true, ancho: 150 },
     ],
   },
   "cuadrillas-trabajo": {

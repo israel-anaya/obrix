@@ -1,26 +1,25 @@
-use obrix_db::entities::categoria_fsr::Model;
-
-use obrix_services::categoria_fsr::{CategoriaFsrData, CategoriaFsrService};
 use crate::AppState;
+use obrix_services::categoria_fasar::{CategoriaFasarCompleto, CategoriaFasarData, CategoriaFasarService};
 
 #[tauri::command]
-pub async fn list_categorias_fsr(state: tauri::State<'_, AppState>) -> Result<Vec<Model>, String> {
+pub async fn list_categorias_fasar(state: tauri::State<'_, AppState>) -> Result<Vec<CategoriaFasarCompleto>, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CategoriaFsrService::listar(activo.portafolio.as_ref())
+    CategoriaFasarService::listar(activo.portafolio.as_ref(), &activo.organizacion_id)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn create_categoria_fsr(
+pub async fn create_categoria_fasar(
     state: tauri::State<'_, AppState>,
-    categoria: CategoriaFsrData,
-) -> Result<Model, String> {
+    categoria: CategoriaFasarData,
+) -> Result<CategoriaFasarCompleto, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CategoriaFsrService::crear(
+    CategoriaFasarService::crear(
         activo.portafolio.as_ref(),
+        &activo.organizacion_id,
         categoria,
         activo.usuario_id_activo.clone(),
     )
@@ -29,14 +28,14 @@ pub async fn create_categoria_fsr(
 }
 
 #[tauri::command]
-pub async fn update_categoria_fsr(
+pub async fn update_categoria_fasar(
     state: tauri::State<'_, AppState>,
     id: String,
-    categoria: CategoriaFsrData,
-) -> Result<Model, String> {
+    categoria: CategoriaFasarData,
+) -> Result<CategoriaFasarCompleto, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CategoriaFsrService::actualizar(
+    CategoriaFasarService::actualizar(
         activo.portafolio.as_ref(),
         id,
         categoria,
@@ -47,10 +46,10 @@ pub async fn update_categoria_fsr(
 }
 
 #[tauri::command]
-pub async fn delete_categoria_fsr(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+pub async fn delete_categoria_fasar(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CategoriaFsrService::eliminar(activo.portafolio.as_ref(), id)
+    CategoriaFasarService::eliminar(activo.portafolio.as_ref(), id)
         .await
         .map_err(|e| e.to_string())
 }

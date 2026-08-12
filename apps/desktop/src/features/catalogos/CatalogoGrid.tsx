@@ -173,6 +173,12 @@ export interface CatalogoGridPersistProps {
   onEliminarFilas?: (ids: string[]) => void | Promise<void>;
   /** Se dispara al confirmar la edición de una fila existente (icono de check). */
   onCeldaEditada?: (fila: Fila) => void | Promise<void>;
+  /** Se dispara cuando `onAgregarFila`/`onCeldaEditada` rechaza — el grid conserva el borrador, pero no muestra el error por sí solo. */
+  onErrorGuardado?: (mensaje: string) => void;
+  /** Se dispara cuando `onAgregarFila`/`onCeldaEditada` resuelve sin error. */
+  onGuardadoExitoso?: () => void;
+  /** Se dispara al cancelar una edición o alta en curso (botón X) — para limpiar un error de guardado previo. */
+  onEdicionCancelada?: () => void;
 }
 
 interface EstadoEdicion {
@@ -222,6 +228,9 @@ export const CatalogoGrid = forwardRef<
     onAgregarFila,
     onEliminarFilas,
     onCeldaEditada,
+    onErrorGuardado,
+    onGuardadoExitoso,
+    onEdicionCancelada,
   },
   ref,
 ) {
@@ -310,6 +319,19 @@ export const CatalogoGrid = forwardRef<
       setEdicion(null);
       return;
     }
+    // Al borrar una celda con la tecla Delete (sin entrar en modo edición,
+    // p. ej. seleccionar la celda y presionar Delete en vez de escribir),
+    // ag-Grid guarda `null` en el campo directamente — sin esto, `String(null)`
+    // termina serializando el texto "null" en vez de vaciar el campo. Se
+    // sanea aquí (al guardar), no en `valueSetter` de la columna: un
+    // `valueSetter` custom cambia cómo ag-Grid decide si el valor cambió, y
+    // eso rompía la detección de "hay una edición pendiente" que muestra los
+    // botones de confirmar/cancelar.
+    for (const col of config.columnas) {
+      if (filaActual[col.campo] == null) {
+        filaActual[col.campo] = col.numero ? 0 : "";
+      }
+    }
     guardandoRef.current = true;
     try {
       if (actual.esNueva) {
@@ -317,17 +339,19 @@ export const CatalogoGrid = forwardRef<
       } else if (esPersistido) {
         await onCeldaEditada?.(filaActual);
       }
-    } catch {
+    } catch (e) {
       // Si falla el guardado (p. ej. un campo requerido no capturado), se
       // conserva el borrador (misma fila, mismo `esNueva`) para reintentar —
       // si aquí se limpiara `edicion`, un reintento posterior de una fila
       // nueva fallida se trataría como edición de una existente, e
       // intentaría actualizar un id que el backend nunca llegó a crear.
       guardandoRef.current = false;
+      onErrorGuardado?.(e instanceof Error ? e.message : String(e));
       return;
     }
     guardandoRef.current = false;
     setEdicion(null);
+    onGuardadoExitoso?.();
     const nodo = gridRef.current?.api.getRowNode(actual.id);
     if (nodo) gridRef.current?.api.redrawRows({ rowNodes: [nodo] });
   };
@@ -342,6 +366,7 @@ export const CatalogoGrid = forwardRef<
       setFilas((prev) => prev.map((f) => (f._id === actual.id ? actual.original : f)));
     }
     setEdicion(null);
+    onEdicionCancelada?.();
   };
 
   const onCellEditingStarted = (event: CellEditingStartedEvent<Fila>) => {

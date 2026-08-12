@@ -23,6 +23,7 @@ import {
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
+import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
 import { MaterialesSeccion } from "@/features/catalogos/MaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
@@ -294,11 +295,11 @@ export default function App() {
   };
 
   const openFsrCalculoTab = (id: string, nombre: string) => {
-    openTab({ id: `${FSR_PREFIX}${id}`, title: `FRS · ${nombre}`, closable: true });
+    openTab({ id: `${FSR_PREFIX}${id}`, title: `Cálculo · ${nombre}`, closable: true });
   };
 
   const openModeloCalculoTab = (id: string, nombre: string) => {
-    openTab({ id: `${MODELO_CALCULO_PREFIX}${id}`, title: `Cálculo · ${nombre}`, closable: true });
+    openTab({ id: `${MODELO_CALCULO_PREFIX}${id}`, title: `Modelo de cálculo · ${nombre}`, closable: true });
   };
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -363,6 +364,7 @@ export default function App() {
       if (catalogoId === "factores-salario-real") {
         return <FactorSalarioRealSeccion onCalcular={openFsrCalculoTab} onEditarModelo={openModeloCalculoTab} />;
       }
+      if (catalogoId === "tabuladores-salario") return <CategoriaFasarSeccion />;
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
         return (
@@ -380,14 +382,15 @@ export default function App() {
     return null;
   };
 
-  // "proveedores", "materiales-item" y "factores-salario-real" ya traen su
-  // propia barra de acciones (ver ProveedoresSeccion/MaterialesSeccion/
-  // FactorSalarioRealSeccion) — no deben mostrar también la del tab
-  // genérico, cableada a `catalogoGridRef`.
+  // "proveedores", "materiales-item", "factores-salario-real" y
+  // "tabuladores-salario" ya traen su propia barra de acciones (ver
+  // ProveedoresSeccion/MaterialesSeccion/FactorSalarioRealSeccion/
+  // CategoriaFasarSeccion) — no deben mostrar también la del tab genérico,
+  // cableada a `catalogoGridRef`.
   const catalogoIdActivo = activeTab?.id.startsWith(CATALOGO_PREFIX)
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
-  const CATALOGOS_BESPOKE = ["proveedores", "materiales-item", "factores-salario-real"];
+  const CATALOGOS_BESPOKE = ["proveedores", "materiales-item", "factores-salario-real", "tabuladores-salario"];
   const catalogoActivoConfig =
     catalogoIdActivo && !CATALOGOS_BESPOKE.includes(catalogoIdActivo)
       ? CATALOGO_GRID_CONFIG[catalogoIdActivo]

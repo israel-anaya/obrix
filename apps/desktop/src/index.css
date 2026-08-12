@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 :root {
   color-scheme: light;
   --background: 0 0% 100%;

@@ -1,4 +1,4 @@
-pub mod categoria_fsr;
+pub mod categoria_fasar;
 pub mod cliente;
 pub mod comentario;
 pub mod factor_salario_real;
@@ -12,5 +12,6 @@ pub mod organizacion_usuario;
 pub mod precio_material;
 pub mod proveedor;
 pub mod region;
+pub mod salario_categoria_fasar;
 pub mod unidad_medida;
 pub mod usuario;
