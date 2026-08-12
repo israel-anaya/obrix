@@ -35,7 +35,9 @@ pub enum ServiceError {
 /// solo archivo gigante, cada entidad es dueña de sus propios datos
 /// iniciales. `sembrar` debe ser idempotente (no duplicar si ya hay datos).
 pub trait DatosIniciales {
-    async fn sembrar(repo: &dyn obrix_db::PortafolioRepository) -> Result<(), ServiceError>;
+    fn sembrar(
+        repo: &dyn obrix_db::PortafolioRepository,
+    ) -> impl std::future::Future<Output = Result<(), ServiceError>> + Send;
 }
 
 /// Id único para un nuevo registro.
