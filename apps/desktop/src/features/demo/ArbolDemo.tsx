@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  flexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  useReactTable,
-  type ColumnDef,
+  columnResizingFeature,
+  columnSizingFeature,
+  createColumnHelper,
+  createExpandedRowModel,
+  rowExpandingFeature,
+  tableFeatures,
+  useTable,
   type ColumnSizingState,
   type ExpandedState,
 } from "@tanstack/react-table";
@@ -36,6 +38,15 @@ function construirArbol(items: FamiliaInsumo[]): NodoFamilia[] {
   return raices;
 }
 
+const features = tableFeatures({
+  rowExpandingFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+  expandedRowModel: createExpandedRowModel(),
+});
+
+const columnHelper = createColumnHelper<typeof features, NodoFamilia>();
+
 export function ArbolDemo() {
   const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -50,63 +61,60 @@ export function ArbolDemo() {
 
   const data = useMemo(() => construirArbol(familias), [familias]);
 
-  const columns = useMemo<ColumnDef<NodoFamilia>[]>(
-    () => [
-      {
-        accessorKey: "nombre",
-        header: "Nombre",
-        size: 280,
-        minSize: 120,
-        cell: ({ row, getValue }) => (
-          <div style={{ paddingLeft: row.depth * 20 }} className="flex items-center gap-1">
-            {row.getCanExpand() ? (
-              <button
-                type="button"
-                onClick={row.getToggleExpandedHandler()}
-                className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                {row.getIsExpanded() ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
-            ) : (
-              <span className="w-[18px]" />
-            )}
-            <span>{getValue<string>()}</span>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "created_at",
-        header: "Creado",
-        size: 180,
-        minSize: 100,
-        cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string>()}</span>,
-      },
-      {
-        accessorKey: "created_by",
-        header: "Creado por",
-        size: 220,
-        minSize: 100,
-        cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string>()}</span>,
-      },
-      {
-        accessorKey: "updated_at",
-        header: "Actualizado",
-        size: 180,
-        minSize: 100,
-        cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string | null>() ?? ""}</span>,
-      },
-      {
-        accessorKey: "updated_by",
-        header: "Actualizado por",
-        size: 220,
-        minSize: 100,
-        cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string | null>() ?? ""}</span>,
-      },
-    ],
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor("nombre", {
+          header: "Nombre",
+          size: 280,
+          minSize: 120,
+          cell: ({ row, getValue }) => (
+            <div style={{ paddingLeft: row.depth * 20 }} className="flex items-center gap-1">
+              {row.getCanExpand() ? (
+                <button
+                  type="button"
+                  onClick={row.getToggleExpandedHandler()}
+                  className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  {row.getIsExpanded() ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+              ) : (
+                <span className="w-[18px]" />
+              )}
+              <span>{getValue()}</span>
+            </div>
+          ),
+        }),
+        columnHelper.accessor("created_at", {
+          header: "Creado",
+          size: 180,
+          minSize: 100,
+          cell: ({ getValue }) => <span className="text-muted-foreground">{getValue()}</span>,
+        }),
+        columnHelper.accessor("created_by", {
+          header: "Creado por",
+          size: 220,
+          minSize: 100,
+          cell: ({ getValue }) => <span className="text-muted-foreground">{getValue()}</span>,
+        }),
+        columnHelper.accessor("updated_at", {
+          header: "Actualizado",
+          size: 180,
+          minSize: 100,
+          cell: ({ getValue }) => <span className="text-muted-foreground">{getValue() ?? ""}</span>,
+        }),
+        columnHelper.accessor("updated_by", {
+          header: "Actualizado por",
+          size: 220,
+          minSize: 100,
+          cell: ({ getValue }) => <span className="text-muted-foreground">{getValue() ?? ""}</span>,
+        }),
+      ]),
     [],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     state: { expanded, columnSizing },
@@ -114,9 +122,7 @@ export function ArbolDemo() {
     onColumnSizingChange: setColumnSizing,
     columnResizeMode: "onChange",
     enableColumnResizing: true,
-    getSubRows: (row) => row.children,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
+    getSubRows: (row: NodoFamilia) => row.children,
   });
 
   return (
@@ -141,7 +147,7 @@ export function ArbolDemo() {
                     style={{ width: header.getSize() }}
                     className="relative border-b border-border px-2 py-1.5 text-left text-xs font-medium text-muted-foreground"
                   >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    <table.FlexRender header={header} />
                     <div
                       onMouseDown={header.getResizeHandler()}
                       onTouchStart={header.getResizeHandler()}
@@ -161,13 +167,13 @@ export function ArbolDemo() {
                 key={row.id}
                 className={cn("hover:bg-accent", i % 2 === 1 && "bg-muted/40")}
               >
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <td
                     key={cell.id}
                     style={{ width: cell.column.getSize() }}
                     className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-border px-2 py-1"
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <table.FlexRender cell={cell} />
                   </td>
                 ))}
               </tr>
