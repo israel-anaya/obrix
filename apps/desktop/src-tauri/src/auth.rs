@@ -27,8 +27,8 @@ struct Tokens {
 }
 
 fn auth_json_path() -> Result<PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "no se pudo resolver $HOME".to_string())?;
-    Ok(PathBuf::from(home).join(".obrix").join("auth.json"))
+    let home = dirs::home_dir().ok_or_else(|| "no se pudo resolver el directorio home".to_string())?;
+    Ok(home.join(".obrix").join("auth.json"))
 }
 
 /// No hay plataforma real contra la cual validar los tokens, así que

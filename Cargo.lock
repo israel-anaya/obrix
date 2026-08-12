@@ -2750,6 +2750,7 @@ dependencies = [
 name = "obrix-desktop"
 version = "0.1.0"
 dependencies = [
+ "dirs",
  "obrix-db",
  "obrix-plugins",
  "obrix-services",
