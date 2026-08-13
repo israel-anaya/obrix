@@ -72,7 +72,7 @@ const organizaciones: CatalogoGeneralDescriptor<Organizacion, OrganizacionData> 
   grid: {
     titulo: "Organización",
     columnas: [
-      { campo: "razon_social", encabezado: "Razón social" },
+      { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
       { campo: "rfc", encabezado: "RFC", ancho: 140 },
       { campo: "tipo", encabezado: "Tipo", ancho: 160, opciones: TIPOS_ORGANIZACION },
       ...COLUMNAS_CONTROL,
@@ -110,7 +110,7 @@ const usuarios: CatalogoGeneralDescriptor<Usuario, UsuarioData> = {
   grid: {
     titulo: "Usuarios",
     columnas: [
-      { campo: "nombre", encabezado: "Nombre" },
+      { campo: "nombre", encabezado: "Nombre", ancho: 240 },
       { campo: "correo", encabezado: "Correo", ancho: 200 },
       { campo: "rol", encabezado: "Rol", ancho: 130, opciones: ROLES_USUARIO },
       { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
@@ -151,7 +151,7 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
       { campo: "simbolo", encabezado: "Símbolo", ancho: 100 },
       { campo: "simbolo_impresion", encabezado: "Símbolo de impresión", ancho: 160 },
       { campo: "clave_sat", encabezado: "Clave SAT", ancho: 120 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "tipo_magnitud", encabezado: "Tipo de magnitud", ancho: 160, opciones: TIPOS_MAGNITUD },
       ...COLUMNAS_CONTROL,
     ],
@@ -195,7 +195,7 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
   grid: {
     titulo: "Regiones",
     columnas: [
-      { campo: "nombre", encabezado: "Nombre" },
+      { campo: "nombre", encabezado: "Nombre", ancho: 240 },
       { campo: "estado", encabezado: "Estado", ancho: 160 },
       { campo: "factor_ajuste", encabezado: "Factor de ajuste", numero: true, ancho: 150 },
       ...COLUMNAS_CONTROL,
@@ -227,7 +227,7 @@ const familiasInsumo: CatalogoGeneralDescriptor<FamiliaInsumo, FamiliaInsumoData
   titulo: "Familias de insumo",
   grid: {
     titulo: "Familias de insumo",
-    columnas: [{ campo: "nombre", encabezado: "Nombre" }, ...COLUMNAS_CONTROL],
+    columnas: [{ campo: "nombre", encabezado: "Nombre", ancho: 240 }, ...COLUMNAS_CONTROL],
   },
   api: {
     list: api.listFamiliasInsumo,
@@ -247,7 +247,7 @@ const monedas: CatalogoGeneralDescriptor<Moneda, MonedaData> = {
     titulo: "Monedas",
     columnas: [
       { campo: "codigo", encabezado: "Código", ancho: 100 },
-      { campo: "nombre", encabezado: "Nombre" },
+      { campo: "nombre", encabezado: "Nombre", ancho: 240 },
       { campo: "simbolo", encabezado: "Símbolo", ancho: 100 },
       { campo: "decimales", encabezado: "Decimales", numero: true, ancho: 110 },
       ...COLUMNAS_CONTROL,

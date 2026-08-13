@@ -17,9 +17,9 @@ const PROVEEDORES: CatalogoGeneralDescriptor<Proveedor, ProveedorData> = {
   grid: {
     titulo: "Proveedores",
     columnas: [
-      { campo: "razon_social", encabezado: "Razón social" },
+      { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
       { campo: "rfc", encabezado: "RFC", ancho: 140 },
-      { campo: "contacto", encabezado: "Contacto" },
+      { campo: "contacto", encabezado: "Contacto", ancho: 180 },
       { campo: "calificacion", encabezado: "Calificación", numero: true, estrellas: true, ancho: 130 },
       ...COLUMNAS_CONTROL,
     ],

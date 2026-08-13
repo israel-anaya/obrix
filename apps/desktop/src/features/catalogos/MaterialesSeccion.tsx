@@ -137,7 +137,7 @@ export function MaterialesSeccion() {
       titulo: "Materiales",
       columnas: [
         { campo: "clave", encabezado: "Clave", ancho: 110 },
-        { campo: "descripcion", encabezado: "Descripción" },
+        { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
         { campo: "unidad", encabezado: "Unidad", ancho: 110, opciones: unidades.map((u) => u.simbolo) },
         { campo: "costo_actual", encabezado: "Costo actual", ancho: 130, soloLectura: true, numero: true },
         {

@@ -1,4 +1,5 @@
 import { createContext, forwardRef, memo, useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { catalogoClipboardActivo, setCatalogoClipboardActivo, type CatalogoClipboard } from "@/features/catalogos/catalogoClipboard";
 import { createPortal } from "react-dom";
 import {
   columnFilteringFeature,
@@ -35,7 +36,8 @@ import { cn } from "@/lib/utils";
 export interface CatalogoColumnaDef {
   campo: string;
   encabezado: string;
-  ancho?: number;
+  /** Ancho inicial en px — obligatorio; el usuario puede redimensionar a mano. */
+  ancho: number;
   numero?: boolean;
   /** Se edita/muestra como checkbox — para columnas cuyo valor es verdadero/falso. */
   booleano?: boolean;
@@ -184,19 +186,6 @@ function parsearValorPegado(
     return crudo.slice(0, -columna.sufijo.length);
   }
   return texto;
-}
-
-export interface CatalogoClipboard {
-  copiar: () => Promise<void>;
-  cortar: () => Promise<void>;
-  pegar: () => Promise<void>;
-}
-
-/** Último grid que recibió foco — el menú Edit de `App` lo usa para Cortar/Copiar/Pegar. */
-let clipboardActivo: CatalogoClipboard | null = null;
-
-export function catalogoClipboardActivo(): CatalogoClipboard | null {
-  return clipboardActivo;
 }
 
 async function escribirClipboard(texto: string) {
@@ -550,35 +539,27 @@ function ComboboxCelda({
   opciones,
   valorInicial,
   filtrarAlAbrir = false,
-  autoFocus = true,
-  listaSoloConFoco = false,
   clase,
   onElegir,
   onDescartar,
   onTab,
   onEnter,
   onConfirmarFila,
-  onFoco,
 }: {
   opciones: readonly string[];
   valorInicial: string;
   /** True si se abrió tecleando (reemplazo); F2/clic muestran la lista completa. */
   filtrarAlAbrir?: boolean;
-  autoFocus?: boolean;
-  /** En la barra de valor: la lista solo aparece al enfocar, no al montar. */
-  listaSoloConFoco?: boolean;
   clase: string;
   onElegir: (valor: string) => void;
   onDescartar: () => void;
   onTab: (shift: boolean) => void;
   onEnter: (shift: boolean) => void;
   onConfirmarFila: () => void;
-  onFoco?: () => void;
 }) {
   const [texto, setTexto] = useState(valorInicial);
   const [filtrar, setFiltrar] = useState(filtrarAlAbrir);
   const [activo, setActivo] = useState(() => Math.max(0, opciones.findIndex((o) => o === valorInicial)));
-  const [enfocado, setEnfocado] = useState(autoFocus);
   const descartarRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listaRef = useRef<HTMLUListElement>(null);
@@ -586,7 +567,7 @@ function ComboboxCelda({
 
   const coincidencias = opciones.filter((o) => o.toLowerCase().includes(texto.trim().toLowerCase()));
   const visibles = filtrar ? coincidencias : opciones;
-  const opcionesKey = opciones.join("\0");
+  const ultimo = Math.max(visibles.length - 1, 0);
 
   useLayoutEffect(() => {
     const lista = listaRef.current;
@@ -607,29 +588,14 @@ function ComboboxCelda({
       window.removeEventListener("resize", medir);
       window.removeEventListener("scroll", medir, true);
     };
-  }, [enfocado]);
-
-  useEffect(() => {
-    if (enfocado) return;
-    setTexto(valorInicial);
-    setFiltrar(false);
-    setActivo(Math.max(0, opciones.findIndex((o) => o === valorInicial)));
-    descartarRef.current = false;
-  }, [valorInicial, enfocado, opcionesKey]);
+  }, []);
 
   const canon = (t: string) => opciones.find((o) => o.toLowerCase() === t.trim().toLowerCase()) ?? null;
-  const ultimo = Math.max(visibles.length - 1, 0);
 
   const elegir = (valor: string) => {
     if (descartarRef.current) return;
     descartarRef.current = true;
     onElegir(valor);
-    if (listaSoloConFoco) {
-      setTexto(valor);
-      setFiltrar(false);
-      setEnfocado(false);
-      inputRef.current?.blur();
-    }
   };
 
   const commitFiltro = (): boolean => {
@@ -658,33 +624,23 @@ function ComboboxCelda({
 
   return (
     <>
-      <div className={cn("relative flex h-full min-w-0 items-center", listaSoloConFoco && "flex-1")}>
+      <div className="relative flex h-full min-w-0 items-center">
         <input
           ref={inputRef}
-          autoFocus={autoFocus}
+          autoFocus
           value={texto}
           onChange={(e) => {
             setTexto(e.target.value);
             setFiltrar(true);
             setActivo(0);
           }}
-          onFocus={(e) => {
-            setEnfocado(true);
-            if (listaSoloConFoco) setFiltrar(false);
-            e.currentTarget.select();
-            onFoco?.();
-          }}
+          onFocus={(e) => e.currentTarget.select()}
           onBlur={() => {
-            setEnfocado(false);
             if (!descartarRef.current) commitFiltro();
           }}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               descartarRef.current = true;
-              setTexto(valorInicial);
-              setFiltrar(false);
-              setEnfocado(false);
-              inputRef.current?.blur();
               onDescartar();
               return;
             }
@@ -740,11 +696,11 @@ function ComboboxCelda({
         />
         <ChevronDown size={12} className="pointer-events-none absolute right-0.5 text-muted-foreground" />
       </div>
-      {rect && (!listaSoloConFoco || enfocado) &&
+      {rect &&
         createPortal(
           <ul
             ref={listaRef}
-            className="fixed z-[400] max-h-48 overflow-auto border border-border bg-popover py-0.5 text-xs text-popover-foreground shadow-md"
+            className="fixed z-[400] max-h-48 overflow-auto border border-neutral-300 bg-white py-0.5 text-xs text-neutral-900 shadow-md"
             style={{
               top: abrirArriba ? undefined : rect.bottom,
               bottom: abrirArriba ? window.innerHeight - rect.top : undefined,
@@ -753,13 +709,16 @@ function ComboboxCelda({
             }}
           >
             {visibles.length === 0 ? (
-              <li className="px-2 py-1 text-muted-foreground">Sin coincidencias</li>
+              <li className="px-2 py-1 text-neutral-500">Sin coincidencias</li>
             ) : (
               visibles.map((o, i) => (
                 <li key={o}>
                   <button
                     type="button"
-                    className={cn("flex w-full px-2 py-1 text-left hover:bg-accent", i === activo && "bg-accent")}
+                    className={cn(
+                      "flex w-full px-2 py-1 text-left text-neutral-900 hover:bg-neutral-100",
+                      i === activo && "bg-neutral-200",
+                    )}
                     data-combo-activo={i === activo ? "" : undefined}
                     onMouseDown={(e) => e.preventDefault()}
                     onMouseEnter={() => setActivo(i)}
@@ -993,89 +952,6 @@ function EditorCelda({
   );
 }
 
-function BarraValor({
-  referencia,
-  valor,
-  soloLectura,
-  opciones,
-  onCommit,
-  onConfirmarFila,
-  onFocusBarra,
-}: {
-  referencia: string;
-  valor: string;
-  soloLectura: boolean;
-  opciones?: readonly string[];
-  onCommit: (valor: string) => void;
-  onConfirmarFila: () => void;
-  onFocusBarra?: () => void;
-}) {
-  const [local, setLocal] = useState(valor);
-  const [focused, setFocused] = useState(false);
-  useEffect(() => {
-    if (!focused) setLocal(valor);
-  }, [valor, focused]);
-
-  return (
-    <div className="flex h-7 shrink-0 items-center gap-1 border-b border-border bg-muted/50 px-1">
-      <span className="w-36 shrink-0 truncate px-1 text-[11px] tabular-nums text-muted-foreground" title={referencia || undefined}>
-        {referencia || " "}
-      </span>
-      <div className="h-4 w-px shrink-0 bg-border" />
-      {opciones && !soloLectura ? (
-        <ComboboxCelda
-          key={referencia}
-          opciones={opciones}
-          valorInicial={valor}
-          autoFocus={false}
-          listaSoloConFoco
-          clase="h-6 w-full bg-transparent px-1 text-xs outline-none"
-          onElegir={onCommit}
-          onDescartar={() => {}}
-          onTab={() => {}}
-          onEnter={() => {}}
-          onConfirmarFila={onConfirmarFila}
-          onFoco={onFocusBarra}
-        />
-      ) : (
-        <input
-          value={focused ? local : valor}
-          readOnly={soloLectura}
-          onFocus={() => {
-            setFocused(true);
-            onFocusBarra?.();
-          }}
-          onChange={(e) => setLocal(e.target.value)}
-          onBlur={() => {
-            setFocused(false);
-            if (!soloLectura && local !== valor) onCommit(local);
-          }}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S")) {
-              e.preventDefault();
-              if (!soloLectura && local !== valor) onCommit(local);
-              onConfirmarFila();
-              return;
-            }
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (!soloLectura && local !== valor) onCommit(local);
-              e.currentTarget.blur();
-            }
-            if (e.key === "Escape") {
-              e.preventDefault();
-              setLocal(valor);
-              setFocused(false);
-              e.currentTarget.blur();
-            }
-          }}
-          className="h-6 min-w-0 flex-1 bg-transparent px-1 text-xs outline-none read-only:text-muted-foreground"
-        />
-      )}
-    </div>
-  );
-}
-
 function CeldaCatalogo({
   columna,
   fila,
@@ -1214,7 +1090,6 @@ function FilaVirtual({
   filaRefs,
   celdaRefs,
   altoEncabezado,
-  columnSizing,
   estiloColumna,
   anclaIzquierda,
   anchoAncladoTotal,
@@ -1233,8 +1108,7 @@ function FilaVirtual({
   filaRefs: React.RefObject<Map<string, HTMLTableRowElement>>;
   celdaRefs: React.RefObject<Map<string, HTMLTableCellElement>>;
   altoEncabezado: number;
-  columnSizing: Record<string, number>;
-  estiloColumna: (columnId: string, size: number, seRedimensiono: boolean) => React.CSSProperties;
+  estiloColumna: (size: number) => React.CSSProperties;
   anclaIzquierda: Map<string, number>;
   anchoAncladoTotal: number;
   modoSeleccion: "multiple" | "unica";
@@ -1272,7 +1146,7 @@ function FilaVirtual({
             }}
             data-column-id={cell.column.id}
             style={{
-              ...estiloColumna(cell.column.id, cell.column.getSize(), cell.column.id in columnSizing),
+              ...estiloColumna(cell.column.getSize()),
               ...(anclaLeft !== undefined ? { left: anclaLeft } : { scrollMarginLeft: anchoAncladoTotal }),
             }}
             className={cn(
@@ -1306,48 +1180,6 @@ function ThConMarca({
     <th style={style} className={cn(className, activo && "text-foreground")}>
       {children}
     </th>
-  );
-}
-
-function BarraValorConectada({
-  store,
-  filas,
-  filasVisibles,
-  config,
-  onCommit,
-  onConfirmarFila,
-  onFocusBarra,
-}: {
-  store: Store<CeldaSel>;
-  filas: Fila[];
-  filasVisibles: { original: Fila }[];
-  config: CatalogoGridConfig;
-  onCommit: (texto: string) => void;
-  onConfirmarFila: () => void;
-  onFocusBarra: () => void;
-}) {
-  const sel = useSyncExternalStore(store.subscribe, store.get);
-  const filaBarra = sel ? filas.find((f) => f._id === sel.filaId) : undefined;
-  const colBarra = sel ? config.columnas.find((c) => c.campo === sel.campo) : undefined;
-  const idxBarra = filaBarra ? filasVisibles.findIndex((r) => r.original._id === filaBarra._id) : -1;
-  const referenciaBarra = filaBarra && colBarra && idxBarra >= 0 ? `${idxBarra + 1} · ${colBarra.encabezado}` : "";
-  const valorBarra = filaBarra && colBarra ? valorVisible(filaBarra, colBarra) : "";
-  return (
-    <BarraValor
-      referencia={referenciaBarra}
-      valor={valorBarra}
-      soloLectura={!colBarra || !!colBarra.soloLectura}
-      opciones={
-        filaBarra && colBarra
-          ? typeof colBarra.opciones === "function"
-            ? colBarra.opciones(filaBarra)
-            : colBarra.opciones
-          : undefined
-      }
-      onCommit={onCommit}
-      onConfirmarFila={onConfirmarFila}
-      onFocusBarra={onFocusBarra}
-    />
   );
 }
 
@@ -1656,7 +1488,7 @@ export const CatalogoGrid = forwardRef<
         columnHelper.accessor((fila) => fila[c.campo], {
           id: c.campo,
           header: c.encabezado,
-          size: c.ancho ?? 160,
+          size: c.ancho,
           minSize: 48,
           enableGlobalFilter: true,
           cell: (ctx) => <CeldaCatalogoMemo columna={c} fila={ctx.row.original} columnas={config.columnas} />,
@@ -1949,14 +1781,12 @@ export const CatalogoGrid = forwardRef<
       cortar: () => clipboardApiRef.current.cortar(),
       pegar: () => clipboardApiRef.current.pegar(),
     };
-    const onFocus = () => {
-      clipboardActivo = api;
-    };
+    const onFocus = () => setCatalogoClipboardActivo(api);
     const el = scrollRef.current;
     el?.addEventListener("focusin", onFocus);
     return () => {
       el?.removeEventListener("focusin", onFocus);
-      if (clipboardActivo === api) clipboardActivo = null;
+      if (catalogoClipboardActivo() === api) setCatalogoClipboardActivo(null);
     };
   }, []);
 
@@ -2174,27 +2004,10 @@ export const CatalogoGrid = forwardRef<
 
   const primerCampoTexto = config.columnas.find((c) => !c.numero)?.campo ?? config.columnas[0]?.campo;
 
-  // Las columnas `__seleccion`/`__acciones` no viven en `config.columnas` —
-  // siempre usan un ancho fijo (el que trae su `size` de columnDef), nunca
-  // flex-fill. Las columnas de datos sin `ancho` propio sí llenan el espacio
-  // restante, salvo que el usuario ya las haya redimensionado a mano.
-  const estiloColumna = (columnId: string, size: number, seRedimensiono: boolean): React.CSSProperties => {
-    if (columnId.startsWith("__") || seRedimensiono) return { flex: `0 0 ${size}px`, width: size };
-    const ancho = config.columnas.find((c) => c.campo === columnId)?.ancho;
-    if (ancho) return { flex: `0 0 ${ancho}px`, width: ancho };
-    return { flex: "1 1 0%", minWidth: 48 };
-  };
-
-  const commitBarra = (texto: string) => {
-    const sel = seleccionStore.get();
-    if (!sel) return;
-    const filaBarra = filasRef.current.find((f) => f._id === sel.filaId);
-    const colBarra = config.columnas.find((c) => c.campo === sel.campo);
-    if (!filaBarra || !colBarra || colBarra.soloLectura) return;
-    const parsed = parsearValorPegado(texto, colBarra, filaBarra);
-    if (parsed === null) return;
-    confirmarCambioCelda(filaBarra._id, colBarra.campo, parsed);
-  };
+  const estiloColumna = (size: number): React.CSSProperties => ({
+    flex: `0 0 ${size}px`,
+    width: size,
+  });
 
   const enCampo = (target: EventTarget | null) => {
     const t = target as HTMLElement | null;
@@ -2222,15 +2035,6 @@ export const CatalogoGrid = forwardRef<
           />
         </div>
       )}
-      <BarraValorConectada
-        store={seleccionStore}
-        filas={filas}
-        filasVisibles={filasVisibles}
-        config={config}
-        onCommit={commitBarra}
-        onConfirmarFila={() => void confirmarEdicion()}
-        onFocusBarra={cerrarCelda}
-      />
       {errorGuardado && (
         <div className="shrink-0 truncate border-b border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive" title={errorGuardado}>
           {errorGuardado}
@@ -2263,7 +2067,7 @@ export const CatalogoGrid = forwardRef<
         className="min-h-0 flex-1 overflow-auto outline-none"
       >
         <table.Subscribe selector={(state) => state.columnSizing}>
-          {(columnSizing) => (
+          {(_columnSizing) => (
             <table.Subscribe selector={(state) => state.columnResizing?.isResizingColumn ?? false}>
               {() => (
             <table
@@ -2283,7 +2087,7 @@ export const CatalogoGrid = forwardRef<
                           key={header.id}
                           columnId={header.column.id}
                           style={{
-                            ...estiloColumna(header.column.id, header.getSize(), header.column.id in columnSizing),
+                            ...estiloColumna(header.getSize()),
                             ...(anclaLeft !== undefined && { left: anclaLeft }),
                           }}
                           className={cn(
@@ -2350,7 +2154,6 @@ export const CatalogoGrid = forwardRef<
                           filaRefs={filaRefs}
                           celdaRefs={celdaRefs}
                           altoEncabezado={altoEncabezado}
-                          columnSizing={columnSizing}
                           estiloColumna={estiloColumna}
                           anclaIzquierda={anclaIzquierda}
                           anchoAncladoTotal={anchoAncladoTotal}

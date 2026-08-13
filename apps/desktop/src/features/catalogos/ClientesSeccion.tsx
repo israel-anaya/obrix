@@ -18,10 +18,10 @@ const CLIENTES: CatalogoGeneralDescriptor<Cliente, ClienteData> = {
   grid: {
     titulo: "Clientes",
     columnas: [
-      { campo: "razon_social", encabezado: "Razón social" },
+      { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
       { campo: "rfc", encabezado: "RFC", ancho: 140 },
       { campo: "tipo", encabezado: "Tipo", ancho: 150, opciones: TIPOS_CLIENTE },
-      { campo: "contacto_nombre", encabezado: "Contacto" },
+      { campo: "contacto_nombre", encabezado: "Contacto", ancho: 180 },
       { campo: "contacto_correo", encabezado: "Correo de contacto", ancho: 200 },
       { campo: "contacto_telefono", encabezado: "Teléfono", ancho: 140 },
       ...COLUMNAS_CONTROL,

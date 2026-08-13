@@ -48,7 +48,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Factores de Salario Real",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "concepto", encabezado: "Concepto" },
+      { campo: "concepto", encabezado: "Concepto", ancho: 280 },
       { campo: "diasNoLaborados", encabezado: "Días no laborados", numero: true, ancho: 160 },
       { campo: "factor", encabezado: "Factor", numero: true, ancho: 110 },
     ],
@@ -57,7 +57,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Cuadrillas de trabajo",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "integrantes", encabezado: "Integrantes", numero: true, ancho: 120 },
       { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
     ],
@@ -66,8 +66,8 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Fletes",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "origen", encabezado: "Origen" },
-      { campo: "destino", encabezado: "Destino" },
+      { campo: "origen", encabezado: "Origen", ancho: 180 },
+      { campo: "destino", encabezado: "Destino", ancho: 180 },
       { campo: "costo", encabezado: "Costo", numero: true, ancho: 120 },
     ],
   },
@@ -75,7 +75,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Materiales",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "unidad", encabezado: "Unidad", ancho: 100 },
       { campo: "precio", encabezado: "Precio unitario", numero: true, ancho: 140 },
     ],
@@ -84,7 +84,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Básicos y Auxiliares",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "unidad", encabezado: "Unidad", ancho: 100 },
       { campo: "precio", encabezado: "Precio unitario", numero: true, ancho: 140 },
     ],
@@ -93,7 +93,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Herramienta",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "unidad", encabezado: "Unidad", ancho: 100 },
       { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
     ],
@@ -102,7 +102,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Costos Horarios",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "tipo", encabezado: "Tipo", ancho: 130 },
       { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
     ],
@@ -111,8 +111,8 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Equipo rentado",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
-      { campo: "proveedor", encabezado: "Proveedor" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
+      { campo: "proveedor", encabezado: "Proveedor", ancho: 220 },
       { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
     ],
   },
@@ -120,7 +120,7 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
     titulo: "Conceptos",
     columnas: [
       { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción" },
+      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
       { campo: "unidad", encabezado: "Unidad", ancho: 100 },
       { campo: "cantidad", encabezado: "Cantidad", numero: true, ancho: 110 },
       { campo: "precioUnitario", encabezado: "Precio unitario", numero: true, ancho: 140 },

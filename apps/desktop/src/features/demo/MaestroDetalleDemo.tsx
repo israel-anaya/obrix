@@ -7,7 +7,7 @@ import type { FamiliaInsumo } from "@/lib/types";
 const GRID_FAMILIA = {
   titulo: "Familias de insumo",
   columnas: [
-    { campo: "nombre", encabezado: "Nombre" },
+    { campo: "nombre", encabezado: "Nombre", ancho: 240 },
     { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true },
   ],
 };

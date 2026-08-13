@@ -6,7 +6,7 @@ import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo, listUsuar
 import type { FamiliaInsumo } from "@/lib/types";
 
 const COLUMNAS_FAMILIA = [
-  { campo: "nombre", encabezado: "Nombre" },
+  { campo: "nombre", encabezado: "Nombre", ancho: 240 },
   { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
   { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
   { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },

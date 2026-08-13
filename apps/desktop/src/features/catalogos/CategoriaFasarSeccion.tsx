@@ -104,7 +104,7 @@ export function CategoriaFasarSeccion() {
       titulo: "Tabuladores de Salario",
       columnas: [
         { campo: "clave", encabezado: "Clave", ancho: 110 },
-        { campo: "descripcion", encabezado: "Descripción" },
+        { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
         { campo: "unidad", encabezado: "Unidad", ancho: 110, opciones: unidades.map((u) => u.simbolo) },
         { campo: "salario_real_diario", encabezado: "Salario real vigente", ancho: 160, soloLectura: true, numero: true },
         {

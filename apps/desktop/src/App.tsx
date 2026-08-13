@@ -22,7 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { CatalogoGrid, catalogoClipboardActivo, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
+import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
+import { catalogoClipboardActivo } from "@/features/catalogos/catalogoClipboard";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";

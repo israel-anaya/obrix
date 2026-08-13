@@ -76,7 +76,7 @@ export function OrganizacionSeccion() {
     () => ({
       titulo: "Organización",
       columnas: [
-        { campo: "razon_social", encabezado: "Razón social" },
+        { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
         { campo: "rfc", encabezado: "RFC", ancho: 140 },
         { campo: "tipo", encabezado: "Tipo", ancho: 160, opciones: TIPOS_ORGANIZACION },
         {

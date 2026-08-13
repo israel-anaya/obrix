@@ -33,7 +33,7 @@ const COLUMNAS_CONTROL = [
 const MAESTRO_GRID: CatalogoGridConfig = {
   titulo: "Usuarios",
   columnas: [
-    { campo: "nombre", encabezado: "Nombre" },
+    { campo: "nombre", encabezado: "Nombre", ancho: 240 },
     { campo: "correo", encabezado: "Correo", ancho: 200 },
     { campo: "rol", encabezado: "Rol", ancho: 130, opciones: ROLES_USUARIO },
     { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
@@ -71,6 +71,7 @@ export function UsuariosSeccion() {
         {
           campo: "organizacion",
           encabezado: "Organización",
+          ancho: 260,
           opciones: organizaciones.map((o) => o.razon_social),
         },
         { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
