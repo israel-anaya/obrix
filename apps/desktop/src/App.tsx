@@ -28,7 +28,13 @@ import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
+import { EscalafonSalarioSeccion } from "@/features/catalogos/EscalafonSalarioSeccion";
+import { EstanteriaMaterialesSeccion } from "@/features/catalogos/EstanteriaMaterialesSeccion";
 import { MaterialesSeccion } from "@/features/catalogos/MaterialesSeccion";
+import { MatrizOficioRegionSeccion } from "@/features/catalogos/MatrizOficioRegionSeccion";
+import { MesaEquivalentesSeccion } from "@/features/catalogos/MesaEquivalentesSeccion";
+import { PuenteBaseRealSeccion } from "@/features/catalogos/PuenteBaseRealSeccion";
+import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
 import { ArbolDemo } from "@/features/demo/ArbolDemo";
@@ -379,10 +385,16 @@ export default function App() {
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
       if (catalogoId === "clientes") return <ClientesSeccion />;
       if (catalogoId === "materiales-item") return <MaterialesSeccion />;
+      if (catalogoId === "materiales-estanteria") return <EstanteriaMaterialesSeccion />;
+      if (catalogoId === "materiales-mesa") return <MesaEquivalentesSeccion />;
+      if (catalogoId === "materiales-radar") return <RadarMaterialesSeccion />;
       if (catalogoId === "factores-salario-real") {
         return <FactorSalarioRealSeccion onCalcular={openFsrCalculoTab} onEditarModelo={openModeloCalculoTab} />;
       }
       if (catalogoId === "tabuladores-salario") return <CategoriaFasarSeccion />;
+      if (catalogoId === "tabuladores-escalafon") return <EscalafonSalarioSeccion />;
+      if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
+      if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
         return (
@@ -400,15 +412,27 @@ export default function App() {
     return null;
   };
 
-  // "proveedores", "clientes", "materiales-item", "factores-salario-real" y
-  // "tabuladores-salario" ya traen su propia barra de acciones (ver
-  // ProveedoresSeccion/ClientesSeccion/MaterialesSeccion/FactorSalarioRealSeccion/
-  // CategoriaFasarSeccion) — no deben mostrar también la del tab genérico,
-  // cableada a `dataGridRef`.
+  // "proveedores", "clientes", "materiales-item", "materiales-estanteria",
+  // "materiales-mesa", "materiales-radar", "factores-salario-real",
+  // "tabuladores-salario", "tabuladores-escalafon", "tabuladores-matriz" y
+  // "tabuladores-puente" ya traen su propia barra de acciones — no deben
+  // mostrar también la del tab genérico, cableada a `dataGridRef`.
   const catalogoIdActivo = activeTab?.id.startsWith(CATALOGO_PREFIX)
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
-  const CATALOGOS_BESPOKE = ["proveedores", "clientes", "materiales-item", "factores-salario-real", "tabuladores-salario"];
+  const CATALOGOS_BESPOKE = [
+    "proveedores",
+    "clientes",
+    "materiales-item",
+    "materiales-estanteria",
+    "materiales-mesa",
+    "materiales-radar",
+    "factores-salario-real",
+    "tabuladores-salario",
+    "tabuladores-escalafon",
+    "tabuladores-matriz",
+    "tabuladores-puente",
+  ];
   const catalogoActivoConfig =
     catalogoIdActivo && !CATALOGOS_BESPOKE.includes(catalogoIdActivo)
       ? CATALOGO_GRID_CONFIG[catalogoIdActivo]

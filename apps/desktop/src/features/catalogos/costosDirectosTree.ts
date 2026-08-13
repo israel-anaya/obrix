@@ -13,6 +13,9 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     hijos: [
       { id: "factores-salario-real", label: "Factores de Salario Real" },
       { id: "tabuladores-salario", label: "Tabuladores de Salario" },
+      { id: "tabuladores-escalafon", label: "Escalafón" },
+      { id: "tabuladores-matriz", label: "Matriz oficio × región" },
+      { id: "tabuladores-puente", label: "Puente base → real" },
       { id: "cuadrillas-trabajo", label: "Cuadrillas de trabajo" },
     ],
   },
@@ -22,6 +25,9 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     hijos: [
       { id: "fletes", label: "Fletes" },
       { id: "materiales-item", label: "Materiales" },
+      { id: "materiales-estanteria", label: "Estantería" },
+      { id: "materiales-mesa", label: "Mesa de equivalentes" },
+      { id: "materiales-radar", label: "Radar de costos" },
     ],
   },
   { id: "basicos-auxiliares", label: "Básicos y Auxiliares" },

@@ -61,12 +61,15 @@ export function SalarioCategoriaFasarPanel({
   categoriaId,
   categoriaClave,
   categoriaDescripcion,
+  captura,
   onCerrar,
   onSalarioRegistrado,
 }: {
   categoriaId: string | null;
   categoriaClave?: string;
   categoriaDescripcion?: string;
+  /** Si `abrir`, abre el alta con esa región (null = nacional). Si no, cierra el alta. Lo usa la matriz oficio×región. */
+  captura?: { regionId: string | null; ticket: number; abrir: boolean } | null;
   onCerrar: () => void;
   onSalarioRegistrado?: () => void;
 }) {
@@ -131,6 +134,19 @@ export function SalarioCategoriaFasarPanel({
       clearTimeout(espera);
     };
   }, [categoriaId]);
+
+  // La matriz manda `captura` al clic de una celda vacía: abre el alta ya
+  // apuntando a esa zona, sin pasar por "Nuevo salario".
+  useEffect(() => {
+    if (!captura || !categoriaId) return;
+    if (captura.abrir) {
+      setRegionNueva(captura.regionId ?? "");
+      setFactorNuevoId("");
+      setFormAbierto(true);
+    } else {
+      setFormAbierto(false);
+    }
+  }, [captura, categoriaId]);
 
   const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
 

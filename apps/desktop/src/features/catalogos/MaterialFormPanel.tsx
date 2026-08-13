@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { CAMPO_INPUT_CLASE, Campo } from "@/components/Campo";
 import { formatearFecha } from "@/lib/fecha";
-import { updateMaterial } from "@/lib/tauri";
+import { createMaterial, updateMaterial } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,28 +21,34 @@ function aMaterialData(m: Material): MaterialData {
 }
 
 /**
- * Vista en forma del material seleccionado en el grid — los mismos campos
- * que las columnas, pero en un formulario más legible para revisar/editar
- * un registro a la vez. Vive junto a `MaterialesSeccion`, sincronizada con
- * la fila seleccionada; "Guardar" hace `updateMaterial` y avisa al padre vía
- * `onGuardado` para refrescar el grid.
+ * Vista en forma del material seleccionado — los mismos campos que las
+ * columnas, pero en un formulario más legible para revisar/editar un
+ * registro a la vez. En `MaterialesSeccion` se sincroniza con la fila;
+ * en la Estantería también cubre el alta (`nuevo`) sin tocar el grid.
+ * "Guardar" hace `updateMaterial` (o `createMaterial` si `nuevo`); avisa
+ * al padre vía `onGuardado` / `onCreado`.
  */
 export function MaterialFormPanel({
   material,
+  nuevo,
   unidades,
   proveedores,
   familias,
   nombresPorUsuarioId,
   onCerrar,
   onGuardado,
+  onCreado,
 }: {
   material: Material | null;
+  /** Borrador de un alta — si viene, el panel crea en vez de editar. */
+  nuevo?: MaterialData | null;
   unidades: UnidadMedida[];
   proveedores: Proveedor[];
   familias: FamiliaInsumo[];
   nombresPorUsuarioId: Record<string, string>;
   onCerrar: () => void;
   onGuardado?: () => void;
+  onCreado?: (creado: Material) => void;
 }) {
   const raicesFamilia = useMemo(() => familias.filter((f) => f.parent_id === null), [familias]);
   const hijasPorPadreId = useMemo(() => {
@@ -57,28 +63,42 @@ export function MaterialFormPanel({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Se resincroniza cada vez que cambia el material seleccionado (o se
-  // recarga tras guardar) — descarta cualquier edición sin confirmar de la
-  // fila anterior, igual que al cambiar de fila en el grid.
+  const creando = !!nuevo;
+
+  // Se resincroniza cada vez que cambia el material seleccionado, el
+  // borrador de alta, o se recarga tras guardar — descarta cualquier
+  // edición sin confirmar de la fila anterior.
   useEffect(() => {
     setError(null);
+    if (nuevo) {
+      setDatos(nuevo);
+      return;
+    }
     setDatos(material ? aMaterialData(material) : null);
-  }, [material]);
+  }, [material, nuevo]);
 
   const hijas = datos?.familia_id ? (hijasPorPadreId[datos.familia_id] ?? []) : [];
 
-  const modificado = useMemo(() => {
-    if (!material || !datos) return false;
+  const puedeGuardar = useMemo(() => {
+    if (!datos) return false;
+    if (!datos.clave.trim() || !datos.descripcion.trim() || !datos.unidad_id) return false;
+    if (creando) return true;
+    if (!material) return false;
     return JSON.stringify(datos) !== JSON.stringify(aMaterialData(material));
-  }, [material, datos]);
+  }, [material, datos, creando]);
 
   const guardar = async () => {
-    if (!material || !datos) return;
+    if (!datos || !puedeGuardar) return;
     setGuardando(true);
     setError(null);
     try {
-      await updateMaterial(material.id, datos);
-      onGuardado?.();
+      if (creando) {
+        const creado = await createMaterial(datos);
+        onCreado?.(creado);
+      } else if (material) {
+        await updateMaterial(material.id, datos);
+        onGuardado?.();
+      }
     } catch (e) {
       setError(String(e));
     } finally {
@@ -91,7 +111,7 @@ export function MaterialFormPanel({
       <div className="border-b border-border px-3 py-1.5">
         <div className="flex items-center justify-between gap-2">
           <h3 className="truncate text-xs font-semibold text-muted-foreground">
-            Ficha{material ? ` — ${material.clave}` : ""}
+            Ficha{creando ? " — nuevo" : material ? ` — ${material.clave}` : ""}
           </h3>
           <button
             type="button"
@@ -104,7 +124,7 @@ export function MaterialFormPanel({
         </div>
       </div>
 
-      {!material || !datos ? (
+      {!datos ? (
         <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un material para ver su ficha.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
@@ -211,15 +231,15 @@ export function MaterialFormPanel({
             <div className="rounded-md border border-border bg-muted/30 p-2 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Costo actual</span>
-                <span className="font-medium">{material.precio_vigente ? `$${material.precio_vigente}` : "$0"}</span>
+                <span className="font-medium">{material?.precio_vigente ? `$${material.precio_vigente}` : "$0"}</span>
               </div>
             </div>
 
             <div className="flex justify-end gap-2 border-t border-border pt-3">
               <button
                 type="button"
-                onClick={() => setDatos(aMaterialData(material))}
-                disabled={!modificado || guardando}
+                onClick={() => setDatos(nuevo ?? (material ? aMaterialData(material) : datos))}
+                disabled={!puedeGuardar || guardando || creando}
                 className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
               >
                 Descartar
@@ -227,16 +247,17 @@ export function MaterialFormPanel({
               <button
                 type="button"
                 onClick={() => void guardar()}
-                disabled={!modificado || guardando}
+                disabled={!puedeGuardar || guardando}
                 className={cn(
                   "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
-                  (!modificado || guardando) && "opacity-50",
+                  (!puedeGuardar || guardando) && "opacity-50",
                 )}
               >
-                {guardando ? "Guardando…" : "Guardar"}
+                {guardando ? "Guardando…" : creando ? "Crear" : "Guardar"}
               </button>
             </div>
 
+            {!creando && material && (
             <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
               <span>Creado</span>
               <span className="text-right">{formatearFecha(material.created_at)}</span>
@@ -249,6 +270,7 @@ export function MaterialFormPanel({
                 {material.updated_by ? (nombresPorUsuarioId[material.updated_by] ?? material.updated_by) : "—"}
               </span>
             </div>
+            )}
           </div>
         </div>
       )}
