@@ -255,6 +255,16 @@ interface EstadoEdicion {
 const ESTRELLA_VACIA = "text-muted-foreground/30";
 const ESTRELLA_LLENA = "fill-amber-400 text-amber-400";
 const ALTO_FILA = 26;
+/** Espera al primer eco, alineada al KeyboardDelay típico del SO. */
+const FLECHA_REPEAT_DELAY_MS = 400;
+/** ~25 Hz una vez que el hold arranca — no el flood de `keydown.repeat`. */
+const FLECHA_REPEAT_MS = 40;
+
+type Flecha = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
+
+function esFlecha(key: string): key is Flecha {
+  return key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight";
+}
 
 function renderEstrellas(valor: unknown, onElegir?: (n: number) => void) {
   const numero = Number(valor);
@@ -1555,6 +1565,159 @@ export const CatalogoGrid = forwardRef<
     else scrollRef.current?.focus();
   };
 
+  const rowSelectionRef = useRef(rowSelection);
+  rowSelectionRef.current = rowSelection;
+  const columnasRef = useRef(config.columnas);
+  columnasRef.current = config.columnas;
+
+  const moverPorFlecha = (key: Flecha, opts: { alBorde: boolean; enfocar: boolean }) => {
+    const columnas = columnasRef.current;
+    const filas = filasVisiblesRef.current;
+    const sel = seleccionStore.get();
+
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      if (edicionRef.current) return;
+      const filaActualId = sel?.filaId ?? Object.keys(rowSelectionRef.current)[0];
+      const idxActual = filas.findIndex((r) => r.original._id === filaActualId);
+      const destino = opts.alBorde
+        ? key === "ArrowDown"
+          ? filas.length - 1
+          : 0
+        : idxActual + (key === "ArrowDown" ? 1 : -1);
+      const siguiente = filas[destino];
+      if (!siguiente) return;
+      const campo = sel?.campo ?? primerCampo(columnas);
+      if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
+      if (opts.enfocar) enfocarFila(destino, siguiente.original._id);
+      return;
+    }
+
+    if (!sel) return;
+    if (opts.alBorde) {
+      const campo = key === "ArrowLeft" ? columnas[0]?.campo : columnas[columnas.length - 1]?.campo;
+      if (campo) seleccionStore.set({ filaId: sel.filaId, campo });
+      return;
+    }
+    const idxActual = columnas.findIndex((c) => c.campo === sel.campo);
+    const siguienteCol = columnas[idxActual + (key === "ArrowRight" ? 1 : -1)];
+    if (!siguienteCol) return;
+    seleccionStore.set({ filaId: sel.filaId, campo: siguienteCol.campo });
+  };
+
+  const holdRef = useRef({
+    held: new Set<Flecha>(),
+    activa: null as Flecha | null,
+    raf: 0,
+    startedAt: 0,
+    lastMove: 0,
+    parked: false,
+  });
+  const moverPorFlechaRef = useRef(moverPorFlecha);
+  moverPorFlechaRef.current = moverPorFlecha;
+  const loopHoldRef = useRef<(t: number) => void>(() => {});
+
+  const detenerHold = () => {
+    const h = holdRef.current;
+    h.held.clear();
+    h.activa = null;
+    h.parked = false;
+    if (h.raf) {
+      cancelAnimationFrame(h.raf);
+      h.raf = 0;
+    }
+  };
+
+  loopHoldRef.current = (t: number) => {
+    const h = holdRef.current;
+    if (!h.activa) {
+      h.raf = 0;
+      return;
+    }
+    h.raf = requestAnimationFrame((now) => loopHoldRef.current(now));
+    if (abiertaStore.get()) return;
+    if ((h.activa === "ArrowUp" || h.activa === "ArrowDown") && edicionRef.current) return;
+    if (t - h.startedAt < FLECHA_REPEAT_DELAY_MS) return;
+    // El foco en la fila de origen se perdería al virtualizarla; el
+    // contenedor (tabIndex=0) sí sobrevive todo el hold.
+    if (!h.parked) {
+      h.parked = true;
+      scrollRef.current?.focus({ preventScroll: true });
+    }
+    if (t - h.lastMove < FLECHA_REPEAT_MS) return;
+    h.lastMove = t;
+    moverPorFlechaRef.current(h.activa, { alBorde: false, enfocar: false });
+  };
+
+  const arrancarHold = (key: Flecha) => {
+    const h = holdRef.current;
+    h.held.add(key);
+    h.activa = key;
+    h.startedAt = performance.now();
+    h.lastMove = h.startedAt;
+    if (!h.raf) {
+      h.parked = false;
+      h.raf = requestAnimationFrame((now) => loopHoldRef.current(now));
+    }
+  };
+
+  const onFlechaKeyUp = (key: string) => {
+    if (!esFlecha(key)) return;
+    const h = holdRef.current;
+    if (!h.held.has(key)) return;
+    h.held.delete(key);
+    if (h.activa === key) {
+      const resto = [...h.held];
+      h.activa = resto[resto.length - 1] ?? null;
+      if (h.activa) {
+        h.startedAt = performance.now();
+        h.lastMove = h.startedAt;
+      }
+    }
+    if (h.activa) return;
+    h.parked = false;
+    if (h.raf) {
+      cancelAnimationFrame(h.raf);
+      h.raf = 0;
+    }
+    const sel = seleccionStore.get();
+    if (!sel) return;
+    const nodo = filaRefs.current.get(sel.filaId);
+    if (nodo && document.activeElement === nodo) return;
+    const idx = filasVisiblesRef.current.findIndex((r) => r.original._id === sel.filaId);
+    if (idx >= 0) enfocarFila(idx, sel.filaId);
+  };
+
+  const onFlechaKeyUpRef = useRef(onFlechaKeyUp);
+  onFlechaKeyUpRef.current = onFlechaKeyUp;
+  const detenerHoldRef = useRef(detenerHold);
+  detenerHoldRef.current = detenerHold;
+
+  useEffect(() => {
+    const onKeyUp = (e: KeyboardEvent) => onFlechaKeyUpRef.current(e.key);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!holdRef.current.activa || !esFlecha(e.key)) return;
+      e.preventDefault();
+    };
+    const onBlur = () => detenerHoldRef.current();
+    const onFocusIn = (e: FocusEvent) => {
+      const caja = scrollRef.current;
+      if (!caja || !holdRef.current.activa) return;
+      if (e.target instanceof Node && caja.contains(e.target)) return;
+      detenerHoldRef.current();
+    };
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("blur", onBlur);
+    document.addEventListener("focusin", onFocusIn);
+    return () => {
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("blur", onBlur);
+      document.removeEventListener("focusin", onFocusIn);
+      detenerHoldRef.current();
+    };
+  }, []);
+
   // Mantiene siempre exactamente una fila seleccionada en modo "unica": al
   // montar restaura `seleccionInicialId` o cae en la primera; si la selección se vacía más
   // adelante (p. ej. se borró la fila seleccionada), vuelve a caer en la
@@ -1812,6 +1975,8 @@ export const CatalogoGrid = forwardRef<
       return;
     }
 
+    if (!esFlecha(e.key) && holdRef.current.activa) detenerHold();
+
     if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S") && edicion) {
       e.preventDefault();
       void confirmarEdicion();
@@ -1826,26 +1991,19 @@ export const CatalogoGrid = forwardRef<
       return;
     }
 
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-      // Con una fila en borrador, las flechas ↑/↓ no deben moverse a otra fila.
-      if (edicion) {
+    if (esFlecha(e.key)) {
+      // Primer keydown mueve ya; los ecos del SO (`repeat`) se ignoran — el
+      // loop de rAF mueve a ~25 Hz y el keyup corta sin cola residual.
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && edicion) {
         e.preventDefault();
         return;
       }
-      const filaActualId = celdaSeleccionada?.filaId ?? Object.keys(rowSelection)[0];
-      const idxActual = filasVisibles.findIndex((r) => r.original._id === filaActualId);
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !celdaSeleccionada) return;
       const alBorde = e.ctrlKey || e.metaKey;
-      const destino = alBorde
-        ? e.key === "ArrowDown"
-          ? filasVisibles.length - 1
-          : 0
-        : idxActual + (e.key === "ArrowDown" ? 1 : -1);
-      const siguiente = filasVisibles[destino];
-      if (!siguiente) return;
       e.preventDefault();
-      const campo = celdaSeleccionada?.campo ?? primerCampo(config.columnas);
-      if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
-      enfocarFila(destino, siguiente.original._id);
+      if (e.repeat) return;
+      moverPorFlecha(e.key, { alBorde, enfocar: e.key === "ArrowUp" || e.key === "ArrowDown" });
+      if (!alBorde) arrancarHold(e.key);
       return;
     }
 
@@ -1869,20 +2027,6 @@ export const CatalogoGrid = forwardRef<
       const campo = celdaSeleccionada?.campo ?? primerCampo(config.columnas);
       if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
       enfocarFila(destino, siguiente.original._id);
-      return;
-    }
-
-    if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && celdaSeleccionada) {
-      e.preventDefault();
-      if (e.ctrlKey || e.metaKey) {
-        const campo = e.key === "ArrowLeft" ? config.columnas[0]?.campo : config.columnas[config.columnas.length - 1]?.campo;
-        if (campo) seleccionStore.set({ filaId: celdaSeleccionada.filaId, campo });
-        return;
-      }
-      const idxActual = config.columnas.findIndex((c) => c.campo === celdaSeleccionada.campo);
-      const siguienteCol = config.columnas[idxActual + (e.key === "ArrowRight" ? 1 : -1)];
-      if (!siguienteCol) return;
-      seleccionStore.set({ filaId: celdaSeleccionada.filaId, campo: siguienteCol.campo });
       return;
     }
 
