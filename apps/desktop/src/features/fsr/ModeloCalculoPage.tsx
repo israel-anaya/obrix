@@ -69,6 +69,12 @@ const COLUMNAS_CALCULADOS: CatalogoGridConfig["columnas"] = [
   { campo: "descripcion", encabezado: "Descripción", ancho: 420, sinFiltro: true },
 ];
 
+// Constantes de módulo, no objetos literales en el JSX: `CatalogoGrid` memoiza
+// sus columnas por la identidad de `config.columnas`, así que un literal nuevo
+// en cada render rehace las `ColumnDef` y con ellas todas las celdas.
+const CONFIG_PARAMETROS: CatalogoGridConfig = { titulo: "Parámetros", columnas: COLUMNAS_PARAMETROS };
+const CONFIG_CALCULADOS: CatalogoGridConfig = { titulo: "Campos calculados", columnas: COLUMNAS_CALCULADOS };
+
 export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId: string }) {
   const [fila, setFila] = useState<FactorSalarioReal | null>(null);
   const [parametros, setParametros] = useState<Parametro[]>([]);
@@ -307,7 +313,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
             <CatalogoGrid
               key="parametros"
               ref={gridParametrosRef}
-              config={{ titulo: "Parámetros", columnas: COLUMNAS_PARAMETROS }}
+              config={CONFIG_PARAMETROS}
               filasIniciales={filasParametros}
               modoSeleccion="unica"
               onFilaSeleccionada={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
@@ -324,7 +330,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
               <CatalogoGrid
                 key="calculados"
                 ref={gridCalculadosRef}
-                config={{ titulo: "Campos calculados", columnas: COLUMNAS_CALCULADOS }}
+                config={CONFIG_CALCULADOS}
                 filasIniciales={filasCalculados}
                 modoSeleccion="unica"
                 onFilaSeleccionada={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}

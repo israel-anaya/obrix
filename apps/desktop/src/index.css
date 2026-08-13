@@ -154,3 +154,45 @@ body {
   animation: barra-progreso-indeterminada 1.1s ease-in-out infinite;
   transform-origin: left;
 }
+
+/*
+ * Tinte de una fila en borrador del grid de catálogos: verde para un alta,
+ * ámbar para la edición de un registro existente. En tema oscuro el tinte es
+ * translúcido (igual que `bg-*-950/60`) para que se mezcle con el fondo.
+ *
+ * Por eso las celdas ancladas (las columnas sticky de índice/selección/
+ * acciones) no pueden pintar el tinte tal cual: al hacer scroll horizontal se
+ * vería a través de ellas el contenido que pasa por debajo. Pintan el fondo
+ * opaco y encima el mismo tinte como segunda capa (`background-image`), con lo
+ * que quedan opacas y del mismo color que el resto de la fila.
+ */
+:root {
+  --fila-alta: var(--color-emerald-50);
+  --fila-edicion: var(--color-amber-50);
+}
+
+.dark {
+  --fila-alta: color-mix(in oklab, var(--color-emerald-950) 60%, transparent);
+  --fila-edicion: color-mix(in oklab, var(--color-amber-950) 60%, transparent);
+}
+
+.fila-alta {
+  background-color: var(--fila-alta);
+}
+
+.fila-edicion {
+  background-color: var(--fila-edicion);
+}
+
+.celda-anclada-alta,
+.celda-anclada-edicion {
+  background-color: hsl(var(--background));
+}
+
+.celda-anclada-alta {
+  background-image: linear-gradient(var(--fila-alta), var(--fila-alta));
+}
+
+.celda-anclada-edicion {
+  background-image: linear-gradient(var(--fila-edicion), var(--fila-edicion));
+}

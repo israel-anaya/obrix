@@ -308,7 +308,19 @@ function esTeclaVertical(key: TeclaHold): boolean {
   return key === "ArrowUp" || key === "ArrowDown" || key === "PageUp" || key === "PageDown";
 }
 
-function renderEstrellas(valor: unknown, onElegir?: (n: number) => void) {
+/**
+ * Memoizada: son 5 iconos (hasta 3 nodos cada uno en la media estrella) por
+ * celda, y una columna de estrellas los rehacía en cada render de la celda —
+ * seleccionarla, guardarla, entrar en borrador. Con `valor` y `onElegir`
+ * estables (ver `CeldaCatalogo`), el subárbol no se vuelve a construir.
+ */
+const Estrellas = memo(function Estrellas({
+  valor,
+  onElegir,
+}: {
+  valor: unknown;
+  onElegir?: (n: number) => void;
+}) {
   const numero = Number(valor);
   const redondeado = Number.isFinite(numero) && numero > 0 ? Math.round(numero * 2) / 2 : 0;
   return (
@@ -349,7 +361,7 @@ function renderEstrellas(valor: unknown, onElegir?: (n: number) => void) {
       })}
     </div>
   );
-}
+});
 
 /**
  * Texto formateado de una celda — mismo texto que ve el usuario (fecha con
@@ -413,16 +425,75 @@ function crearStore<T>(inicial: T): Store<T> {
   };
 }
 
-function crearStoreSeleccion(): Store<CeldaSel> {
-  const store = crearStore<CeldaSel>(null);
+/**
+ * Store de la celda seleccionada con notificación por clave: mover la selección
+ * solo despierta a la fila/columna/celda que se deja y a la que se toma, no a
+ * las ~(filas visibles × columnas) suscripciones del cuerpo. Notificar a todas
+ * costaba miles de snapshots por movimiento y, con el hold de flechas a ~25 Hz
+ * (ver `FLECHA_REPEAT_MS`), decenas de miles por segundo.
+ */
+interface StoreSeleccion {
+  get: () => CeldaSel;
+  set: (next: CeldaSel) => void;
+  /** Para efectos que reaccionan a cualquier movimiento (scroll, notificación al padre). */
+  subscribe: (fn: () => void) => () => void;
+  subscribeFila: (filaId: string, fn: () => void) => () => void;
+  subscribeCampo: (campo: string, fn: () => void) => () => void;
+  subscribeCelda: (filaId: string, campo: string, fn: () => void) => () => void;
+}
+
+/** ` ` como separador: ningún `_id` ni nombre de campo lo contiene. */
+function claveCelda(filaId: string, campo: string): string {
+  return `x:${filaId} ${campo}`;
+}
+
+function crearStoreSeleccion(): StoreSeleccion {
+  let valor: CeldaSel = null;
+  const globales = new Set<() => void>();
+  const porClave = new Map<string, Set<() => void>>();
+
+  const suscribir = (clave: string, fn: () => void) => {
+    let bucket = porClave.get(clave);
+    if (!bucket) {
+      bucket = new Set();
+      porClave.set(clave, bucket);
+    }
+    const propio = bucket;
+    propio.add(fn);
+    return () => {
+      propio.delete(fn);
+      if (propio.size === 0 && porClave.get(clave) === propio) porClave.delete(clave);
+    };
+  };
+
+  const claves = (sel: CeldaSel, acc: Set<string>) => {
+    if (!sel) return;
+    acc.add(`f:${sel.filaId}`);
+    acc.add(`c:${sel.campo}`);
+    acc.add(claveCelda(sel.filaId, sel.campo));
+  };
+
   return {
-    subscribe: store.subscribe,
-    get: store.get,
+    get: () => valor,
     set(next) {
-      const prev = store.get();
+      const prev = valor;
       if (prev?.filaId === next?.filaId && prev?.campo === next?.campo) return;
-      store.set(next);
+      valor = next;
+      const afectadas = new Set<string>();
+      claves(prev, afectadas);
+      claves(next, afectadas);
+      for (const clave of afectadas) porClave.get(clave)?.forEach((fn) => fn());
+      globales.forEach((fn) => fn());
     },
+    subscribe(fn) {
+      globales.add(fn);
+      return () => {
+        globales.delete(fn);
+      };
+    },
+    subscribeFila: (filaId, fn) => suscribir(`f:${filaId}`, fn),
+    subscribeCampo: (campo, fn) => suscribir(`c:${campo}`, fn),
+    subscribeCelda: (filaId, campo, fn) => suscribir(claveCelda(filaId, campo), fn),
   };
 }
 
@@ -435,7 +506,7 @@ type ChromeGrid = {
 };
 
 type GridUi = {
-  seleccion: Store<CeldaSel>;
+  seleccion: StoreSeleccion;
   abierta: Store<CeldaAbierta | null>;
   chrome: Store<ChromeGrid>;
   meta: { current: CatalogoTableMeta };
@@ -449,71 +520,123 @@ function useGridUi(): GridUi {
   return ctx;
 }
 
+// `getSnapshot` y `subscribe` van en `useCallback`: si cambian de identidad,
+// React vuelve a suscribir y a re-ejecutar el snapshot en cada render.
+
 function useCeldaSeleccionada(filaId: string, campo: string) {
   const { seleccion } = useGridUi();
-  return useSyncExternalStore(seleccion.subscribe, () => {
-    const s = seleccion.get();
-    return !!s && s.filaId === filaId && s.campo === campo;
-  });
+  return useSyncExternalStore(
+    useCallback((fn) => seleccion.subscribeCelda(filaId, campo, fn), [seleccion, filaId, campo]),
+    useCallback(() => {
+      const s = seleccion.get();
+      return !!s && s.filaId === filaId && s.campo === campo;
+    }, [seleccion, filaId, campo]),
+  );
 }
 
 function useFilaActiva(filaId: string) {
   const { seleccion } = useGridUi();
-  return useSyncExternalStore(seleccion.subscribe, () => seleccion.get()?.filaId === filaId);
+  return useSyncExternalStore(
+    useCallback((fn) => seleccion.subscribeFila(filaId, fn), [seleccion, filaId]),
+    useCallback(() => seleccion.get()?.filaId === filaId, [seleccion, filaId]),
+  );
 }
 
 function useCampoActivo(campo: string) {
   const { seleccion } = useGridUi();
-  return useSyncExternalStore(seleccion.subscribe, () => seleccion.get()?.campo === campo);
+  return useSyncExternalStore(
+    useCallback((fn) => seleccion.subscribeCampo(campo, fn), [seleccion, campo]),
+    useCallback(() => seleccion.get()?.campo === campo, [seleccion, campo]),
+  );
 }
 
 function useCeldaAbierta(filaId: string, campo: string) {
   const { abierta } = useGridUi();
-  return useSyncExternalStore(abierta.subscribe, () => {
-    const a = abierta.get();
-    return a?.filaId === filaId && a?.campo === campo ? a : null;
-  });
+  return useSyncExternalStore(
+    abierta.subscribe,
+    useCallback(() => {
+      const a = abierta.get();
+      return a?.filaId === filaId && a?.campo === campo ? a : null;
+    }, [abierta, filaId, campo]),
+  );
 }
 
-function useBloqueada(filaId: string) {
+/**
+ * Los tres estados que el chrome le aporta a una celda, empaquetados en un
+ * entero: una sola suscripción por celda en vez de tres (con ~20 columnas × ~40
+ * filas visibles eran ~2 400 altas y bajas de listener por vuelta de viewport),
+ * y un snapshot primitivo que React puede comparar sin re-renderizar.
+ */
+const CELDA_BLOQUEADA = 1;
+const CELDA_GUARDANDO = 2;
+const CELDA_ERROR = 4;
+
+function useEstadoCelda(filaId: string, campo: string): number {
   const { chrome } = useGridUi();
-  return useSyncExternalStore(chrome.subscribe, () => {
-    const e = chrome.get().edicion;
-    return !!e && e.id !== filaId;
-  });
+  return useSyncExternalStore(
+    chrome.subscribe,
+    useCallback(() => {
+      const c = chrome.get();
+      const e = c.edicion;
+      return (
+        (e && e.id !== filaId ? CELDA_BLOQUEADA : 0) |
+        (c.guardando ? CELDA_GUARDANDO : 0) |
+        (e?.id === filaId && c.camposError.has(campo) ? CELDA_ERROR : 0)
+      );
+    }, [chrome, filaId, campo]),
+  );
 }
 
-function useGuardando() {
+/** Igual que `useEstadoCelda`, para la columna de acciones de una fila. */
+const FILA_BORRADOR = 1;
+const FILA_GUARDANDO = 2;
+const FILA_RESALTAR = 4;
+
+function useEstadoAcciones(filaId: string): number {
   const { chrome } = useGridUi();
-  return useSyncExternalStore(chrome.subscribe, () => chrome.get().guardando);
+  return useSyncExternalStore(
+    chrome.subscribe,
+    useCallback(() => {
+      const c = chrome.get();
+      return (
+        (c.edicion?.id === filaId ? FILA_BORRADOR : 0) |
+        (c.guardando ? FILA_GUARDANDO : 0) |
+        (c.resaltarSeleccion ? FILA_RESALTAR : 0)
+      );
+    }, [chrome, filaId]),
+  );
 }
 
-function useErrorCampo(filaId: string, campo: string) {
+/**
+ * Tipo de borrador de la fila, no la clase ya resuelta: la fila y sus celdas
+ * ancladas pintan el mismo tinte de forma distinta (ver `index.css`).
+ */
+type TipoBorrador = "" | "alta" | "edicion";
+
+function useTipoBorrador(filaId: string): TipoBorrador {
   const { chrome } = useGridUi();
-  return useSyncExternalStore(chrome.subscribe, () => {
-    const c = chrome.get();
-    return !!(c.edicion?.id === filaId && c.camposError.has(campo));
-  });
+  return useSyncExternalStore(
+    chrome.subscribe,
+    useCallback((): TipoBorrador => {
+      const e = chrome.get().edicion;
+      if (e?.id !== filaId) return "";
+      return e.esNueva ? "alta" : "edicion";
+    }, [chrome, filaId]),
+  );
 }
 
-function useEsBorrador(filaId: string) {
-  const { chrome } = useGridUi();
-  return useSyncExternalStore(chrome.subscribe, () => chrome.get().edicion?.id === filaId);
-}
+const CLASE_FILA_BORRADOR: Record<TipoBorrador, string> = {
+  "": "",
+  alta: "fila-alta",
+  edicion: "fila-edicion",
+};
 
-function useClaseBorrador(filaId: string) {
-  const { chrome } = useGridUi();
-  return useSyncExternalStore(chrome.subscribe, () => {
-    const e = chrome.get().edicion;
-    if (e?.id !== filaId) return "";
-    return e.esNueva ? "bg-emerald-50 dark:bg-emerald-950/60" : "bg-amber-50 dark:bg-amber-950/60";
-  });
-}
-
-function useResaltarPunto(filaId: string, filaSeleccionada: boolean) {
-  const { chrome } = useGridUi();
-  return useSyncExternalStore(chrome.subscribe, () => chrome.get().resaltarSeleccion && filaSeleccionada && chrome.get().edicion?.id !== filaId);
-}
+/** Opaca: fondo + tinte en dos capas, para tapar lo que pasa por debajo. */
+const CLASE_CELDA_ANCLADA_BORRADOR: Record<TipoBorrador, string> = {
+  "": "",
+  alta: "celda-anclada-alta",
+  edicion: "celda-anclada-edicion",
+};
 
 const CHROME_VACIO: ChromeGrid = {
   edicion: null,
@@ -549,7 +672,7 @@ function CeldaVista({
   onToggleBooleano?: () => void;
   onEstrella?: (n: number) => void;
 }) {
-  if (columna.estrellas) return renderEstrellas(fila[columna.campo], onEstrella);
+  if (columna.estrellas) return <Estrellas valor={fila[columna.campo]} onElegir={onEstrella} />;
   if (columna.booleano) {
     return (
       <div className="flex h-full w-full items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -631,14 +754,34 @@ function ComboboxCelda({
     else if (bottom > lista.scrollTop + lista.clientHeight) lista.scrollTop = bottom - lista.clientHeight;
   }, [activo, visibles.length]);
 
+  // El listener de scroll va en captura (para oír el scroll del contenedor del
+  // grid, que no burbujea), así que se dispara con mucha frecuencia: se marca
+  // pasivo y se acumula en un rAF, y solo se re-renderiza si el input se movió
+  // de verdad — `getBoundingClientRect` devuelve un objeto nuevo cada vez.
   useLayoutEffect(() => {
-    const medir = () => setRect(inputRef.current?.getBoundingClientRect() ?? null);
+    let raf = 0;
+    const medir = () => {
+      const r = inputRef.current?.getBoundingClientRect() ?? null;
+      setRect((prev) =>
+        prev && r && prev.top === r.top && prev.bottom === r.bottom && prev.left === r.left && prev.width === r.width
+          ? prev
+          : r,
+      );
+    };
+    const programar = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        medir();
+      });
+    };
     medir();
-    window.addEventListener("resize", medir);
-    window.addEventListener("scroll", medir, true);
+    window.addEventListener("resize", programar, { passive: true });
+    window.addEventListener("scroll", programar, { capture: true, passive: true });
     return () => {
-      window.removeEventListener("resize", medir);
-      window.removeEventListener("scroll", medir, true);
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("resize", programar);
+      window.removeEventListener("scroll", programar, true);
     };
   }, []);
 
@@ -788,15 +931,25 @@ function ComboboxCelda({
   );
 }
 
-/** Manija de resize: cursor col-resize, guía a todo el alto del grid. */
+/**
+ * Manija de resize: cursor col-resize, guía a todo el alto del grid.
+ *
+ * La hoja de estilo se inserta una sola vez y ya no se toca; lo que se enciende
+ * y apaga es una clase en `<body>`. Insertar y quitar un `<style>` en cada
+ * resize invalidaba el CSSOM entero y obligaba a rehacer el matching de reglas
+ * de todo el documento.
+ */
+const CLASE_COL_RESIZE = "catalogo-col-resize";
+
 function aplicarCursorColResize(activo: boolean) {
   const id = "catalogo-cursor-col-resize";
-  document.getElementById(id)?.remove();
-  if (!activo) return;
-  const style = document.createElement("style");
-  style.id = id;
-  style.textContent = "*,*::before,*::after{cursor:col-resize!important}";
-  document.head.appendChild(style);
+  if (activo && !document.getElementById(id)) {
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `body.${CLASE_COL_RESIZE} *,body.${CLASE_COL_RESIZE} *::before,body.${CLASE_COL_RESIZE} *::after{cursor:col-resize!important}`;
+    document.head.appendChild(style);
+  }
+  document.body.classList.toggle(CLASE_COL_RESIZE, activo);
 }
 
 function ManijaResize({
@@ -815,10 +968,14 @@ function ManijaResize({
   const [guia, setGuia] = useState<{ left: number; top: number; height: number } | null>(null);
   const visible = hover || resizing;
 
+  // Solo hace algo mientras esta manija está redimensionando: antes el efecto
+  // corría al montar cada una de las N manijas del encabezado y, al limpiarse,
+  // podía apagarle el cursor a otra columna que sí estuviera redimensionando.
   useEffect(() => {
-    aplicarCursorColResize(resizing);
+    if (!resizing) return;
+    aplicarCursorColResize(true);
     const prev = document.body.style.userSelect;
-    if (resizing) document.body.style.userSelect = "none";
+    document.body.style.userSelect = "none";
     return () => {
       aplicarCursorColResize(false);
       document.body.style.userSelect = prev;
@@ -830,24 +987,39 @@ function ManijaResize({
       setGuia(null);
       return;
     }
+    let raf = 0;
     const medir = () => {
       const handle = handleRef.current;
       const caja = contenedorRef.current;
       if (!handle || !caja) return;
       const h = handle.getBoundingClientRect();
       const c = caja.getBoundingClientRect();
-      setGuia({ left: h.right, top: c.top, height: c.height });
+      setGuia((prev) =>
+        prev && prev.left === h.right && prev.top === c.top && prev.height === c.height
+          ? prev
+          : { left: h.right, top: c.top, height: c.height },
+      );
+    };
+    // Igual que en `ComboboxCelda`: el scroll en captura llega en cada evento
+    // del contenedor, así que se acumula en un rAF y se marca pasivo.
+    const programar = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        medir();
+      });
     };
     medir();
     const caja = contenedorRef.current;
     const th = handleRef.current?.parentElement;
-    const ro = new ResizeObserver(medir);
+    const ro = new ResizeObserver(programar);
     if (caja) ro.observe(caja);
     if (th) ro.observe(th);
-    window.addEventListener("scroll", medir, true);
+    window.addEventListener("scroll", programar, { capture: true, passive: true });
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
-      window.removeEventListener("scroll", medir, true);
+      window.removeEventListener("scroll", programar, true);
     };
   }, [visible, resizing, contenedorRef]);
 
@@ -1013,13 +1185,30 @@ function CeldaCatalogo({
   fila: Fila;
   columnas: CatalogoColumnaDef[];
 }) {
-  const meta = useGridUi().meta.current;
+  const ui = useGridUi();
+  const meta = ui.meta.current;
   const abierta = useCeldaAbierta(fila._id, columna.campo);
   const seleccionada = useCeldaSeleccionada(fila._id, columna.campo);
-  const bloqueada = useBloqueada(fila._id);
-  const guardando = useGuardando();
-  const conError = useErrorCampo(fila._id, columna.campo);
+  const estado = useEstadoCelda(fila._id, columna.campo);
+  const conError = (estado & CELDA_ERROR) !== 0;
   const clicDirecto = columna.booleano || columna.estrellas;
+
+  // Estables (van por el ref de `meta`, no por el `meta` del render) para que
+  // `Estrellas` pueda memoizarse y el checkbox no reciba un handler nuevo cada vez.
+  const alternarBooleano = useCallback(() => {
+    const m = ui.meta.current;
+    m.seleccionarCelda(fila._id, columna.campo);
+    m.confirmarCambioCelda(fila._id, columna.campo, !fila[columna.campo]);
+  }, [ui, fila, columna.campo]);
+
+  const elegirEstrella = useCallback(
+    (n: number) => {
+      const m = ui.meta.current;
+      m.seleccionarCelda(fila._id, columna.campo);
+      m.confirmarCambioCelda(fila._id, columna.campo, n);
+    },
+    [ui, fila._id, columna.campo],
+  );
   if (!columna.soloLectura && abierta && !columna.booleano) {
     return (
       <EditorCelda
@@ -1031,7 +1220,7 @@ function CeldaCatalogo({
       />
     );
   }
-  const puedeMutar = !columna.soloLectura && !guardando && !bloqueada;
+  const puedeMutar = !columna.soloLectura && (estado & (CELDA_GUARDANDO | CELDA_BLOQUEADA)) === 0;
   return (
     <div
       className={cn(
@@ -1052,22 +1241,8 @@ function CeldaCatalogo({
       <CeldaVista
         fila={fila}
         columna={columna}
-        onToggleBooleano={
-          columna.booleano && puedeMutar
-            ? () => {
-                meta.seleccionarCelda(fila._id, columna.campo);
-                meta.confirmarCambioCelda(fila._id, columna.campo, !fila[columna.campo]);
-              }
-            : undefined
-        }
-        onEstrella={
-          columna.estrellas && puedeMutar
-            ? (n) => {
-                meta.seleccionarCelda(fila._id, columna.campo);
-                meta.confirmarCambioCelda(fila._id, columna.campo, n);
-              }
-            : undefined
-        }
+        onToggleBooleano={columna.booleano && puedeMutar ? alternarBooleano : undefined}
+        onEstrella={columna.estrellas && puedeMutar ? elegirEstrella : undefined}
       />
     </div>
   );
@@ -1091,10 +1266,11 @@ function IndiceFila({ filaId, indice }: { filaId: string; indice: number }) {
 
 function AccionesFila({ filaId }: { filaId: string }) {
   const meta = useGridUi().meta.current;
-  const esBorrador = useEsBorrador(filaId);
-  const guardando = useGuardando();
+  const estado = useEstadoAcciones(filaId);
   const activa = useFilaActiva(filaId);
-  const punto = useResaltarPunto(filaId, activa);
+  const esBorrador = (estado & FILA_BORRADOR) !== 0;
+  const guardando = (estado & FILA_GUARDANDO) !== 0;
+  const punto = (estado & FILA_RESALTAR) !== 0 && activa && !esBorrador;
   if (esBorrador) {
     return (
       <div className="flex h-full items-center justify-center gap-px">
@@ -1173,10 +1349,16 @@ const FilaVirtual = memo(function FilaVirtual({
 }) {
   const filaId = row.original._id;
   const activa = useFilaActiva(filaId);
-  const claseBorrador = useClaseBorrador(filaId);
-  const esBorrador = !!claseBorrador;
+  const tipoBorrador = useTipoBorrador(filaId);
+  const esBorrador = tipoBorrador !== "";
   const seleccionadaVisual = modoSeleccion === "unica" ? activa : seleccionada;
-  const fondo = cn("bg-background", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent");
+  // Una sola clase de fondo por celda anclada — sin superponer `bg-*` y dejar
+  // que gane la última, que es lo que dejaba el tinte translúcido a la vista.
+  const fondo = esBorrador
+    ? CLASE_CELDA_ANCLADA_BORRADOR[tipoBorrador]
+    : seleccionadaVisual
+      ? "bg-accent"
+      : "bg-background";
 
   // Ref estable: un callback inline se desmonta y remonta en cada render (React
   // lo invoca con `null` y luego con el nodo), rehaciendo el Map fila a fila.
@@ -1202,7 +1384,12 @@ const FilaVirtual = memo(function FilaVirtual({
       ref={asignarRef}
       style={estiloFila}
       tabIndex={0}
-      className={cn("flex outline-none", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent", modoSeleccion === "unica" && "cursor-pointer")}
+      className={cn(
+        "flex outline-none",
+        CLASE_FILA_BORRADOR[tipoBorrador],
+        !esBorrador && seleccionadaVisual && "bg-accent",
+        modoSeleccion === "unica" && "cursor-pointer",
+      )}
     >
       {row.getAllCells().map((cell) => {
         const columnId = cell.column.id;
@@ -1496,6 +1683,13 @@ export const CatalogoGrid = forwardRef<
   // en cada tecla del buscador *y* en cada commit de celda (cambia la
   // identidad de `filas`). Al editar una celda solo esa fila es un objeto
   // nuevo, así que solo esa se recalcula; el resto sale del caché.
+  /** Búsqueda por campo — la usan los atajos de teclado y el portapapeles, que
+   * antes recorrían `config.columnas` con un `find` en cada pulsación. */
+  const defPorCampo = useMemo(
+    () => new Map(config.columnas.map((c) => [c.campo, c])),
+    [config.columnas],
+  );
+
   const cacheTextoFila = useMemo(() => new WeakMap<Fila, string>(), [config.columnas]);
   const filtroGlobal = useMemo<FilterFn<typeof features, Fila>>(() => {
     let ultimoFiltro: unknown;
@@ -1608,7 +1802,6 @@ export const CatalogoGrid = forwardRef<
     const ancladas = new Set<string>();
     const th = new Map<string, string>();
     const botonTh = new Map<string, string>();
-    const defPorCampo = new Map(config.columnas.map((c) => [c.campo, c]));
     for (const c of columns) {
       const id = String(c.id ?? "");
       const ancho = `var(${varAncho(id)})`;
@@ -1643,7 +1836,7 @@ export const CatalogoGrid = forwardRef<
       if (anclaLeft !== undefined) ancladas.add(id);
     }
     return { estilosCelda: estilos, clasesCelda: clases, columnasAncladas: ancladas, clasesTh: th, clasesBotonTh: botonTh };
-  }, [columns, anclaIzquierda, anchoAncladoTotal, config.columnas]);
+  }, [columns, anclaIzquierda, anchoAncladoTotal, defPorCampo]);
 
   const table = useTable(
     {
@@ -1672,7 +1865,9 @@ export const CatalogoGrid = forwardRef<
     count: filasVisibles.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ALTO_FILA,
-    overscan: 12,
+    // ~216px de colchón arriba y abajo. Cada fila montada cuesta suscripciones
+    // a los stores, así que con las filas ya memoizadas conviene montar menos.
+    overscan: 8,
     getItemKey: (index) => filasVisibles[index]?.id ?? index,
     scrollPaddingStart: altoEncabezado,
   });
@@ -2023,7 +2218,7 @@ export const CatalogoGrid = forwardRef<
     }
     if (!celdaSeleccionada) return null;
     const fila = filasRef.current.find((f) => f._id === celdaSeleccionada.filaId);
-    const col = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+    const col = defPorCampo.get(celdaSeleccionada.campo);
     if (!fila || !col) return null;
     return valorVisible(fila, col);
   };
@@ -2088,7 +2283,7 @@ export const CatalogoGrid = forwardRef<
       }
       return;
     }
-    const col = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+    const col = defPorCampo.get(celdaSeleccionada.campo);
     if (!col || col.soloLectura) return;
     confirmarCambioCelda(celdaSeleccionada.filaId, col.campo, valorVacio(col));
   };
@@ -2204,7 +2399,7 @@ export const CatalogoGrid = forwardRef<
     }
 
     if (!celdaAbierta && celdaSeleccionada && e.key === "F2") {
-      const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+      const columna = defPorCampo.get(celdaSeleccionada.campo);
       if (columna && !columna.soloLectura) {
         e.preventDefault();
         if (columna.booleano) {
@@ -2218,7 +2413,7 @@ export const CatalogoGrid = forwardRef<
     }
 
     if (!celdaAbierta && celdaSeleccionada && e.key === " ") {
-      const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+      const columna = defPorCampo.get(celdaSeleccionada.campo);
       if (columna && columna.booleano && !columna.soloLectura) {
         e.preventDefault();
         const fila = filasRef.current.find((f) => f._id === celdaSeleccionada.filaId);
@@ -2230,7 +2425,7 @@ export const CatalogoGrid = forwardRef<
     // Delete/Backspace vacían la celda seleccionada y entran en borrador de fila
     // — no persisten hasta ✓. Igual que Excel, sin abrir el editor.
     if (!celdaAbierta && celdaSeleccionada && (e.key === "Delete" || e.key === "Backspace")) {
-      const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+      const columna = defPorCampo.get(celdaSeleccionada.campo);
       if (columna && !columna.soloLectura) {
         e.preventDefault();
         confirmarCambioCelda(celdaSeleccionada.filaId, columna.campo, valorVacio(columna));
@@ -2243,7 +2438,7 @@ export const CatalogoGrid = forwardRef<
     // columnas de solo lectura ni a las que se editan con un `<select>`
     // (booleano/opciones), donde "reemplazar tecleando" no tiene sentido.
     if (!celdaAbierta && celdaSeleccionada && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+      const columna = defPorCampo.get(celdaSeleccionada.campo);
       if (columna && !columna.soloLectura && !columna.booleano) {
         e.preventDefault();
         abrirCelda(celdaSeleccionada.filaId, celdaSeleccionada.campo, e.key);
