@@ -1,4 +1,4 @@
-import { createContext, forwardRef, memo, useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, forwardRef, memo, useCallback, useContext, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { catalogoClipboardActivo, setCatalogoClipboardActivo, type CatalogoClipboard } from "@/features/catalogos/catalogoClipboard";
 import { createPortal } from "react-dom";
 import {
@@ -8,6 +8,7 @@ import {
   createColumnHelper,
   createFilteredRowModel,
   createSortedRowModel,
+  FlexRender,
   globalFilteringFeature,
   rowSelectionFeature,
   rowSortingFeature,
@@ -255,6 +256,20 @@ interface EstadoEdicion {
 const ESTRELLA_VACIA = "text-muted-foreground/30";
 const ESTRELLA_LLENA = "fill-amber-400 text-amber-400";
 const ALTO_FILA = 26;
+
+/**
+ * Nombre de la variable CSS que lleva el ancho vivo de una columna. Los anchos
+ * se publican una sola vez en el `<table>`: así redimensionar solo cambia un
+ * `style` en el contenedor y el navegador re-mide, sin volver a renderizar
+ * ninguna fila (con `columnResizeMode: "onChange"`, hacerlo por celda
+ * significaba re-renderizar todo el cuerpo en cada `mousemove`).
+ */
+function varAncho(columnId: string): string {
+  // Los caracteres no válidos en un nombre de custom property se codifican por
+  // su code point (y no a un "_" fijo) para que dos columnas distintas nunca
+  // terminen compartiendo la misma variable —y por tanto el mismo ancho.
+  return `--cw-${columnId.replace(/[^\w-]/g, (ch) => `_${ch.codePointAt(0)}_`)}`;
+}
 /** Espera al primer eco, alineada al KeyboardDelay típico del SO. */
 const FLECHA_REPEAT_DELAY_MS = 400;
 /** ~25 Hz una vez que el hold arranca — no el flood de `keydown.repeat`. */
@@ -1112,86 +1127,91 @@ function AccionesFila({ filaId }: { filaId: string }) {
   return null;
 }
 
-function FilaVirtual({
+type CeldaTabla = { id: string; column: { id: string } };
+
+/**
+ * Memoizada a propósito: el cuerpo se re-renderiza en cada cambio de estado del
+ * grid (y en cada `mousemove` de un resize), pero una fila solo depende de su
+ * `row`, de su índice y de si está seleccionada — lo demás (borrador, celda
+ * activa, guardado) entra por suscripción a los stores. `seleccionada` viaja
+ * como prop porque `row` es una referencia estable que no cambia al cambiar
+ * `rowSelection`, así que leer `row.getIsSelected()` aquí dejaría la fila
+ * congelada con el valor anterior.
+ */
+const FilaVirtual = memo(function FilaVirtual({
   row,
   itemIndex,
   measureElement,
   filaRefs,
-  celdaRefs,
   altoEncabezado,
-  estiloColumna,
-  anclaIzquierda,
-  anchoAncladoTotal,
+  estilosCelda,
+  clasesCelda,
+  columnasAncladas,
+  seleccionada,
   modoSeleccion,
-  onClickFila,
-  renderCelda,
 }: {
   row: {
     id: string;
     original: Fila;
-    getAllCells: () => Array<{ id: string; column: { id: string; getSize: () => number } }>;
-    getIsSelected: () => boolean;
+    getAllCells: () => CeldaTabla[];
   };
   itemIndex: number;
   measureElement: (el: HTMLTableRowElement | null) => void;
   filaRefs: React.RefObject<Map<string, HTMLTableRowElement>>;
-  celdaRefs: React.RefObject<Map<string, HTMLTableCellElement>>;
   altoEncabezado: number;
-  estiloColumna: (size: number) => React.CSSProperties;
-  anclaIzquierda: Map<string, number>;
-  anchoAncladoTotal: number;
+  estilosCelda: Map<string, React.CSSProperties>;
+  clasesCelda: Map<string, string>;
+  columnasAncladas: ReadonlySet<string>;
+  seleccionada: boolean;
   modoSeleccion: "multiple" | "unica";
-  onClickFila: (e: React.MouseEvent<HTMLTableRowElement>) => void;
-  renderCelda: (cell: { id: string; column: { id: string; getSize: () => number } }) => React.ReactNode;
 }) {
-  const activa = useFilaActiva(row.original._id);
-  const claseBorrador = useClaseBorrador(row.original._id);
+  const filaId = row.original._id;
+  const activa = useFilaActiva(filaId);
+  const claseBorrador = useClaseBorrador(filaId);
   const esBorrador = !!claseBorrador;
-  const seleccionadaVisual = modoSeleccion === "unica" ? activa : row.getIsSelected();
+  const seleccionadaVisual = modoSeleccion === "unica" ? activa : seleccionada;
   const fondo = cn("bg-background", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent");
+
+  // Ref estable: un callback inline se desmonta y remonta en cada render (React
+  // lo invoca con `null` y luego con el nodo), así que `measureElement` corría
+  // dos veces por fila y por render — con su lectura de layout y su barrido de
+  // la caché de elementos. Así corre una sola vez, al montar la fila.
+  const asignarRef = useCallback(
+    (el: HTMLTableRowElement | null) => {
+      measureElement(el);
+      if (el) filaRefs.current.set(filaId, el);
+      else filaRefs.current.delete(filaId);
+    },
+    [measureElement, filaRefs, filaId],
+  );
+
+  const estiloFila = useMemo(() => ({ scrollMarginTop: altoEncabezado }), [altoEncabezado]);
 
   return (
     <tr
       data-index={itemIndex}
-      ref={(el) => {
-        measureElement(el);
-        if (el) filaRefs.current.set(row.original._id, el);
-        else filaRefs.current.delete(row.original._id);
-      }}
-      style={{ scrollMarginTop: altoEncabezado }}
+      ref={asignarRef}
+      style={estiloFila}
       tabIndex={0}
-      onClick={onClickFila}
       className={cn("flex outline-none", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent", modoSeleccion === "unica" && "cursor-pointer")}
     >
       {row.getAllCells().map((cell) => {
-        const anclaLeft = anclaIzquierda.get(cell.column.id);
+        const columnId = cell.column.id;
+        const anclada = columnasAncladas.has(columnId);
         return (
           <td
             key={cell.id}
-            ref={(el) => {
-              const clave = `${row.original._id}:${cell.column.id}`;
-              if (el) celdaRefs.current.set(clave, el);
-              else celdaRefs.current.delete(clave);
-            }}
-            data-column-id={cell.column.id}
-            style={{
-              ...estiloColumna(cell.column.getSize()),
-              ...(anclaLeft !== undefined ? { left: anclaLeft } : { scrollMarginLeft: anchoAncladoTotal }),
-            }}
-            className={cn(
-              "overflow-hidden py-0.5 text-xs",
-              "border-b border-r border-border",
-              cell.column.id.startsWith("__") && "px-0",
-              anclaLeft !== undefined && cn("sticky z-[1]", fondo),
-            )}
+            data-column-id={columnId}
+            style={estilosCelda.get(columnId)}
+            className={anclada ? cn(clasesCelda.get(columnId), fondo) : clasesCelda.get(columnId)}
           >
-            {renderCelda(cell)}
+            <FlexRender cell={cell as never} />
           </td>
         );
       })}
     </tr>
   );
-}
+});
 
 function ThConMarca({
   columnId,
@@ -1290,6 +1310,10 @@ export const CatalogoGrid = forwardRef<
   const buscadorControlado = busquedaControlada !== undefined;
   const busqueda = buscadorControlado ? busquedaControlada : busquedaInterna;
   const setBusqueda = buscadorControlado ? onBusquedaChange! : setBusquedaInterna;
+  // El input responde a cada tecla; el re-filtrado (que reconstruye el modelo
+  // de filas y repinta el cuerpo) se hace en un render de baja prioridad que
+  // React puede interrumpir si el usuario sigue escribiendo.
+  const busquedaFiltro = useDeferredValue(busqueda);
   const guardandoRef = useRef(false);
   const filasRef = useRef(filas);
   filasRef.current = filas;
@@ -1297,7 +1321,6 @@ export const CatalogoGrid = forwardRef<
   edicionRef.current = edicion;
   const copiarFilaCompletaRef = useRef(false);
   const filaRefs = useRef(new Map<string, HTMLTableRowElement>());
-  const celdaRefs = useRef(new Map<string, HTMLTableCellElement>());
   const theadRef = useRef<HTMLTableSectionElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Alto real del `<thead>` (sticky) — para que las filas reserven ese
@@ -1458,18 +1481,36 @@ export const CatalogoGrid = forwardRef<
   // no contra los valores crudos — así buscar algo visible siempre lo encuentra.
   // La fila en borrador siempre pasa el filtro: si no, "Agregar" con buscador
   // activo esconde la fila vacía y parece que no pasó nada.
-  const filtroGlobal = useMemo<FilterFn<typeof features, Fila>>(
-    () => (row, _columnId, filterValue) => {
-      if (edicion && row.original._id === edicion.id) return true;
+  //
+  // El texto se cachea por objeto fila en un `WeakMap`: armarlo es O(columnas)
+  // con `formatearFecha` y concatenación de strings, y el filtro se re-ejecuta
+  // en cada tecla del buscador *y* en cada commit de celda (cambia la
+  // identidad de `filas`). Al editar una celda solo esa fila es un objeto
+  // nuevo, así que solo esa se recalcula; el resto sale del caché.
+  const cacheTextoFila = useMemo(() => new WeakMap<Fila, string>(), [config.columnas]);
+  const filtroGlobal = useMemo<FilterFn<typeof features, Fila>>(() => {
+    let ultimoFiltro: unknown;
+    let ultimoFiltroLower = "";
+    return (row, _columnId, filterValue) => {
+      const enEdicion = edicionRef.current;
+      if (enEdicion && row.original._id === enEdicion.id) return true;
       if (!filterValue) return true;
-      const texto = config.columnas
-        .map((c) => valorVisible(row.original, c))
-        .join(" ")
-        .toLowerCase();
-      return texto.includes(String(filterValue).toLowerCase());
-    },
-    [config.columnas, edicion],
-  );
+      if (filterValue !== ultimoFiltro) {
+        ultimoFiltro = filterValue;
+        ultimoFiltroLower = String(filterValue).toLowerCase();
+      }
+      let texto = cacheTextoFila.get(row.original);
+      if (texto === undefined) {
+        texto = config.columnas
+          .map((c) => valorVisible(row.original, c))
+          .join(" ")
+          .toLowerCase();
+        cacheTextoFila.set(row.original, texto);
+      }
+      return texto.includes(ultimoFiltroLower);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.columnas, cacheTextoFila]);
 
   const columns = useMemo(() => {
     const cols: ColumnDef<typeof features, Fila, any>[] = [];
@@ -1547,13 +1588,61 @@ export const CatalogoGrid = forwardRef<
   const anchoAncladoTotalRef = useRef(0);
   anchoAncladoTotalRef.current = anchoAncladoTotal;
 
+  // Estilos y clases por columna, calculados una sola vez: el ancho ya no
+  // viaja en el `style` de cada `<td>` (va por variable CSS en el `<table>`,
+  // ver `varAncho`), así que todos son constantes por columna. Evita crear un
+  // objeto de estilo y llamar a `cn`/`twMerge` por celda en cada render — y
+  // durante un resize la cabecera se repinta en cada `mousemove`.
+  const { estilosCelda, clasesCelda, columnasAncladas, clasesTh, clasesBotonTh } = useMemo(() => {
+    const estilos = new Map<string, React.CSSProperties>();
+    const clases = new Map<string, string>();
+    const ancladas = new Set<string>();
+    const th = new Map<string, string>();
+    const botonTh = new Map<string, string>();
+    const defPorCampo = new Map(config.columnas.map((c) => [c.campo, c]));
+    for (const c of columns) {
+      const id = String(c.id ?? "");
+      const ancho = `var(${varAncho(id)})`;
+      const anclaLeft = anclaIzquierda.get(id);
+      const esNumero = defPorCampo.get(id)?.numero;
+      estilos.set(id, {
+        flex: `0 0 ${ancho}`,
+        width: ancho,
+        ...(anclaLeft !== undefined ? { left: anclaLeft } : { scrollMarginLeft: anchoAncladoTotal }),
+      });
+      clases.set(
+        id,
+        cn(
+          "overflow-hidden py-0.5 text-xs",
+          "border-b border-r border-border",
+          id.startsWith("__") && "px-0",
+          anclaLeft !== undefined && "sticky z-[1]",
+        ),
+      );
+      th.set(
+        id,
+        cn(
+          "relative border-b border-r border-border px-1.5 py-1.5 text-xs font-medium text-muted-foreground",
+          esNumero ? "text-right" : "text-left",
+          anclaLeft !== undefined && "sticky z-30 bg-muted",
+        ),
+      );
+      botonTh.set(
+        id,
+        cn("flex items-center gap-1 hover:text-foreground disabled:opacity-50", esNumero && "ml-auto"),
+      );
+      if (anclaLeft !== undefined) ancladas.add(id);
+    }
+    return { estilosCelda: estilos, clasesCelda: clases, columnasAncladas: ancladas, clasesTh: th, clasesBotonTh: botonTh };
+  }, [columns, anclaIzquierda, anchoAncladoTotal, config.columnas]);
+
   const table = useTable(
     {
       features,
       data: filas,
       columns,
       getRowId: (f) => f._id,
-      state: { rowSelection, globalFilter: busqueda },
+      state: { rowSelection, globalFilter: busquedaFiltro },
       onRowSelectionChange: setRowSelection,
       onGlobalFilterChange: (updater) => setBusqueda(typeof updater === "function" ? updater(busqueda) : updater),
       enableMultiRowSelection: modoSeleccion === "multiple",
@@ -1862,7 +1951,12 @@ export const CatalogoGrid = forwardRef<
   // Trae la fila al viewport (virtualizador) y, si ya está montada, la columna.
   useEffect(() => {
     const alinearHorizontal = (filaId: string, campo: string) => {
-      const celda = celdaRefs.current.get(`${filaId}:${campo}`);
+      // Se busca dentro de la fila en vez de mantener un `Map` de refs por
+      // celda: ese Map costaba un detach+attach de ref por celda en cada
+      // render, para una lectura que ocurre solo al mover la selección.
+      const celda = filaRefs.current
+        .get(filaId)
+        ?.querySelector<HTMLTableCellElement>(`td[data-column-id="${CSS.escape(campo)}"]`);
       const caja = scrollRef.current;
       if (!celda || !caja) return false;
       const c = celda.getBoundingClientRect();
@@ -2200,10 +2294,24 @@ export const CatalogoGrid = forwardRef<
 
   const primerCampoTexto = config.columnas.find((c) => !c.numero)?.campo ?? config.columnas[0]?.campo;
 
-  const estiloColumna = (size: number): React.CSSProperties => ({
-    flex: `0 0 ${size}px`,
-    width: size,
-  });
+  // Un solo handler delegado en el `<tbody>` en vez de un `onClick` por fila:
+  // así `FilaVirtual` no recibe una closure nueva en cada render y puede
+  // memoizarse. La fila se resuelve por `data-index`.
+  const onClickCuerpo = (e: React.MouseEvent<HTMLTableSectionElement>) => {
+    const objetivo = e.target as HTMLElement;
+    const tr = objetivo.closest<HTMLTableRowElement>("tr[data-index]");
+    if (!tr) return;
+    const fila = filasVisiblesRef.current[Number(tr.dataset.index)];
+    if (!fila) return;
+    const filaId = fila.original._id;
+    if (edicionRef.current && edicionRef.current.id !== filaId) return;
+    tr.focus();
+    const columnId = objetivo.closest("td")?.dataset.columnId;
+    if (columnId && !columnId.startsWith("__")) return;
+    copiarFilaCompletaRef.current = columnId === "__indice";
+    const campo = primerCampo(config.columnas);
+    if (campo) seleccionStore.set({ filaId, campo });
+  };
 
   const enCampo = (target: EventTarget | null) => {
     const t = target as HTMLElement | null;
@@ -2265,32 +2373,35 @@ export const CatalogoGrid = forwardRef<
         <table.Subscribe selector={(state) => state.columnSizing}>
           {(_columnSizing) => (
             <table.Subscribe selector={(state) => state.columnResizing?.isResizingColumn ?? false}>
-              {() => (
+              {() => {
+            // Los anchos vivos se publican como variables CSS en el `<table>`:
+            // durante un resize (`columnResizeMode: "onChange"`) esto es lo
+            // único que cambia, y las filas —memoizadas— no se re-renderizan.
+            const estiloTabla: Record<string, string | number> = {
+              minWidth: table.getTotalSize(),
+              width: "100%",
+            };
+            for (const col of table.getAllLeafColumns()) {
+              estiloTabla[varAncho(col.id)] = `${col.getSize()}px`;
+            }
+            return (
             <table
               className="w-full border-collapse border-l border-t border-border text-sm"
-              style={{ minWidth: table.getTotalSize(), width: "100%" }}
+              style={estiloTabla as React.CSSProperties}
             >
               <thead ref={theadRef} className="sticky top-0 z-20 bg-muted">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id} className="flex">
                     {headerGroup.headers.map((header) => {
-                      const esOrdenable = !header.column.id.startsWith("__");
+                      const columnId = header.column.id;
+                      const esOrdenable = !columnId.startsWith("__");
                       const orden = header.column.getIsSorted();
-                      const anclaLeft = anclaIzquierda.get(header.column.id);
-                      const def = config.columnas.find((c) => c.campo === header.column.id);
                       return (
                         <ThConMarca
                           key={header.id}
-                          columnId={header.column.id}
-                          style={{
-                            ...estiloColumna(header.getSize()),
-                            ...(anclaLeft !== undefined && { left: anclaLeft }),
-                          }}
-                          className={cn(
-                            "relative border-b border-r border-border px-1.5 py-1.5 text-xs font-medium text-muted-foreground",
-                            def?.numero ? "text-right" : "text-left",
-                            anclaLeft !== undefined && "sticky z-30 bg-muted",
-                          )}
+                          columnId={columnId}
+                          style={estilosCelda.get(columnId)}
+                          className={clasesTh.get(columnId)}
                         >
                           {esOrdenable ? (
                             <button
@@ -2298,10 +2409,7 @@ export const CatalogoGrid = forwardRef<
                               tabIndex={-1}
                               disabled={!!edicion}
                               onClick={edicion ? undefined : header.column.getToggleSortingHandler()}
-                              className={cn(
-                                "flex items-center gap-1 hover:text-foreground disabled:opacity-50",
-                                def?.numero && "ml-auto",
-                              )}
+                              className={clasesBotonTh.get(columnId)}
                             >
                               <table.FlexRender header={header} />
                               {orden === "asc" && <ArrowUp size={11} />}
@@ -2324,7 +2432,7 @@ export const CatalogoGrid = forwardRef<
                   </tr>
                 ))}
               </thead>
-              <tbody>
+              <tbody onClick={onClickCuerpo}>
                 {filasVisibles.length === 0 ? (
                   <tr className="flex" style={{ width: "100%" }}>
                     <td className="flex-1 px-2 py-4 text-center text-xs text-muted-foreground">
@@ -2348,22 +2456,12 @@ export const CatalogoGrid = forwardRef<
                           itemIndex={item.index}
                           measureElement={rowVirtualizer.measureElement}
                           filaRefs={filaRefs}
-                          celdaRefs={celdaRefs}
                           altoEncabezado={altoEncabezado}
-                          estiloColumna={estiloColumna}
-                          anclaIzquierda={anclaIzquierda}
-                          anchoAncladoTotal={anchoAncladoTotal}
+                          estilosCelda={estilosCelda}
+                          clasesCelda={clasesCelda}
+                          columnasAncladas={columnasAncladas}
+                          seleccionada={row.getIsSelected()}
                           modoSeleccion={modoSeleccion}
-                          renderCelda={(cell) => <table.FlexRender cell={cell as never} />}
-                          onClickFila={(e) => {
-                            if (edicion && edicion.id !== row.original._id) return;
-                            e.currentTarget.focus();
-                            const columnId = (e.target as HTMLElement).closest("td")?.dataset.columnId;
-                            if (columnId && !columnId.startsWith("__")) return;
-                            copiarFilaCompletaRef.current = columnId === "__indice";
-                            const campo = primerCampo(config.columnas);
-                            if (campo) seleccionStore.set({ filaId: row.original._id, campo });
-                          }}
                         />
                       );
                     })}
@@ -2376,7 +2474,8 @@ export const CatalogoGrid = forwardRef<
                 )}
               </tbody>
             </table>
-              )}
+            );
+              }}
             </table.Subscribe>
           )}
         </table.Subscribe>
