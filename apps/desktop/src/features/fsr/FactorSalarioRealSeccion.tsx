@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calculator, Plus, RefreshCcw, Sigma, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
 import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, updateFactorSalarioReal } from "@/lib/tauri";
 import type { FactorSalarioRealData, Region } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,11 @@ export function FactorSalarioRealSeccion({
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(FACTOR_SALARIO_REAL_API);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const { organizacionActivaId } = useOrganizacionActiva();
+  useEffect(() => {
+    reload();
+  }, [organizacionActivaId, reload]);
 
   useEffect(() => {
     if (!guardadoExitoso) return;
@@ -103,30 +110,33 @@ export function FactorSalarioRealSeccion({
         >
           {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
         </p>
-        <BarraAcciones
-          acciones={[
-            { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-            { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
-            {
-              icono: Calculator,
-              titulo: "Calcular FSR",
-              onClick: () => filaSeleccionada && onCalcular(filaSeleccionada.id, filaSeleccionada.nombre),
-              disabled: !filaSeleccionada,
-            },
-            {
-              icono: Sigma,
-              titulo: "Editar modelo de cálculo",
-              onClick: () => filaSeleccionada && onEditarModelo(filaSeleccionada.id, filaSeleccionada.nombre),
-              disabled: !filaSeleccionada,
-            },
-            {
-              icono: Trash2,
-              titulo: "Eliminar seleccionado",
-              onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
-              disabled: !filaSeleccionada,
-            },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={setBusqueda} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              {
+                icono: Calculator,
+                titulo: "Calcular FSR",
+                onClick: () => filaSeleccionada && onCalcular(filaSeleccionada.id, filaSeleccionada.nombre),
+                disabled: !filaSeleccionada,
+              },
+              {
+                icono: Sigma,
+                titulo: "Editar modelo de cálculo",
+                onClick: () => filaSeleccionada && onEditarModelo(filaSeleccionada.id, filaSeleccionada.nombre),
+                disabled: !filaSeleccionada,
+              },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                disabled: !filaSeleccionada,
+              },
+            ]}
+          />
+        </div>
       </div>
       <div className="min-h-0 flex-1">
         <CatalogoGrid
@@ -134,6 +144,8 @@ export function FactorSalarioRealSeccion({
           config={config}
           filasIniciales={filas}
           modoSeleccion="unica"
+          busqueda={busqueda}
+          onBusquedaChange={setBusqueda}
           onFilaSeleccionada={(fila) => setSeleccionadoId(fila?._id ?? null)}
           onAgregarFila={(fila) => crear(filaAFactorData(fila))}
           onEliminarFilas={(ids) => eliminar(ids)}

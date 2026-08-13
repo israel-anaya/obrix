@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones, type AccionBarra } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
@@ -50,6 +51,8 @@ function PanelConAcciones({
   puedeAgregar,
   puedeEliminar,
   accionesExtra,
+  busqueda,
+  onBusquedaChange,
   children,
 }: {
   titulo: string;
@@ -59,20 +62,25 @@ function PanelConAcciones({
   puedeAgregar: boolean;
   puedeEliminar: boolean;
   accionesExtra?: AccionBarra[];
+  busqueda: string;
+  onBusquedaChange: (busqueda: string) => void;
   children: ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <h2 className="text-sm font-semibold">{titulo}</h2>
-        <BarraAcciones
-          acciones={[
-            { icono: RefreshCcw, titulo: "Recargar", onClick: () => onRecargar?.(), disabled: !onRecargar },
-            { icono: Plus, titulo: "Agregar", onClick: () => onAgregar?.(), disabled: !puedeAgregar },
-            { icono: Trash2, titulo: "Eliminar seleccionado", onClick: () => onEliminar?.(), disabled: !puedeEliminar },
-            ...(accionesExtra ?? []),
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={onBusquedaChange} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: () => onRecargar?.(), disabled: !onRecargar },
+              { icono: Plus, titulo: "Agregar", onClick: () => onAgregar?.(), disabled: !puedeAgregar },
+              { icono: Trash2, titulo: "Eliminar seleccionado", onClick: () => onEliminar?.(), disabled: !puedeEliminar },
+              ...(accionesExtra ?? []),
+            ]}
+          />
+        </div>
       </div>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
@@ -102,10 +110,12 @@ export function VistaMaestroDetalle<D>({
   const detalleGridRef = useRef<CatalogoGridHandle>(null);
   const [maestroSeleccionadoId, setMaestroSeleccionadoId] = useState<string | null>(null);
   const [maestroPuedeEliminar, setMaestroPuedeEliminar] = useState(false);
+  const [busquedaMaestro, setBusquedaMaestro] = useState("");
   const [filasDetalle, setFilasDetalle] = useState<Fila[]>([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
   const [detallePuedeEliminar, setDetallePuedeEliminar] = useState(false);
+  const [busquedaDetalle, setBusquedaDetalle] = useState("");
 
   const cargarDetalle = (cancelado: () => boolean) => {
     if (!maestroSeleccionadoId) {
@@ -154,12 +164,16 @@ export function VistaMaestroDetalle<D>({
           puedeAgregar={!!onAgregarMaestro}
           puedeEliminar={!!onEliminarMaestro && maestroPuedeEliminar}
           accionesExtra={accionesExtraMaestro}
+          busqueda={busquedaMaestro}
+          onBusquedaChange={setBusquedaMaestro}
         >
           <CatalogoGrid
             ref={maestroGridRef}
             config={maestroGrid}
             filasIniciales={maestroFilas}
             modoSeleccion="unica"
+            busqueda={busquedaMaestro}
+            onBusquedaChange={setBusquedaMaestro}
             onSelectionChange={setMaestroPuedeEliminar}
             onFilaSeleccionada={(fila) => setMaestroSeleccionadoId(fila?._id ?? null)}
             onAgregarFila={onAgregarMaestro}
@@ -179,6 +193,8 @@ export function VistaMaestroDetalle<D>({
             puedeAgregar={!!detalle.crear}
             puedeEliminar={!!detalle.eliminar && detallePuedeEliminar}
             accionesExtra={accionesExtraDetalle}
+            busqueda={busquedaDetalle}
+            onBusquedaChange={setBusquedaDetalle}
           >
             {errorDetalle && <p className="px-3 py-1 text-xs text-destructive">{errorDetalle}</p>}
             <CatalogoGrid
@@ -186,6 +202,8 @@ export function VistaMaestroDetalle<D>({
               config={detalle.grid}
               filasIniciales={cargandoDetalle ? [] : filasDetalle}
               modoSeleccion="unica"
+              busqueda={busquedaDetalle}
+              onBusquedaChange={setBusquedaDetalle}
               onSelectionChange={setDetallePuedeEliminar}
               onAgregarFila={
                 detalle.crear

@@ -7,6 +7,7 @@ import { CATALOGOS_GENERALES } from "@/features/configuracion/catalogosGenerales
 import { ConfiguracionSidebar } from "@/features/configuracion/ConfiguracionSidebar";
 import { FamiliasInsumoSeccion } from "@/features/configuracion/FamiliasInsumoSeccion";
 import { OrganizacionSeccion } from "@/features/configuracion/OrganizacionSeccion";
+import { UsuariosSeccion } from "@/features/configuracion/UsuariosSeccion";
 
 function AparienciaSeccion({
   theme,
@@ -110,6 +111,7 @@ export function SettingsPage({
     if (seccionActiva === "servidor") return <ServidorSeccion />;
     if (seccionActiva === "familias-insumo") return <FamiliasInsumoSeccion />;
     if (seccionActiva === "organizaciones") return <OrganizacionSeccion />;
+    if (seccionActiva === "usuarios") return <UsuariosSeccion />;
     if (catalogo) return <CatalogoGeneralSeccion key={catalogo.id} descriptor={catalogo} />;
     return null;
   };

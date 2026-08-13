@@ -76,3 +76,12 @@ pub fn iniciar_sesion_mock(app: &tauri::AppHandle) -> Result<AccountInfo, String
 
     Ok(cuenta)
 }
+
+/// Borra `auth.json` — la próxima `sesion_actual()` ya no encuentra tokens.
+pub fn cerrar_sesion() -> Result<(), String> {
+    let path = auth_json_path()?;
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}

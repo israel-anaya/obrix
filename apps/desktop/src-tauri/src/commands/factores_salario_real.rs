@@ -7,7 +7,7 @@ use crate::AppState;
 pub async fn list_factores_salario_real(state: tauri::State<'_, AppState>) -> Result<Vec<Model>, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    FactorSalarioRealService::listar(activo.portafolio.as_ref())
+    FactorSalarioRealService::listar(activo.portafolio.as_ref(), &activo.organizacion_id)
         .await
         .map_err(|e| e.to_string())
 }

@@ -59,6 +59,20 @@ export interface UsuarioData {
   activo: boolean;
 }
 
+/** Membresía de un usuario en una organización, con los datos de esta última — detalle del maestro/detalle de usuarios. */
+export interface OrganizacionMembresia {
+  membresia_id: string;
+  organizacion_id: string;
+  razon_social: string;
+  rfc: string;
+  tipo: TipoOrganizacion;
+  activo: boolean;
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
 export const TIPOS_CLIENTE = ["privado", "dependencia_publica"] as const;
 export type TipoCliente = (typeof TIPOS_CLIENTE)[number];
 

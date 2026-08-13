@@ -25,3 +25,10 @@ pub async fn iniciar_sesion(
     state.set_cuenta(cuenta.clone()).await;
     Ok(cuenta)
 }
+
+#[tauri::command]
+pub async fn cerrar_sesion(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    auth::cerrar_sesion()?;
+    state.limpiar_cuenta().await;
+    Ok(())
+}

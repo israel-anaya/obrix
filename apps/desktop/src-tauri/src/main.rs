@@ -97,6 +97,10 @@ impl AppState {
         *self.cuenta.write().await = Some(cuenta);
     }
 
+    pub async fn limpiar_cuenta(&self) {
+        *self.cuenta.write().await = None;
+    }
+
     pub async fn dejar_pendiente(&self, pendiente: PortafolioPendiente) {
         *self.pendiente.write().await = Some(pendiente);
     }
@@ -128,6 +132,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::auth::obtener_sesion,
             commands::auth::iniciar_sesion,
+            commands::auth::cerrar_sesion,
             commands::portafolio::crear_portafolio,
             commands::portafolio::abrir_portafolio,
             commands::portafolio::confirmar_apertura_portafolio_ajeno,
@@ -142,6 +147,10 @@ fn main() {
             commands::usuarios::create_usuario,
             commands::usuarios::update_usuario,
             commands::usuarios::delete_usuario,
+            commands::usuarios::list_organizaciones_de_usuario,
+            commands::usuarios::create_organizacion_usuario,
+            commands::usuarios::update_organizacion_usuario,
+            commands::usuarios::delete_organizacion_usuario,
             commands::clientes::list_clientes,
             commands::clientes::create_cliente,
             commands::clientes::update_cliente,

@@ -2,7 +2,6 @@ import type { CatalogoColumnaDef, CatalogoGridConfig } from "@/features/catalogo
 import type { Fila } from "@/features/catalogos/CatalogoGrid";
 import * as api from "@/lib/tauri";
 import type {
-  Cliente,
   FamiliaInsumo,
   FamiliaInsumoData,
   Moneda,
@@ -11,17 +10,15 @@ import type {
   RegionData,
   RolUsuario,
   UnidadMedidaData,
-  ClienteData,
   UsuarioData,
   Organizacion,
   Region,
-  TipoCliente,
   TipoMagnitud,
   TipoOrganizacion,
   UnidadMedida,
   Usuario,
 } from "@/lib/types";
-import { ROLES_USUARIO, TIPOS_CLIENTE, TIPOS_MAGNITUD, TIPOS_ORGANIZACION } from "@/lib/types";
+import { ROLES_USUARIO, TIPOS_MAGNITUD, TIPOS_ORGANIZACION } from "@/lib/types";
 import type { CatalogoGeneralApi } from "@/features/configuracion/useCatalogoGeneral";
 
 export interface CatalogoGeneralDescriptor<T extends { id: string }, Nuevo> {
@@ -99,6 +96,14 @@ const organizaciones: CatalogoGeneralDescriptor<Organizacion, OrganizacionData> 
   }),
 };
 
+/**
+ * `grid`/`api`/`aFila`/`filaANuevo` no se usan para renderizar — `SettingsPage`
+ * intercepta este id y muestra `UsuariosSeccion` en su lugar, con un detalle
+ * (las organizaciones del usuario seleccionado) que este descriptor genérico
+ * no puede expresar. Se dejan aquí solo para satisfacer
+ * `CatalogoGeneralDescriptor` y darle su entrada en el sidebar, igual que
+ * `organizaciones`/`familiasInsumo`.
+ */
 const usuarios: CatalogoGeneralDescriptor<Usuario, UsuarioData> = {
   id: "usuarios",
   titulo: "Usuarios",
@@ -134,59 +139,6 @@ const usuarios: CatalogoGeneralDescriptor<Usuario, UsuarioData> = {
     // siempre es uno de los válidos — el cast solo recupera el tipo literal.
     rol: String(f.rol) as RolUsuario,
     activo: Boolean(f.activo),
-  }),
-};
-
-const clientes: CatalogoGeneralDescriptor<Cliente, ClienteData> = {
-  id: "clientes",
-  titulo: "Clientes",
-  grid: {
-    titulo: "Clientes",
-    columnas: [
-      { campo: "razon_social", encabezado: "Razón social" },
-      { campo: "rfc", encabezado: "RFC", ancho: 140 },
-      { campo: "tipo", encabezado: "Tipo", ancho: 150, opciones: TIPOS_CLIENTE },
-      { campo: "contacto_nombre", encabezado: "Contacto" },
-      { campo: "contacto_correo", encabezado: "Correo de contacto", ancho: 200 },
-      { campo: "contacto_telefono", encabezado: "Teléfono", ancho: 140 },
-      ...COLUMNAS_CONTROL,
-    ],
-  },
-  api: {
-    list: api.listClientes,
-    crear: api.createCliente,
-    actualizar: api.updateCliente,
-    eliminar: api.deleteCliente,
-  },
-  aFila: (m) => ({
-    _id: m.id,
-    razon_social: m.razon_social,
-    rfc: m.rfc,
-    tipo: m.tipo,
-    contacto_nombre: m.contacto_nombre ?? "",
-    contacto_correo: m.contacto_correo ?? "",
-    contacto_telefono: m.contacto_telefono ?? "",
-    ...filaControl(m),
-  }),
-  vacio: {
-    razon_social: "Nuevo cliente",
-    rfc: "",
-    tipo: "privado",
-    contacto_nombre: null,
-    contacto_correo: null,
-    contacto_telefono: null,
-    domicilio_fiscal: null,
-  },
-  filaANuevo: (f) => ({
-    razon_social: String(f.razon_social),
-    rfc: String(f.rfc),
-    // La celda usa un selector (opciones: TIPOS_CLIENTE), así que el valor
-    // siempre es uno de los válidos — el cast solo recupera el tipo literal.
-    tipo: String(f.tipo) as TipoCliente,
-    contacto_nombre: String(f.contacto_nombre) || null,
-    contacto_correo: String(f.contacto_correo) || null,
-    contacto_telefono: String(f.contacto_telefono) || null,
-    domicilio_fiscal: null,
   }),
 };
 
@@ -327,7 +279,6 @@ const monedas: CatalogoGeneralDescriptor<Moneda, MonedaData> = {
 export const CATALOGOS_GENERALES = [
   organizaciones,
   usuarios,
-  clientes,
   unidadesMedida,
   regiones,
   familiasInsumo,

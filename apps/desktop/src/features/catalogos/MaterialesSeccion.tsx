@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { DollarSign, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
 import { MaterialFormPanel } from "@/features/catalogos/MaterialFormPanel";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createMaterial,
   deleteMaterial,
@@ -47,6 +49,7 @@ export function MaterialesSeccion() {
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [materialSeleccionadoId, setMaterialSeleccionadoId] = useState<string | null>(null);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
     if (!guardadoExitoso) return;
@@ -85,10 +88,11 @@ export function MaterialesSeccion() {
     }
   };
 
+  const { organizacionActivaId } = useOrganizacionActiva();
   useEffect(() => {
     recargarTodo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [organizacionActivaId]);
 
   // Los selectores de la grid muestran texto (símbolo/razón social), no ids
   // — estos mapas convierten en ambas direcciones al leer/guardar filas.
@@ -221,6 +225,8 @@ export function MaterialesSeccion() {
       modoSeleccion="unica"
       resaltarSeleccion={panelPreciosAbierto || panelFichaAbierto}
       seleccionInicialId={materialSeleccionadoId}
+      busqueda={busqueda}
+      onBusquedaChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
       onFilaSeleccionada={(fila) => setMaterialSeleccionadoId(fila?._id ?? null)}
       onAgregarFila={(fila) => createMaterial(filaAMaterialData(fila)).then(recargarMateriales)}
@@ -249,42 +255,45 @@ export function MaterialesSeccion() {
             {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
           </p>
         </div>
-        <BarraAcciones
-          acciones={[
-            { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-            { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
-            {
-              icono: Trash2,
-              titulo: "Eliminar seleccionado",
-              onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
-              disabled: !puedeEliminar,
-            },
-            {
-              icono: Upload,
-              titulo: importando ? "Importando…" : "Importar desde CSV",
-              onClick: () => void importarCsv(),
-              disabled: importando,
-            },
-            {
-              icono: DollarSign,
-              titulo: panelPreciosAbierto ? "Ocultar precios" : "Ver precios",
-              onClick: () =>
-                setPanelPreciosAbierto((v) => {
-                  if (!v) setPanelFichaAbierto(false);
-                  return !v;
-                }),
-            },
-            {
-              icono: FileText,
-              titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
-              onClick: () =>
-                setPanelFichaAbierto((v) => {
-                  if (!v) setPanelPreciosAbierto(false);
-                  return !v;
-                }),
-            },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={setBusqueda} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                disabled: !puedeEliminar,
+              },
+              {
+                icono: Upload,
+                titulo: importando ? "Importando…" : "Importar desde CSV",
+                onClick: () => void importarCsv(),
+                disabled: importando,
+              },
+              {
+                icono: DollarSign,
+                titulo: panelPreciosAbierto ? "Ocultar precios" : "Ver precios",
+                onClick: () =>
+                  setPanelPreciosAbierto((v) => {
+                    if (!v) setPanelFichaAbierto(false);
+                    return !v;
+                  }),
+              },
+              {
+                icono: FileText,
+                titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () =>
+                  setPanelFichaAbierto((v) => {
+                    if (!v) setPanelPreciosAbierto(false);
+                    return !v;
+                  }),
+              },
+            ]}
+          />
+        </div>
       </div>
       {resultadoImportacion && (
         <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs">

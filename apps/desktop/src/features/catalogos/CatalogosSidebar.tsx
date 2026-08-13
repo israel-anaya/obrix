@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, FilePlus2, FileText, Folder, Layers, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { COSTOS_DIRECTOS_TREE, type NodoCatalogo } from "@/features/catalogos/costosDirectosTree";
+import { COSTOS_DIRECTOS_TREE, NODOS_OTROS, type NodoCatalogo } from "@/features/catalogos/costosDirectosTree";
 
 interface ItemCatalogo {
   id: string;
@@ -14,12 +14,14 @@ interface GrupoDef {
   label: string;
   modo: "arbol" | "lista" | "fijo";
   nombreBase: string;
+  /** Solo para `modo: "fijo"` — los nodos que se muestran directamente, sin estado local. */
+  arbol?: NodoCatalogo[];
 }
 
 const GRUPOS: GrupoDef[] = [
-  { id: "costos-directos", label: "Costos Directos", modo: "fijo", nombreBase: "" },
+  { id: "costos-directos", label: "Costos Directos", modo: "fijo", nombreBase: "", arbol: COSTOS_DIRECTOS_TREE },
   { id: "costos-indirectos", label: "Costos Indirectos", modo: "arbol", nombreBase: "Costo indirecto" },
-  { id: "clientes", label: "Clientes", modo: "lista", nombreBase: "Cliente" },
+  { id: "otros", label: "Otros", modo: "fijo", nombreBase: "", arbol: NODOS_OTROS },
 ];
 
 function NodoArbolFijo({
@@ -82,14 +84,10 @@ export function CatalogosSidebar({
   onOpenCatalogo: (id: string, label: string) => void;
 }) {
   const [itemsPorGrupo, setItemsPorGrupo] = useState<Record<string, ItemCatalogo[]>>({
-    "costos-directos": [],
     "costos-indirectos": [],
-    clientes: [],
   });
   const [seleccionPorGrupo, setSeleccionPorGrupo] = useState<Record<string, string | null>>({
-    "costos-directos": null,
     "costos-indirectos": null,
-    clientes: null,
   });
   const [nodosExpandidos, setNodosExpandidos] = useState<Set<string>>(new Set());
 
@@ -162,7 +160,7 @@ export function CatalogosSidebar({
             <AccordionContent className="pb-1">
               <div className="flex min-h-0 flex-1 flex-col overflow-auto">
                 {grupo.modo === "fijo" &&
-                  COSTOS_DIRECTOS_TREE.map((nodo) => (
+                  grupo.arbol?.map((nodo) => (
                     <NodoArbolFijo
                       key={nodo.id}
                       nodo={nodo}

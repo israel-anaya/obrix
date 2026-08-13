@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
 import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -37,6 +38,7 @@ const COLUMNAS_CONTROL = [
 export function OrganizacionSeccion() {
   const gridRef = useRef<CatalogoGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const { items, error, crear, actualizar, eliminar, reload } = useCatalogoGeneral(ORGANIZACION_API);
   // `useCatalogoGeneral` solo refresca su propia lista local (`items`) — el
   // resto de la app lee organizaciones de `OrganizacionContext`, que no se
@@ -121,18 +123,21 @@ export function OrganizacionSeccion() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <h2 className="text-sm font-semibold">Organización</h2>
-        <BarraAcciones
-          acciones={[
-            { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-            { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
-            {
-              icono: Trash2,
-              titulo: "Eliminar seleccionado",
-              onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
-              disabled: !puedeEliminar,
-            },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={setBusqueda} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                disabled: !puedeEliminar,
+              },
+            ]}
+          />
+        </div>
       </div>
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
@@ -141,6 +146,8 @@ export function OrganizacionSeccion() {
           config={config}
           filasIniciales={filas}
           modoSeleccion="unica"
+          busqueda={busqueda}
+          onBusquedaChange={setBusqueda}
           onSelectionChange={setPuedeEliminar}
           onAgregarFila={(fila) => crear(filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())}
           onEliminarFilas={(ids) => eliminar(ids).then(() => recargarOrganizacionContext())}

@@ -20,7 +20,6 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     id: "materiales",
     label: "Materiales",
     hijos: [
-      { id: "proveedores", label: "Proveedores" },
       { id: "fletes", label: "Fletes" },
       { id: "materiales-item", label: "Materiales" },
     ],
@@ -36,6 +35,12 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     ],
   },
   { id: "conceptos", label: "Conceptos" },
+];
+
+/** Ítems fijos del grupo "Otros" — catálogos generales sin lugar propio en el árbol de costos directos. */
+export const NODOS_OTROS: NodoCatalogo[] = [
+  { id: "proveedores", label: "Proveedores" },
+  { id: "clientes", label: "Clientes" },
 ];
 
 export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
@@ -55,16 +60,6 @@ export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
       { campo: "descripcion", encabezado: "Descripción" },
       { campo: "integrantes", encabezado: "Integrantes", numero: true, ancho: 120 },
       { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
-    ],
-  },
-  proveedores: {
-    titulo: "Proveedores",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "nombre", encabezado: "Nombre" },
-      { campo: "contacto", encabezado: "Contacto" },
-      { campo: "telefono", encabezado: "Teléfono", ancho: 130 },
-      { campo: "ubicacion", encabezado: "Ubicación" },
     ],
   },
   fletes: {

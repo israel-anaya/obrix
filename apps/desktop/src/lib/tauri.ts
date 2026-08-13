@@ -26,6 +26,7 @@ import type {
   UsuarioData,
   Moneda,
   Organizacion,
+  OrganizacionMembresia,
   Region,
   UnidadMedida,
   Usuario,
@@ -37,6 +38,10 @@ export function obtenerSesion(): Promise<AccountInfo | null> {
 
 export function iniciarSesion(): Promise<AccountInfo> {
   return invoke("iniciar_sesion");
+}
+
+export function cerrarSesion(): Promise<void> {
+  return invoke("cerrar_sesion");
 }
 
 export function crearPortafolio(path: string): Promise<string> {
@@ -84,6 +89,24 @@ export function updateUsuario(id: string, usuario: UsuarioData): Promise<Usuario
 }
 export function deleteUsuario(id: string): Promise<void> {
   return invoke("delete_usuario", { id });
+}
+
+export function listOrganizacionesDeUsuario(usuarioId: string): Promise<OrganizacionMembresia[]> {
+  return invoke("list_organizaciones_de_usuario", { usuarioId });
+}
+export function createOrganizacionUsuario(usuarioId: string, organizacionId: string): Promise<OrganizacionMembresia> {
+  return invoke("create_organizacion_usuario", { usuarioId, organizacionId });
+}
+export function updateOrganizacionUsuario(
+  id: string,
+  usuarioId: string,
+  organizacionId: string,
+  activo: boolean,
+): Promise<OrganizacionMembresia> {
+  return invoke("update_organizacion_usuario", { id, usuarioId, organizacionId, activo });
+}
+export function deleteOrganizacionUsuario(id: string): Promise<void> {
+  return invoke("delete_organizacion_usuario", { id });
 }
 
 export function listClientes(): Promise<Cliente[]> {

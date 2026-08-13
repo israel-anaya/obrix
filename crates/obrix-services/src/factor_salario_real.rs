@@ -1,7 +1,7 @@
 use obrix_db::entities::factor_salario_real::{ActiveModel, Column, Entity, Model};
 use obrix_db::entities::region;
 use obrix_db::PortafolioRepository;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, QueryOrder};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
@@ -65,8 +65,9 @@ impl FactorSalarioRealService {
         Ok(())
     }
 
-    pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
+    pub async fn listar(repo: &dyn PortafolioRepository, organizacion_id: &str) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
+            .filter(Column::OrganizacionId.eq(organizacion_id))
             .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)

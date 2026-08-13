@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
 import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
 import type { CatalogoGeneralDescriptor } from "@/features/configuracion/catalogosGenerales";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
@@ -14,6 +15,7 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(descriptor.api);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
     if (!guardadoExitoso) return;
@@ -54,29 +56,29 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold">{descriptor.titulo}</h2>
-          <p
-            className={cn(
-              "text-xs font-medium",
-              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
-            )}
-          >
-            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
-          </p>
+        <p
+          className={cn(
+            "text-xs font-medium",
+            error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
+          )}
+        >
+          {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
+        </p>
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={setBusqueda} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: () => reload() },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                disabled: !puedeEliminar,
+              },
+            ]}
+          />
         </div>
-        <BarraAcciones
-          acciones={[
-            { icono: RefreshCcw, titulo: "Recargar", onClick: () => reload() },
-            { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
-            {
-              icono: Trash2,
-              titulo: "Eliminar seleccionado",
-              onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
-              disabled: !puedeEliminar,
-            },
-          ]}
-        />
       </div>
       <div className="min-h-0 flex-1">
         <CatalogoGrid
@@ -84,6 +86,8 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
           config={descriptor.grid}
           filasIniciales={filas}
           modoSeleccion="unica"
+          busqueda={busqueda}
+          onBusquedaChange={setBusqueda}
           onSelectionChange={setPuedeEliminar}
           onAgregarFila={(fila) => crear(descriptor.filaANuevo(fila))}
           onEliminarFilas={(ids) => eliminar(ids)}

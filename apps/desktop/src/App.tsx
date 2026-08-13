@@ -3,6 +3,7 @@ import { BookOpen, FolderKanban, Plus, Trash2 } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CuentaFooter } from "@/components/CuentaFooter";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
 import { LoginGate } from "@/components/LoginGate";
 import { MenuBar, type MenuDef } from "@/components/MenuBar";
@@ -24,6 +25,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
+import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
 import { MaterialesSeccion } from "@/features/catalogos/MaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
@@ -43,6 +45,7 @@ import { useTheme } from "@/hooks/useTheme";
 import type { AccountInfo, Organizacion } from "@/lib/types";
 import {
   abrirPortafolio,
+  cerrarSesion,
   confirmarAperturaPortafolioAjeno,
   crearPortafolio,
   iniciarSesion,
@@ -112,6 +115,15 @@ export default function App() {
       const cuentaIniciada = await iniciarSesion();
       setCuenta(cuentaIniciada);
       setSesionError(null);
+    } catch (e) {
+      setSesionError(String(e));
+    }
+  };
+
+  const handleCerrarSesion = async () => {
+    try {
+      await cerrarSesion();
+      setCuenta(null);
     } catch (e) {
       setSesionError(String(e));
     }
@@ -213,6 +225,10 @@ export default function App() {
       setOrganizacionActivaId(organizacionId);
     } catch (e) {
       setPortafolioError(String(e));
+      // `portafolioError` solo se muestra en `StartScreen` — con una pestaña
+      // abierta (el caso normal al usar el switcher del sidebar) ese error
+      // queda invisible. Se relanza para que el propio switcher lo muestre.
+      throw e;
     }
   };
 
@@ -360,6 +376,7 @@ export default function App() {
     if (activeTab.id.startsWith(CATALOGO_PREFIX)) {
       const catalogoId = activeTab.id.slice(CATALOGO_PREFIX.length);
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
+      if (catalogoId === "clientes") return <ClientesSeccion />;
       if (catalogoId === "materiales-item") return <MaterialesSeccion />;
       if (catalogoId === "factores-salario-real") {
         return <FactorSalarioRealSeccion onCalcular={openFsrCalculoTab} onEditarModelo={openModeloCalculoTab} />;
@@ -382,15 +399,15 @@ export default function App() {
     return null;
   };
 
-  // "proveedores", "materiales-item", "factores-salario-real" y
+  // "proveedores", "clientes", "materiales-item", "factores-salario-real" y
   // "tabuladores-salario" ya traen su propia barra de acciones (ver
-  // ProveedoresSeccion/MaterialesSeccion/FactorSalarioRealSeccion/
+  // ProveedoresSeccion/ClientesSeccion/MaterialesSeccion/FactorSalarioRealSeccion/
   // CategoriaFasarSeccion) — no deben mostrar también la del tab genérico,
   // cableada a `catalogoGridRef`.
   const catalogoIdActivo = activeTab?.id.startsWith(CATALOGO_PREFIX)
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
-  const CATALOGOS_BESPOKE = ["proveedores", "materiales-item", "factores-salario-real", "tabuladores-salario"];
+  const CATALOGOS_BESPOKE = ["proveedores", "clientes", "materiales-item", "factores-salario-real", "tabuladores-salario"];
   const catalogoActivoConfig =
     catalogoIdActivo && !CATALOGOS_BESPOKE.includes(catalogoIdActivo)
       ? CATALOGO_GRID_CONFIG[catalogoIdActivo]
@@ -518,6 +535,7 @@ export default function App() {
                 <OrganizacionSwitcher />
                 <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{renderSidebar()}</div>
+                <CuentaFooter cuenta={cuenta} onCerrarSesion={handleCerrarSesion} />
               </ResizablePanel>
               <ResizableHandle withHandle />
             </>

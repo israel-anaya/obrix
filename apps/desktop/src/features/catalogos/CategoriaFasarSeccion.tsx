@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DollarSign, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { cn } from "@/lib/utils";
 import {
   createCategoriaFasar,
@@ -46,6 +48,7 @@ export function CategoriaFasarSeccion() {
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
   const [estadoGuardado, setEstadoGuardado] = useState<{ tipo: "error" | "exito"; mensaje: string } | null>(null);
+  const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
     if (estadoGuardado?.tipo !== "exito") return;
@@ -64,10 +67,11 @@ export function CategoriaFasarSeccion() {
     });
   };
 
+  const { organizacionActivaId } = useOrganizacionActiva();
   useEffect(() => {
     recargarTodo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [organizacionActivaId]);
 
   const simboloPorUnidadId = useMemo(
     () => Object.fromEntries(unidades.map((u) => [u.id, u.simbolo])),
@@ -173,6 +177,8 @@ export function CategoriaFasarSeccion() {
           modoSeleccion="unica"
           resaltarSeleccion
           seleccionInicialId={categoriaSeleccionadaId}
+          busqueda={busqueda}
+          onBusquedaChange={setBusqueda}
           onSelectionChange={setPuedeEliminar}
           onFilaSeleccionada={(fila) => setCategoriaSeleccionadaId(fila?._id ?? null)}
           onAgregarFila={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
@@ -202,6 +208,8 @@ export function CategoriaFasarSeccion() {
       modoSeleccion="unica"
       resaltarSeleccion={panelHistorialAbierto}
       seleccionInicialId={categoriaSeleccionadaId}
+      busqueda={busqueda}
+      onBusquedaChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
       onFilaSeleccionada={(fila) => setCategoriaSeleccionadaId(fila?._id ?? null)}
       onAgregarFila={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
@@ -228,30 +236,33 @@ export function CategoriaFasarSeccion() {
         >
           {estadoGuardado?.mensaje ?? "—"}
         </p>
-        <BarraAcciones
-          acciones={[
-            { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-            { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
-            {
-              icono: Trash2,
-              titulo: "Eliminar seleccionado",
-              onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
-              disabled: !puedeEliminar,
-            },
-            {
-              icono: DollarSign,
-              titulo: panelSalarioAbierto ? "Ocultar salario" : "Ver salario",
-              onClick: () => setPanelSalarioAbierto((v) => !v),
-              disabled: !panelSalarioAbierto && categorias.length === 0,
-            },
-            {
-              icono: History,
-              titulo: panelHistorialAbierto ? "Ocultar historial de salarios" : "Ver historial de salarios",
-              onClick: () => setPanelHistorialAbierto((v) => !v),
-              disabled: !panelHistorialAbierto && categorias.length === 0,
-            },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={setBusqueda} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                disabled: !puedeEliminar,
+              },
+              {
+                icono: DollarSign,
+                titulo: panelSalarioAbierto ? "Ocultar salario" : "Ver salario",
+                onClick: () => setPanelSalarioAbierto((v) => !v),
+                disabled: !panelSalarioAbierto && categorias.length === 0,
+              },
+              {
+                icono: History,
+                titulo: panelHistorialAbierto ? "Ocultar historial de salarios" : "Ver historial de salarios",
+                onClick: () => setPanelHistorialAbierto((v) => !v),
+                disabled: !panelHistorialAbierto && categorias.length === 0,
+              },
+            ]}
+          />
+        </div>
       </div>
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
