@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
+import { CatalogoGrid, catalogoClipboardActivo, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
@@ -471,9 +471,9 @@ export default function App() {
         { label: "Deshacer", shortcut: "Ctrl+Z", disabled: true },
         { label: "Rehacer", shortcut: "Ctrl+Shift+Z", disabled: true },
         "separator",
-        { label: "Cortar", shortcut: "Ctrl+X", disabled: true },
-        { label: "Copiar", shortcut: "Ctrl+C", disabled: true },
-        { label: "Pegar", shortcut: "Ctrl+V", disabled: true },
+        { label: "Cortar", shortcut: "Ctrl+X", onClick: () => void catalogoClipboardActivo()?.cortar() },
+        { label: "Copiar", shortcut: "Ctrl+C", onClick: () => void catalogoClipboardActivo()?.copiar() },
+        { label: "Pegar", shortcut: "Ctrl+V", onClick: () => void catalogoClipboardActivo()?.pegar() },
       ],
     },
     {

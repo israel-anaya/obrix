@@ -19,11 +19,36 @@ import {
   type ValorRango,
 } from "@/lib/types";
 
-function nuevoParametro(): Parametro {
-  return { id: "", etiqueta: "", grupo: "General", tipo: "numero", valor_default: 0 };
+function filaAParametro(fila: Fila): Parametro {
+  const tipo = (TIPOS_PARAMETRO as readonly string[]).includes(String(fila.tipo))
+    ? (fila.tipo as TipoParametro)
+    : "numero";
+  const base: Parametro = {
+    id: String(fila.id).trim(),
+    etiqueta: String(fila.etiqueta),
+    grupo: String(fila.grupo) || "General",
+    tipo,
+    referencia_legal: String(fila.referencia_legal) || undefined,
+    descripcion: String(fila.descripcion) || undefined,
+  };
+  if (tipo === "rango") {
+    return { ...base, valor_default: [{ clasificacion: "", inferior: 0, superior: null, valor: 0 }] };
+  }
+  if (tipo === "booleano") {
+    return { ...base, valor_default: Number(fila.valor_default) !== 0 };
+  }
+  return { ...base, valor_default: Number(fila.valor_default) || 0 };
 }
-function nuevoCalculado(): CampoCalculado {
-  return { id: "", etiqueta: "", tipo: "formula", formula: "" };
+
+function filaACalculado(fila: Fila): CampoCalculado {
+  return {
+    id: String(fila.id).trim(),
+    etiqueta: String(fila.etiqueta),
+    tipo: "formula",
+    formula: String(fila.formula),
+    referencia_legal: String(fila.referencia_legal) || undefined,
+    descripcion: String(fila.descripcion) || undefined,
+  };
 }
 
 const COLUMNAS_PARAMETROS: CatalogoGridConfig["columnas"] = [
@@ -286,7 +311,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
               filasIniciales={filasParametros}
               modoSeleccion="unica"
               onFilaSeleccionada={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
-              onAgregarFila={() => setParametros((vs) => [...vs, nuevoParametro()])}
+              onAgregarFila={(fila) => setParametros((vs) => [...vs, filaAParametro(fila)])}
               onEliminarFilas={(ids) => eliminarParametros(ids.map(Number))}
               onCeldaEditada={aplicarEdicionParametro}
             />
@@ -303,7 +328,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
                 filasIniciales={filasCalculados}
                 modoSeleccion="unica"
                 onFilaSeleccionada={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
-                onAgregarFila={() => setCalculados((vs) => [...vs, nuevoCalculado()])}
+                onAgregarFila={(fila) => setCalculados((vs) => [...vs, filaACalculado(fila)])}
                 onEliminarFilas={(ids) => eliminarCalculados(ids.map(Number))}
                 onCeldaEditada={aplicarEdicionCalculado}
               />

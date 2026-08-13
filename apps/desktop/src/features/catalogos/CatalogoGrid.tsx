@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, forwardRef, memo, useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import {
   columnFilteringFeature,
   columnResizingFeature,
@@ -15,7 +16,8 @@ import {
   type FilterFn,
   type RowSelectionState,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, Check, Search, Star, X } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { ArrowDown, ArrowUp, Check, ChevronDown, Loader2, Search, Star, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +73,163 @@ function filaVacia(columnas: CatalogoColumnaDef[]): Fila {
   };
 }
 
+function primerCampo(columnas: CatalogoColumnaDef[]): string | undefined {
+  return columnas.find((c) => !c.soloLectura)?.campo ?? columnas[0]?.campo;
+}
+
+/** Acepta decimal con coma o punto (`1,5` / `1.5`) y miles al estilo México (`1.234,56`). */
+function parsearNumero(texto: string): number | null {
+  const t = texto.trim().replace(/\s/g, "");
+  if (t === "") return 0;
+  const tieneComa = t.includes(",");
+  const tienePunto = t.includes(".");
+  let normalizado = t;
+  if (tieneComa && tienePunto) {
+    normalizado =
+      t.lastIndexOf(",") > t.lastIndexOf(".")
+        ? t.replace(/\./g, "").replace(",", ".")
+        : t.replace(/,/g, "");
+  } else if (tieneComa) {
+    normalizado = t.replace(",", ".");
+  }
+  const n = Number(normalizado);
+  return Number.isFinite(n) ? n : null;
+}
+
+function valorVacio(columna: CatalogoColumnaDef): string | number | boolean {
+  if (columna.booleano) return false;
+  if (columna.numero) return 0;
+  return "";
+}
+
+/** Intenta asociar el mensaje de error del backend a columnas por `campo` o encabezado. */
+function camposDesdeMensaje(mensaje: string, columnas: CatalogoColumnaDef[], fila: Fila): string[] {
+  const lower = mensaje.toLowerCase();
+  const porNombre = columnas
+    .filter((c) => !c.soloLectura && (lower.includes(c.campo.toLowerCase()) || lower.includes(c.encabezado.toLowerCase())))
+    .map((c) => c.campo);
+  if (porNombre.length > 0) return porNombre;
+  const pareceRequerido = /vacío|vacio|required|not null|obligatori|empty/i.test(mensaje);
+  if (!pareceRequerido) return [];
+  return columnas
+    .filter((c) => {
+      if (c.soloLectura || c.booleano || c.numero) return false;
+      const v = fila[c.campo];
+      return v === "" || v == null;
+    })
+    .map((c) => c.campo);
+}
+
+function escaparTsv(valor: string): string {
+  if (/[\t\n\r"]/.test(valor)) return `"${valor.replace(/"/g, '""')}"`;
+  return valor;
+}
+
+function filaATsv(fila: Fila, columnas: CatalogoColumnaDef[]): string {
+  return columnas.map((c) => escaparTsv(valorVisible(fila, c))).join("\t");
+}
+
+function parsearTsv(texto: string): string[][] {
+  const normalizado = texto.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lineas = normalizado.split("\n");
+  if (lineas.at(-1) === "") lineas.pop();
+  return lineas
+    .map((linea) => linea.split("\t"))
+    .filter((linea) => linea.some((c) => c.trim() !== ""));
+}
+
+function aplicarLineaAFila(
+  fila: Fila,
+  linea: string[],
+  startIdx: number,
+  columnas: CatalogoColumnaDef[],
+): { fila: Fila; changed: boolean } {
+  let next = { ...fila };
+  let changed = false;
+  for (let i = 0; i < linea.length; i++) {
+    const col = columnas[startIdx + i];
+    if (!col) break;
+    const parsed = parsearValorPegado(linea[i] ?? "", col, next);
+    if (parsed === null || next[col.campo] === parsed) continue;
+    next = { ...next, [col.campo]: parsed };
+    changed = true;
+  }
+  return { fila: next, changed };
+}
+
+function parsearValorPegado(
+  texto: string,
+  columna: CatalogoColumnaDef,
+  fila: Fila,
+): string | number | boolean | null {
+  if (columna.soloLectura) return null;
+  const crudo = texto.trim();
+  if (columna.booleano) {
+    const t = crudo.toLowerCase();
+    if (["sí", "si", "true", "1", "yes"].includes(t)) return true;
+    if (["no", "false", "0"].includes(t)) return false;
+    return null;
+  }
+  if (columna.numero || columna.estrellas) {
+    const n = parsearNumero(crudo);
+    if (n === null) return null;
+    if (columna.estrellas) return Math.min(5, Math.max(0, n));
+    return n;
+  }
+  const opciones = typeof columna.opciones === "function" ? columna.opciones(fila) : columna.opciones;
+  if (opciones) {
+    return opciones.find((o) => o.toLowerCase() === crudo.toLowerCase()) ?? null;
+  }
+  if (columna.sufijo && crudo.endsWith(columna.sufijo)) {
+    return crudo.slice(0, -columna.sufijo.length);
+  }
+  return texto;
+}
+
+export interface CatalogoClipboard {
+  copiar: () => Promise<void>;
+  cortar: () => Promise<void>;
+  pegar: () => Promise<void>;
+}
+
+/** Último grid que recibió foco — el menú Edit de `App` lo usa para Cortar/Copiar/Pegar. */
+let clipboardActivo: CatalogoClipboard | null = null;
+
+export function catalogoClipboardActivo(): CatalogoClipboard | null {
+  return clipboardActivo;
+}
+
+async function escribirClipboard(texto: string) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = texto;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+}
+
+/**
+ * Si hay un borrador en curso, el padre puede mandar `filasIniciales` nuevas
+ * (p. ej. al resolver nombres de usuario) sin pisar lo que el usuario está editando.
+ * Durante el guardado se acepta la lista del padre tal cual — el alta persistida
+ * suele llegar con otro `_id` que el UUID local.
+ */
+function fusionarFilas(prev: Fila[], siguientes: Fila[], edicion: EstadoEdicion | null, guardando: boolean): Fila[] {
+  if (!edicion || guardando) return siguientes;
+  const borrador = prev.find((f) => f._id === edicion.id);
+  if (!borrador) return siguientes;
+  if (edicion.esNueva || !siguientes.some((f) => f._id === edicion.id)) {
+    return [...siguientes, borrador];
+  }
+  return siguientes.map((f) => (f._id === edicion.id ? borrador : f));
+}
+
 export interface CatalogoGridHandle {
   agregarFila: () => void;
   eliminarFilaSeleccionada: () => void;
@@ -101,33 +260,50 @@ interface EstadoEdicion {
 }
 
 /**
- * Columnas `booleano` se editan/muestran como un combobox "Sí"/"No" (no
- * checkbox) — el valor subyacente sigue siendo `boolean`, ver `EditorCelda`.
+ * Columnas `booleano` se muestran como checkbox (el valor sigue siendo
+ * `boolean`). El cambio entra al borrador de la fila; persiste con ✓.
  */
-const SI_NO = ["Sí", "No"] as const;
-
 const ESTRELLA_VACIA = "text-muted-foreground/30";
 const ESTRELLA_LLENA = "fill-amber-400 text-amber-400";
+const ALTO_FILA = 26;
 
-function renderEstrellas(valor: unknown) {
+function renderEstrellas(valor: unknown, onElegir?: (n: number) => void) {
   const numero = Number(valor);
-  if (!Number.isFinite(numero) || numero <= 0) return null;
-  // Redondea al medio punto más cercano (4.3 -> 4.5, 4.2 -> 4) para poder
-  // dibujar una estrella a la mitad, no solo llena/vacía.
-  const redondeado = Math.round(numero * 2) / 2;
+  const redondeado = Number.isFinite(numero) && numero > 0 ? Math.round(numero * 2) / 2 : 0;
   return (
-    <div className="flex h-full items-center gap-0.5" title={String(valor)}>
+    <div
+      className="flex h-full items-center gap-0.5"
+      title={Number.isFinite(numero) && numero > 0 ? String(valor) : undefined}
+      onClick={onElegir ? (e) => e.stopPropagation() : undefined}
+    >
       {Array.from({ length: 5 }, (_, i) => {
         const relleno = Math.min(Math.max(redondeado - i, 0), 1);
-        if (relleno === 0) return <Star key={i} size={13} className={ESTRELLA_VACIA} />;
-        if (relleno === 1) return <Star key={i} size={13} className={ESTRELLA_LLENA} />;
-        return (
-          <span key={i} className="relative inline-block" style={{ width: 13, height: 13 }}>
-            <Star size={13} className={cn("absolute inset-0", ESTRELLA_VACIA)} />
-            <span className="absolute inset-0 overflow-hidden" style={{ width: "50%" }}>
-              <Star size={13} className={ESTRELLA_LLENA} />
+        const clase = relleno === 1 ? ESTRELLA_LLENA : ESTRELLA_VACIA;
+        const icono =
+          relleno > 0 && relleno < 1 ? (
+            <span className="relative inline-block" style={{ width: 13, height: 13 }}>
+              <Star size={13} className={cn("absolute inset-0", ESTRELLA_VACIA)} />
+              <span className="absolute inset-0 overflow-hidden" style={{ width: "50%" }}>
+                <Star size={13} className={ESTRELLA_LLENA} />
+              </span>
             </span>
-          </span>
+          ) : (
+            <Star size={13} className={clase} />
+          );
+        if (!onElegir) return <span key={i}>{icono}</span>;
+        return (
+          <button
+            key={i}
+            type="button"
+            title={`${i + 1}`}
+            className="rounded-sm p-0 hover:scale-110"
+            onClick={(e) => {
+              e.stopPropagation();
+              onElegir(i + 1);
+            }}
+          >
+            {icono}
+          </button>
         );
       })}
     </div>
@@ -158,17 +334,153 @@ interface CeldaAbierta {
 
 interface CatalogoTableMeta {
   edicion: EstadoEdicion | null;
-  celdaAbierta: CeldaAbierta | null;
-  /** Celda marcada con un solo click — solo visual, distinta de `celdaAbierta` (que sí está en edición). */
-  celdaSeleccionada: { filaId: string; campo: string } | null;
   resaltarSeleccion: boolean;
+  guardando: boolean;
   seleccionarCelda: (filaId: string, campo: string) => void;
   abrirCelda: (filaId: string, campo: string, valorInicial?: string) => void;
   confirmarCambioCelda: (filaId: string, campo: string, valor: string | number | boolean) => void;
   cerrarCelda: () => void;
   confirmarEdicion: () => void;
   cancelarEdicion: () => void;
+  camposError: ReadonlySet<string>;
+  errorGuardado: string | null;
 }
+
+type CeldaSel = { filaId: string; campo: string } | null;
+
+interface Store<T> {
+  subscribe: (fn: () => void) => () => void;
+  get: () => T;
+  set: (next: T) => void;
+}
+
+function crearStore<T>(inicial: T): Store<T> {
+  let valor = inicial;
+  const listeners = new Set<() => void>();
+  return {
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    },
+    get: () => valor,
+    set(next) {
+      valor = next;
+      listeners.forEach((fn) => fn());
+    },
+  };
+}
+
+function crearStoreSeleccion(): Store<CeldaSel> {
+  const store = crearStore<CeldaSel>(null);
+  return {
+    subscribe: store.subscribe,
+    get: store.get,
+    set(next) {
+      const prev = store.get();
+      if (prev?.filaId === next?.filaId && prev?.campo === next?.campo) return;
+      store.set(next);
+    },
+  };
+}
+
+type ChromeGrid = {
+  edicion: EstadoEdicion | null;
+  guardando: boolean;
+  camposError: ReadonlySet<string>;
+  errorGuardado: string | null;
+  resaltarSeleccion: boolean;
+};
+
+type GridUi = {
+  seleccion: Store<CeldaSel>;
+  abierta: Store<CeldaAbierta | null>;
+  chrome: Store<ChromeGrid>;
+  meta: { current: CatalogoTableMeta };
+};
+
+const GridUiContext = createContext<GridUi | null>(null);
+
+function useGridUi(): GridUi {
+  const ctx = useContext(GridUiContext);
+  if (!ctx) throw new Error("GridUiContext");
+  return ctx;
+}
+
+function useCeldaSeleccionada(filaId: string, campo: string) {
+  const { seleccion } = useGridUi();
+  return useSyncExternalStore(seleccion.subscribe, () => {
+    const s = seleccion.get();
+    return !!s && s.filaId === filaId && s.campo === campo;
+  });
+}
+
+function useFilaActiva(filaId: string) {
+  const { seleccion } = useGridUi();
+  return useSyncExternalStore(seleccion.subscribe, () => seleccion.get()?.filaId === filaId);
+}
+
+function useCampoActivo(campo: string) {
+  const { seleccion } = useGridUi();
+  return useSyncExternalStore(seleccion.subscribe, () => seleccion.get()?.campo === campo);
+}
+
+function useCeldaAbierta(filaId: string, campo: string) {
+  const { abierta } = useGridUi();
+  return useSyncExternalStore(abierta.subscribe, () => {
+    const a = abierta.get();
+    return a?.filaId === filaId && a?.campo === campo ? a : null;
+  });
+}
+
+function useBloqueada(filaId: string) {
+  const { chrome } = useGridUi();
+  return useSyncExternalStore(chrome.subscribe, () => {
+    const e = chrome.get().edicion;
+    return !!e && e.id !== filaId;
+  });
+}
+
+function useGuardando() {
+  const { chrome } = useGridUi();
+  return useSyncExternalStore(chrome.subscribe, () => chrome.get().guardando);
+}
+
+function useErrorCampo(filaId: string, campo: string) {
+  const { chrome } = useGridUi();
+  return useSyncExternalStore(chrome.subscribe, () => {
+    const c = chrome.get();
+    return !!(c.edicion?.id === filaId && c.camposError.has(campo));
+  });
+}
+
+function useEsBorrador(filaId: string) {
+  const { chrome } = useGridUi();
+  return useSyncExternalStore(chrome.subscribe, () => chrome.get().edicion?.id === filaId);
+}
+
+function useClaseBorrador(filaId: string) {
+  const { chrome } = useGridUi();
+  return useSyncExternalStore(chrome.subscribe, () => {
+    const e = chrome.get().edicion;
+    if (e?.id !== filaId) return "";
+    return e.esNueva ? "bg-emerald-50 dark:bg-emerald-950/60" : "bg-amber-50 dark:bg-amber-950/60";
+  });
+}
+
+function useResaltarPunto(filaId: string, filaSeleccionada: boolean) {
+  const { chrome } = useGridUi();
+  return useSyncExternalStore(chrome.subscribe, () => chrome.get().resaltarSeleccion && filaSeleccionada && chrome.get().edicion?.id !== filaId);
+}
+
+const CHROME_VACIO: ChromeGrid = {
+  edicion: null,
+  guardando: false,
+  camposError: new Set(),
+  errorGuardado: null,
+  resaltarSeleccion: false,
+};
 
 const features = tableFeatures({
   columnFilteringFeature,
@@ -184,16 +496,46 @@ const features = tableFeatures({
 
 const columnHelper = createColumnHelper<typeof features, Fila>();
 
-/** Vista de solo lectura de una celda — estrellas, indentado, o el texto formateado normal. */
-function CeldaVista({ fila, columna }: { fila: Fila; columna: CatalogoColumnaDef }) {
-  if (columna.estrellas) return renderEstrellas(fila[columna.campo]);
+/** Vista de una celda — checkbox, estrellas, indentado, o el texto formateado. */
+function CeldaVista({
+  fila,
+  columna,
+  onToggleBooleano,
+  onEstrella,
+}: {
+  fila: Fila;
+  columna: CatalogoColumnaDef;
+  onToggleBooleano?: () => void;
+  onEstrella?: (n: number) => void;
+}) {
+  if (columna.estrellas) return renderEstrellas(fila[columna.campo], onEstrella);
+  if (columna.booleano) {
+    return (
+      <div className="flex h-full w-full items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={Boolean(fila[columna.campo])}
+          disabled={!onToggleBooleano}
+          onChange={() => onToggleBooleano?.()}
+          className="cursor-pointer disabled:cursor-default"
+        />
+      </div>
+    );
+  }
   const texto = valorVisible(fila, columna);
   const contenido = columna.indentarPor ? (
     <span style={{ paddingLeft: (Number(fila[columna.indentarPor]) || 0) * 16 }}>{texto}</span>
   ) : (
     texto
   );
-  return <span className={cn(columna.numero && "block w-full text-right")}>{contenido}</span>;
+  return (
+    <span
+      title={texto || undefined}
+      className={cn("block min-w-0 truncate", columna.numero && "w-full text-right tabular-nums")}
+    >
+      {contenido}
+    </span>
+  );
 }
 
 /**
@@ -201,53 +543,385 @@ function CeldaVista({ fila, columna }: { fila: Fila; columna: CatalogoColumnaDef
  * opciones). Commitea en blur/Enter/Tab; Escape descarta sin guardar.
  * Tab/Shift+Tab confirman y abren el editor de la siguiente/anterior columna
  * editable de la misma fila. Enter/Shift+Enter confirman y solo seleccionan
- * esa columna, sin abrir su editor (como en Excel). Nunca salta de fila.
+ * esa columna, sin abrir su editor. Nunca salta de fila (el commit es por fila,
+ * con ✓/✗). Ctrl+Enter confirma la fila entera.
  */
+function ComboboxCelda({
+  opciones,
+  valorInicial,
+  filtrarAlAbrir = false,
+  autoFocus = true,
+  listaSoloConFoco = false,
+  clase,
+  onElegir,
+  onDescartar,
+  onTab,
+  onEnter,
+  onConfirmarFila,
+  onFoco,
+}: {
+  opciones: readonly string[];
+  valorInicial: string;
+  /** True si se abrió tecleando (reemplazo); F2/clic muestran la lista completa. */
+  filtrarAlAbrir?: boolean;
+  autoFocus?: boolean;
+  /** En la barra de valor: la lista solo aparece al enfocar, no al montar. */
+  listaSoloConFoco?: boolean;
+  clase: string;
+  onElegir: (valor: string) => void;
+  onDescartar: () => void;
+  onTab: (shift: boolean) => void;
+  onEnter: (shift: boolean) => void;
+  onConfirmarFila: () => void;
+  onFoco?: () => void;
+}) {
+  const [texto, setTexto] = useState(valorInicial);
+  const [filtrar, setFiltrar] = useState(filtrarAlAbrir);
+  const [activo, setActivo] = useState(() => Math.max(0, opciones.findIndex((o) => o === valorInicial)));
+  const [enfocado, setEnfocado] = useState(autoFocus);
+  const descartarRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listaRef = useRef<HTMLUListElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  const coincidencias = opciones.filter((o) => o.toLowerCase().includes(texto.trim().toLowerCase()));
+  const visibles = filtrar ? coincidencias : opciones;
+  const opcionesKey = opciones.join("\0");
+
+  useLayoutEffect(() => {
+    const lista = listaRef.current;
+    const item = lista?.querySelector("[data-combo-activo]") as HTMLElement | null;
+    if (!lista || !item) return;
+    const top = item.offsetTop;
+    const bottom = top + item.offsetHeight;
+    if (top < lista.scrollTop) lista.scrollTop = top;
+    else if (bottom > lista.scrollTop + lista.clientHeight) lista.scrollTop = bottom - lista.clientHeight;
+  }, [activo, visibles.length]);
+
+  useLayoutEffect(() => {
+    const medir = () => setRect(inputRef.current?.getBoundingClientRect() ?? null);
+    medir();
+    window.addEventListener("resize", medir);
+    window.addEventListener("scroll", medir, true);
+    return () => {
+      window.removeEventListener("resize", medir);
+      window.removeEventListener("scroll", medir, true);
+    };
+  }, [enfocado]);
+
+  useEffect(() => {
+    if (enfocado) return;
+    setTexto(valorInicial);
+    setFiltrar(false);
+    setActivo(Math.max(0, opciones.findIndex((o) => o === valorInicial)));
+    descartarRef.current = false;
+  }, [valorInicial, enfocado, opcionesKey]);
+
+  const canon = (t: string) => opciones.find((o) => o.toLowerCase() === t.trim().toLowerCase()) ?? null;
+  const ultimo = Math.max(visibles.length - 1, 0);
+
+  const elegir = (valor: string) => {
+    if (descartarRef.current) return;
+    descartarRef.current = true;
+    onElegir(valor);
+    if (listaSoloConFoco) {
+      setTexto(valor);
+      setFiltrar(false);
+      setEnfocado(false);
+      inputRef.current?.blur();
+    }
+  };
+
+  const commitFiltro = (): boolean => {
+    if (descartarRef.current) return false;
+    const exacto = canon(texto);
+    if (exacto) {
+      elegir(exacto);
+      return true;
+    }
+    const resaltada = visibles[activo] ?? visibles[0];
+    if (resaltada && (texto.trim() !== "" || !filtrar)) {
+      elegir(resaltada);
+      return true;
+    }
+    if (valorInicial && opciones.includes(valorInicial) && texto.trim() === "") {
+      elegir(valorInicial);
+      return true;
+    }
+    descartarRef.current = true;
+    onDescartar();
+    return false;
+  };
+
+  const maxLista = 192;
+  const abrirArriba = rect ? window.innerHeight - rect.bottom < maxLista && rect.top > window.innerHeight - rect.bottom : false;
+
+  return (
+    <>
+      <div className={cn("relative flex h-full min-w-0 items-center", listaSoloConFoco && "flex-1")}>
+        <input
+          ref={inputRef}
+          autoFocus={autoFocus}
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setFiltrar(true);
+            setActivo(0);
+          }}
+          onFocus={(e) => {
+            setEnfocado(true);
+            if (listaSoloConFoco) setFiltrar(false);
+            e.currentTarget.select();
+            onFoco?.();
+          }}
+          onBlur={() => {
+            setEnfocado(false);
+            if (!descartarRef.current) commitFiltro();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              descartarRef.current = true;
+              setTexto(valorInicial);
+              setFiltrar(false);
+              setEnfocado(false);
+              inputRef.current?.blur();
+              onDescartar();
+              return;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S")) {
+              e.preventDefault();
+              if (commitFiltro()) onConfirmarFila();
+              return;
+            }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActivo((i) => Math.min(ultimo, i + 1));
+              return;
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActivo((i) => Math.max(0, i - 1));
+              return;
+            }
+            if (e.key === "PageDown") {
+              e.preventDefault();
+              setActivo((i) => Math.min(ultimo, i + 8));
+              return;
+            }
+            if (e.key === "PageUp") {
+              e.preventDefault();
+              setActivo((i) => Math.max(0, i - 8));
+              return;
+            }
+            if (e.key === "Home") {
+              e.preventDefault();
+              setActivo(0);
+              return;
+            }
+            if (e.key === "End") {
+              e.preventDefault();
+              setActivo(ultimo);
+              return;
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const elegido = visibles[activo] ?? canon(texto);
+              if (elegido) elegir(elegido);
+              else if (!commitFiltro()) return;
+              onEnter(e.shiftKey);
+              return;
+            }
+            if (e.key === "Tab") {
+              e.preventDefault();
+              if (commitFiltro()) onTab(e.shiftKey);
+            }
+          }}
+          className={cn(clase, "pr-5")}
+        />
+        <ChevronDown size={12} className="pointer-events-none absolute right-0.5 text-muted-foreground" />
+      </div>
+      {rect && (!listaSoloConFoco || enfocado) &&
+        createPortal(
+          <ul
+            ref={listaRef}
+            className="fixed z-[400] max-h-48 overflow-auto border border-border bg-popover py-0.5 text-xs text-popover-foreground shadow-md"
+            style={{
+              top: abrirArriba ? undefined : rect.bottom,
+              bottom: abrirArriba ? window.innerHeight - rect.top : undefined,
+              left: rect.left,
+              width: Math.max(rect.width, 160),
+            }}
+          >
+            {visibles.length === 0 ? (
+              <li className="px-2 py-1 text-muted-foreground">Sin coincidencias</li>
+            ) : (
+              visibles.map((o, i) => (
+                <li key={o}>
+                  <button
+                    type="button"
+                    className={cn("flex w-full px-2 py-1 text-left hover:bg-accent", i === activo && "bg-accent")}
+                    data-combo-activo={i === activo ? "" : undefined}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setActivo(i)}
+                    onClick={() => elegir(o)}
+                  >
+                    {o}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/** Manija de resize: cursor col-resize, guía a todo el alto del grid. */
+function aplicarCursorColResize(activo: boolean) {
+  const id = "catalogo-cursor-col-resize";
+  document.getElementById(id)?.remove();
+  if (!activo) return;
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = "*,*::before,*::after{cursor:col-resize!important}";
+  document.head.appendChild(style);
+}
+
+function ManijaResize({
+  resizing,
+  onMouseDown,
+  onTouchStart,
+  contenedorRef,
+}: {
+  resizing: boolean;
+  onMouseDown: React.MouseEventHandler<HTMLDivElement>;
+  onTouchStart: React.TouchEventHandler<HTMLDivElement>;
+  contenedorRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const handleRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState(false);
+  const [guia, setGuia] = useState<{ left: number; top: number; height: number } | null>(null);
+  const visible = hover || resizing;
+
+  useEffect(() => {
+    aplicarCursorColResize(resizing);
+    const prev = document.body.style.userSelect;
+    if (resizing) document.body.style.userSelect = "none";
+    return () => {
+      aplicarCursorColResize(false);
+      document.body.style.userSelect = prev;
+    };
+  }, [resizing]);
+
+  useLayoutEffect(() => {
+    if (!visible) {
+      setGuia(null);
+      return;
+    }
+    const medir = () => {
+      const handle = handleRef.current;
+      const caja = contenedorRef.current;
+      if (!handle || !caja) return;
+      const h = handle.getBoundingClientRect();
+      const c = caja.getBoundingClientRect();
+      setGuia({ left: h.right, top: c.top, height: c.height });
+    };
+    medir();
+    const caja = contenedorRef.current;
+    const th = handleRef.current?.parentElement;
+    const ro = new ResizeObserver(medir);
+    if (caja) ro.observe(caja);
+    if (th) ro.observe(th);
+    window.addEventListener("scroll", medir, true);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("scroll", medir, true);
+    };
+  }, [visible, resizing, contenedorRef]);
+
+  return (
+    <>
+      <div
+        ref={handleRef}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onMouseDown(e);
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onTouchStart(e);
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        className="absolute right-0 top-0 z-20 h-full w-2.5 touch-none select-none"
+        style={{ cursor: "col-resize" }}
+      />
+      {guia &&
+        createPortal(
+          <div
+            className={cn("pointer-events-none fixed z-[500] w-0.5", resizing ? "bg-primary" : "bg-primary/40")}
+            style={{ left: guia.left, top: guia.top, height: guia.height }}
+          />,
+          document.body,
+        )}
+    </>
+  );
+}
+
 function EditorCelda({
   columna,
   fila,
   meta,
   columnas,
+  valorForzado,
 }: {
   columna: CatalogoColumnaDef;
   fila: Fila;
   meta: CatalogoTableMeta;
   columnas: CatalogoColumnaDef[];
+  valorForzado?: string;
 }) {
-  // Si `celdaAbierta` trae `valorInicial` (se abrió escribiendo directamente
-  // sobre la celda seleccionada, sin doble click), arranca reemplazando el
-  // valor existente — igual que Excel.
-  const valorForzado = meta.celdaAbierta?.valorInicial;
+  // Si se pasa `valorForzado` (se abrió escribiendo directamente sobre la
+  // celda seleccionada, sin doble click), arranca reemplazando el valor
+  // existente — igual que Excel.
   const valorInicial = valorForzado ?? fila[columna.campo];
   const [valor, setValor] = useState<string>(
-    valorForzado !== undefined
-      ? valorForzado
-      : columna.booleano
-        ? (valorInicial ? "Sí" : "No")
-        : String(valorInicial ?? ""),
+    valorForzado !== undefined ? valorForzado : String(valorInicial ?? ""),
   );
   // Evita que el blur nativo disparado al desmontar este editor (p. ej. al
   // cerrar con Escape) vuelva a commitear un valor que el usuario descartó.
   const descartarRef = useRef(false);
 
-  const commit = () => {
-    if (descartarRef.current) return;
+  const commit = (): boolean => {
+    if (descartarRef.current) return false;
     let valorFinal: string | number | boolean = valor;
-    if (columna.booleano) valorFinal = valor === "Sí";
-    else if (columna.numero) valorFinal = Number(valor) || 0;
+    if (columna.booleano) valorFinal = valor === "Sí" || valor === "true";
+    else if (columna.numero) {
+      const n = parsearNumero(valor);
+      if (n === null) {
+        descartarRef.current = true;
+        meta.cerrarCelda();
+        return false;
+      }
+      valorFinal = n;
+    }
     meta.confirmarCambioCelda(fila._id, columna.campo, valorFinal);
+    return true;
   };
 
-  const moverA = (delta: 1 | -1, abrirEditor: boolean) => {
+  const navegar = (delta: 1 | -1, abrirEditor: boolean) => {
     const editables = columnas.filter((c) => !c.soloLectura);
     const idxActual = editables.findIndex((c) => c.campo === columna.campo);
     const siguiente = editables[idxActual + delta];
-    commit();
-    // `celdaSeleccionada` no se actualiza sola al navegar con Tab/Enter — sin
-    // esto, el ring de "celda seleccionada" se queda en la primera celda
-    // editada en vez de seguir a donde realmente terminó la navegación.
     meta.seleccionarCelda(fila._id, siguiente ? siguiente.campo : columna.campo);
     if (siguiente && abrirEditor) meta.abrirCelda(fila._id, siguiente.campo);
+  };
+
+  const moverA = (delta: 1 | -1, abrirEditor: boolean) => {
+    commit();
+    navegar(delta, abrirEditor);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -256,10 +930,14 @@ function EditorCelda({
       meta.cerrarCelda();
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S")) {
+      e.preventDefault();
+      if (commit()) meta.confirmarEdicion();
+      return;
+    }
     if (e.key === "Enter") {
-      // A diferencia de Tab, Enter solo confirma y selecciona la siguiente
-      // columna editable — no la abre en modo edición (como en Excel, donde
-      // Enter mueve la selección pero no arranca la edición de la celda).
+      // Enter confirma la celda y mueve la selección a la siguiente columna
+      // de *esta* fila — no baja de fila, porque el commit es por fila (✓/✗).
       e.preventDefault();
       moverA(e.shiftKey ? -1 : 1, false);
       return;
@@ -277,30 +955,34 @@ function EditorCelda({
     }
   };
 
-  const opciones = columna.booleano
-    ? SI_NO
-    : typeof columna.opciones === "function"
-      ? columna.opciones(fila)
-      : columna.opciones;
+  const opciones = typeof columna.opciones === "function" ? columna.opciones(fila) : columna.opciones;
 
-  const clase = "h-full w-full rounded-none border-none bg-background px-1 text-sm outline-none ring-1 ring-primary";
+  const clase = cn(
+    "h-full w-full rounded-none border-none bg-background px-1 text-sm outline-none ring-1 ring-primary",
+    columna.numero && "text-right tabular-nums",
+  );
 
   if (opciones) {
     return (
-      <select autoFocus value={valor} onChange={(e) => setValor(e.target.value)} onBlur={commit} onKeyDown={onKeyDown} className={clase}>
-        {opciones.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+      <ComboboxCelda
+        opciones={opciones}
+        valorInicial={String(valorInicial ?? "")}
+        filtrarAlAbrir={valorForzado !== undefined}
+        clase={clase}
+        onElegir={(v) => meta.confirmarCambioCelda(fila._id, columna.campo, v)}
+        onDescartar={() => meta.cerrarCelda()}
+        onTab={(shift) => navegar(shift ? -1 : 1, true)}
+        onEnter={(shift) => navegar(shift ? -1 : 1, false)}
+        onConfirmarFila={() => meta.confirmarEdicion()}
+      />
     );
   }
 
   return (
     <input
       autoFocus
-      type={columna.numero ? "number" : "text"}
+      type="text"
+      inputMode={columna.numero ? "decimal" : undefined}
       value={valor}
       onChange={(e) => setValor(e.target.value)}
       onFocus={(e) => e.currentTarget.select()}
@@ -311,35 +993,361 @@ function EditorCelda({
   );
 }
 
+function BarraValor({
+  referencia,
+  valor,
+  soloLectura,
+  opciones,
+  onCommit,
+  onConfirmarFila,
+  onFocusBarra,
+}: {
+  referencia: string;
+  valor: string;
+  soloLectura: boolean;
+  opciones?: readonly string[];
+  onCommit: (valor: string) => void;
+  onConfirmarFila: () => void;
+  onFocusBarra?: () => void;
+}) {
+  const [local, setLocal] = useState(valor);
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setLocal(valor);
+  }, [valor, focused]);
+
+  return (
+    <div className="flex h-7 shrink-0 items-center gap-1 border-b border-border bg-muted/50 px-1">
+      <span className="w-36 shrink-0 truncate px-1 text-[11px] tabular-nums text-muted-foreground" title={referencia || undefined}>
+        {referencia || " "}
+      </span>
+      <div className="h-4 w-px shrink-0 bg-border" />
+      {opciones && !soloLectura ? (
+        <ComboboxCelda
+          key={referencia}
+          opciones={opciones}
+          valorInicial={valor}
+          autoFocus={false}
+          listaSoloConFoco
+          clase="h-6 w-full bg-transparent px-1 text-xs outline-none"
+          onElegir={onCommit}
+          onDescartar={() => {}}
+          onTab={() => {}}
+          onEnter={() => {}}
+          onConfirmarFila={onConfirmarFila}
+          onFoco={onFocusBarra}
+        />
+      ) : (
+        <input
+          value={focused ? local : valor}
+          readOnly={soloLectura}
+          onFocus={() => {
+            setFocused(true);
+            onFocusBarra?.();
+          }}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={() => {
+            setFocused(false);
+            if (!soloLectura && local !== valor) onCommit(local);
+          }}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S")) {
+              e.preventDefault();
+              if (!soloLectura && local !== valor) onCommit(local);
+              onConfirmarFila();
+              return;
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (!soloLectura && local !== valor) onCommit(local);
+              e.currentTarget.blur();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setLocal(valor);
+              setFocused(false);
+              e.currentTarget.blur();
+            }
+          }}
+          className="h-6 min-w-0 flex-1 bg-transparent px-1 text-xs outline-none read-only:text-muted-foreground"
+        />
+      )}
+    </div>
+  );
+}
+
 function CeldaCatalogo({
   columna,
   fila,
-  meta,
   columnas,
 }: {
   columna: CatalogoColumnaDef;
   fila: Fila;
-  meta: CatalogoTableMeta;
   columnas: CatalogoColumnaDef[];
 }) {
-  const abierta = meta.celdaAbierta?.filaId === fila._id && meta.celdaAbierta?.campo === columna.campo;
-  if (!columna.soloLectura && abierta) {
-    return <EditorCelda columna={columna} fila={fila} meta={meta} columnas={columnas} />;
+  const meta = useGridUi().meta.current;
+  const abierta = useCeldaAbierta(fila._id, columna.campo);
+  const seleccionada = useCeldaSeleccionada(fila._id, columna.campo);
+  const bloqueada = useBloqueada(fila._id);
+  const guardando = useGuardando();
+  const conError = useErrorCampo(fila._id, columna.campo);
+  const clicDirecto = columna.booleano || columna.estrellas;
+  if (!columna.soloLectura && abierta && !columna.booleano) {
+    return (
+      <EditorCelda
+        columna={columna}
+        fila={fila}
+        meta={meta}
+        columnas={columnas}
+        valorForzado={abierta.valorInicial}
+      />
+    );
   }
-  const seleccionada = meta.celdaSeleccionada?.filaId === fila._id && meta.celdaSeleccionada?.campo === columna.campo;
+  const puedeMutar = !columna.soloLectura && !guardando && !bloqueada;
   return (
     <div
       className={cn(
-        "flex h-full min-h-[22px] items-center px-1 ring-inset",
+        "flex h-full min-h-[22px] min-w-0 items-center px-1 ring-inset",
         columna.soloLectura ? "text-muted-foreground" : "cursor-pointer",
-        // Borde marcado tipo "celda activa" de Excel, no un resaltado tenue.
-        seleccionada && "ring-2 ring-primary",
+        seleccionada && !conError && "ring-2 ring-primary",
+        conError && "ring-2 ring-destructive",
       )}
-      onClick={() => meta.seleccionarCelda(fila._id, columna.campo)}
-      onDoubleClick={columna.soloLectura ? undefined : () => meta.abrirCelda(fila._id, columna.campo)}
+      title={conError ? (meta.errorGuardado ?? "Revisa este campo") : undefined}
+      onClick={() => {
+        meta.seleccionarCelda(fila._id, columna.campo);
+        if (seleccionada && !columna.soloLectura && !clicDirecto) {
+          meta.abrirCelda(fila._id, columna.campo);
+        }
+      }}
+      onDoubleClick={columna.soloLectura || clicDirecto ? undefined : () => meta.abrirCelda(fila._id, columna.campo)}
     >
-      <CeldaVista fila={fila} columna={columna} />
+      <CeldaVista
+        fila={fila}
+        columna={columna}
+        onToggleBooleano={
+          columna.booleano && puedeMutar
+            ? () => {
+                meta.seleccionarCelda(fila._id, columna.campo);
+                meta.confirmarCambioCelda(fila._id, columna.campo, !fila[columna.campo]);
+              }
+            : undefined
+        }
+        onEstrella={
+          columna.estrellas && puedeMutar
+            ? (n) => {
+                meta.seleccionarCelda(fila._id, columna.campo);
+                meta.confirmarCambioCelda(fila._id, columna.campo, n);
+              }
+            : undefined
+        }
+      />
     </div>
+  );
+}
+
+const CeldaCatalogoMemo = memo(CeldaCatalogo);
+
+function IndiceFila({ filaId, indice }: { filaId: string; indice: number }) {
+  const activa = useFilaActiva(filaId);
+  return (
+    <div
+      className={cn(
+        "flex h-full items-center justify-end px-1 text-[10px] tabular-nums text-muted-foreground",
+        activa && "font-medium text-foreground",
+      )}
+    >
+      {indice}
+    </div>
+  );
+}
+
+function AccionesFila({ filaId }: { filaId: string }) {
+  const meta = useGridUi().meta.current;
+  const esBorrador = useEsBorrador(filaId);
+  const guardando = useGuardando();
+  const activa = useFilaActiva(filaId);
+  const punto = useResaltarPunto(filaId, activa);
+  if (esBorrador) {
+    return (
+      <div className="flex h-full items-center justify-center gap-0.5">
+        <button
+          type="button"
+          title="Confirmar (Ctrl+Enter)"
+          disabled={guardando}
+          onClick={(e) => {
+            e.stopPropagation();
+            meta.confirmarEdicion();
+          }}
+          className="rounded p-0.5 text-emerald-600 hover:bg-muted disabled:opacity-50"
+        >
+          {guardando ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+        </button>
+        <button
+          type="button"
+          title="Cancelar (Esc)"
+          disabled={guardando}
+          onClick={(e) => {
+            e.stopPropagation();
+            meta.cancelarEdicion();
+          }}
+          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+  if (punto) {
+    return (
+      <div className="flex h-full items-center justify-center" title="Fila seleccionada">
+        <span className="h-2 w-2 rounded-full bg-sky-500 shadow-[0_0_0_3px_rgba(14,165,233,0.25)]" />
+      </div>
+    );
+  }
+  return null;
+}
+
+function FilaVirtual({
+  row,
+  itemIndex,
+  measureElement,
+  filaRefs,
+  celdaRefs,
+  altoEncabezado,
+  columnSizing,
+  estiloColumna,
+  anclaIzquierda,
+  anchoAncladoTotal,
+  modoSeleccion,
+  onClickFila,
+  renderCelda,
+}: {
+  row: {
+    id: string;
+    original: Fila;
+    getAllCells: () => Array<{ id: string; column: { id: string; getSize: () => number } }>;
+    getIsSelected: () => boolean;
+  };
+  itemIndex: number;
+  measureElement: (el: HTMLTableRowElement | null) => void;
+  filaRefs: React.RefObject<Map<string, HTMLTableRowElement>>;
+  celdaRefs: React.RefObject<Map<string, HTMLTableCellElement>>;
+  altoEncabezado: number;
+  columnSizing: Record<string, number>;
+  estiloColumna: (columnId: string, size: number, seRedimensiono: boolean) => React.CSSProperties;
+  anclaIzquierda: Map<string, number>;
+  anchoAncladoTotal: number;
+  modoSeleccion: "multiple" | "unica";
+  onClickFila: (e: React.MouseEvent<HTMLTableRowElement>) => void;
+  renderCelda: (cell: { id: string; column: { id: string; getSize: () => number } }) => React.ReactNode;
+}) {
+  const activa = useFilaActiva(row.original._id);
+  const claseBorrador = useClaseBorrador(row.original._id);
+  const esBorrador = !!claseBorrador;
+  const seleccionadaVisual = modoSeleccion === "unica" ? activa : row.getIsSelected();
+  const fondo = cn("bg-background", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent");
+
+  return (
+    <tr
+      data-index={itemIndex}
+      ref={(el) => {
+        measureElement(el);
+        if (el) filaRefs.current.set(row.original._id, el);
+        else filaRefs.current.delete(row.original._id);
+      }}
+      style={{ scrollMarginTop: altoEncabezado }}
+      tabIndex={0}
+      onClick={onClickFila}
+      className={cn("flex outline-none", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent", modoSeleccion === "unica" && "cursor-pointer")}
+    >
+      {row.getAllCells().map((cell) => {
+        const anclaLeft = anclaIzquierda.get(cell.column.id);
+        return (
+          <td
+            key={cell.id}
+            ref={(el) => {
+              const clave = `${row.original._id}:${cell.column.id}`;
+              if (el) celdaRefs.current.set(clave, el);
+              else celdaRefs.current.delete(clave);
+            }}
+            data-column-id={cell.column.id}
+            style={{
+              ...estiloColumna(cell.column.id, cell.column.getSize(), cell.column.id in columnSizing),
+              ...(anclaLeft !== undefined ? { left: anclaLeft } : { scrollMarginLeft: anchoAncladoTotal }),
+            }}
+            className={cn(
+              "overflow-hidden py-0.5 text-xs",
+              "border-b border-r border-border",
+              cell.column.id.startsWith("__") && "px-0",
+              anclaLeft !== undefined && cn("sticky z-[1]", fondo),
+            )}
+          >
+            {renderCelda(cell)}
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
+
+function ThConMarca({
+  columnId,
+  className,
+  style,
+  children,
+}: {
+  columnId: string;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  const activo = useCampoActivo(columnId);
+  return (
+    <th style={style} className={cn(className, activo && "text-foreground")}>
+      {children}
+    </th>
+  );
+}
+
+function BarraValorConectada({
+  store,
+  filas,
+  filasVisibles,
+  config,
+  onCommit,
+  onConfirmarFila,
+  onFocusBarra,
+}: {
+  store: Store<CeldaSel>;
+  filas: Fila[];
+  filasVisibles: { original: Fila }[];
+  config: CatalogoGridConfig;
+  onCommit: (texto: string) => void;
+  onConfirmarFila: () => void;
+  onFocusBarra: () => void;
+}) {
+  const sel = useSyncExternalStore(store.subscribe, store.get);
+  const filaBarra = sel ? filas.find((f) => f._id === sel.filaId) : undefined;
+  const colBarra = sel ? config.columnas.find((c) => c.campo === sel.campo) : undefined;
+  const idxBarra = filaBarra ? filasVisibles.findIndex((r) => r.original._id === filaBarra._id) : -1;
+  const referenciaBarra = filaBarra && colBarra && idxBarra >= 0 ? `${idxBarra + 1} · ${colBarra.encabezado}` : "";
+  const valorBarra = filaBarra && colBarra ? valorVisible(filaBarra, colBarra) : "";
+  return (
+    <BarraValor
+      referencia={referenciaBarra}
+      valor={valorBarra}
+      soloLectura={!colBarra || !!colBarra.soloLectura}
+      opciones={
+        filaBarra && colBarra
+          ? typeof colBarra.opciones === "function"
+            ? colBarra.opciones(filaBarra)
+            : colBarra.opciones
+          : undefined
+      }
+      onCommit={onCommit}
+      onConfirmarFila={onConfirmarFila}
+      onFocusBarra={onFocusBarra}
+    />
   );
 }
 
@@ -404,14 +1412,30 @@ export const CatalogoGrid = forwardRef<
   );
   const [pendienteEliminar, setPendienteEliminar] = useState<Fila[] | null>(null);
   const [edicion, setEdicion] = useState<EstadoEdicion | null>(null);
-  const [celdaAbierta, setCeldaAbierta] = useState<CeldaAbierta | null>(null);
-  const [celdaSeleccionada, setCeldaSeleccionada] = useState<{ filaId: string; campo: string } | null>(null);
+  const seleccionStore = useRef(crearStoreSeleccion()).current;
+  const abiertaStore = useRef(crearStore<CeldaAbierta | null>(null)).current;
+  const chromeStore = useRef(crearStore<ChromeGrid>(CHROME_VACIO)).current;
+  const metaRef = useRef<CatalogoTableMeta>(null as unknown as CatalogoTableMeta);
+  const uiStore = useRef<GridUi>({
+    seleccion: seleccionStore,
+    abierta: abiertaStore,
+    chrome: chromeStore,
+    meta: metaRef,
+  }).current;
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [busquedaInterna, setBusquedaInterna] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  const [camposError, setCamposError] = useState<Set<string>>(() => new Set());
   const buscadorControlado = busquedaControlada !== undefined;
   const busqueda = buscadorControlado ? busquedaControlada : busquedaInterna;
   const setBusqueda = buscadorControlado ? onBusquedaChange! : setBusquedaInterna;
   const guardandoRef = useRef(false);
+  const filasRef = useRef(filas);
+  filasRef.current = filas;
+  const edicionRef = useRef(edicion);
+  edicionRef.current = edicion;
+  const copiarFilaCompletaRef = useRef(false);
   const filaRefs = useRef(new Map<string, HTMLTableRowElement>());
   const celdaRefs = useRef(new Map<string, HTMLTableCellElement>());
   const theadRef = useRef<HTMLTableSectionElement>(null);
@@ -422,44 +1446,65 @@ export const CatalogoGrid = forwardRef<
   const [altoEncabezado, setAltoEncabezado] = useState(0);
 
   useLayoutEffect(() => {
-    setAltoEncabezado(theadRef.current?.getBoundingClientRect().height ?? 0);
+    const el = theadRef.current;
+    if (!el) return;
+    const medir = () => setAltoEncabezado(el.getBoundingClientRect().height);
+    medir();
+    const observer = new ResizeObserver(medir);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    if (filasIniciales) setFilas(filasIniciales);
+    if (!filasIniciales) return;
+    setFilas((prev) => fusionarFilas(prev, filasIniciales, edicionRef.current, guardandoRef.current));
   }, [filasIniciales]);
 
   const seleccionarCelda = (filaId: string, campo: string) => {
-    if (edicion && edicion.id !== filaId) return;
-    setCeldaSeleccionada({ filaId, campo });
+    if (edicionRef.current && edicionRef.current.id !== filaId) return;
+    copiarFilaCompletaRef.current = false;
+    seleccionStore.set({ filaId, campo });
   };
 
   const abrirCelda = (filaId: string, campo: string, valorInicial?: string) => {
-    if (edicion && edicion.id !== filaId) return;
-    setCeldaAbierta({ filaId, campo, valorInicial });
+    if (edicionRef.current && edicionRef.current.id !== filaId) return;
+    if (guardandoRef.current) return;
+    abiertaStore.set({ filaId, campo, valorInicial });
   };
 
-  const cerrarCelda = () => setCeldaAbierta(null);
+  const cerrarCelda = () => abiertaStore.set(null);
 
   const confirmarCambioCelda = (filaId: string, campo: string, valor: string | number | boolean) => {
-    const filaActual = filas.find((f) => f._id === filaId);
+    const filaActual = filasRef.current.find((f) => f._id === filaId);
     if (!filaActual || filaActual[campo] === valor) {
-      setCeldaAbierta(null);
+      abiertaStore.set(null);
       return;
     }
-    setFilas((prev) => prev.map((f) => (f._id === filaId ? { ...f, [campo]: valor } : f)));
-    setCeldaAbierta(null);
-    if (!edicion) {
-      setEdicion({ id: filaId, esNueva: false, original: filaActual });
+    const siguientes = filasRef.current.map((f) => (f._id === filaId ? { ...f, [campo]: valor } : f));
+    filasRef.current = siguientes;
+    setFilas(siguientes);
+    abiertaStore.set(null);
+    setCamposError((prev) => {
+      if (!prev.has(campo)) return prev;
+      const next = new Set(prev);
+      next.delete(campo);
+      return next;
+    });
+    if (!edicionRef.current) {
+      const siguienteEdicion = { id: filaId, esNueva: false, original: filaActual };
+      edicionRef.current = siguienteEdicion;
+      setEdicion(siguienteEdicion);
     }
   };
 
   const confirmarEdicion = async () => {
-    if (!edicion || guardandoRef.current) return;
-    setCeldaAbierta(null);
-    const filaActual = filas.find((f) => f._id === edicion.id);
+    if (!edicionRef.current || guardandoRef.current) return;
+    const actual = edicionRef.current;
+    abiertaStore.set(null);
+    const filaActual = filasRef.current.find((f) => f._id === actual.id);
     if (!filaActual) {
       setEdicion(null);
+      edicionRef.current = null;
       return;
     }
     // Al borrar una celda (p. ej. Delete sin escribir nada nuevo) el valor
@@ -471,10 +1516,15 @@ export const CatalogoGrid = forwardRef<
         filaSaneada[col.campo] = col.numero ? 0 : "";
       }
     }
-    setFilas((prev) => prev.map((f) => (f._id === edicion.id ? filaSaneada : f)));
+    const siguientes = filasRef.current.map((f) => (f._id === actual.id ? filaSaneada : f));
+    filasRef.current = siguientes;
+    setFilas(siguientes);
     guardandoRef.current = true;
+    setGuardando(true);
+    setErrorGuardado(null);
+    setCamposError(new Set());
     try {
-      if (edicion.esNueva) {
+      if (actual.esNueva) {
         if (esPersistido) await onAgregarFila?.(filaSaneada);
       } else if (esPersistido) {
         await onCeldaEditada?.(filaSaneada);
@@ -485,45 +1535,70 @@ export const CatalogoGrid = forwardRef<
       // si aquí se limpiara `edicion`, un reintento posterior de una fila
       // nueva fallida se trataría como edición de una existente, e
       // intentaría actualizar un id que el backend nunca llegó a crear.
+      const mensaje = e instanceof Error ? e.message : String(e);
       guardandoRef.current = false;
-      onErrorGuardado?.(e instanceof Error ? e.message : String(e));
+      setGuardando(false);
+      setErrorGuardado(mensaje);
+      const marcados = camposDesdeMensaje(mensaje, config.columnas, filaSaneada);
+      setCamposError(new Set(marcados.length > 0 ? marcados : [primerCampo(config.columnas)].filter(Boolean) as string[]));
+      onErrorGuardado?.(mensaje);
       return;
     }
     guardandoRef.current = false;
+    setGuardando(false);
+    setErrorGuardado(null);
+    setCamposError(new Set());
+    edicionRef.current = null;
     setEdicion(null);
     onGuardadoExitoso?.();
   };
 
   const cancelarEdicion = () => {
-    if (!edicion || guardandoRef.current) return;
-    setCeldaAbierta(null);
-    if (edicion.esNueva) {
-      setFilas((prev) => prev.filter((f) => f._id !== edicion.id));
+    if (!edicionRef.current || guardandoRef.current) return;
+    const actual = edicionRef.current;
+    abiertaStore.set(null);
+    if (actual.esNueva) {
+      const siguientes = filasRef.current.filter((f) => f._id !== actual.id);
+      filasRef.current = siguientes;
+      setFilas(siguientes);
     } else {
-      setFilas((prev) => prev.map((f) => (f._id === edicion.id ? edicion.original : f)));
+      const siguientes = filasRef.current.map((f) => (f._id === actual.id ? actual.original : f));
+      filasRef.current = siguientes;
+      setFilas(siguientes);
     }
+    edicionRef.current = null;
     setEdicion(null);
+    setErrorGuardado(null);
+    setCamposError(new Set());
     onEdicionCancelada?.();
   };
 
   const meta: CatalogoTableMeta = {
     edicion,
-    celdaAbierta,
-    celdaSeleccionada,
     resaltarSeleccion,
+    guardando,
     seleccionarCelda,
     abrirCelda,
     confirmarCambioCelda,
     cerrarCelda,
     confirmarEdicion: () => void confirmarEdicion(),
     cancelarEdicion,
+    camposError,
+    errorGuardado,
   };
+  metaRef.current = meta;
+  useEffect(() => {
+    chromeStore.set({ edicion, guardando, camposError, errorGuardado, resaltarSeleccion });
+  }, [edicion, guardando, camposError, errorGuardado, resaltarSeleccion]);
 
   // Compara contra el texto ya formateado de toda la fila (mismo texto que
   // ve el usuario: fecha con `formatearFecha`, "Sí"/"No", sufijo aplicado),
   // no contra los valores crudos — así buscar algo visible siempre lo encuentra.
+  // La fila en borrador siempre pasa el filtro: si no, "Agregar" con buscador
+  // activo esconde la fila vacía y parece que no pasó nada.
   const filtroGlobal = useMemo<FilterFn<typeof features, Fila>>(
     () => (row, _columnId, filterValue) => {
+      if (edicion && row.original._id === edicion.id) return true;
       if (!filterValue) return true;
       const texto = config.columnas
         .map((c) => valorVisible(row.original, c))
@@ -531,11 +1606,21 @@ export const CatalogoGrid = forwardRef<
         .toLowerCase();
       return texto.includes(String(filterValue).toLowerCase());
     },
-    [config.columnas],
+    [config.columnas, edicion],
   );
 
   const columns = useMemo(() => {
     const cols: ColumnDef<typeof features, Fila, any>[] = [];
+    cols.push(
+      columnHelper.display({
+        id: "__indice",
+        header: "",
+        size: 36,
+        minSize: 36,
+        enableResizing: false,
+        cell: (ctx) => <IndiceFila filaId={ctx.row.original._id} indice={ctx.row.index + 1} />,
+      }),
+    );
     if (modoSeleccion === "multiple") {
       cols.push(
         columnHelper.display({
@@ -561,48 +1646,10 @@ export const CatalogoGrid = forwardRef<
       columnHelper.display({
         id: "__acciones",
         header: "",
-        size: 50,
-        minSize: 50,
+        size: 64,
+        minSize: 64,
         enableResizing: false,
-        cell: (ctx) => {
-          const m = ctx.table.options.meta!;
-          if (m.edicion && ctx.row.original._id === m.edicion.id) {
-            return (
-              <div className="flex h-full items-center justify-center gap-0.5">
-                <button
-                  type="button"
-                  title="Confirmar"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    m.confirmarEdicion();
-                  }}
-                  className="rounded p-0.5 text-emerald-600 hover:bg-muted"
-                >
-                  <Check size={13} />
-                </button>
-                <button
-                  type="button"
-                  title="Cancelar"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    m.cancelarEdicion();
-                  }}
-                  className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            );
-          }
-          if (m.resaltarSeleccion && ctx.row.getIsSelected()) {
-            return (
-              <div className="flex h-full items-center justify-center" title="Fila seleccionada">
-                <span className="h-2 w-2 rounded-full bg-sky-500 shadow-[0_0_0_3px_rgba(14,165,233,0.25)]" />
-              </div>
-            );
-          }
-          return null;
-        },
+        cell: (ctx) => <AccionesFila filaId={ctx.row.original._id} />,
       }),
     );
     for (const c of config.columnas) {
@@ -611,9 +1658,9 @@ export const CatalogoGrid = forwardRef<
           id: c.campo,
           header: c.encabezado,
           size: c.ancho ?? 160,
-          minSize: c.ancho ?? 160,
+          minSize: 48,
           enableGlobalFilter: true,
-          cell: (ctx) => <CeldaCatalogo columna={c} fila={ctx.row.original} meta={ctx.table.options.meta!} columnas={config.columnas} />,
+          cell: (ctx) => <CeldaCatalogoMemo columna={c} fila={ctx.row.original} columnas={config.columnas} />,
         }),
       );
     }
@@ -635,6 +1682,8 @@ export const CatalogoGrid = forwardRef<
     }
     return { anclaIzquierda: mapa, anchoAncladoTotal: offset };
   }, [columns]);
+  const anchoAncladoTotalRef = useRef(0);
+  anchoAncladoTotalRef.current = anchoAncladoTotal;
 
   const table = useTable(
     {
@@ -647,7 +1696,7 @@ export const CatalogoGrid = forwardRef<
       onGlobalFilterChange: (updater) => setBusqueda(typeof updater === "function" ? updater(busqueda) : updater),
       enableMultiRowSelection: modoSeleccion === "multiple",
       globalFilterFn: filtroGlobal,
-      getColumnCanGlobalFilter: (column) => column.id !== "__acciones" && column.id !== "__seleccion",
+      getColumnCanGlobalFilter: (column) => !String(column.id).startsWith("__"),
       columnResizeMode: "onChange",
       enableColumnResizing: true,
       meta,
@@ -656,6 +1705,24 @@ export const CatalogoGrid = forwardRef<
   );
 
   const filasVisibles = table.getRowModel().rows;
+  const filasVisiblesRef = useRef(filasVisibles);
+  filasVisiblesRef.current = filasVisibles;
+
+  const rowVirtualizer = useVirtualizer({
+    count: filasVisibles.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ALTO_FILA,
+    overscan: 12,
+    getItemKey: (index) => filasVisibles[index]?.id ?? index,
+    scrollPaddingStart: altoEncabezado,
+  });
+
+  const enfocarFila = (index: number, filaId: string) => {
+    rowVirtualizer.scrollToIndex(index, { align: "auto" });
+    const nodo = filaRefs.current.get(filaId);
+    if (nodo) nodo.focus();
+    else scrollRef.current?.focus();
+  };
 
   // Mantiene siempre exactamente una fila seleccionada en modo "unica": al
   // montar (o remontar, p. ej. al abrir un panel lateral) restaura
@@ -668,47 +1735,240 @@ export const CatalogoGrid = forwardRef<
     if (Object.keys(rowSelection).length > 0) return;
     if (filasVisibles.length === 0) return;
     const objetivo = seleccionInicialId ? filasVisibles.find((r) => r.original._id === seleccionInicialId) : undefined;
-    (objetivo ?? filasVisibles[0]).toggleSelected(true);
+    const row = objetivo ?? filasVisibles[0];
+    row.toggleSelected(true);
+    const sel = seleccionStore.get();
+    const campo =
+      (sel && config.columnas.some((c) => c.campo === sel.campo)
+        ? sel.campo
+        : primerCampo(config.columnas));
+    if (campo) seleccionStore.set({ filaId: row.original._id, campo });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modoSeleccion, filas, rowSelection, seleccionInicialId]);
 
+  const onFilaSeleccionadaRef = useRef(onFilaSeleccionada);
+  onFilaSeleccionadaRef.current = onFilaSeleccionada;
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
+
   useEffect(() => {
+    if (modoSeleccion !== "unica") return;
+    let t = 0;
+    let ultimaNotificada: string | null = null;
+    const programar = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => {
+        const filaId = seleccionStore.get()?.filaId;
+        if (!filaId) return;
+        setRowSelection((prev) => (prev[filaId] ? prev : { [filaId]: true }));
+        if (ultimaNotificada === filaId) return;
+        ultimaNotificada = filaId;
+        const fila = filasRef.current.find((f) => f._id === filaId) ?? null;
+        onFilaSeleccionadaRef.current?.(fila);
+        onSelectionChangeRef.current?.(true);
+      }, 200);
+    };
+    programar();
+    const unsub = seleccionStore.subscribe(programar);
+    return () => {
+      window.clearTimeout(t);
+      unsub();
+    };
+  }, [modoSeleccion]);
+
+  useEffect(() => {
+    if (modoSeleccion === "unica") return;
     onSelectionChange?.(Object.keys(rowSelection).length > 0);
-    const seleccionadas = table.getSelectedRowModel().rows;
-    onFilaSeleccionada?.(seleccionadas[0]?.original ?? null);
+    const fila = table.getSelectedRowModel().rows[0]?.original ?? null;
+    const t = window.setTimeout(() => onFilaSeleccionada?.(fila), 200);
+    return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rowSelection]);
+  }, [rowSelection, modoSeleccion]);
 
   // Con muchos registros, la fila nueva o la que se empieza a editar puede
   // quedar fuera del área visible — hace scroll hasta ella.
   useEffect(() => {
     if (!edicion) return;
-    filaRefs.current.get(edicion.id)?.scrollIntoView({ block: "nearest" });
+    const idx = filasVisibles.findIndex((r) => r.original._id === edicion.id);
+    if (idx >= 0) rowVirtualizer.scrollToIndex(idx, { align: "auto" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edicion]);
 
-  // La navegación horizontal (←/→) solo mueve `celdaSeleccionada` — si la
-  // columna destino queda fuera del área visible, hay que traerla a la vista.
+  // Trae la fila al viewport (virtualizador) y, si ya está montada, la columna.
   useEffect(() => {
-    if (!celdaSeleccionada) return;
-    const clave = `${celdaSeleccionada.filaId}:${celdaSeleccionada.campo}`;
-    celdaRefs.current.get(clave)?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [celdaSeleccionada]);
+    const alinearHorizontal = (filaId: string, campo: string) => {
+      const celda = celdaRefs.current.get(`${filaId}:${campo}`);
+      const caja = scrollRef.current;
+      if (!celda || !caja) return false;
+      const c = celda.getBoundingClientRect();
+      const b = caja.getBoundingClientRect();
+      const margen = anchoAncladoTotalRef.current;
+      if (c.right > b.right) caja.scrollLeft += c.right - b.right;
+      else if (c.left < b.left + margen) caja.scrollLeft -= b.left + margen - c.left;
+      return true;
+    };
+    const aplicar = () => {
+      const sel = seleccionStore.get();
+      if (!sel) return;
+      const idx = filasVisiblesRef.current.findIndex((r) => r.original._id === sel.filaId);
+      if (idx >= 0) rowVirtualizer.scrollToIndex(idx, { align: "auto" });
+      if (alinearHorizontal(sel.filaId, sel.campo)) return;
+      requestAnimationFrame(() => {
+        if (seleccionStore.get() !== sel) return;
+        alinearHorizontal(sel.filaId, sel.campo);
+      });
+    };
+    aplicar();
+    return seleccionStore.subscribe(aplicar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Al confirmar (Enter/blur) o cancelar (Escape) la edición de una celda sin
   // saltar a otra (eso lo maneja `moverA` con Tab), el editor se desmonta y el
   // foco se pierde del todo — sin nada enfocado dentro del grid, las flechas
   // dejan de llegarle a `onKeyDownContenedor`. Se regresa el foco a la fila.
   useEffect(() => {
-    if (celdaAbierta) return;
-    const filaId = celdaSeleccionada?.filaId;
-    if (!filaId) return;
-    filaRefs.current.get(filaId)?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [celdaAbierta]);
+    const alCerrar = () => {
+      if (abiertaStore.get()) return;
+      const filaId = seleccionStore.get()?.filaId;
+      if (!filaId) return;
+      const nodo = filaRefs.current.get(filaId);
+      if (nodo) nodo.focus();
+      else scrollRef.current?.focus();
+    };
+    return abiertaStore.subscribe(alCerrar);
+  }, []);
+
+  const textoACopiar = (): string | null => {
+    const celdaSeleccionada = seleccionStore.get();
+    const seleccionadas = table.getSelectedRowModel().rows.map((r) => r.original);
+    if (copiarFilaCompletaRef.current || (modoSeleccion === "multiple" && seleccionadas.length > 1)) {
+      const origen =
+        modoSeleccion === "unica"
+          ? filasRef.current.filter((f) => f._id === celdaSeleccionada?.filaId)
+          : seleccionadas.length > 0
+            ? seleccionadas
+            : filasRef.current.filter((f) => f._id === celdaSeleccionada?.filaId);
+      if (origen.length === 0) return null;
+      return origen.map((f) => filaATsv(f, config.columnas)).join("\n");
+    }
+    if (!celdaSeleccionada) return null;
+    const fila = filasRef.current.find((f) => f._id === celdaSeleccionada.filaId);
+    const col = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+    if (!fila || !col) return null;
+    return valorVisible(fila, col);
+  };
+
+  const copiar = async () => {
+    const texto = textoACopiar();
+    if (texto == null) return;
+    await escribirClipboard(texto);
+  };
+
+  const aplicarPegado = (lineas: string[][]) => {
+    const celdaSeleccionada = seleccionStore.get();
+    const linea = lineas[0];
+    if (!linea || linea.length === 0) return;
+    const destinoId = celdaSeleccionada?.filaId ?? Object.keys(rowSelection)[0];
+    if (!destinoId) return;
+    if (edicionRef.current && edicionRef.current.id !== destinoId) return;
+    const fila = filasRef.current.find((f) => f._id === destinoId);
+    if (!fila) return;
+    let startIdx = 0;
+    if (linea.length === 1 && celdaSeleccionada) {
+      startIdx = config.columnas.findIndex((c) => c.campo === celdaSeleccionada.campo);
+      if (startIdx < 0) startIdx = 0;
+    }
+    const { fila: next, changed } = aplicarLineaAFila(fila, linea, startIdx, config.columnas);
+    if (!changed) return;
+    const siguientes = filasRef.current.map((f) => (f._id === destinoId ? next : f));
+    filasRef.current = siguientes;
+    setFilas(siguientes);
+    abiertaStore.set(null);
+    if (!edicionRef.current) {
+      const siguienteEdicion = { id: destinoId, esNueva: false, original: fila };
+      edicionRef.current = siguienteEdicion;
+      setEdicion(siguienteEdicion);
+    }
+  };
+
+  const vaciarSeleccionCopiada = () => {
+    const celdaSeleccionada = seleccionStore.get();
+    if (!celdaSeleccionada) return;
+    if (copiarFilaCompletaRef.current) {
+      const fila = filasRef.current.find((f) => f._id === celdaSeleccionada.filaId);
+      if (!fila) return;
+      let next: Fila = { ...fila };
+      let changed = false;
+      for (const col of config.columnas) {
+        if (col.soloLectura) continue;
+        const vacio = valorVacio(col);
+        if (next[col.campo] !== vacio) {
+          next = { ...next, [col.campo]: vacio };
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      const siguientes = filasRef.current.map((f) => (f._id === celdaSeleccionada.filaId ? next : f));
+      filasRef.current = siguientes;
+      setFilas(siguientes);
+      if (!edicionRef.current) {
+        const siguienteEdicion = { id: celdaSeleccionada.filaId, esNueva: false, original: fila };
+        edicionRef.current = siguienteEdicion;
+        setEdicion(siguienteEdicion);
+      }
+      return;
+    }
+    const col = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+    if (!col || col.soloLectura) return;
+    confirmarCambioCelda(celdaSeleccionada.filaId, col.campo, valorVacio(col));
+  };
+
+  const cortar = async () => {
+    await copiar();
+    vaciarSeleccionCopiada();
+  };
+
+  const pegar = async () => {
+    try {
+      const texto = await navigator.clipboard.readText();
+      if (texto) aplicarPegado(parsearTsv(texto));
+    } catch {
+      /* el evento `paste` nativo cubre el caso sin permiso de clipboard */
+    }
+  };
+
+  const clipboardApiRef = useRef<CatalogoClipboard>({
+    copiar: async () => {},
+    cortar: async () => {},
+    pegar: async () => {},
+  });
+  clipboardApiRef.current = { copiar, cortar, pegar };
+
+  useEffect(() => {
+    const api: CatalogoClipboard = {
+      copiar: () => clipboardApiRef.current.copiar(),
+      cortar: () => clipboardApiRef.current.cortar(),
+      pegar: () => clipboardApiRef.current.pegar(),
+    };
+    const onFocus = () => {
+      clipboardActivo = api;
+    };
+    const el = scrollRef.current;
+    el?.addEventListener("focusin", onFocus);
+    return () => {
+      el?.removeEventListener("focusin", onFocus);
+      if (clipboardActivo === api) clipboardActivo = null;
+    };
+  }, []);
 
   const onKeyDownContenedor = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const celdaSeleccionada = seleccionStore.get();
+    const celdaAbierta = abiertaStore.get();
     const objetivo = e.target as HTMLElement;
-    if (objetivo.tagName === "INPUT" || objetivo.tagName === "SELECT" || objetivo.tagName === "TEXTAREA") {
+    const enEditor = objetivo.tagName === "INPUT" || objetivo.tagName === "SELECT" || objetivo.tagName === "TEXTAREA";
+
+    if (enEditor) {
       // Al mover el cursor de texto con ←/→ dentro del editor, el navegador
       // puede intentar hacer scroll del contenedor para "mantener visible" el
       // caret — la celda ya es visible (por eso se está editando), así que
@@ -724,41 +1984,129 @@ export const CatalogoGrid = forwardRef<
       return;
     }
 
-    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && modoSeleccion === "unica") {
-      // Con una fila en borrador (agregando/editando), las flechas ↑/↓ no
-      // deben moverse a otra fila — solo ←/→ dentro de la misma.
+    if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S") && edicion) {
+      e.preventDefault();
+      void confirmarEdicion();
+      return;
+    }
+
+    // Escape con el editor cerrado cancela el borrador de la fila (mismo que ✗).
+    // Con el editor abierto, EditorCelda ya consumió Escape para descartar solo la celda.
+    if (e.key === "Escape" && edicion && !celdaAbierta) {
+      e.preventDefault();
+      cancelarEdicion();
+      return;
+    }
+
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      // Con una fila en borrador, las flechas ↑/↓ no deben moverse a otra fila.
       if (edicion) {
         e.preventDefault();
         return;
       }
-      e.preventDefault();
-      const idxActual = filasVisibles.findIndex((r) => r.getIsSelected());
-      const siguiente = filasVisibles[idxActual + (e.key === "ArrowDown" ? 1 : -1)];
+      const filaActualId = celdaSeleccionada?.filaId ?? Object.keys(rowSelection)[0];
+      const idxActual = filasVisibles.findIndex((r) => r.original._id === filaActualId);
+      const alBorde = e.ctrlKey || e.metaKey;
+      const destino = alBorde
+        ? e.key === "ArrowDown"
+          ? filasVisibles.length - 1
+          : 0
+        : idxActual + (e.key === "ArrowDown" ? 1 : -1);
+      const siguiente = filasVisibles[destino];
       if (!siguiente) return;
-      siguiente.toggleSelected(true);
-      if (celdaSeleccionada) setCeldaSeleccionada({ filaId: siguiente.original._id, campo: celdaSeleccionada.campo });
-      const nodo = filaRefs.current.get(siguiente.original._id);
-      nodo?.focus();
-      nodo?.scrollIntoView({ block: "nearest" });
+      e.preventDefault();
+      const campo = celdaSeleccionada?.campo ?? primerCampo(config.columnas);
+      if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
+      enfocarFila(destino, siguiente.original._id);
+      return;
+    }
+
+    if (e.key === "PageUp" || e.key === "PageDown") {
+      if (edicion) {
+        e.preventDefault();
+        return;
+      }
+      const altoFila = ALTO_FILA;
+      const altoVista = (scrollRef.current?.clientHeight ?? 400) - altoEncabezado;
+      const porPagina = Math.max(1, Math.floor(altoVista / altoFila) - 1);
+      const filaActualId = celdaSeleccionada?.filaId ?? Object.keys(rowSelection)[0];
+      const idxActual = Math.max(0, filasVisibles.findIndex((r) => r.original._id === filaActualId));
+      const destino = Math.min(
+        filasVisibles.length - 1,
+        Math.max(0, idxActual + (e.key === "PageDown" ? porPagina : -porPagina)),
+      );
+      const siguiente = filasVisibles[destino];
+      if (!siguiente) return;
+      e.preventDefault();
+      const campo = celdaSeleccionada?.campo ?? primerCampo(config.columnas);
+      if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
+      enfocarFila(destino, siguiente.original._id);
       return;
     }
 
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && celdaSeleccionada) {
       e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        const campo = e.key === "ArrowLeft" ? config.columnas[0]?.campo : config.columnas[config.columnas.length - 1]?.campo;
+        if (campo) seleccionStore.set({ filaId: celdaSeleccionada.filaId, campo });
+        return;
+      }
       const idxActual = config.columnas.findIndex((c) => c.campo === celdaSeleccionada.campo);
       const siguienteCol = config.columnas[idxActual + (e.key === "ArrowRight" ? 1 : -1)];
       if (!siguienteCol) return;
-      setCeldaSeleccionada({ filaId: celdaSeleccionada.filaId, campo: siguienteCol.campo });
+      seleccionStore.set({ filaId: celdaSeleccionada.filaId, campo: siguienteCol.campo });
       return;
     }
 
-    // F2 abre el editor de la celda seleccionada conservando su valor actual
-    // (a diferencia de teclear directamente, que lo reemplaza) — igual que Excel.
+    if ((e.key === "Home" || e.key === "End") && (celdaSeleccionada || Object.keys(rowSelection).length > 0)) {
+      e.preventDefault();
+      const alBorde = e.ctrlKey || e.metaKey;
+      if (alBorde && !edicion) {
+        const row = e.key === "Home" ? filasVisibles[0] : filasVisibles[filasVisibles.length - 1];
+        const campo = e.key === "Home" ? config.columnas[0]?.campo : config.columnas[config.columnas.length - 1]?.campo;
+        if (row && campo) {
+          seleccionStore.set({ filaId: row.original._id, campo });
+          enfocarFila(e.key === "Home" ? 0 : filasVisibles.length - 1, row.original._id);
+        }
+        return;
+      }
+      const campo = e.key === "Home" ? config.columnas[0]?.campo : config.columnas[config.columnas.length - 1]?.campo;
+      const filaId = edicion?.id ?? celdaSeleccionada?.filaId ?? Object.keys(rowSelection)[0];
+      if (campo && filaId) seleccionStore.set({ filaId, campo });
+      return;
+    }
+
     if (!celdaAbierta && celdaSeleccionada && e.key === "F2") {
       const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
       if (columna && !columna.soloLectura) {
         e.preventDefault();
-        abrirCelda(celdaSeleccionada.filaId, celdaSeleccionada.campo);
+        if (columna.booleano) {
+          const fila = filasRef.current.find((f) => f._id === celdaSeleccionada.filaId);
+          if (fila) confirmarCambioCelda(celdaSeleccionada.filaId, columna.campo, !fila[columna.campo]);
+        } else {
+          abrirCelda(celdaSeleccionada.filaId, celdaSeleccionada.campo);
+        }
+      }
+      return;
+    }
+
+    if (!celdaAbierta && celdaSeleccionada && e.key === " ") {
+      const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+      if (columna && columna.booleano && !columna.soloLectura) {
+        e.preventDefault();
+        const fila = filasRef.current.find((f) => f._id === celdaSeleccionada.filaId);
+        if (fila) confirmarCambioCelda(celdaSeleccionada.filaId, columna.campo, !fila[columna.campo]);
+        return;
+      }
+    }
+
+    // Delete/Backspace vacían la celda seleccionada y entran en borrador de fila
+    // — no persisten hasta ✓. Igual que Excel, sin abrir el editor.
+    if (!celdaAbierta && celdaSeleccionada && (e.key === "Delete" || e.key === "Backspace")) {
+      const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
+      if (columna && !columna.soloLectura) {
+        e.preventDefault();
+        confirmarCambioCelda(celdaSeleccionada.filaId, columna.campo, valorVacio(columna));
       }
       return;
     }
@@ -769,7 +2117,7 @@ export const CatalogoGrid = forwardRef<
     // (booleano/opciones), donde "reemplazar tecleando" no tiene sentido.
     if (!celdaAbierta && celdaSeleccionada && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const columna = config.columnas.find((c) => c.campo === celdaSeleccionada.campo);
-      if (columna && !columna.soloLectura && !columna.booleano && !columna.opciones) {
+      if (columna && !columna.soloLectura && !columna.booleano) {
         e.preventDefault();
         abrirCelda(celdaSeleccionada.filaId, celdaSeleccionada.campo, e.key);
       }
@@ -778,30 +2126,52 @@ export const CatalogoGrid = forwardRef<
 
   useImperativeHandle(ref, () => ({
     agregarFila: () => {
-      if (edicion) return;
+      if (edicionRef.current) return;
       const nueva = filaVacia(config.columnas);
-      setFilas((prev) => [...prev, nueva]);
-      setEdicion({ id: nueva._id, esNueva: true, original: nueva });
+      const siguientes = [...filasRef.current, nueva];
+      filasRef.current = siguientes;
+      setFilas(siguientes);
+      const siguienteEdicion = { id: nueva._id, esNueva: true, original: nueva };
+      edicionRef.current = siguienteEdicion;
+      setEdicion(siguienteEdicion);
+      setRowSelection({ [nueva._id]: true });
+      const campo = primerCampo(config.columnas);
+      if (campo) {
+        seleccionStore.set({ filaId: nueva._id, campo });
+        abiertaStore.set({ filaId: nueva._id, campo });
+      }
     },
     eliminarFilaSeleccionada: () => {
+      if (modoSeleccion === "unica") {
+        const id = seleccionStore.get()?.filaId;
+        const fila = id ? filasRef.current.find((f) => f._id === id) : undefined;
+        if (fila) setPendienteEliminar([fila]);
+        return;
+      }
       const seleccionadas = table.getSelectedRowModel().rows.map((r) => r.original);
       if (seleccionadas.length === 0) return;
       setPendienteEliminar(seleccionadas);
     },
   }));
 
-  const confirmarEliminacion = () => {
+  const confirmarEliminacion = async () => {
     if (!pendienteEliminar) return;
     const ids = pendienteEliminar.map((f) => f._id);
-    if (esPersistido) {
-      void onEliminarFilas?.(ids);
-    } else {
-      const idsSet = new Set(ids);
-      setFilas((prev) => prev.filter((f) => !idsSet.has(f._id)));
+    try {
+      if (esPersistido) {
+        await onEliminarFilas?.(ids);
+      } else {
+        const idsSet = new Set(ids);
+        setFilas((prev) => prev.filter((f) => !idsSet.has(f._id)));
+      }
+      setPendienteEliminar(null);
+      setRowSelection({});
+      onSelectionChange?.(false);
+      onFilaSeleccionada?.(null);
+    } catch (e) {
+      setPendienteEliminar(null);
+      onErrorGuardado?.(e instanceof Error ? e.message : String(e));
     }
-    setPendienteEliminar(null);
-    onSelectionChange?.(false);
-    onFilaSeleccionada?.(null);
   };
 
   const primerCampoTexto = config.columnas.find((c) => !c.numero)?.campo ?? config.columnas[0]?.campo;
@@ -814,21 +2184,34 @@ export const CatalogoGrid = forwardRef<
     if (columnId.startsWith("__") || seRedimensiono) return { flex: `0 0 ${size}px`, width: size };
     const ancho = config.columnas.find((c) => c.campo === columnId)?.ancho;
     if (ancho) return { flex: `0 0 ${ancho}px`, width: ancho };
-    return { flex: "1 1 0%", minWidth: ancho ?? 160 };
+    return { flex: "1 1 0%", minWidth: 48 };
   };
 
-  // La primera columna queda anclada (`sticky left-0`) para que el checkbox
-  // de selección o los botones ✓/✗ sigan visibles al hacer scroll horizontal
-  // — necesita un fondo 100% opaco (no un tinte translúcido como `.../15`,
-  // que dejaría ver las columnas que pasan por debajo) para taparlas del todo.
-  const claseFondoFila = (fila: Fila): string =>
-    cn(
-      "bg-background",
-      edicion?.esNueva && fila._id === edicion.id && "bg-emerald-50",
-      edicion && !edicion.esNueva && fila._id === edicion.id && "bg-amber-50",
-    );
+  const commitBarra = (texto: string) => {
+    const sel = seleccionStore.get();
+    if (!sel) return;
+    const filaBarra = filasRef.current.find((f) => f._id === sel.filaId);
+    const colBarra = config.columnas.find((c) => c.campo === sel.campo);
+    if (!filaBarra || !colBarra || colBarra.soloLectura) return;
+    const parsed = parsearValorPegado(texto, colBarra, filaBarra);
+    if (parsed === null) return;
+    confirmarCambioCelda(filaBarra._id, colBarra.campo, parsed);
+  };
+
+  const enCampo = (target: EventTarget | null) => {
+    const t = target as HTMLElement | null;
+    return t?.tagName === "INPUT" || t?.tagName === "SELECT" || t?.tagName === "TEXTAREA";
+  };
+
+  const filasVirtuales = rowVirtualizer.getVirtualItems();
+  const paddingTop = filasVirtuales.length > 0 ? filasVirtuales[0].start : 0;
+  const paddingBottom =
+    filasVirtuales.length > 0
+      ? rowVirtualizer.getTotalSize() - filasVirtuales[filasVirtuales.length - 1].end + 25
+      : 0;
 
   return (
+    <GridUiContext.Provider value={uiStore}>
     <div className="flex h-full flex-col">
       {!buscadorControlado && (
         <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
@@ -841,38 +2224,86 @@ export const CatalogoGrid = forwardRef<
           />
         </div>
       )}
-      <div ref={scrollRef} onKeyDown={onKeyDownContenedor} className="min-h-0 flex-1 overflow-auto">
+      <BarraValorConectada
+        store={seleccionStore}
+        filas={filas}
+        filasVisibles={filasVisibles}
+        config={config}
+        onCommit={commitBarra}
+        onConfirmarFila={() => void confirmarEdicion()}
+        onFocusBarra={cerrarCelda}
+      />
+      {errorGuardado && (
+        <div className="shrink-0 truncate border-b border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive" title={errorGuardado}>
+          {errorGuardado}
+        </div>
+      )}
+      <div
+        ref={scrollRef}
+        tabIndex={0}
+        onKeyDown={onKeyDownContenedor}
+        onCopy={(e) => {
+          if (enCampo(e.target)) return;
+          const texto = textoACopiar();
+          if (texto == null) return;
+          e.preventDefault();
+          e.clipboardData.setData("text/plain", texto);
+        }}
+        onCut={(e) => {
+          if (enCampo(e.target)) return;
+          const texto = textoACopiar();
+          if (texto == null) return;
+          e.preventDefault();
+          e.clipboardData.setData("text/plain", texto);
+          vaciarSeleccionCopiada();
+        }}
+        onPaste={(e) => {
+          if (enCampo(e.target)) return;
+          e.preventDefault();
+          aplicarPegado(parsearTsv(e.clipboardData.getData("text/plain")));
+        }}
+        className="min-h-0 flex-1 overflow-auto outline-none"
+      >
         <table.Subscribe selector={(state) => state.columnSizing}>
           {(columnSizing) => (
+            <table.Subscribe selector={(state) => state.columnResizing?.isResizingColumn ?? false}>
+              {() => (
             <table
               className="w-full border-collapse border-l border-t border-border text-sm"
-              style={{ width: table.getTotalSize() }}
+              style={{ minWidth: table.getTotalSize(), width: "100%" }}
             >
-              <thead ref={theadRef} className="sticky top-0 z-10 bg-muted">
+              <thead ref={theadRef} className="sticky top-0 z-20 bg-muted">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id} className="flex">
                     {headerGroup.headers.map((header) => {
                       const esOrdenable = !header.column.id.startsWith("__");
                       const orden = header.column.getIsSorted();
                       const anclaLeft = anclaIzquierda.get(header.column.id);
+                      const def = config.columnas.find((c) => c.campo === header.column.id);
                       return (
-                        <th
+                        <ThConMarca
                           key={header.id}
+                          columnId={header.column.id}
                           style={{
                             ...estiloColumna(header.column.id, header.getSize(), header.column.id in columnSizing),
                             ...(anclaLeft !== undefined && { left: anclaLeft }),
                           }}
                           className={cn(
-                            "relative border-b border-r border-border px-1.5 py-1.5 text-left text-xs font-medium text-muted-foreground",
-                            anclaLeft !== undefined && "sticky z-20 bg-muted",
+                            "relative border-b border-r border-border px-1.5 py-1.5 text-xs font-medium text-muted-foreground",
+                            def?.numero ? "text-right" : "text-left",
+                            anclaLeft !== undefined && "sticky z-30 bg-muted",
                           )}
                         >
                           {esOrdenable ? (
                             <button
                               type="button"
                               tabIndex={-1}
-                              onClick={header.column.getToggleSortingHandler()}
-                              className="flex items-center gap-1 hover:text-foreground"
+                              disabled={!!edicion}
+                              onClick={edicion ? undefined : header.column.getToggleSortingHandler()}
+                              className={cn(
+                                "flex items-center gap-1 hover:text-foreground disabled:opacity-50",
+                                def?.numero && "ml-auto",
+                              )}
                             >
                               <table.FlexRender header={header} />
                               {orden === "asc" && <ArrowUp size={11} />}
@@ -882,88 +2313,74 @@ export const CatalogoGrid = forwardRef<
                             <table.FlexRender header={header} />
                           )}
                           {header.column.getCanResize() && (
-                            <div
+                            <ManijaResize
+                              resizing={header.column.getIsResizing()}
                               onMouseDown={header.getResizeHandler()}
                               onTouchStart={header.getResizeHandler()}
-                              className={cn(
-                                "absolute right-0 top-0 h-full w-1 cursor-col-resize touch-none select-none hover:bg-primary/50",
-                                header.column.getIsResizing() && "bg-primary",
-                              )}
+                              contenedorRef={scrollRef}
                             />
                           )}
-                        </th>
+                        </ThConMarca>
                       );
                     })}
                   </tr>
                 ))}
               </thead>
               <tbody>
-                {filasVisibles.map((row) => (
-                  <tr
-                    key={row.id}
-                    ref={(el) => {
-                      if (el) filaRefs.current.set(row.original._id, el);
-                      else filaRefs.current.delete(row.original._id);
-                    }}
-                    style={{ scrollMarginTop: altoEncabezado }}
-                    tabIndex={modoSeleccion === "unica" ? 0 : undefined}
-                    onClick={
-                      modoSeleccion === "unica"
-                        ? (e) => {
-                            if (edicion && edicion.id !== row.original._id) return;
-                            row.toggleSelected(true);
-                            e.currentTarget.focus();
-                          }
-                        : undefined
-                    }
-                    className={cn(
-                      "flex outline-none",
-                      edicion?.esNueva && row.original._id === edicion.id && "bg-emerald-500/15",
-                      edicion && !edicion.esNueva && row.original._id === edicion.id && "bg-amber-500/15",
-                      modoSeleccion === "unica" && "cursor-pointer",
-                    )}
-                  >
-                    {row.getAllCells().map((cell) => {
-                      const anclaLeft = anclaIzquierda.get(cell.column.id);
-                      return (
-                        <td
-                          key={cell.id}
-                          ref={(el) => {
-                            const clave = `${row.original._id}:${cell.column.id}`;
-                            if (el) celdaRefs.current.set(clave, el);
-                            else celdaRefs.current.delete(clave);
-                          }}
-                          style={{
-                            ...estiloColumna(cell.column.id, cell.column.getSize(), cell.column.id in columnSizing),
-                            ...(anclaLeft !== undefined ? { left: anclaLeft } : { scrollMarginLeft: anchoAncladoTotal }),
-                          }}
-                          className={cn(
-                            "overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-border/70 py-0.5 text-xs",
-                            cell.column.id.startsWith("__") && "px-0",
-                            anclaLeft !== undefined && cn("sticky z-10", claseFondoFila(row.original)),
-                          )}
-                        >
-                          <table.FlexRender cell={cell} />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-                {filasVisibles.length === 0 && (
+                {filasVisibles.length === 0 ? (
                   <tr className="flex" style={{ width: "100%" }}>
-                    <td colSpan={columns.length} className="px-2 py-4 text-center text-xs text-muted-foreground">
+                    <td className="flex-1 px-2 py-4 text-center text-xs text-muted-foreground">
                       Sin registros.
                     </td>
                   </tr>
+                ) : (
+                  <>
+                    {paddingTop > 0 && (
+                      <tr aria-hidden className="flex" style={{ height: paddingTop }}>
+                        <td className="p-0" style={{ height: paddingTop }} />
+                      </tr>
+                    )}
+                    {filasVirtuales.map((item) => {
+                      const row = filasVisibles[item.index];
+                      if (!row) return null;
+                      return (
+                        <FilaVirtual
+                          key={row.id}
+                          row={row}
+                          itemIndex={item.index}
+                          measureElement={rowVirtualizer.measureElement}
+                          filaRefs={filaRefs}
+                          celdaRefs={celdaRefs}
+                          altoEncabezado={altoEncabezado}
+                          columnSizing={columnSizing}
+                          estiloColumna={estiloColumna}
+                          anclaIzquierda={anclaIzquierda}
+                          anchoAncladoTotal={anchoAncladoTotal}
+                          modoSeleccion={modoSeleccion}
+                          renderCelda={(cell) => <table.FlexRender cell={cell as never} />}
+                          onClickFila={(e) => {
+                            if (edicion && edicion.id !== row.original._id) return;
+                            e.currentTarget.focus();
+                            const columnId = (e.target as HTMLElement).closest("td")?.dataset.columnId;
+                            if (columnId && !columnId.startsWith("__")) return;
+                            copiarFilaCompletaRef.current = columnId === "__indice";
+                            const campo = primerCampo(config.columnas);
+                            if (campo) seleccionStore.set({ filaId: row.original._id, campo });
+                          }}
+                        />
+                      );
+                    })}
+                    {paddingBottom > 0 && (
+                      <tr aria-hidden className="flex" style={{ height: paddingBottom }}>
+                        <td className="p-0" style={{ height: paddingBottom }} />
+                      </tr>
+                    )}
+                  </>
                 )}
-                {/* Fila espaciadora, no editable — evita que el scrollbar horizontal
-                    (que se dibuja encima del contenido, no reserva su propio espacio
-                    en algunos navegadores) tape la última fila real. */}
-                <tr aria-hidden className="flex" style={{ width: "100%" }}>
-                  <td colSpan={columns.length} style={{ height: 25 }} />
-                </tr>
               </tbody>
             </table>
+              )}
+            </table.Subscribe>
           )}
         </table.Subscribe>
       </div>
@@ -989,10 +2406,11 @@ export const CatalogoGrid = forwardRef<
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel />
-            <AlertDialogAction onClick={confirmarEliminacion}>Eliminar</AlertDialogAction>
+            <AlertDialogAction onClick={() => void confirmarEliminacion()}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </GridUiContext.Provider>
   );
 });
