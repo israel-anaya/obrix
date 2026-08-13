@@ -255,7 +255,15 @@ interface EstadoEdicion {
  */
 const ESTRELLA_VACIA = "text-muted-foreground/30";
 const ESTRELLA_LLENA = "fill-amber-400 text-amber-400";
-const ALTO_FILA = 26;
+/**
+ * Alto exacto de una fila, fijado en el `<tr>` (no estimado): 22px de contenido
+ * (el `min-h-[22px]` de la celda) + 4px de `py-0.5` + 1px de `border-b`. Al ser
+ * fijo por construcción, el virtualizador no necesita medir cada fila —ni
+ * observarla con un ResizeObserver— y la aritmética de scroll/paginado que usa
+ * esta constante es exacta. Si cambia el padding, el borde o el alto de celda,
+ * hay que actualizar este número (una fila más alta se recorta, no crece).
+ */
+const ALTO_FILA = 27;
 
 /**
  * Nombre de la variable CSS que lleva el ancho vivo de una columna. Los anchos
@@ -1141,7 +1149,6 @@ type CeldaTabla = { id: string; column: { id: string } };
 const FilaVirtual = memo(function FilaVirtual({
   row,
   itemIndex,
-  measureElement,
   filaRefs,
   altoEncabezado,
   estilosCelda,
@@ -1156,7 +1163,6 @@ const FilaVirtual = memo(function FilaVirtual({
     getAllCells: () => CeldaTabla[];
   };
   itemIndex: number;
-  measureElement: (el: HTMLTableRowElement | null) => void;
   filaRefs: React.RefObject<Map<string, HTMLTableRowElement>>;
   altoEncabezado: number;
   estilosCelda: Map<string, React.CSSProperties>;
@@ -1173,19 +1179,22 @@ const FilaVirtual = memo(function FilaVirtual({
   const fondo = cn("bg-background", claseBorrador, !esBorrador && seleccionadaVisual && "bg-accent");
 
   // Ref estable: un callback inline se desmonta y remonta en cada render (React
-  // lo invoca con `null` y luego con el nodo), así que `measureElement` corría
-  // dos veces por fila y por render — con su lectura de layout y su barrido de
-  // la caché de elementos. Así corre una sola vez, al montar la fila.
+  // lo invoca con `null` y luego con el nodo), rehaciendo el Map fila a fila.
   const asignarRef = useCallback(
     (el: HTMLTableRowElement | null) => {
-      measureElement(el);
       if (el) filaRefs.current.set(filaId, el);
       else filaRefs.current.delete(filaId);
     },
-    [measureElement, filaRefs, filaId],
+    [filaRefs, filaId],
   );
 
-  const estiloFila = useMemo(() => ({ scrollMarginTop: altoEncabezado }), [altoEncabezado]);
+  // El alto va en el `<tr>` para que sea exactamente `ALTO_FILA` sin depender
+  // de lo que mida el contenido — es lo que le permite al virtualizador confiar
+  // en `estimateSize` y no medir ni observar cada fila.
+  const estiloFila = useMemo(
+    () => ({ height: ALTO_FILA, scrollMarginTop: altoEncabezado }),
+    [altoEncabezado],
+  );
 
   return (
     <tr
@@ -2454,7 +2463,6 @@ export const CatalogoGrid = forwardRef<
                           key={row.id}
                           row={row}
                           itemIndex={item.index}
-                          measureElement={rowVirtualizer.measureElement}
                           filaRefs={filaRefs}
                           altoEncabezado={altoEncabezado}
                           estilosCelda={estilosCelda}
