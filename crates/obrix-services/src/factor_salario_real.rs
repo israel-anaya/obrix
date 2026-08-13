@@ -142,16 +142,29 @@ impl FactorSalarioRealService {
 }
 
 impl DatosIniciales for FactorSalarioRealService {
-    /// Un FSR por cada región ya sembrada (ver `RegionService::sembrar`) —
-    /// con el modelo de cálculo estándar y sus parámetros en los valores
-    /// default que declara ese modelo (ver `parametros_json_default`); el
-    /// usuario los ajusta desde "Calcular FSR" a los del ejercicio real.
+    /// Un FSR nacional (`region_id` nulo) primero, y luego uno por cada
+    /// región ya sembrada (ver `RegionService::sembrar`) — con el modelo de
+    /// cálculo estándar y sus parámetros en los valores default que declara
+    /// ese modelo (ver `parametros_json_default`); el usuario los ajusta
+    /// desde "Calcular FSR" a los del ejercicio real.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if Entity::find().one(repo.conexion()).await?.is_some() {
             return Ok(());
         }
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
         let organizacion = OrganizacionService::buscar_admin_obrix(repo).await?;
+        Self::crear(
+            repo,
+            organizacion.id.clone(),
+            FactorSalarioRealData {
+                nombre: "FSR — Nacional".to_string(),
+                region_id: None,
+                modelo_calculo_json: String::new(),
+                parametros_json: String::new(),
+            },
+            admin.id.clone(),
+        )
+        .await?;
         let regiones = region::Entity::find().all(repo.conexion()).await?;
         for r in regiones {
             Self::crear(

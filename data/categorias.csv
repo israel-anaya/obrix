@@ -1,34 +1,33 @@
-Categoría
-Aluminero
-Auxiliar topógrafo
-Ayudante de instalación
-Ayudante oficial
-Cabo de ayudantes
-Cabo de oficios
-Cadenero
-Carpintero de banco
-Carpintero de obra negra
-Herrero de campo
-Oficial albañil
-Oficial azulejero
-Oficial colocador
-Oficial electricista
-Oficial fierrero
-Oficial pintor
-Oficial plomero
-Oficial vidriero
-Oficial yesero
-Operador de camión
-Operador de cargador
-Operador de carpeteador
-Operador de duo-pactor
-Operador de equipo ligero
-Operador de motoconformadora
-Operador de petrolizadora
-Operador de plancha
-Operador de retroexcavadora
-Operador de tractor
-Operador de vehículo con grúa
-Rastrillero
-Tornillero
-Tubero
+Categoría,Unidad,Familia,Subfamilia
+Aluminero,jor,Mano de obra,Herrería
+Auxiliar topógrafo,jor,Mano de obra,Ayudantes
+Ayudante de instalación,jor,Mano de obra,Ayudantes
+Ayudante oficial,jor,Mano de obra,Ayudantes
+Cabo de ayudantes,jor,Mano de obra,Ayudantes
+Cabo de oficios,jor,Mano de obra,Albañilería
+Cadenero,jor,Mano de obra,Ayudantes
+Carpintero de banco,jor,Mano de obra,Carpintería
+Carpintero de obra negra,jor,Mano de obra,Carpintería
+Herrero de campo,jor,Mano de obra,Herrería
+Oficial albañil,jor,Mano de obra,Albañilería
+Oficial azulejero,jor,Mano de obra,Albañilería
+Oficial colocador,jor,Mano de obra,Albañilería
+Oficial electricista,jor,Mano de obra,Electricidad
+Oficial fierrero,jor,Mano de obra,Herrería
+Oficial pintor,jor,Mano de obra,Pintura
+Oficial plomero,jor,Mano de obra,Plomería
+Oficial vidriero,jor,Mano de obra,Herrería
+Operador de camión,jor,Mano de obra,Operadores
+Operador de cargador,jor,Mano de obra,Operadores
+Operador de carpeteador,jor,Mano de obra,Operadores
+Operador de duo-pactor,jor,Mano de obra,Operadores
+Operador de equipo ligero,jor,Mano de obra,Operadores
+Operador de motoconformadora,jor,Mano de obra,Operadores
+Operador de petrolizadora,jor,Mano de obra,Operadores
+Operador de plancha,jor,Mano de obra,Operadores
+Operador de retroexcavadora,jor,Mano de obra,Operadores
+Operador de tractor,jor,Mano de obra,Operadores
+Operador de vehículo con grúa,jor,Mano de obra,Operadores
+Rastrillero,jor,Mano de obra,Ayudantes
+Tornillero,jor,Mano de obra,Herrería
+Tubero,jor,Mano de obra,Plomería

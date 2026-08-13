@@ -205,7 +205,7 @@ mod tests {
     use std::path::Path;
 
     use obrix_plugins::PortafolioFactory;
-    use sea_orm::EntityTrait;
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 
     use obrix_services::seed::sembrar_catalogos_generales;
 
@@ -280,6 +280,73 @@ mod tests {
         assert!(
             membresias.is_empty(),
             "el usuario admin no debe recibir membresía en ninguna organización — nunca inicia sesión"
+        );
+
+        let categorias = obrix_db::entities::categoria_fasar::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .expect("listar categorias_fasar");
+        assert_eq!(
+            categorias.len(),
+            32,
+            "32 categorías de data/categorias.csv, sin duplicar"
+        );
+
+        let insumos_mo = obrix_db::entities::insumo::Entity::find()
+            .filter(
+                obrix_db::entities::insumo::Column::Tipo
+                    .eq(obrix_db::entities::insumo::TipoInsumo::ManoObra),
+            )
+            .all(portafolio.conexion())
+            .await
+            .expect("listar insumos de mano de obra");
+        assert_eq!(insumos_mo.len(), 32);
+
+        let aluminero = insumos_mo
+            .iter()
+            .find(|i| i.descripcion == "Aluminero")
+            .expect("Aluminero");
+        assert_eq!(aluminero.clave, "MO-001");
+        let jor = unidades
+            .iter()
+            .find(|u| u.simbolo == "jor")
+            .expect("unidad jor");
+        assert_eq!(aluminero.unidad_id, jor.id);
+        let familia_aluminero = familias
+            .iter()
+            .find(|f| Some(&f.id) == aluminero.familia_id.as_ref())
+            .expect("familia de Aluminero");
+        let subfamilia_aluminero = familias
+            .iter()
+            .find(|f| Some(&f.id) == aluminero.sub_familia_id.as_ref())
+            .expect("subfamilia de Aluminero");
+        assert_eq!(familia_aluminero.nombre, "Mano de obra");
+        assert_eq!(subfamilia_aluminero.nombre, "Herrería");
+        assert_eq!(
+            subfamilia_aluminero.parent_id.as_deref(),
+            Some(familia_aluminero.id.as_str()),
+            "Herrería de Aluminero debe ser hija de Mano de obra, no de Cancelería y vidrio"
+        );
+
+        let factores = obrix_db::entities::factor_salario_real::Entity::find()
+            .order_by_asc(obrix_db::entities::factor_salario_real::Column::CreatedAt)
+            .all(portafolio.conexion())
+            .await
+            .expect("listar factores de salario real");
+        assert_eq!(
+            factores.len(),
+            4,
+            "1 nacional + 3 regiones, sin duplicar"
+        );
+        assert!(
+            factores[0].region_id.is_none(),
+            "el FSR nacional (region_id nulo) debe ser el primer registro"
+        );
+        assert_eq!(factores[0].nombre, "FSR — Nacional");
+        assert_eq!(
+            factores.iter().filter(|f| f.region_id.is_none()).count(),
+            1,
+            "solo un FSR nacional"
         );
     }
 }

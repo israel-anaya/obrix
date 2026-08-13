@@ -3,15 +3,22 @@
 //! sola entidad "Categoría FASAR", igual que `material` hace con `insumo`.
 
 use obrix_db::entities::insumo::{self, TipoInsumo};
-use obrix_db::entities::{categoria_fasar, salario_categoria_fasar};
+use obrix_db::entities::{categoria_fasar, familia_insumo, salario_categoria_fasar, unidad_medida};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
     TransactionTrait,
 };
 
+use crate::organizacion::OrganizacionService;
 use crate::salario_categoria_fasar::SalarioCategoriaFasarService;
-use crate::{nuevo_id, ServiceError};
+use crate::usuario::UsuarioService;
+use crate::{nuevo_id, DatosIniciales, ServiceError};
+
+/// Catálogo de categorías FASAR de referencia — fuente de verdad en
+/// `data/categorias.csv`, embebido tal cual en el binario (mismo patrón que
+/// `modelo-calculo-fasar.json` en `FactorSalarioRealService`).
+const CATEGORIAS_CSV: &str = include_str!("../../../data/categorias.csv");
 
 #[derive(serde::Deserialize)]
 pub struct CategoriaFasarData {
@@ -167,6 +174,122 @@ impl CategoriaFasarService {
     }
 }
 
+#[derive(serde::Deserialize)]
+struct RegistroCsvCategoria {
+    #[serde(rename = "Categoría")]
+    categoria: String,
+    #[serde(rename = "Unidad")]
+    unidad: String,
+    #[serde(rename = "Familia")]
+    familia: String,
+    #[serde(rename = "Subfamilia")]
+    subfamilia: String,
+}
+
+impl DatosIniciales for CategoriaFasarService {
+    /// Una categoría por cada fila de `data/categorias.csv`. Depende de
+    /// `organizacion`, `unidad_medida` y `familia_insumo` (Unidad/Familia/
+    /// Subfamilia del CSV se resuelven por nombre), ya sembradas antes — ver
+    /// orden en `seed::sembrar_catalogos_generales`. Clave `MO-001`… en el
+    /// orden del archivo. Sin salario: eso vive en `salario_categoria_fasar`
+    /// y lo carga el usuario después.
+    async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
+        if categoria_fasar::Entity::find().one(repo.conexion()).await?.is_some() {
+            return Ok(());
+        }
+        let admin = UsuarioService::buscar_admin_obrix(repo).await?;
+        let organizacion = OrganizacionService::buscar_admin_obrix(repo).await?;
+
+        let unidades = unidad_medida::Entity::find().all(repo.conexion()).await?;
+        let unidad_id_por_texto: std::collections::HashMap<String, String> = unidades
+            .iter()
+            .flat_map(|u| {
+                [
+                    (u.simbolo.to_lowercase(), u.id.clone()),
+                    (u.descripcion.to_lowercase(), u.id.clone()),
+                ]
+            })
+            .collect();
+
+        let familias = familia_insumo::Entity::find().all(repo.conexion()).await?;
+        let raiz_id_por_nombre: std::collections::HashMap<String, String> = familias
+            .iter()
+            .filter(|f| f.parent_id.is_none())
+            .map(|f| (f.nombre.to_lowercase(), f.id.clone()))
+            .collect();
+        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> = familias
+            .iter()
+            .filter_map(|f| {
+                f.parent_id
+                    .as_ref()
+                    .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
+            })
+            .collect();
+
+        let mut lector = csv::ReaderBuilder::new().from_reader(CATEGORIAS_CSV.as_bytes());
+        for (i, registro) in lector.deserialize::<RegistroCsvCategoria>().enumerate() {
+            let fila = i + 2;
+            let registro = registro.map_err(|e| {
+                ServiceError::Validacion(format!("categorias.csv fila {fila}: {e}"))
+            })?;
+            let descripcion = registro.categoria.trim().to_string();
+            if descripcion.is_empty() {
+                return Err(ServiceError::Validacion(format!(
+                    "categorias.csv fila {fila}: categoría vacía"
+                )));
+            }
+
+            let unidad_texto = registro.unidad.trim();
+            if unidad_texto.is_empty() {
+                return Err(ServiceError::Validacion(format!(
+                    "categorias.csv fila {fila}: unidad vacía"
+                )));
+            }
+            let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto.to_lowercase()).cloned() else {
+                return Err(ServiceError::Validacion(format!(
+                    "categorias.csv fila {fila}: unidad \"{unidad_texto}\" no encontrada"
+                )));
+            };
+
+            let familia_texto = registro.familia.trim();
+            let familia_id = raiz_id_por_nombre
+                .get(&familia_texto.to_lowercase())
+                .cloned()
+                .ok_or_else(|| {
+                    ServiceError::NoEncontrado(format!(
+                        "categorias.csv fila {fila}: familia \"{familia_texto}\" no encontrada"
+                    ))
+                })?;
+
+            let subfamilia_texto = registro.subfamilia.trim();
+            let sub_familia_id = hija_id_por_padre_y_nombre
+                .get(&(familia_id.clone(), subfamilia_texto.to_lowercase()))
+                .cloned()
+                .ok_or_else(|| {
+                    ServiceError::NoEncontrado(format!(
+                        "categorias.csv fila {fila}: subfamilia \"{subfamilia_texto}\" no encontrada dentro de \"{familia_texto}\""
+                    ))
+                })?;
+
+            Self::crear(
+                repo,
+                &organizacion.id,
+                CategoriaFasarData {
+                    clave: format!("MO-{:03}", i + 1),
+                    descripcion,
+                    unidad_id,
+                    familia_id: Some(familia_id),
+                    sub_familia_id: Some(sub_familia_id),
+                    activo: true,
+                },
+                admin.id.clone(),
+            )
+            .await?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,5 +425,97 @@ mod tests {
             categoria_restante.is_none(),
             "categoria_fasar debe borrarse en cascada junto con el insumo"
         );
+    }
+
+    /// El CSV pide `jor` en cada fila — si esa unidad no está sembrada, el
+    /// sembrado debe abortar con `Validacion`, no crear categorías a medias.
+    #[tokio::test]
+    async fn sembrar_falla_si_la_unidad_del_csv_no_existe() {
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-13T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set(crate::usuario::CORREO_ADMIN_OBRIX.into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            updated_at: Set(None),
+            created_by: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        moneda::ActiveModel {
+            id: Set("mon-1".into()),
+            codigo: Set("MXN".into()),
+            nombre: Set("Peso mexicano".into()),
+            simbolo: Set("$".into()),
+            decimales: Set(2),
+            created_at: Set(now.clone()),
+            updated_at: Set(None),
+            created_by: Set("usr-1".into()),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        organizacion::ActiveModel {
+            id: Set("org-1".into()),
+            razon_social: Set("Org".into()),
+            rfc: Set("XAXX010101000".into()),
+            tipo: Set(organizacion::TipoOrganizacion::Despacho),
+            moneda_default_id: Set("mon-1".into()),
+            created_at: Set(now.clone()),
+            updated_at: Set(None),
+            created_by: Set("usr-1".into()),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        // Hay unidades, pero ninguna es `jor` — el CSV no debe resolverse
+        // contra "cualquier unidad", sino contra el símbolo de cada fila.
+        unidad_medida::ActiveModel {
+            id: Set("um-m".into()),
+            simbolo: Set("m".into()),
+            simbolo_impresion: Set("m".into()),
+            clave_sat: Set(None),
+            descripcion: Set("Metro".into()),
+            tipo_magnitud: Set(unidad_medida::TipoMagnitud::Longitud),
+            created_at: Set(now),
+            updated_at: Set(None),
+            created_by: Set("usr-1".into()),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        let err = CategoriaFasarService::sembrar(&portafolio)
+            .await
+            .expect_err("debe fallar si jor no está en unidad_medida");
+        match err {
+            ServiceError::Validacion(mensaje) => {
+                assert!(
+                    mensaje.contains("unidad \"jor\" no encontrada"),
+                    "mensaje inesperado: {mensaje}"
+                );
+            }
+            otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
+        }
+
+        let creadas = categoria_fasar::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .unwrap();
+        assert!(creadas.is_empty(), "no debe quedar ninguna categoría a medias");
     }
 }
