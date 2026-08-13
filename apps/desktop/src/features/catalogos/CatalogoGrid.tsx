@@ -134,7 +134,7 @@ function filaATsv(fila: Fila, columnas: CatalogoColumnaDef[]): string {
 function parsearTsv(texto: string): string[][] {
   const normalizado = texto.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const lineas = normalizado.split("\n");
-  if (lineas.at(-1) === "") lineas.pop();
+  if (lineas[lineas.length - 1] === "") lineas.pop();
   return lineas
     .map((linea) => linea.split("\t"))
     .filter((linea) => linea.some((c) => c.trim() !== ""));
@@ -259,11 +259,30 @@ const ALTO_FILA = 26;
 const FLECHA_REPEAT_DELAY_MS = 400;
 /** ~25 Hz una vez que el hold arranca — no el flood de `keydown.repeat`. */
 const FLECHA_REPEAT_MS = 40;
+/** PageUp/Down saltan un viewport; ~12 Hz para que cada página alcance a pintarse. */
+const PAGINA_REPEAT_MS = 80;
 
-type Flecha = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
+type TeclaHold =
+  | "ArrowUp"
+  | "ArrowDown"
+  | "ArrowLeft"
+  | "ArrowRight"
+  | "PageUp"
+  | "PageDown";
 
-function esFlecha(key: string): key is Flecha {
-  return key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight";
+function esTeclaHold(key: string): key is TeclaHold {
+  return (
+    key === "ArrowUp" ||
+    key === "ArrowDown" ||
+    key === "ArrowLeft" ||
+    key === "ArrowRight" ||
+    key === "PageUp" ||
+    key === "PageDown"
+  );
+}
+
+function esTeclaVertical(key: TeclaHold): boolean {
+  return key === "ArrowUp" || key === "ArrowDown" || key === "PageUp" || key === "PageDown";
 }
 
 function renderEstrellas(valor: unknown, onElegir?: (n: number) => void) {
@@ -1285,6 +1304,8 @@ export const CatalogoGrid = forwardRef<
   // espacio al hacer scroll hacia ellas (`scroll-margin-top`) y no queden
   // tapadas por el encabezado al llegar a la primera fila.
   const [altoEncabezado, setAltoEncabezado] = useState(0);
+  const altoEncabezadoRef = useRef(0);
+  altoEncabezadoRef.current = altoEncabezado;
 
   useLayoutEffect(() => {
     const el = theadRef.current;
@@ -1557,12 +1578,42 @@ export const CatalogoGrid = forwardRef<
     getItemKey: (index) => filasVisibles[index]?.id ?? index,
     scrollPaddingStart: altoEncabezado,
   });
+  const rowVirtualizerRef = useRef(rowVirtualizer);
+  rowVirtualizerRef.current = rowVirtualizer;
+  const scrollAlignRef = useRef<"start" | "end" | "nearest">("nearest");
 
-  const enfocarFila = (index: number, filaId: string) => {
-    rowVirtualizer.scrollToIndex(index, { align: "auto" });
+  const alinearVertical = (filaId: string) => {
+    const fila = filaRefs.current.get(filaId);
+    const caja = scrollRef.current;
+    if (!fila || !caja) return false;
+    const f = fila.getBoundingClientRect();
+    const b = caja.getBoundingClientRect();
+    const margen = altoEncabezadoRef.current;
+    if (f.bottom > b.bottom) caja.scrollTop += f.bottom - b.bottom;
+    else if (f.top < b.top + margen) caja.scrollTop -= b.top + margen - f.top;
+    return true;
+  };
+
+  // Si la fila no está montada, `scrollToIndex` con start/end (no `auto`) +
+  // flushSync del virtualizador deja el DOM listo; `alinearVertical` corrige
+  // el thead sticky en el mismo turno, antes del paint.
+  const traerFilaAVista = (filaId: string) => {
+    if (alinearVertical(filaId)) return true;
+    const idx = filasVisiblesRef.current.findIndex((r) => r.original._id === filaId);
+    if (idx < 0) return false;
+    let align = scrollAlignRef.current;
+    if (align === "nearest") {
+      const top = scrollRef.current?.scrollTop ?? 0;
+      align = idx * ALTO_FILA < top ? "start" : "end";
+    }
+    rowVirtualizerRef.current.scrollToIndex(idx, { align });
+    return alinearVertical(filaId);
+  };
+
+  const enfocarFila = (_index: number, filaId: string) => {
     const nodo = filaRefs.current.get(filaId);
-    if (nodo) nodo.focus();
-    else scrollRef.current?.focus();
+    if (nodo) nodo.focus({ preventScroll: true });
+    else scrollRef.current?.focus({ preventScroll: true });
   };
 
   const rowSelectionRef = useRef(rowSelection);
@@ -1570,7 +1621,7 @@ export const CatalogoGrid = forwardRef<
   const columnasRef = useRef(config.columnas);
   columnasRef.current = config.columnas;
 
-  const moverPorFlecha = (key: Flecha, opts: { alBorde: boolean; enfocar: boolean }) => {
+  const moverPorTecla = (key: TeclaHold, opts: { alBorde: boolean; enfocar: boolean }) => {
     const columnas = columnasRef.current;
     const filas = filasVisiblesRef.current;
     const sel = seleccionStore.get();
@@ -1592,6 +1643,26 @@ export const CatalogoGrid = forwardRef<
       return;
     }
 
+    if (key === "PageUp" || key === "PageDown") {
+      if (edicionRef.current) return;
+      const altoVista = (scrollRef.current?.clientHeight ?? 400) - altoEncabezadoRef.current;
+      const porPagina = Math.max(1, Math.floor(altoVista / ALTO_FILA) - 1);
+      const filaActualId = sel?.filaId ?? Object.keys(rowSelectionRef.current)[0];
+      const idxActual = Math.max(0, filas.findIndex((r) => r.original._id === filaActualId));
+      const destino = Math.min(
+        filas.length - 1,
+        Math.max(0, idxActual + (key === "PageDown" ? porPagina : -porPagina)),
+      );
+      const siguiente = filas[destino];
+      if (!siguiente) return;
+      const campo = sel?.campo ?? primerCampo(columnas);
+      scrollAlignRef.current = key === "PageDown" ? "end" : "start";
+      if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
+      scrollAlignRef.current = "nearest";
+      if (opts.enfocar) enfocarFila(destino, siguiente.original._id);
+      return;
+    }
+
     if (!sel) return;
     if (opts.alBorde) {
       const campo = key === "ArrowLeft" ? columnas[0]?.campo : columnas[columnas.length - 1]?.campo;
@@ -1605,15 +1676,15 @@ export const CatalogoGrid = forwardRef<
   };
 
   const holdRef = useRef({
-    held: new Set<Flecha>(),
-    activa: null as Flecha | null,
+    held: new Set<TeclaHold>(),
+    activa: null as TeclaHold | null,
     raf: 0,
     startedAt: 0,
     lastMove: 0,
     parked: false,
   });
-  const moverPorFlechaRef = useRef(moverPorFlecha);
-  moverPorFlechaRef.current = moverPorFlecha;
+  const moverPorTeclaRef = useRef(moverPorTecla);
+  moverPorTeclaRef.current = moverPorTecla;
   const loopHoldRef = useRef<(t: number) => void>(() => {});
 
   const detenerHold = () => {
@@ -1635,7 +1706,7 @@ export const CatalogoGrid = forwardRef<
     }
     h.raf = requestAnimationFrame((now) => loopHoldRef.current(now));
     if (abiertaStore.get()) return;
-    if ((h.activa === "ArrowUp" || h.activa === "ArrowDown") && edicionRef.current) return;
+    if (esTeclaVertical(h.activa) && edicionRef.current) return;
     if (t - h.startedAt < FLECHA_REPEAT_DELAY_MS) return;
     // El foco en la fila de origen se perdería al virtualizarla; el
     // contenedor (tabIndex=0) sí sobrevive todo el hold.
@@ -1643,12 +1714,13 @@ export const CatalogoGrid = forwardRef<
       h.parked = true;
       scrollRef.current?.focus({ preventScroll: true });
     }
-    if (t - h.lastMove < FLECHA_REPEAT_MS) return;
+    const intervalo = h.activa === "PageUp" || h.activa === "PageDown" ? PAGINA_REPEAT_MS : FLECHA_REPEAT_MS;
+    if (t - h.lastMove < intervalo) return;
     h.lastMove = t;
-    moverPorFlechaRef.current(h.activa, { alBorde: false, enfocar: false });
+    moverPorTeclaRef.current(h.activa, { alBorde: false, enfocar: false });
   };
 
-  const arrancarHold = (key: Flecha) => {
+  const arrancarHold = (key: TeclaHold) => {
     const h = holdRef.current;
     h.held.add(key);
     h.activa = key;
@@ -1660,8 +1732,8 @@ export const CatalogoGrid = forwardRef<
     }
   };
 
-  const onFlechaKeyUp = (key: string) => {
-    if (!esFlecha(key)) return;
+  const onHoldKeyUp = (key: string) => {
+    if (!esTeclaHold(key)) return;
     const h = holdRef.current;
     if (!h.held.has(key)) return;
     h.held.delete(key);
@@ -1687,15 +1759,15 @@ export const CatalogoGrid = forwardRef<
     if (idx >= 0) enfocarFila(idx, sel.filaId);
   };
 
-  const onFlechaKeyUpRef = useRef(onFlechaKeyUp);
-  onFlechaKeyUpRef.current = onFlechaKeyUp;
+  const onHoldKeyUpRef = useRef(onHoldKeyUp);
+  onHoldKeyUpRef.current = onHoldKeyUp;
   const detenerHoldRef = useRef(detenerHold);
   detenerHoldRef.current = detenerHold;
 
   useEffect(() => {
-    const onKeyUp = (e: KeyboardEvent) => onFlechaKeyUpRef.current(e.key);
+    const onKeyUp = (e: KeyboardEvent) => onHoldKeyUpRef.current(e.key);
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!holdRef.current.activa || !esFlecha(e.key)) return;
+      if (!holdRef.current.activa || !esTeclaHold(e.key)) return;
       e.preventDefault();
     };
     const onBlur = () => detenerHoldRef.current();
@@ -1803,11 +1875,12 @@ export const CatalogoGrid = forwardRef<
     const aplicar = () => {
       const sel = seleccionStore.get();
       if (!sel) return;
-      const idx = filasVisiblesRef.current.findIndex((r) => r.original._id === sel.filaId);
-      if (idx >= 0) rowVirtualizer.scrollToIndex(idx, { align: "auto" });
-      if (alinearHorizontal(sel.filaId, sel.campo)) return;
+      const vertical = traerFilaAVista(sel.filaId);
+      const horiz = alinearHorizontal(sel.filaId, sel.campo);
+      if (vertical && horiz) return;
       requestAnimationFrame(() => {
         if (seleccionStore.get() !== sel) return;
+        traerFilaAVista(sel.filaId);
         alinearHorizontal(sel.filaId, sel.campo);
       });
     };
@@ -1826,8 +1899,8 @@ export const CatalogoGrid = forwardRef<
       const filaId = seleccionStore.get()?.filaId;
       if (!filaId) return;
       const nodo = filaRefs.current.get(filaId);
-      if (nodo) nodo.focus();
-      else scrollRef.current?.focus();
+      if (nodo) nodo.focus({ preventScroll: true });
+      else scrollRef.current?.focus({ preventScroll: true });
     };
     return abiertaStore.subscribe(alCerrar);
   }, []);
@@ -1975,7 +2048,7 @@ export const CatalogoGrid = forwardRef<
       return;
     }
 
-    if (!esFlecha(e.key) && holdRef.current.activa) detenerHold();
+    if (!esTeclaHold(e.key) && holdRef.current.activa) detenerHold();
 
     if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key === "s" || e.key === "S") && edicion) {
       e.preventDefault();
@@ -1991,42 +2064,19 @@ export const CatalogoGrid = forwardRef<
       return;
     }
 
-    if (esFlecha(e.key)) {
+    if (esTeclaHold(e.key)) {
       // Primer keydown mueve ya; los ecos del SO (`repeat`) se ignoran — el
-      // loop de rAF mueve a ~25 Hz y el keyup corta sin cola residual.
-      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && edicion) {
+      // loop de rAF mueve a ritmo propio y el keyup corta sin cola residual.
+      if (esTeclaVertical(e.key) && edicion) {
         e.preventDefault();
         return;
       }
       if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !celdaSeleccionada) return;
-      const alBorde = e.ctrlKey || e.metaKey;
+      const alBorde = (e.ctrlKey || e.metaKey) && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight");
       e.preventDefault();
       if (e.repeat) return;
-      moverPorFlecha(e.key, { alBorde, enfocar: e.key === "ArrowUp" || e.key === "ArrowDown" });
+      moverPorTecla(e.key, { alBorde, enfocar: esTeclaVertical(e.key) });
       if (!alBorde) arrancarHold(e.key);
-      return;
-    }
-
-    if (e.key === "PageUp" || e.key === "PageDown") {
-      if (edicion) {
-        e.preventDefault();
-        return;
-      }
-      const altoFila = ALTO_FILA;
-      const altoVista = (scrollRef.current?.clientHeight ?? 400) - altoEncabezado;
-      const porPagina = Math.max(1, Math.floor(altoVista / altoFila) - 1);
-      const filaActualId = celdaSeleccionada?.filaId ?? Object.keys(rowSelection)[0];
-      const idxActual = Math.max(0, filasVisibles.findIndex((r) => r.original._id === filaActualId));
-      const destino = Math.min(
-        filasVisibles.length - 1,
-        Math.max(0, idxActual + (e.key === "PageDown" ? porPagina : -porPagina)),
-      );
-      const siguiente = filasVisibles[destino];
-      if (!siguiente) return;
-      e.preventDefault();
-      const campo = celdaSeleccionada?.campo ?? primerCampo(config.columnas);
-      if (campo) seleccionStore.set({ filaId: siguiente.original._id, campo });
-      enfocarFila(destino, siguiente.original._id);
       return;
     }
 
@@ -2037,7 +2087,9 @@ export const CatalogoGrid = forwardRef<
         const row = e.key === "Home" ? filasVisibles[0] : filasVisibles[filasVisibles.length - 1];
         const campo = e.key === "Home" ? config.columnas[0]?.campo : config.columnas[config.columnas.length - 1]?.campo;
         if (row && campo) {
+          scrollAlignRef.current = e.key === "Home" ? "start" : "end";
           seleccionStore.set({ filaId: row.original._id, campo });
+          scrollAlignRef.current = "nearest";
           enfocarFila(e.key === "Home" ? 0 : filasVisibles.length - 1, row.original._id);
         }
         return;

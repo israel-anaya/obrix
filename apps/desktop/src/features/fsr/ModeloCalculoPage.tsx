@@ -23,7 +23,7 @@ function filaAParametro(fila: Fila): Parametro {
   const tipo = (TIPOS_PARAMETRO as readonly string[]).includes(String(fila.tipo))
     ? (fila.tipo as TipoParametro)
     : "numero";
-  const base: Parametro = {
+  const base: Omit<Parametro, "valor_default"> = {
     id: String(fila.id).trim(),
     etiqueta: String(fila.etiqueta),
     grupo: String(fila.grupo) || "General",
