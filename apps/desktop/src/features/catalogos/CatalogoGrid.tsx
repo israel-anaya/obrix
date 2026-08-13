@@ -1169,7 +1169,7 @@ function AccionesFila({ filaId }: { filaId: string }) {
   const punto = useResaltarPunto(filaId, activa);
   if (esBorrador) {
     return (
-      <div className="flex h-full items-center justify-center gap-0.5">
+      <div className="flex h-full items-center justify-center gap-px">
         <button
           type="button"
           title="Confirmar (Ctrl+Enter)"
@@ -1178,9 +1178,9 @@ function AccionesFila({ filaId }: { filaId: string }) {
             e.stopPropagation();
             meta.confirmarEdicion();
           }}
-          className="rounded p-0.5 text-emerald-600 hover:bg-muted disabled:opacity-50"
+          className="rounded p-px text-emerald-600 hover:bg-muted disabled:opacity-50"
         >
-          {guardando ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          {guardando ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
         </button>
         <button
           type="button"
@@ -1190,9 +1190,9 @@ function AccionesFila({ filaId }: { filaId: string }) {
             e.stopPropagation();
             meta.cancelarEdicion();
           }}
-          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50"
+          className="rounded p-px text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50"
         >
-          <X size={14} />
+          <X size={16} />
         </button>
       </div>
     );
@@ -1373,8 +1373,7 @@ export const CatalogoGrid = forwardRef<
     resaltarSeleccion?: boolean;
     /**
      * `_id` a reseleccionar cuando el grid (re)monta en modo "unica" — el
-     * grid pierde su selección interna cada vez que cambia de posición en el
-     * árbol (p. ej. al abrir un panel lateral, ver `MaterialesSeccion`), así
+     * grid pierde su selección interna si cambia de posición en el árbol, así
      * que sin esto siempre volvería a caer en la primera fila.
      */
     seleccionInicialId?: string | null;
@@ -1646,8 +1645,8 @@ export const CatalogoGrid = forwardRef<
       columnHelper.display({
         id: "__acciones",
         header: "",
-        size: 64,
-        minSize: 64,
+        size: 54,
+        minSize: 54,
         enableResizing: false,
         cell: (ctx) => <AccionesFila filaId={ctx.row.original._id} />,
       }),
@@ -1725,8 +1724,7 @@ export const CatalogoGrid = forwardRef<
   };
 
   // Mantiene siempre exactamente una fila seleccionada en modo "unica": al
-  // montar (o remontar, p. ej. al abrir un panel lateral) restaura
-  // `seleccionInicialId` o cae en la primera; si la selección se vacía más
+  // montar restaura `seleccionInicialId` o cae en la primera; si la selección se vacía más
   // adelante (p. ej. se borró la fila seleccionada), vuelve a caer en la
   // primera. Un solo efecto evita la carrera de dos efectos leyendo el mismo
   // `rowSelection` (aún no actualizado) en el mismo commit.

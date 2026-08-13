@@ -167,46 +167,13 @@ export function CategoriaFasarSeccion() {
 
   const categoriaSeleccionada = categorias.find((c) => c.id === categoriaSeleccionadaId) ?? null;
 
-  const contenidoGrid = panelSalarioAbierto ? (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize="47" minSize="35" className="flex flex-col overflow-hidden">
-        <CatalogoGrid
-          ref={gridRef}
-          config={config}
-          filasIniciales={filas}
-          modoSeleccion="unica"
-          resaltarSeleccion
-          seleccionInicialId={categoriaSeleccionadaId}
-          busqueda={busqueda}
-          onBusquedaChange={setBusqueda}
-          onSelectionChange={setPuedeEliminar}
-          onFilaSeleccionada={(fila) => setCategoriaSeleccionadaId(fila?._id ?? null)}
-          onAgregarFila={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
-          onCeldaEditada={(fila) => updateCategoriaFasar(fila._id, filaACategoriaData(fila)).then(recargarCategorias)}
-          onEliminarFilas={(ids) => Promise.all(ids.map((id) => deleteCategoriaFasar(id))).then(recargarCategorias)}
-          onErrorGuardado={(mensaje) => setEstadoGuardado({ tipo: "error", mensaje })}
-          onGuardadoExitoso={() => setEstadoGuardado({ tipo: "exito", mensaje: "Guardado exitosamente" })}
-          onEdicionCancelada={() => setEstadoGuardado(null)}
-        />
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize="53" minSize="22" className="flex flex-col overflow-hidden">
-        <SalarioCategoriaFasarPanel
-          categoriaId={categoriaSeleccionadaId}
-          categoriaClave={categoriaSeleccionada?.clave}
-          categoriaDescripcion={categoriaSeleccionada?.descripcion}
-          onCerrar={() => setPanelSalarioAbierto(false)}
-          onSalarioRegistrado={recargarCategorias}
-        />
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  ) : (
+  const grid = (
     <CatalogoGrid
       ref={gridRef}
       config={config}
       filasIniciales={filas}
       modoSeleccion="unica"
-      resaltarSeleccion={panelHistorialAbierto}
+      resaltarSeleccion={panelSalarioAbierto || panelHistorialAbierto}
       seleccionInicialId={categoriaSeleccionadaId}
       busqueda={busqueda}
       onBusquedaChange={setBusqueda}
@@ -266,19 +233,59 @@ export function CategoriaFasarSeccion() {
       </div>
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
-        {panelHistorialAbierto ? (
-          <ResizablePanelGroup orientation="vertical" className="h-full">
-            <ResizablePanel defaultSize="65" minSize="35" className="flex flex-col overflow-hidden">
-              {contenidoGrid}
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize="35" minSize="20" className="flex flex-col overflow-hidden">
-              <SalarioHistorialGrid categoriaId={categoriaSeleccionadaId} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          contenidoGrid
-        )}
+        {/* Los grupos viven siempre para no desmontar el grid al abrir salario
+            o historial (si no, el virtualizador vuelve a scroll 0). */}
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel
+            id="fasar-principal"
+            defaultSize="65"
+            minSize="35"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            <ResizablePanelGroup orientation="horizontal" className="h-full">
+              <ResizablePanel
+                id="fasar-grid"
+                defaultSize="47"
+                minSize="35"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                {grid}
+              </ResizablePanel>
+              {panelSalarioAbierto ? (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel
+                    id="fasar-salario"
+                    defaultSize="53"
+                    minSize="22"
+                    className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                  >
+                    <SalarioCategoriaFasarPanel
+                      categoriaId={categoriaSeleccionadaId}
+                      categoriaClave={categoriaSeleccionada?.clave}
+                      categoriaDescripcion={categoriaSeleccionada?.descripcion}
+                      onCerrar={() => setPanelSalarioAbierto(false)}
+                      onSalarioRegistrado={recargarCategorias}
+                    />
+                  </ResizablePanel>
+                </>
+              ) : null}
+            </ResizablePanelGroup>
+          </ResizablePanel>
+          {panelHistorialAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="fasar-historial"
+                defaultSize="35"
+                minSize="20"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <SalarioHistorialGrid categoriaId={categoriaSeleccionadaId} />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </div>
     </div>
   );

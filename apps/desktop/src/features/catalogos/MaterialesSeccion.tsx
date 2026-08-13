@@ -323,37 +323,50 @@ export function MaterialesSeccion() {
         </div>
       )}
       <div className="min-h-0 flex-1">
-        {panelPreciosAbierto || panelFichaAbierto ? (
-          <ResizablePanelGroup orientation="horizontal" className="h-full">
-            <ResizablePanel defaultSize="65" minSize="40" className="flex flex-col overflow-hidden">
-              {grid}
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize="35" minSize="22" className="flex flex-col overflow-hidden">
-              {panelPreciosAbierto ? (
-                <PreciosMaterialPanel
-                  materialId={materialSeleccionadoId}
-                  materialClave={materialSeleccionado?.clave}
-                  materialDescripcion={materialSeleccionado?.descripcion}
-                  onCerrar={() => setPanelPreciosAbierto(false)}
-                  onPrecioRegistrado={recargarMateriales}
-                />
-              ) : (
-                <MaterialFormPanel
-                  material={materialSeleccionado}
-                  unidades={unidades}
-                  proveedores={proveedores}
-                  familias={familias}
-                  nombresPorUsuarioId={nombresPorUsuarioId}
-                  onCerrar={() => setPanelFichaAbierto(false)}
-                  onGuardado={recargarMateriales}
-                />
-              )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          grid
-        )}
+        {/* El grupo vive siempre: si el grid pasa de hijo directo a panel (o
+            al revés) React lo desmonta, el virtualizador vuelve a scroll 0 y
+            el renglón seleccionado deja de verse. */}
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="materiales-grid"
+            defaultSize="65"
+            minSize="40"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            {grid}
+          </ResizablePanel>
+          {panelPreciosAbierto || panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="materiales-detalle"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                {panelPreciosAbierto ? (
+                  <PreciosMaterialPanel
+                    materialId={materialSeleccionadoId}
+                    materialClave={materialSeleccionado?.clave}
+                    materialDescripcion={materialSeleccionado?.descripcion}
+                    onCerrar={() => setPanelPreciosAbierto(false)}
+                    onPrecioRegistrado={recargarMateriales}
+                  />
+                ) : (
+                  <MaterialFormPanel
+                    material={materialSeleccionado}
+                    unidades={unidades}
+                    proveedores={proveedores}
+                    familias={familias}
+                    nombresPorUsuarioId={nombresPorUsuarioId}
+                    onCerrar={() => setPanelFichaAbierto(false)}
+                    onGuardado={recargarMateriales}
+                  />
+                )}
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </div>
     </div>
   );
