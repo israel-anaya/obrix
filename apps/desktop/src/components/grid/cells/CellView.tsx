@@ -87,7 +87,6 @@ export function CellView({
           checked={Boolean(row[column.field])}
           disabled={!onToggleBoolean}
           onChange={() => onToggleBoolean?.()}
-          className="cursor-pointer disabled:cursor-default"
         />
       </div>
     );

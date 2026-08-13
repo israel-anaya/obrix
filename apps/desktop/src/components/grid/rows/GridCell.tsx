@@ -54,7 +54,7 @@ function GridCell({
     <div
       className={cn(
         "flex h-full min-h-[22px] min-w-0 items-center px-1 ring-inset",
-        column.readOnly ? "text-muted-foreground" : "cursor-pointer",
+        column.readOnly && "text-muted-foreground",
         selected && !hasError && "ring-2 ring-primary",
         hasError && "ring-2 ring-destructive",
       )}

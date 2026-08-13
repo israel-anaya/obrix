@@ -79,10 +79,13 @@ export const VirtualRow = memo(function VirtualRow({
       style={rowStyle}
       tabIndex={0}
       className={cn(
-        "flex outline-none",
+        // El cursor se hereda: declarado una vez en la fila cubre las celdas,
+        // las columnas ancladas y el hueco entre ellas. La flecha estándar, que
+        // es lo que hace cualquier hoja de cálculo — ni manita ni barra de
+        // texto (los editores sí piden `cursor-text` aparte).
+        "flex cursor-default outline-none",
         DRAFT_ROW_CLASS[draftKind],
         !isDraft && visuallySelected && "bg-accent",
-        selectionMode === "single" && "cursor-pointer",
       )}
     >
       {row.getAllCells().map((cell) => {

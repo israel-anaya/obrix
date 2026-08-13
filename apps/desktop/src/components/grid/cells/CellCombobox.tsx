@@ -122,7 +122,13 @@ export function CellCombobox({
             setFiltering(true);
             setActive(0);
           }}
-          onFocus={(e) => e.currentTarget.select()}
+          // Same as in `CellEditor`: when it was opened by typing
+          // (`filterOnOpen`), the text is the key just pressed — selecting it
+          // would let the next key wipe it.
+          onFocus={(e) => {
+            if (!filterOnOpen) e.currentTarget.select();
+            else e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+          }}
           onBlur={() => {
             if (!discardedRef.current) commitFilter();
           }}

@@ -100,7 +100,7 @@ export function CellEditor({
   const options = typeof column.options === "function" ? column.options(row) : column.options;
 
   const className = cn(
-    "h-full w-full rounded-none border-none bg-background px-1 text-sm outline-none ring-1 ring-primary",
+    "h-full w-full cursor-text rounded-none border-none bg-background px-1 text-sm outline-none ring-1 ring-primary",
     column.numeric && "text-right tabular-nums",
   );
 
@@ -127,7 +127,13 @@ export function CellEditor({
       inputMode={column.numeric ? "decimal" : undefined}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      onFocus={(e) => e.currentTarget.select()}
+      onFocus={(e) => {
+        // Opened by typing (`forcedValue`): the value *is* the key just
+        // pressed, so selecting it would make the next key replace it and the
+        // first character would be lost. The caret goes to the end instead.
+        if (forcedValue === undefined) e.currentTarget.select();
+        else e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+      }}
       onBlur={commit}
       onKeyDown={onKeyDown}
       className={className}

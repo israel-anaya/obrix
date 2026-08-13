@@ -24,3 +24,10 @@ apps/desktop/src-tauri/gen
 # Env
 .env
 .env.local
+
+# Playwright
+apps/desktop/test-results/
+apps/desktop/playwright-report/
+portafolios/fsr2.obx
+portafolios/fsr3.obx
+portafolios/fsr4.obx
