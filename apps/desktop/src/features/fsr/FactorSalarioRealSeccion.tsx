@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Calculator, Plus, RefreshCcw, Sigma, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
-import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, updateFactorSalarioReal } from "@/lib/tauri";
@@ -19,8 +19,8 @@ const FACTOR_SALARIO_REAL_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 160, soloLectura: true, fecha: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 160, soloLectura: true, fecha: true },
+  { field: "created_at", header: "Creado", width: 160, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 160, readOnly: true, date: true },
 ];
 
 export function FactorSalarioRealSeccion({
@@ -30,7 +30,7 @@ export function FactorSalarioRealSeccion({
   onCalcular: (id: string, nombre: string) => void;
   onEditarModelo: (id: string, nombre: string) => void;
 }) {
-  const gridRef = useRef<CatalogoGridHandle>(null);
+  const gridRef = useRef<DataGridHandle>(null);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(FACTOR_SALARIO_REAL_API);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
@@ -60,16 +60,16 @@ export function FactorSalarioRealSeccion({
   const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
   const regionIdPorNombre = useMemo(() => Object.fromEntries(regiones.map((r) => [r.nombre, r.id])), [regiones]);
 
-  const config: CatalogoGridConfig = useMemo(
+  const config: DataGridConfig = useMemo(
     () => ({
-      titulo: "FRS",
-      columnas: [
-        { campo: "nombre", encabezado: "Nombre", ancho: 260 },
+      title: "FRS",
+      columns: [
+        { field: "nombre", header: "Nombre", width: 260 },
         {
-          campo: "region",
-          encabezado: "Región",
-          ancho: 180,
-          opciones: [NACIONAL, ...regiones.map((r) => r.nombre)],
+          field: "region",
+          header: "Región",
+          width: 180,
+          options: [NACIONAL, ...regiones.map((r) => r.nombre)],
         },
         ...COLUMNAS_CONTROL,
       ],
@@ -77,7 +77,7 @@ export function FactorSalarioRealSeccion({
     [regiones],
   );
 
-  const filas: Fila[] = useMemo(
+  const filas: Row[] = useMemo(
     () =>
       items.map((f) => ({
         _id: f.id,
@@ -89,7 +89,7 @@ export function FactorSalarioRealSeccion({
     [items, nombrePorRegionId],
   );
 
-  const filaAFactorData = (fila: Fila, previo?: { modelo_calculo_json: string; parametros_json: string }): FactorSalarioRealData => ({
+  const filaAFactorData = (fila: Row, previo?: { modelo_calculo_json: string; parametros_json: string }): FactorSalarioRealData => ({
     nombre: String(fila.nombre),
     region_id: String(fila.region) === NACIONAL ? null : (regionIdPorNombre[String(fila.region)] ?? null),
     // Vacío: el backend siembra el modelo de cálculo estándar.
@@ -115,7 +115,7 @@ export function FactorSalarioRealSeccion({
           <BarraAcciones
             acciones={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Calculator,
                 titulo: "Calcular FSR",
@@ -131,7 +131,7 @@ export function FactorSalarioRealSeccion({
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !filaSeleccionada,
               },
             ]}
@@ -139,22 +139,22 @@ export function FactorSalarioRealSeccion({
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <CatalogoGrid
+        <DataGrid
           ref={gridRef}
           config={config}
-          filasIniciales={filas}
-          modoSeleccion="unica"
-          busqueda={busqueda}
-          onBusquedaChange={setBusqueda}
-          onFilaSeleccionada={(fila) => setSeleccionadoId(fila?._id ?? null)}
-          onAgregarFila={(fila) => crear(filaAFactorData(fila))}
-          onEliminarFilas={(ids) => eliminar(ids)}
-          onCeldaEditada={(fila) => {
+          initialRows={filas}
+          selectionMode="single"
+          search={busqueda}
+          onSearchChange={setBusqueda}
+          onRowSelected={(fila) => setSeleccionadoId(fila?._id ?? null)}
+          onAddRow={(fila) => crear(filaAFactorData(fila))}
+          onDeleteRows={(ids) => eliminar(ids)}
+          onEditRow={(fila) => {
             const previo = items.find((f) => f.id === fila._id);
             actualizar(fila._id, filaAFactorData(fila, previo));
           }}
-          onGuardadoExitoso={() => setGuardadoExitoso(true)}
-          onEdicionCancelada={() => {
+          onSaveSuccess={() => setGuardadoExitoso(true)}
+          onCancelEdit={() => {
             limpiarError();
             setGuardadoExitoso(false);
           }}

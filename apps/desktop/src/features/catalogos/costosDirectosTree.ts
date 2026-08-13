@@ -1,4 +1,4 @@
-import type { CatalogoGridConfig } from "@/features/catalogos/CatalogoGrid";
+import type { DataGridConfig } from "@/components/grid/DataGrid";
 
 export interface NodoCatalogo {
   id: string;
@@ -43,88 +43,88 @@ export const NODOS_OTROS: NodoCatalogo[] = [
   { id: "clientes", label: "Clientes" },
 ];
 
-export const CATALOGO_GRID_CONFIG: Record<string, CatalogoGridConfig> = {
+export const CATALOGO_GRID_CONFIG: Record<string, DataGridConfig> = {
   "factores-salario-real": {
-    titulo: "Factores de Salario Real",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "concepto", encabezado: "Concepto", ancho: 280 },
-      { campo: "diasNoLaborados", encabezado: "Días no laborados", numero: true, ancho: 160 },
-      { campo: "factor", encabezado: "Factor", numero: true, ancho: 110 },
+    title: "Factores de Salario Real",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "concepto", header: "Concepto", width: 280 },
+      { field: "diasNoLaborados", header: "Días no laborados", numeric: true, width: 160 },
+      { field: "factor", header: "Factor", numeric: true, width: 110 },
     ],
   },
   "cuadrillas-trabajo": {
-    titulo: "Cuadrillas de trabajo",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "integrantes", encabezado: "Integrantes", numero: true, ancho: 120 },
-      { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
+    title: "Cuadrillas de trabajo",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "integrantes", header: "Integrantes", numeric: true, width: 120 },
+      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
     ],
   },
   fletes: {
-    titulo: "Fletes",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "origen", encabezado: "Origen", ancho: 180 },
-      { campo: "destino", encabezado: "Destino", ancho: 180 },
-      { campo: "costo", encabezado: "Costo", numero: true, ancho: 120 },
+    title: "Fletes",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "origen", header: "Origen", width: 180 },
+      { field: "destino", header: "Destino", width: 180 },
+      { field: "costo", header: "Costo", numeric: true, width: 120 },
     ],
   },
   "materiales-item": {
-    titulo: "Materiales",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "unidad", encabezado: "Unidad", ancho: 100 },
-      { campo: "precio", encabezado: "Precio unitario", numero: true, ancho: 140 },
+    title: "Materiales",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "unidad", header: "Unidad", width: 100 },
+      { field: "precio", header: "Precio unitario", numeric: true, width: 140 },
     ],
   },
   "basicos-auxiliares": {
-    titulo: "Básicos y Auxiliares",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "unidad", encabezado: "Unidad", ancho: 100 },
-      { campo: "precio", encabezado: "Precio unitario", numero: true, ancho: 140 },
+    title: "Básicos y Auxiliares",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "unidad", header: "Unidad", width: 100 },
+      { field: "precio", header: "Precio unitario", numeric: true, width: 140 },
     ],
   },
   herramienta: {
-    titulo: "Herramienta",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "unidad", encabezado: "Unidad", ancho: 100 },
-      { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
+    title: "Herramienta",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "unidad", header: "Unidad", width: 100 },
+      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
     ],
   },
   "costos-horarios": {
-    titulo: "Costos Horarios",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "tipo", encabezado: "Tipo", ancho: 130 },
-      { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
+    title: "Costos Horarios",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "tipo", header: "Tipo", width: 130 },
+      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
     ],
   },
   "equipo-rentado": {
-    titulo: "Equipo rentado",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "proveedor", encabezado: "Proveedor", ancho: 220 },
-      { campo: "costoHora", encabezado: "Costo por hora", numero: true, ancho: 140 },
+    title: "Equipo rentado",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "proveedor", header: "Proveedor", width: 220 },
+      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
     ],
   },
   conceptos: {
-    titulo: "Conceptos",
-    columnas: [
-      { campo: "clave", encabezado: "Clave", ancho: 100 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "unidad", encabezado: "Unidad", ancho: 100 },
-      { campo: "cantidad", encabezado: "Cantidad", numero: true, ancho: 110 },
-      { campo: "precioUnitario", encabezado: "Precio unitario", numero: true, ancho: 140 },
-      { campo: "importe", encabezado: "Importe", numero: true, ancho: 130 },
+    title: "Conceptos",
+    columns: [
+      { field: "clave", header: "Clave", width: 100 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "unidad", header: "Unidad", width: 100 },
+      { field: "cantidad", header: "Cantidad", numeric: true, width: 110 },
+      { field: "precioUnitario", header: "Precio unitario", numeric: true, width: 140 },
+      { field: "importe", header: "Importe", numeric: true, width: 130 },
     ],
   },
 };

@@ -1,5 +1,5 @@
-import type { CatalogoColumnaDef, CatalogoGridConfig } from "@/features/catalogos/CatalogoGrid";
-import type { Fila } from "@/features/catalogos/CatalogoGrid";
+import type { DataGridColumn, DataGridConfig } from "@/components/grid/DataGrid";
+import type { Row } from "@/components/grid/DataGrid";
 import * as api from "@/lib/tauri";
 import type {
   FamiliaInsumo,
@@ -24,21 +24,21 @@ import type { CatalogoGeneralApi } from "@/features/configuracion/useCatalogoGen
 export interface CatalogoGeneralDescriptor<T extends { id: string }, Nuevo> {
   id: string;
   titulo: string;
-  grid: CatalogoGridConfig;
+  grid: DataGridConfig;
   api: CatalogoGeneralApi<T, Nuevo>;
-  aFila: (modelo: T) => Fila;
+  aFila: (modelo: T) => Row;
   /** Alternativa a `aFila` cuando el orden/anidamiento de las filas depende del listado completo (p. ej. un árbol por `parent_id`). */
-  aFilas?: (modelos: T[]) => Fila[];
+  aFilas?: (modelos: T[]) => Row[];
   vacio: Nuevo;
-  filaANuevo: (fila: Fila) => Nuevo;
+  filaANuevo: (fila: Row) => Nuevo;
 }
 
 /** Columnas de auditoría comunes a (casi) toda entidad — visibles, nunca editables. */
-const COLUMNAS_CONTROL: CatalogoColumnaDef[] = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+const COLUMNAS_CONTROL: DataGridColumn[] = [
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 /**
@@ -50,7 +50,7 @@ function filaControl(m: {
   updated_at: string | null;
   created_by: string | null;
   updated_by: string | null;
-}): Pick<Fila, "created_at" | "created_by" | "updated_at" | "updated_by"> {
+}): Pick<Row, "created_at" | "created_by" | "updated_at" | "updated_by"> {
   return {
     created_at: m.created_at,
     created_by: m.created_by ?? "",
@@ -70,11 +70,11 @@ const organizaciones: CatalogoGeneralDescriptor<Organizacion, OrganizacionData> 
   id: "organizaciones",
   titulo: "Organización",
   grid: {
-    titulo: "Organización",
-    columnas: [
-      { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
-      { campo: "rfc", encabezado: "RFC", ancho: 140 },
-      { campo: "tipo", encabezado: "Tipo", ancho: 160, opciones: TIPOS_ORGANIZACION },
+    title: "Organización",
+    columns: [
+      { field: "razon_social", header: "Razón social", width: 260 },
+      { field: "rfc", header: "RFC", width: 140 },
+      { field: "tipo", header: "Tipo", width: 160, options: TIPOS_ORGANIZACION },
       ...COLUMNAS_CONTROL,
     ],
   },
@@ -108,12 +108,12 @@ const usuarios: CatalogoGeneralDescriptor<Usuario, UsuarioData> = {
   id: "usuarios",
   titulo: "Usuarios",
   grid: {
-    titulo: "Usuarios",
-    columnas: [
-      { campo: "nombre", encabezado: "Nombre", ancho: 240 },
-      { campo: "correo", encabezado: "Correo", ancho: 200 },
-      { campo: "rol", encabezado: "Rol", ancho: 130, opciones: ROLES_USUARIO },
-      { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
+    title: "Usuarios",
+    columns: [
+      { field: "nombre", header: "Nombre", width: 240 },
+      { field: "correo", header: "Correo", width: 200 },
+      { field: "rol", header: "Rol", width: 130, options: ROLES_USUARIO },
+      { field: "activo", header: "Activo", width: 90, boolean: true },
       ...COLUMNAS_CONTROL,
     ],
   },
@@ -146,13 +146,13 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
   id: "unidades-medida",
   titulo: "Unidades de medida",
   grid: {
-    titulo: "Unidades de medida",
-    columnas: [
-      { campo: "simbolo", encabezado: "Símbolo", ancho: 100 },
-      { campo: "simbolo_impresion", encabezado: "Símbolo de impresión", ancho: 160 },
-      { campo: "clave_sat", encabezado: "Clave SAT", ancho: 120 },
-      { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-      { campo: "tipo_magnitud", encabezado: "Tipo de magnitud", ancho: 160, opciones: TIPOS_MAGNITUD },
+    title: "Unidades de medida",
+    columns: [
+      { field: "simbolo", header: "Símbolo", width: 100 },
+      { field: "simbolo_impresion", header: "Símbolo de impresión", width: 160 },
+      { field: "clave_sat", header: "Clave SAT", width: 120 },
+      { field: "descripcion", header: "Descripción", width: 320 },
+      { field: "tipo_magnitud", header: "Tipo de magnitud", width: 160, options: TIPOS_MAGNITUD },
       ...COLUMNAS_CONTROL,
     ],
   },
@@ -193,11 +193,11 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
   id: "regiones",
   titulo: "Regiones",
   grid: {
-    titulo: "Regiones",
-    columnas: [
-      { campo: "nombre", encabezado: "Nombre", ancho: 240 },
-      { campo: "estado", encabezado: "Estado", ancho: 160 },
-      { campo: "factor_ajuste", encabezado: "Factor de ajuste", numero: true, ancho: 150 },
+    title: "Regiones",
+    columns: [
+      { field: "nombre", header: "Nombre", width: 240 },
+      { field: "estado", header: "Estado", width: 160 },
+      { field: "factor_ajuste", header: "Factor de ajuste", numeric: true, width: 150 },
       ...COLUMNAS_CONTROL,
     ],
   },
@@ -226,8 +226,8 @@ const familiasInsumo: CatalogoGeneralDescriptor<FamiliaInsumo, FamiliaInsumoData
   id: "familias-insumo",
   titulo: "Familias de insumo",
   grid: {
-    titulo: "Familias de insumo",
-    columnas: [{ campo: "nombre", encabezado: "Nombre", ancho: 240 }, ...COLUMNAS_CONTROL],
+    title: "Familias de insumo",
+    columns: [{ field: "nombre", header: "Nombre", width: 240 }, ...COLUMNAS_CONTROL],
   },
   api: {
     list: api.listFamiliasInsumo,
@@ -244,12 +244,12 @@ const monedas: CatalogoGeneralDescriptor<Moneda, MonedaData> = {
   id: "monedas",
   titulo: "Monedas",
   grid: {
-    titulo: "Monedas",
-    columnas: [
-      { campo: "codigo", encabezado: "Código", ancho: 100 },
-      { campo: "nombre", encabezado: "Nombre", ancho: 240 },
-      { campo: "simbolo", encabezado: "Símbolo", ancho: 100 },
-      { campo: "decimales", encabezado: "Decimales", numero: true, ancho: 110 },
+    title: "Monedas",
+    columns: [
+      { field: "codigo", header: "Código", width: 100 },
+      { field: "nombre", header: "Nombre", width: 240 },
+      { field: "simbolo", header: "Símbolo", width: 100 },
+      { field: "decimales", header: "Decimales", numeric: true, width: 110 },
       ...COLUMNAS_CONTROL,
     ],
   },

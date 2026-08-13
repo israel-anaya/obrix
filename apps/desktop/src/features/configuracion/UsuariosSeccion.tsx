@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { VistaMaestroDetalle } from "@/features/catalogos/VistaMaestroDetalle";
-import type { CatalogoGridConfig, Fila } from "@/features/catalogos/CatalogoGrid";
+import type { DataGridConfig, Row } from "@/components/grid/DataGrid";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -24,19 +24,19 @@ const USUARIO_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
-const MAESTRO_GRID: CatalogoGridConfig = {
-  titulo: "Usuarios",
-  columnas: [
-    { campo: "nombre", encabezado: "Nombre", ancho: 240 },
-    { campo: "correo", encabezado: "Correo", ancho: 200 },
-    { campo: "rol", encabezado: "Rol", ancho: 130, opciones: ROLES_USUARIO },
-    { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
+const MAESTRO_GRID: DataGridConfig = {
+  title: "Usuarios",
+  columns: [
+    { field: "nombre", header: "Nombre", width: 240 },
+    { field: "correo", header: "Correo", width: 200 },
+    { field: "rol", header: "Rol", width: 130, options: ROLES_USUARIO },
+    { field: "activo", header: "Activo", width: 90, boolean: true },
     ...COLUMNAS_CONTROL,
   ],
 };
@@ -64,17 +64,17 @@ export function UsuariosSeccion() {
     [organizaciones],
   );
 
-  const detalleGrid: CatalogoGridConfig = useMemo(
+  const detalleGrid: DataGridConfig = useMemo(
     () => ({
-      titulo: "Organizaciones",
-      columnas: [
+      title: "Organizaciones",
+      columns: [
         {
-          campo: "organizacion",
-          encabezado: "Organización",
-          ancho: 260,
-          opciones: organizaciones.map((o) => o.razon_social),
+          field: "organizacion",
+          header: "Organización",
+          width: 260,
+          options: organizaciones.map((o) => o.razon_social),
         },
-        { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
+        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
@@ -83,7 +83,7 @@ export function UsuariosSeccion() {
 
   const nombrePorUsuarioId = useMemo(() => Object.fromEntries(items.map((u) => [u.id, u.nombre])), [items]);
 
-  const maestroFilas: Fila[] = useMemo(
+  const maestroFilas: Row[] = useMemo(
     () =>
       items.map((u) => ({
         _id: u.id,
@@ -99,7 +99,7 @@ export function UsuariosSeccion() {
     [items, nombrePorUsuarioId],
   );
 
-  const filaAUsuarioData = (fila: Fila) => ({
+  const filaAUsuarioData = (fila: Row) => ({
     nombre: String(fila.nombre),
     correo: String(fila.correo),
     // La celda usa un selector (opciones: ROLES_USUARIO), así que el valor
@@ -108,7 +108,7 @@ export function UsuariosSeccion() {
     activo: Boolean(fila.activo),
   });
 
-  const aFilaDetalle = (m: OrganizacionMembresia): Fila => ({
+  const aFilaDetalle = (m: OrganizacionMembresia): Row => ({
     _id: m.membresia_id,
     organizacion: m.razon_social,
     activo: m.activo,

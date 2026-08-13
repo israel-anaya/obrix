@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
-import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -24,10 +24,10 @@ const ORGANIZACION_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 /**
@@ -36,7 +36,7 @@ const COLUMNAS_CONTROL = [
  * opciones dependen del catálogo `Moneda`, cargado en tiempo de ejecución.
  */
 export function OrganizacionSeccion() {
-  const gridRef = useRef<CatalogoGridHandle>(null);
+  const gridRef = useRef<DataGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const { items, error, crear, actualizar, eliminar, reload } = useCatalogoGeneral(ORGANIZACION_API);
@@ -72,18 +72,18 @@ export function OrganizacionSeccion() {
   const codigoPorMonedaId = useMemo(() => Object.fromEntries(monedas.map((m) => [m.id, m.codigo])), [monedas]);
   const monedaIdPorCodigo = useMemo(() => Object.fromEntries(monedas.map((m) => [m.codigo, m.id])), [monedas]);
 
-  const config: CatalogoGridConfig = useMemo(
+  const config: DataGridConfig = useMemo(
     () => ({
-      titulo: "Organización",
-      columnas: [
-        { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
-        { campo: "rfc", encabezado: "RFC", ancho: 140 },
-        { campo: "tipo", encabezado: "Tipo", ancho: 160, opciones: TIPOS_ORGANIZACION },
+      title: "Organización",
+      columns: [
+        { field: "razon_social", header: "Razón social", width: 260 },
+        { field: "rfc", header: "RFC", width: 140 },
+        { field: "tipo", header: "Tipo", width: 160, options: TIPOS_ORGANIZACION },
         {
-          campo: "moneda_default",
-          encabezado: "Moneda default",
-          ancho: 160,
-          opciones: monedas.map((m) => m.codigo),
+          field: "moneda_default",
+          header: "Moneda default",
+          width: 160,
+          options: monedas.map((m) => m.codigo),
         },
         ...COLUMNAS_CONTROL,
       ],
@@ -91,7 +91,7 @@ export function OrganizacionSeccion() {
     [monedas],
   );
 
-  const filas: Fila[] = useMemo(
+  const filas: Row[] = useMemo(
     () =>
       items.map((o) => ({
         _id: o.id,
@@ -107,7 +107,7 @@ export function OrganizacionSeccion() {
     [items, codigoPorMonedaId, nombresPorUsuarioId],
   );
 
-  const filaAOrganizacionData = (fila: Fila) => ({
+  const filaAOrganizacionData = (fila: Row) => ({
     razon_social: String(fila.razon_social),
     rfc: String(fila.rfc),
     // La celda usa un selector (opciones: TIPOS_ORGANIZACION), así que el
@@ -128,11 +128,11 @@ export function OrganizacionSeccion() {
           <BarraAcciones
             acciones={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
               },
             ]}
@@ -141,17 +141,17 @@ export function OrganizacionSeccion() {
       </div>
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
-        <CatalogoGrid
+        <DataGrid
           ref={gridRef}
           config={config}
-          filasIniciales={filas}
-          modoSeleccion="unica"
-          busqueda={busqueda}
-          onBusquedaChange={setBusqueda}
+          initialRows={filas}
+          selectionMode="single"
+          search={busqueda}
+          onSearchChange={setBusqueda}
           onSelectionChange={setPuedeEliminar}
-          onAgregarFila={(fila) => crear(filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())}
-          onEliminarFilas={(ids) => eliminar(ids).then(() => recargarOrganizacionContext())}
-          onCeldaEditada={(fila) =>
+          onAddRow={(fila) => crear(filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())}
+          onDeleteRows={(ids) => eliminar(ids).then(() => recargarOrganizacionContext())}
+          onEditRow={(fila) =>
             actualizar(fila._id, filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())
           }
         />

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, HelpCircle, ListTree, Plus, Save, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { GrafoCalculados } from "@/features/fsr/GrafoCalculados";
 import { PruebaModeloCalculo } from "@/features/fsr/PruebaModeloCalculo";
 import { RangoEditor } from "@/features/fsr/RangoEditor";
@@ -19,7 +19,7 @@ import {
   type ValorRango,
 } from "@/lib/types";
 
-function filaAParametro(fila: Fila): Parametro {
+function filaAParametro(fila: Row): Parametro {
   const tipo = (TIPOS_PARAMETRO as readonly string[]).includes(String(fila.tipo))
     ? (fila.tipo as TipoParametro)
     : "numero";
@@ -40,7 +40,7 @@ function filaAParametro(fila: Fila): Parametro {
   return { ...base, valor_default: Number(fila.valor_default) || 0 };
 }
 
-function filaACalculado(fila: Fila): CampoCalculado {
+function filaACalculado(fila: Row): CampoCalculado {
   return {
     id: String(fila.id).trim(),
     etiqueta: String(fila.etiqueta),
@@ -51,29 +51,29 @@ function filaACalculado(fila: Fila): CampoCalculado {
   };
 }
 
-const COLUMNAS_PARAMETROS: CatalogoGridConfig["columnas"] = [
-  { campo: "grupo", encabezado: "Categoría", ancho: 94, sinFiltro: true },
-  { campo: "id", encabezado: "Id", ancho: 200 },
-  { campo: "etiqueta", encabezado: "Etiqueta", ancho: 260 },
-  { campo: "tipo", encabezado: "Tipo", ancho: 75, opciones: TIPOS_PARAMETRO, sinFiltro: true },
-  { campo: "valor_default", encabezado: "Default", ancho: 88, numero: true, sinFiltro: true },
-  { campo: "referencia_legal", encabezado: "Referencia legal", ancho: 220, sinFiltro: true },
-  { campo: "descripcion", encabezado: "Descripción", ancho: 420, sinFiltro: true },
+const COLUMNAS_PARAMETROS: DataGridConfig["columns"] = [
+  { field: "grupo", header: "Categoría", width: 94, noFilter: true },
+  { field: "id", header: "Id", width: 200 },
+  { field: "etiqueta", header: "Etiqueta", width: 260 },
+  { field: "tipo", header: "Tipo", width: 75, options: TIPOS_PARAMETRO, noFilter: true },
+  { field: "valor_default", header: "Default", width: 88, numeric: true, noFilter: true },
+  { field: "referencia_legal", header: "Referencia legal", width: 220, noFilter: true },
+  { field: "descripcion", header: "Descripción", width: 420, noFilter: true },
 ];
 
-const COLUMNAS_CALCULADOS: CatalogoGridConfig["columnas"] = [
-  { campo: "id", encabezado: "Id", ancho: 220 },
-  { campo: "etiqueta", encabezado: "Etiqueta", ancho: 260 },
-  { campo: "formula", encabezado: "Fórmula", ancho: 400, sinFiltro: true },
-  { campo: "referencia_legal", encabezado: "Referencia legal", ancho: 220, sinFiltro: true },
-  { campo: "descripcion", encabezado: "Descripción", ancho: 420, sinFiltro: true },
+const COLUMNAS_CALCULADOS: DataGridConfig["columns"] = [
+  { field: "id", header: "Id", width: 220 },
+  { field: "etiqueta", header: "Etiqueta", width: 260 },
+  { field: "formula", header: "Fórmula", width: 400, noFilter: true },
+  { field: "referencia_legal", header: "Referencia legal", width: 220, noFilter: true },
+  { field: "descripcion", header: "Descripción", width: 420, noFilter: true },
 ];
 
-// Constantes de módulo, no objetos literales en el JSX: `CatalogoGrid` memoiza
-// sus columnas por la identidad de `config.columnas`, así que un literal nuevo
+// Constantes de módulo, no objetos literales en el JSX: `DataGrid` memoiza
+// sus columnas por la identidad de `config.columns`, así que un literal nuevo
 // en cada render rehace las `ColumnDef` y con ellas todas las celdas.
-const CONFIG_PARAMETROS: CatalogoGridConfig = { titulo: "Parámetros", columnas: COLUMNAS_PARAMETROS };
-const CONFIG_CALCULADOS: CatalogoGridConfig = { titulo: "Campos calculados", columnas: COLUMNAS_CALCULADOS };
+const CONFIG_PARAMETROS: DataGridConfig = { title: "Parámetros", columns: COLUMNAS_PARAMETROS };
+const CONFIG_CALCULADOS: DataGridConfig = { title: "Campos calculados", columns: COLUMNAS_CALCULADOS };
 
 export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId: string }) {
   const [fila, setFila] = useState<FactorSalarioReal | null>(null);
@@ -87,8 +87,8 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
   const [indiceRangoAbierto, setIndiceRangoAbierto] = useState<number | null>(null);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
 
-  const gridParametrosRef = useRef<CatalogoGridHandle>(null);
-  const gridCalculadosRef = useRef<CatalogoGridHandle>(null);
+  const gridParametrosRef = useRef<DataGridHandle>(null);
+  const gridCalculadosRef = useRef<DataGridHandle>(null);
   const [indiceSeleccionado, setIndiceSeleccionado] = useState<number | null>(null);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
     }
   }, [parametros, calculados, errorValidacion]);
 
-  const filasParametros: Fila[] = useMemo(
+  const filasParametros: Row[] = useMemo(
     () =>
       parametros.map((v, i) => ({
         _id: String(i),
@@ -136,7 +136,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
     [parametros],
   );
 
-  const filasCalculados: Fila[] = useMemo(
+  const filasCalculados: Row[] = useMemo(
     () =>
       calculados.map((v, i) => ({
         _id: String(i),
@@ -166,7 +166,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
     setIndiceSeleccionado(null);
   };
 
-  const aplicarEdicionParametro = (fila: Fila) => {
+  const aplicarEdicionParametro = (fila: Row) => {
     const indice = Number(fila._id);
     const previo = parametros[indice];
     const tipo = fila.tipo as TipoParametro;
@@ -188,7 +188,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
     patchParametro(indice, patch);
   };
 
-  const aplicarEdicionCalculado = (fila: Fila) => {
+  const aplicarEdicionCalculado = (fila: Row) => {
     const indice = Number(fila._id);
     patchCalculado(indice, {
       id: String(fila.id).trim(),
@@ -235,7 +235,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
               {
                 icono: Plus,
                 titulo: pestaña === "calculados" ? "Agregar campo calculado" : "Agregar parámetro",
-                onClick: () => (pestaña === "parametros" ? gridParametrosRef : gridCalculadosRef).current?.agregarFila(),
+                onClick: () => (pestaña === "parametros" ? gridParametrosRef : gridCalculadosRef).current?.addRow(),
                 disabled: pestaña === "grafo",
               },
               {
@@ -247,7 +247,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
-                onClick: () => (pestaña === "parametros" ? gridParametrosRef : gridCalculadosRef).current?.eliminarFilaSeleccionada(),
+                onClick: () => (pestaña === "parametros" ? gridParametrosRef : gridCalculadosRef).current?.deleteSelectedRows(),
                 disabled: pestaña === "grafo" || indiceSeleccionado === null,
               },
               { icono: Save, titulo: guardando ? "Guardando…" : "Guardar cambios", onClick: guardar, disabled: guardando || !!errorValidacion },
@@ -310,16 +310,16 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
 
         {pestaña === "parametros" && (
           <div className="min-h-0 flex-1">
-            <CatalogoGrid
+            <DataGrid
               key="parametros"
               ref={gridParametrosRef}
               config={CONFIG_PARAMETROS}
-              filasIniciales={filasParametros}
-              modoSeleccion="unica"
-              onFilaSeleccionada={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
-              onAgregarFila={(fila) => setParametros((vs) => [...vs, filaAParametro(fila)])}
-              onEliminarFilas={(ids) => eliminarParametros(ids.map(Number))}
-              onCeldaEditada={aplicarEdicionParametro}
+              initialRows={filasParametros}
+              selectionMode="single"
+              onRowSelected={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
+              onAddRow={(fila) => setParametros((vs) => [...vs, filaAParametro(fila)])}
+              onDeleteRows={(ids) => eliminarParametros(ids.map(Number))}
+              onEditRow={aplicarEdicionParametro}
             />
           </div>
         )}
@@ -327,16 +327,16 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
         {pestaña === "calculados" && (
           <div className="flex min-h-0 flex-1 flex-col gap-2">
             <div className="h-1/4 min-h-0">
-              <CatalogoGrid
+              <DataGrid
                 key="calculados"
                 ref={gridCalculadosRef}
                 config={CONFIG_CALCULADOS}
-                filasIniciales={filasCalculados}
-                modoSeleccion="unica"
-                onFilaSeleccionada={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
-                onAgregarFila={(fila) => setCalculados((vs) => [...vs, filaACalculado(fila)])}
-                onEliminarFilas={(ids) => eliminarCalculados(ids.map(Number))}
-                onCeldaEditada={aplicarEdicionCalculado}
+                initialRows={filasCalculados}
+                selectionMode="single"
+                onRowSelected={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
+                onAddRow={(fila) => setCalculados((vs) => [...vs, filaACalculado(fila)])}
+                onDeleteRows={(ids) => eliminarCalculados(ids.map(Number))}
+                onEditRow={aplicarEdicionCalculado}
               />
             </div>
             <div className="flex h-3/4 min-h-0 flex-col">

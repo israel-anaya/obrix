@@ -156,9 +156,9 @@ body {
 }
 
 /*
- * Tinte de una fila en borrador del grid de catálogos: verde para un alta,
- * ámbar para la edición de un registro existente. En tema oscuro el tinte es
- * translúcido (igual que `bg-*-950/60`) para que se mezcle con el fondo.
+ * Tinte de una fila en borrador de `DataGrid`: verde para un alta, ámbar para
+ * la edición de un registro existente. En tema oscuro el tinte es translúcido
+ * (igual que `bg-*-950/60`) para que se mezcle con el fondo.
  *
  * Por eso las celdas ancladas (las columnas sticky de índice/selección/
  * acciones) no pueden pintar el tinte tal cual: al hacer scroll horizontal se
@@ -167,32 +167,32 @@ body {
  * que quedan opacas y del mismo color que el resto de la fila.
  */
 :root {
-  --fila-alta: var(--color-emerald-50);
-  --fila-edicion: var(--color-amber-50);
+  --row-new: var(--color-emerald-50);
+  --row-edit: var(--color-amber-50);
 }
 
 .dark {
-  --fila-alta: color-mix(in oklab, var(--color-emerald-950) 60%, transparent);
-  --fila-edicion: color-mix(in oklab, var(--color-amber-950) 60%, transparent);
+  --row-new: color-mix(in oklab, var(--color-emerald-950) 60%, transparent);
+  --row-edit: color-mix(in oklab, var(--color-amber-950) 60%, transparent);
 }
 
-.fila-alta {
-  background-color: var(--fila-alta);
+.row-new {
+  background-color: var(--row-new);
 }
 
-.fila-edicion {
-  background-color: var(--fila-edicion);
+.row-edit {
+  background-color: var(--row-edit);
 }
 
-.celda-anclada-alta,
-.celda-anclada-edicion {
+.pinned-cell-new,
+.pinned-cell-edit {
   background-color: hsl(var(--background));
 }
 
-.celda-anclada-alta {
-  background-image: linear-gradient(var(--fila-alta), var(--fila-alta));
+.pinned-cell-new {
+  background-image: linear-gradient(var(--row-new), var(--row-new));
 }
 
-.celda-anclada-edicion {
-  background-image: linear-gradient(var(--fila-edicion), var(--fila-edicion));
+.pinned-cell-edit {
+  background-image: linear-gradient(var(--row-edit), var(--row-edit));
 }

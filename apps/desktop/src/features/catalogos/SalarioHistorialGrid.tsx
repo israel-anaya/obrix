@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { CatalogoGrid, type CatalogoGridConfig, type Fila } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridConfig, type Row } from "@/components/grid/DataGrid";
 import { listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
 import type { Region, SalarioCategoriaFasar } from "@/lib/types";
 
 const NACIONAL = "Nacional";
 
-const CONFIG: CatalogoGridConfig = {
-  titulo: "Histórico de salarios",
-  columnas: [
-    { campo: "region", encabezado: "Región", ancho: 160, soloLectura: true },
-    { campo: "salario_base_diario", encabezado: "Base", ancho: 110, soloLectura: true, numero: true },
-    { campo: "factor_salario_real", encabezado: "FSR", ancho: 110, soloLectura: true, numero: true },
-    { campo: "salario_real_diario", encabezado: "Salario real", ancho: 130, soloLectura: true, numero: true },
-    { campo: "usuario", encabezado: "Usuario", ancho: 220, soloLectura: true },
-    { campo: "desde", encabezado: "Desde", ancho: 110, soloLectura: true, fecha: true },
-    { campo: "hasta", encabezado: "Hasta", ancho: 110, soloLectura: true, fecha: true },
+const CONFIG: DataGridConfig = {
+  title: "Histórico de salarios",
+  columns: [
+    { field: "region", header: "Región", width: 160, readOnly: true },
+    { field: "salario_base_diario", header: "Base", width: 110, readOnly: true, numeric: true },
+    { field: "factor_salario_real", header: "FSR", width: 110, readOnly: true, numeric: true },
+    { field: "salario_real_diario", header: "Salario real", width: 130, readOnly: true, numeric: true },
+    { field: "usuario", header: "Usuario", width: 220, readOnly: true },
+    { field: "desde", header: "Desde", width: 110, readOnly: true, date: true },
+    { field: "hasta", header: "Hasta", width: 110, readOnly: true, date: true },
   ],
 };
 
@@ -58,7 +58,7 @@ export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | nu
 
   const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
 
-  const filas: Fila[] = useMemo(
+  const filas: Row[] = useMemo(
     () =>
       salarios.map((s) => ({
         _id: s.id,
@@ -81,7 +81,7 @@ export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | nu
     <div className="flex h-full flex-col">
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
-        <CatalogoGrid config={CONFIG} filasIniciales={filas} />
+        <DataGrid config={CONFIG} initialRows={filas} />
       </div>
     </div>
   );

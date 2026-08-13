@@ -6,24 +6,24 @@ import type { Cliente, ClienteData, TipoCliente } from "@/lib/types";
 import { TIPOS_CLIENTE } from "@/lib/types";
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 const CLIENTES: CatalogoGeneralDescriptor<Cliente, ClienteData> = {
   id: "clientes",
   titulo: "Clientes",
   grid: {
-    titulo: "Clientes",
-    columnas: [
-      { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
-      { campo: "rfc", encabezado: "RFC", ancho: 140 },
-      { campo: "tipo", encabezado: "Tipo", ancho: 150, opciones: TIPOS_CLIENTE },
-      { campo: "contacto_nombre", encabezado: "Contacto", ancho: 180 },
-      { campo: "contacto_correo", encabezado: "Correo de contacto", ancho: 200 },
-      { campo: "contacto_telefono", encabezado: "Teléfono", ancho: 140 },
+    title: "Clientes",
+    columns: [
+      { field: "razon_social", header: "Razón social", width: 260 },
+      { field: "rfc", header: "RFC", width: 140 },
+      { field: "tipo", header: "Tipo", width: 150, options: TIPOS_CLIENTE },
+      { field: "contacto_nombre", header: "Contacto", width: 180 },
+      { field: "contacto_correo", header: "Correo de contacto", width: 200 },
+      { field: "contacto_telefono", header: "Teléfono", width: 140 },
       ...COLUMNAS_CONTROL,
     ],
   },

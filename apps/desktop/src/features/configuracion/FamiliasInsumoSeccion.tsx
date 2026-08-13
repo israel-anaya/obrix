@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CatalogoGridConfig, Fila } from "@/features/catalogos/CatalogoGrid";
+import type { DataGridConfig, Row } from "@/components/grid/DataGrid";
 import type { DetalleConfig } from "@/features/catalogos/VistaMaestroDetalle";
 import { VistaMaestroDetalle } from "@/features/catalogos/VistaMaestroDetalle";
 import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo, listUsuarios, updateFamiliaInsumo } from "@/lib/tauri";
 import type { FamiliaInsumo } from "@/lib/types";
 
 const COLUMNAS_FAMILIA = [
-  { campo: "nombre", encabezado: "Nombre", ancho: 240 },
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "nombre", header: "Nombre", width: 240 },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
-const GRID_FAMILIA: CatalogoGridConfig = { titulo: "Familias de insumo", columnas: COLUMNAS_FAMILIA };
-const GRID_SUBFAMILIA: CatalogoGridConfig = { titulo: "Sub familias", columnas: COLUMNAS_FAMILIA };
+const GRID_FAMILIA: DataGridConfig = { title: "Familias de insumo", columns: COLUMNAS_FAMILIA };
+const GRID_SUBFAMILIA: DataGridConfig = { title: "Sub familias", columns: COLUMNAS_FAMILIA };
 
-function familiaAFila(f: FamiliaInsumo, nombresPorUsuarioId: Record<string, string>): Fila {
+function familiaAFila(f: FamiliaInsumo, nombresPorUsuarioId: Record<string, string>): Row {
   return {
     _id: f.id,
     nombre: f.nombre,

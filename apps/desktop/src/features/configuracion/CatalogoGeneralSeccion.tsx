@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
-import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
 import type { CatalogoGeneralDescriptor } from "@/features/configuracion/catalogosGenerales";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGeneralDescriptor<any, any> }) {
-  const gridRef = useRef<CatalogoGridHandle>(null);
+  const gridRef = useRef<DataGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(descriptor.api);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
@@ -69,11 +69,11 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
           <BarraAcciones
             acciones={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: () => reload() },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
               },
             ]}
@@ -81,19 +81,19 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <CatalogoGrid
+        <DataGrid
           ref={gridRef}
           config={descriptor.grid}
-          filasIniciales={filas}
-          modoSeleccion="unica"
-          busqueda={busqueda}
-          onBusquedaChange={setBusqueda}
+          initialRows={filas}
+          selectionMode="single"
+          search={busqueda}
+          onSearchChange={setBusqueda}
           onSelectionChange={setPuedeEliminar}
-          onAgregarFila={(fila) => crear(descriptor.filaANuevo(fila))}
-          onEliminarFilas={(ids) => eliminar(ids)}
-          onCeldaEditada={(fila) => actualizar(fila._id, descriptor.filaANuevo(fila))}
-          onGuardadoExitoso={() => setGuardadoExitoso(true)}
-          onEdicionCancelada={() => {
+          onAddRow={(fila) => crear(descriptor.filaANuevo(fila))}
+          onDeleteRows={(ids) => eliminar(ids)}
+          onEditRow={(fila) => actualizar(fila._id, descriptor.filaANuevo(fila))}
+          onSaveSuccess={() => setGuardadoExitoso(true)}
+          onCancelEdit={() => {
             limpiarError();
             setGuardadoExitoso(false);
           }}

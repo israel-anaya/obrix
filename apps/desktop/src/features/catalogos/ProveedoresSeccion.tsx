@@ -5,22 +5,22 @@ import * as api from "@/lib/tauri";
 import type { Proveedor, ProveedorData } from "@/lib/types";
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 const PROVEEDORES: CatalogoGeneralDescriptor<Proveedor, ProveedorData> = {
   id: "proveedores",
   titulo: "Proveedores",
   grid: {
-    titulo: "Proveedores",
-    columnas: [
-      { campo: "razon_social", encabezado: "Razón social", ancho: 260 },
-      { campo: "rfc", encabezado: "RFC", ancho: 140 },
-      { campo: "contacto", encabezado: "Contacto", ancho: 180 },
-      { campo: "calificacion", encabezado: "Calificación", numero: true, estrellas: true, ancho: 130 },
+    title: "Proveedores",
+    columns: [
+      { field: "razon_social", header: "Razón social", width: 260 },
+      { field: "rfc", header: "RFC", width: 140 },
+      { field: "contacto", header: "Contacto", width: 180 },
+      { field: "calificacion", header: "Calificación", numeric: true, stars: true, width: 130 },
       ...COLUMNAS_CONTROL,
     ],
   },

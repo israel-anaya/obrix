@@ -3,8 +3,8 @@ const FORMATO_FECHA_HORA = new Intl.DateTimeFormat("es-MX", { dateStyle: "short"
 
 /**
  * Formato de fecha único para la región México (dd/mm/aaaa, con hora si el
- * valor la trae) — todos los catálogos lo usan vía `CatalogoColumnaDef.fecha`
- * en `CatalogoGrid`, así que cambiar el formato solo requiere tocar este
+ * valor la trae) — todos los catálogos lo usan vía `DataGridColumn.date`
+ * en `DataGrid`, así que cambiar el formato solo requiere tocar este
  * archivo. `PreciosMaterialPanel` es la única excepción: tiene su propio
  * formato corto (dd/mm/aa) para las columnas de vigencia de precios.
  */

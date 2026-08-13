@@ -3,7 +3,7 @@ import { DollarSign, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -23,10 +23,10 @@ const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 /**
@@ -37,7 +37,7 @@ const COLUMNAS_CONTROL = [
  * `MaterialesSeccion`/`PreciosMaterialPanel`.
  */
 export function CategoriaFasarSeccion() {
-  const gridRef = useRef<CatalogoGridHandle>(null);
+  const gridRef = useRef<DataGridHandle>(null);
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
@@ -99,38 +99,38 @@ export function CategoriaFasarSeccion() {
     [raicesFamilia],
   );
 
-  const config: CatalogoGridConfig = useMemo(
+  const config: DataGridConfig = useMemo(
     () => ({
-      titulo: "Tabuladores de Salario",
-      columnas: [
-        { campo: "clave", encabezado: "Clave", ancho: 110 },
-        { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-        { campo: "unidad", encabezado: "Unidad", ancho: 110, opciones: unidades.map((u) => u.simbolo) },
-        { campo: "salario_real_diario", encabezado: "Salario real vigente", ancho: 160, soloLectura: true, numero: true },
+      title: "Tabuladores de Salario",
+      columns: [
+        { field: "clave", header: "Clave", width: 110 },
+        { field: "descripcion", header: "Descripción", width: 320 },
+        { field: "unidad", header: "Unidad", width: 110, options: unidades.map((u) => u.simbolo) },
+        { field: "salario_real_diario", header: "Salario real vigente", width: 160, readOnly: true, numeric: true },
         {
-          campo: "familia",
-          encabezado: "Familia",
-          ancho: 200,
-          opciones: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          field: "familia",
+          header: "Familia",
+          width: 200,
+          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
         },
         {
-          campo: "subfamilia",
-          encabezado: "Sub familia",
-          ancho: 200,
-          opciones: (fila) => {
+          field: "subfamilia",
+          header: "Sub familia",
+          width: 200,
+          options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
             return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
           },
         },
-        { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
+        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
     [unidades, raicesFamilia, hijasPorPadreId, raizIdPorNombre],
   );
 
-  const filas: Fila[] = useMemo(
+  const filas: Row[] = useMemo(
     () =>
       categorias.map((c) => ({
         _id: c.id,
@@ -149,7 +149,7 @@ export function CategoriaFasarSeccion() {
     [categorias, simboloPorUnidadId, nombrePorFamiliaId, nombresPorUsuarioId],
   );
 
-  const filaACategoriaData = (fila: Fila): CategoriaFasarData => {
+  const filaACategoriaData = (fila: Row): CategoriaFasarData => {
     const familiaId = fila.familia === SIN_FAMILIA ? null : raizIdPorNombre[String(fila.familia)] ?? null;
     const subFamiliaId =
       familiaId && fila.subfamilia !== SIN_SUBFAMILIA
@@ -168,23 +168,23 @@ export function CategoriaFasarSeccion() {
   const categoriaSeleccionada = categorias.find((c) => c.id === categoriaSeleccionadaId) ?? null;
 
   const grid = (
-    <CatalogoGrid
+    <DataGrid
       ref={gridRef}
       config={config}
-      filasIniciales={filas}
-      modoSeleccion="unica"
-      resaltarSeleccion={panelSalarioAbierto || panelHistorialAbierto}
-      seleccionInicialId={categoriaSeleccionadaId}
-      busqueda={busqueda}
-      onBusquedaChange={setBusqueda}
+      initialRows={filas}
+      selectionMode="single"
+      highlightSelection={panelSalarioAbierto || panelHistorialAbierto}
+      initialSelectedId={categoriaSeleccionadaId}
+      search={busqueda}
+      onSearchChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
-      onFilaSeleccionada={(fila) => setCategoriaSeleccionadaId(fila?._id ?? null)}
-      onAgregarFila={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
-      onCeldaEditada={(fila) => updateCategoriaFasar(fila._id, filaACategoriaData(fila)).then(recargarCategorias)}
-      onEliminarFilas={(ids) => Promise.all(ids.map((id) => deleteCategoriaFasar(id))).then(recargarCategorias)}
-      onErrorGuardado={(mensaje) => setEstadoGuardado({ tipo: "error", mensaje })}
-      onGuardadoExitoso={() => setEstadoGuardado({ tipo: "exito", mensaje: "Guardado exitosamente" })}
-      onEdicionCancelada={() => setEstadoGuardado(null)}
+      onRowSelected={(fila) => setCategoriaSeleccionadaId(fila?._id ?? null)}
+      onAddRow={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
+      onEditRow={(fila) => updateCategoriaFasar(fila._id, filaACategoriaData(fila)).then(recargarCategorias)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCategoriaFasar(id))).then(recargarCategorias)}
+      onSaveError={(mensaje) => setEstadoGuardado({ tipo: "error", mensaje })}
+      onSaveSuccess={() => setEstadoGuardado({ tipo: "exito", mensaje: "Guardado exitosamente" })}
+      onCancelEdit={() => setEstadoGuardado(null)}
     />
   );
 
@@ -208,11 +208,11 @@ export function CategoriaFasarSeccion() {
           <BarraAcciones
             acciones={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
               },
               {

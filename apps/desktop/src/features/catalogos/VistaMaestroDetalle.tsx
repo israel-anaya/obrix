@@ -5,34 +5,34 @@ import { Buscador } from "@/components/Buscador";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
-  CatalogoGrid,
-  type CatalogoGridConfig,
-  type CatalogoGridHandle,
-  type Fila,
-} from "@/features/catalogos/CatalogoGrid";
+  DataGrid,
+  type DataGridConfig,
+  type DataGridHandle,
+  type Row,
+} from "@/components/grid/DataGrid";
 
 export interface DetalleConfig<D> {
-  grid: CatalogoGridConfig;
+  grid: DataGridConfig;
   /** Carga el detalle del maestro seleccionado — misma tabla (autorreferencia) u otra distinta, la vista no distingue. */
   cargar: (maestroId: string) => Promise<D[]>;
-  aFila: (modelo: D) => Fila;
+  aFila: (modelo: D) => Row;
   /** Si se omite, el botón de agregar del panel de detalle queda deshabilitado. Recibe la fila ya editada por el usuario. */
-  crear?: (maestroId: string, fila: Fila) => void | Promise<void>;
+  crear?: (maestroId: string, fila: Row) => void | Promise<void>;
   /** Si se omite, las celdas editables del detalle no persisten (solo cambian visualmente). */
-  editar?: (maestroId: string, fila: Fila) => void | Promise<void>;
+  editar?: (maestroId: string, fila: Row) => void | Promise<void>;
   /** Si se omite, el botón de eliminar del panel de detalle queda deshabilitado. */
   eliminar?: (maestroId: string, ids: string[]) => void | Promise<void>;
 }
 
 export interface VistaMaestroDetalleProps<D> {
-  maestroGrid: CatalogoGridConfig;
-  maestroFilas: Fila[];
+  maestroGrid: DataGridConfig;
+  maestroFilas: Row[];
   /** Recarga `maestroFilas` desde el padre — si se omite, el botón de recargar del panel maestro queda deshabilitado. */
   onRecargarMaestro?: () => void;
   /** Si se omite, el botón de agregar del panel maestro queda deshabilitado. Recibe la fila ya editada por el usuario. */
-  onAgregarMaestro?: (fila: Fila) => void | Promise<void>;
+  onAgregarMaestro?: (fila: Row) => void | Promise<void>;
   /** Si se omite, las celdas editables del maestro no persisten (solo cambian visualmente). */
-  onEditarMaestro?: (fila: Fila) => void | Promise<void>;
+  onEditarMaestro?: (fila: Row) => void | Promise<void>;
   /** Si se omite, el botón de eliminar del panel maestro queda deshabilitado. */
   onEliminarMaestro?: (ids: string[]) => void | Promise<void>;
   /** Íconos extra en la barra del panel maestro, además de agregar/eliminar — para funcionalidad propia de cada vista. */
@@ -106,12 +106,12 @@ export function VistaMaestroDetalle<D>({
   accionesExtraDetalle,
   placeholderDetalle = "Selecciona una fila para ver su detalle.",
 }: VistaMaestroDetalleProps<D>) {
-  const maestroGridRef = useRef<CatalogoGridHandle>(null);
-  const detalleGridRef = useRef<CatalogoGridHandle>(null);
+  const maestroGridRef = useRef<DataGridHandle>(null);
+  const detalleGridRef = useRef<DataGridHandle>(null);
   const [maestroSeleccionadoId, setMaestroSeleccionadoId] = useState<string | null>(null);
   const [maestroPuedeEliminar, setMaestroPuedeEliminar] = useState(false);
   const [busquedaMaestro, setBusquedaMaestro] = useState("");
-  const [filasDetalle, setFilasDetalle] = useState<Fila[]>([]);
+  const [filasDetalle, setFilasDetalle] = useState<Row[]>([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
   const [detallePuedeEliminar, setDetallePuedeEliminar] = useState(false);
@@ -157,28 +157,28 @@ export function VistaMaestroDetalle<D>({
     <ResizablePanelGroup orientation="vertical" className="h-full">
       <ResizablePanel defaultSize="50" minSize="20" className="flex flex-col overflow-hidden">
         <PanelConAcciones
-          titulo={maestroGrid.titulo}
+          titulo={maestroGrid.title}
           onRecargar={onRecargarMaestro}
-          onAgregar={() => maestroGridRef.current?.agregarFila()}
-          onEliminar={() => maestroGridRef.current?.eliminarFilaSeleccionada()}
+          onAgregar={() => maestroGridRef.current?.addRow()}
+          onEliminar={() => maestroGridRef.current?.deleteSelectedRows()}
           puedeAgregar={!!onAgregarMaestro}
           puedeEliminar={!!onEliminarMaestro && maestroPuedeEliminar}
           accionesExtra={accionesExtraMaestro}
           busqueda={busquedaMaestro}
           onBusquedaChange={setBusquedaMaestro}
         >
-          <CatalogoGrid
+          <DataGrid
             ref={maestroGridRef}
             config={maestroGrid}
-            filasIniciales={maestroFilas}
-            modoSeleccion="unica"
-            busqueda={busquedaMaestro}
-            onBusquedaChange={setBusquedaMaestro}
+            initialRows={maestroFilas}
+            selectionMode="single"
+            search={busquedaMaestro}
+            onSearchChange={setBusquedaMaestro}
             onSelectionChange={setMaestroPuedeEliminar}
-            onFilaSeleccionada={(fila) => setMaestroSeleccionadoId(fila?._id ?? null)}
-            onAgregarFila={onAgregarMaestro}
-            onCeldaEditada={onEditarMaestro}
-            onEliminarFilas={onEliminarMaestro}
+            onRowSelected={(fila) => setMaestroSeleccionadoId(fila?._id ?? null)}
+            onAddRow={onAgregarMaestro}
+            onEditRow={onEditarMaestro}
+            onDeleteRows={onEliminarMaestro}
           />
         </PanelConAcciones>
       </ResizablePanel>
@@ -186,10 +186,10 @@ export function VistaMaestroDetalle<D>({
       <ResizablePanel defaultSize="50" minSize="20" className="flex flex-col overflow-hidden">
         {maestroSeleccionadoId ? (
           <PanelConAcciones
-            titulo={detalle.grid.titulo}
+            titulo={detalle.grid.title}
             onRecargar={recargarDetalle}
-            onAgregar={() => detalleGridRef.current?.agregarFila()}
-            onEliminar={() => detalleGridRef.current?.eliminarFilaSeleccionada()}
+            onAgregar={() => detalleGridRef.current?.addRow()}
+            onEliminar={() => detalleGridRef.current?.deleteSelectedRows()}
             puedeAgregar={!!detalle.crear}
             puedeEliminar={!!detalle.eliminar && detallePuedeEliminar}
             accionesExtra={accionesExtraDetalle}
@@ -197,25 +197,25 @@ export function VistaMaestroDetalle<D>({
             onBusquedaChange={setBusquedaDetalle}
           >
             {errorDetalle && <p className="px-3 py-1 text-xs text-destructive">{errorDetalle}</p>}
-            <CatalogoGrid
+            <DataGrid
               ref={detalleGridRef}
               config={detalle.grid}
-              filasIniciales={cargandoDetalle ? [] : filasDetalle}
-              modoSeleccion="unica"
-              busqueda={busquedaDetalle}
-              onBusquedaChange={setBusquedaDetalle}
+              initialRows={cargandoDetalle ? [] : filasDetalle}
+              selectionMode="single"
+              search={busquedaDetalle}
+              onSearchChange={setBusquedaDetalle}
               onSelectionChange={setDetallePuedeEliminar}
-              onAgregarFila={
+              onAddRow={
                 detalle.crear
                   ? (fila) => Promise.resolve(detalle.crear!(maestroSeleccionadoId, fila)).then(recargarDetalle)
                   : undefined
               }
-              onCeldaEditada={
+              onEditRow={
                 detalle.editar
                   ? (fila) => Promise.resolve(detalle.editar!(maestroSeleccionadoId, fila)).then(recargarDetalle)
                   : undefined
               }
-              onEliminarFilas={
+              onDeleteRows={
                 detalle.eliminar
                   ? (ids) => Promise.resolve(detalle.eliminar!(maestroSeleccionadoId, ids)).then(recargarDetalle)
                   : undefined
@@ -223,7 +223,7 @@ export function VistaMaestroDetalle<D>({
             />
           </PanelConAcciones>
         ) : (
-          <PlaceholderTab title={detalle.grid.titulo} subtitle={placeholderDetalle} />
+          <PlaceholderTab title={detalle.grid.title} subtitle={placeholderDetalle} />
         )}
       </ResizablePanel>
     </ResizablePanelGroup>

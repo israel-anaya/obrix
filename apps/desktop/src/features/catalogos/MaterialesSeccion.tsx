@@ -4,7 +4,7 @@ import { DollarSign, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucid
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { CatalogoGrid, type CatalogoGridConfig, type CatalogoGridHandle, type Fila } from "@/features/catalogos/CatalogoGrid";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { MaterialFormPanel } from "@/features/catalogos/MaterialFormPanel";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -28,14 +28,14 @@ const SIN_SUBFAMILIA = "— Sin sub familia —";
 const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const COLUMNAS_CONTROL = [
-  { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "created_by", encabezado: "Creado por", ancho: 220, soloLectura: true },
-  { campo: "updated_at", encabezado: "Actualizado", ancho: 180, soloLectura: true, fecha: true },
-  { campo: "updated_by", encabezado: "Actualizado por", ancho: 220, soloLectura: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 export function MaterialesSeccion() {
-  const gridRef = useRef<CatalogoGridHandle>(null);
+  const gridRef = useRef<DataGridHandle>(null);
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -132,46 +132,46 @@ export function MaterialesSeccion() {
     [raicesFamilia],
   );
 
-  const config: CatalogoGridConfig = useMemo(
+  const config: DataGridConfig = useMemo(
     () => ({
-      titulo: "Materiales",
-      columnas: [
-        { campo: "clave", encabezado: "Clave", ancho: 110 },
-        { campo: "descripcion", encabezado: "Descripción", ancho: 320 },
-        { campo: "unidad", encabezado: "Unidad", ancho: 110, opciones: unidades.map((u) => u.simbolo) },
-        { campo: "costo_actual", encabezado: "Costo actual", ancho: 130, soloLectura: true, numero: true },
+      title: "Materiales",
+      columns: [
+        { field: "clave", header: "Clave", width: 110 },
+        { field: "descripcion", header: "Descripción", width: 320 },
+        { field: "unidad", header: "Unidad", width: 110, options: unidades.map((u) => u.simbolo) },
+        { field: "costo_actual", header: "Costo actual", width: 130, readOnly: true, numeric: true },
         {
-          campo: "familia",
-          encabezado: "Familia",
-          ancho: 200,
-          opciones: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          field: "familia",
+          header: "Familia",
+          width: 200,
+          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
         },
         {
-          campo: "subfamilia",
-          encabezado: "Sub familia",
-          ancho: 200,
-          opciones: (fila) => {
+          field: "subfamilia",
+          header: "Sub familia",
+          width: 200,
+          options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
             return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
           },
         },
         {
-          campo: "proveedor",
-          encabezado: "Proveedor",
-          ancho: 220,
-          opciones: [SIN_PROVEEDOR, ...proveedores.map((p) => p.razon_social)],
+          field: "proveedor",
+          header: "Proveedor",
+          width: 220,
+          options: [SIN_PROVEEDOR, ...proveedores.map((p) => p.razon_social)],
         },
-        { campo: "marca", encabezado: "Marca", ancho: 160 },
-        { campo: "merma_porcentaje", encabezado: "Merma", numero: true, sufijo: "%", ancho: 110 },
-        { campo: "activo", encabezado: "Activo", ancho: 90, booleano: true },
+        { field: "marca", header: "Marca", width: 160 },
+        { field: "merma_porcentaje", header: "Merma", numeric: true, suffix: "%", width: 110 },
+        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
     [unidades, proveedores, raicesFamilia, hijasPorPadreId, raizIdPorNombre],
   );
 
-  const filas: Fila[] = useMemo(
+  const filas: Row[] = useMemo(
     () =>
       materiales.map((m) => ({
         _id: m.id,
@@ -193,7 +193,7 @@ export function MaterialesSeccion() {
     [materiales, simboloPorUnidadId, nombrePorFamiliaId, nombrePorProveedorId, nombresPorUsuarioId],
   );
 
-  const filaAMaterialData = (fila: Fila): MaterialData => {
+  const filaAMaterialData = (fila: Row): MaterialData => {
     const familiaId = fila.familia === SIN_FAMILIA ? null : raizIdPorNombre[String(fila.familia)] ?? null;
     // La subfamilia solo es válida si es hija de la familia elegida en esta
     // misma fila — si no calza (p. ej. se cambió la familia después), se descarta.
@@ -218,23 +218,23 @@ export function MaterialesSeccion() {
   const materialSeleccionado = materiales.find((m) => m.id === materialSeleccionadoId) ?? null;
 
   const grid = (
-    <CatalogoGrid
+    <DataGrid
       ref={gridRef}
       config={config}
-      filasIniciales={filas}
-      modoSeleccion="unica"
-      resaltarSeleccion={panelPreciosAbierto || panelFichaAbierto}
-      seleccionInicialId={materialSeleccionadoId}
-      busqueda={busqueda}
-      onBusquedaChange={setBusqueda}
+      initialRows={filas}
+      selectionMode="single"
+      highlightSelection={panelPreciosAbierto || panelFichaAbierto}
+      initialSelectedId={materialSeleccionadoId}
+      search={busqueda}
+      onSearchChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
-      onFilaSeleccionada={(fila) => setMaterialSeleccionadoId(fila?._id ?? null)}
-      onAgregarFila={(fila) => createMaterial(filaAMaterialData(fila)).then(recargarMateriales)}
-      onCeldaEditada={(fila) => updateMaterial(fila._id, filaAMaterialData(fila)).then(recargarMateriales)}
-      onEliminarFilas={(ids) => Promise.all(ids.map((id) => deleteMaterial(id))).then(recargarMateriales)}
-      onErrorGuardado={(mensaje) => setError(mensaje)}
-      onGuardadoExitoso={() => setGuardadoExitoso(true)}
-      onEdicionCancelada={() => {
+      onRowSelected={(fila) => setMaterialSeleccionadoId(fila?._id ?? null)}
+      onAddRow={(fila) => createMaterial(filaAMaterialData(fila)).then(recargarMateriales)}
+      onEditRow={(fila) => updateMaterial(fila._id, filaAMaterialData(fila)).then(recargarMateriales)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteMaterial(id))).then(recargarMateriales)}
+      onSaveError={(mensaje) => setError(mensaje)}
+      onSaveSuccess={() => setGuardadoExitoso(true)}
+      onCancelEdit={() => {
         setError(null);
         setGuardadoExitoso(false);
       }}
@@ -260,11 +260,11 @@ export function MaterialesSeccion() {
           <BarraAcciones
             acciones={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.agregarFila() },
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.eliminarFilaSeleccionada(),
+                onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
               },
               {

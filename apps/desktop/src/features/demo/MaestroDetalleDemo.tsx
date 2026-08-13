@@ -5,10 +5,10 @@ import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo } from "@/
 import type { FamiliaInsumo } from "@/lib/types";
 
 const GRID_FAMILIA = {
-  titulo: "Familias de insumo",
-  columnas: [
-    { campo: "nombre", encabezado: "Nombre", ancho: 240 },
-    { campo: "created_at", encabezado: "Creado", ancho: 180, soloLectura: true },
+  title: "Familias de insumo",
+  columns: [
+    { field: "nombre", header: "Nombre", width: 240 },
+    { field: "created_at", header: "Creado", width: 180, readOnly: true },
   ],
 };
 

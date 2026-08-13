@@ -22,8 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { CatalogoGrid, type CatalogoGridHandle } from "@/features/catalogos/CatalogoGrid";
-import { catalogoClipboardActivo } from "@/features/catalogos/catalogoClipboard";
+import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
+import { activeGridClipboard } from "@/components/grid/gridClipboard";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
@@ -97,7 +97,7 @@ export default function App() {
   const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
 
-  const catalogoGridRef = useRef<CatalogoGridHandle>(null);
+  const dataGridRef = useRef<DataGridHandle>(null);
   const [catalogoPuedeEliminar, setCatalogoPuedeEliminar] = useState(false);
 
   useEffect(() => {
@@ -386,11 +386,11 @@ export default function App() {
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
         return (
-          <CatalogoGrid
+          <DataGrid
             key={catalogoId}
-            ref={catalogoGridRef}
+            ref={dataGridRef}
             config={config}
-            modoSeleccion="unica"
+            selectionMode="single"
             onSelectionChange={setCatalogoPuedeEliminar}
           />
         );
@@ -404,7 +404,7 @@ export default function App() {
   // "tabuladores-salario" ya traen su propia barra de acciones (ver
   // ProveedoresSeccion/ClientesSeccion/MaterialesSeccion/FactorSalarioRealSeccion/
   // CategoriaFasarSeccion) — no deben mostrar también la del tab genérico,
-  // cableada a `catalogoGridRef`.
+  // cableada a `dataGridRef`.
   const catalogoIdActivo = activeTab?.id.startsWith(CATALOGO_PREFIX)
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
@@ -417,11 +417,11 @@ export default function App() {
   const tabActions = catalogoActivoConfig && (
     <BarraAcciones
       acciones={[
-        { icono: Plus, titulo: "Agregar fila", onClick: () => catalogoGridRef.current?.agregarFila() },
+        { icono: Plus, titulo: "Agregar fila", onClick: () => dataGridRef.current?.addRow() },
         {
           icono: Trash2,
           titulo: "Eliminar fila seleccionada",
-          onClick: () => catalogoGridRef.current?.eliminarFilaSeleccionada(),
+          onClick: () => dataGridRef.current?.deleteSelectedRows(),
           disabled: !catalogoPuedeEliminar,
         },
       ]}
@@ -472,9 +472,9 @@ export default function App() {
         { label: "Deshacer", shortcut: "Ctrl+Z", disabled: true },
         { label: "Rehacer", shortcut: "Ctrl+Shift+Z", disabled: true },
         "separator",
-        { label: "Cortar", shortcut: "Ctrl+X", onClick: () => void catalogoClipboardActivo()?.cortar() },
-        { label: "Copiar", shortcut: "Ctrl+C", onClick: () => void catalogoClipboardActivo()?.copiar() },
-        { label: "Pegar", shortcut: "Ctrl+V", onClick: () => void catalogoClipboardActivo()?.pegar() },
+        { label: "Cortar", shortcut: "Ctrl+X", onClick: () => void activeGridClipboard()?.cut() },
+        { label: "Copiar", shortcut: "Ctrl+C", onClick: () => void activeGridClipboard()?.copy() },
+        { label: "Pegar", shortcut: "Ctrl+V", onClick: () => void activeGridClipboard()?.paste() },
       ],
     },
     {
