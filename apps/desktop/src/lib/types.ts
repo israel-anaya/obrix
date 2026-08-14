@@ -250,6 +250,37 @@ export interface CategoriaFasarData {
 }
 
 /**
+ * Extensión de `insumo` cuando `tipo = equipo_herramienta` y se trata de
+ * herramienta mayor/con motor, precio propio simple, sin cálculo de
+ * depreciación (a diferencia de `equipo_costo_horario`) — ver `herramienta`
+ * en el diccionario de datos. Sin precio propio: dentro de una cuadrilla su
+ * costo se resuelve como `porcentaje_mano_obra` × `sub_total_mano_obra`.
+ */
+export interface Herramienta extends CamposControl {
+  id: string;
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  /** Debe ser hija (`parent_id`) de `familia_id`. */
+  sub_familia_id: string | null;
+  /** 0 a 100. */
+  porcentaje_mano_obra: number | null;
+  activo: boolean;
+}
+
+export interface HerramientaData {
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  sub_familia_id: string | null;
+  /** 0 a 100. */
+  porcentaje_mano_obra: number | null;
+  activo: boolean;
+}
+
+/**
  * Vigencia de salario+FSR de una `categoria_fasar` — historizada por
  * región, nunca se sobrescribe. `factor_salario_real` y
  * `salario_real_diario` los calcula el cliente (`modeloCalculo.ts`, campo

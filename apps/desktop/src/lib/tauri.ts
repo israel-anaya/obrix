@@ -8,6 +8,8 @@ import type {
   FactorSalarioRealData,
   FamiliaInsumo,
   FamiliaInsumoData,
+  Herramienta,
+  HerramientaData,
   Material,
   MaterialData,
   OrganizacionData,
@@ -236,6 +238,19 @@ export function createSalarioCategoriaFasar(
 }
 export function createSalariosCategoriaFasarLote(salarios: SalarioLoteItem[]): Promise<SalarioCategoriaFasar[]> {
   return invoke("create_salarios_categoria_fasar_lote", { salarios });
+}
+
+export function listHerramientas(): Promise<Herramienta[]> {
+  return invoke("list_herramientas");
+}
+export function createHerramienta(herramienta: HerramientaData): Promise<Herramienta> {
+  return invoke("create_herramienta", { herramienta });
+}
+export function updateHerramienta(id: string, herramienta: HerramientaData): Promise<Herramienta> {
+  return invoke("update_herramienta", { id, herramienta });
+}
+export function deleteHerramienta(id: string): Promise<void> {
+  return invoke("delete_herramienta", { id });
 }
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {

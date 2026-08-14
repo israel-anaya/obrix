@@ -8,6 +8,7 @@ pub mod categoria_fasar;
 pub mod cliente;
 pub mod factor_salario_real;
 pub mod familia_insumo;
+pub mod herramienta;
 pub mod material;
 pub mod moneda;
 pub mod organizacion;

@@ -3,6 +3,7 @@ pub mod cliente;
 pub mod comentario;
 pub mod factor_salario_real;
 pub mod familia_insumo;
+pub mod herramienta;
 pub mod historial_cambio;
 pub mod insumo;
 pub mod material;

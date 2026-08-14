@@ -95,15 +95,6 @@ export const CATALOGO_GRID_CONFIG: Record<string, DataGridConfig> = {
       { field: "precio", header: "Precio unitario", numeric: true, width: 140 },
     ],
   },
-  herramienta: {
-    title: "Herramienta",
-    columns: [
-      { field: "clave", header: "Clave", width: 100 },
-      { field: "descripcion", header: "Descripción", width: 320 },
-      { field: "unidad", header: "Unidad", width: 100 },
-      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
-    ],
-  },
   "costos-horarios": {
     title: "Costos Horarios",
     columns: [

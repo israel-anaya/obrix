@@ -30,6 +30,7 @@ import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
 import { EscalafonSalarioSeccion } from "@/features/catalogos/EscalafonSalarioSeccion";
 import { EstanteriaMaterialesSeccion } from "@/features/catalogos/EstanteriaMaterialesSeccion";
+import { HerramientaSeccion } from "@/features/catalogos/HerramientaSeccion";
 import { MaterialesSeccion } from "@/features/catalogos/MaterialesSeccion";
 import { MatrizOficioRegionSeccion } from "@/features/catalogos/MatrizOficioRegionSeccion";
 import { MesaEquivalentesSeccion } from "@/features/catalogos/MesaEquivalentesSeccion";
@@ -397,6 +398,7 @@ export default function App() {
       if (catalogoId === "tabuladores-escalafon") return <EscalafonSalarioSeccion />;
       if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
+      if (catalogoId === "herramienta") return <HerramientaSeccion />;
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
         return (
@@ -416,9 +418,9 @@ export default function App() {
 
   // "proveedores", "clientes", "materiales-item", "materiales-estanteria",
   // "materiales-mesa", "materiales-radar", "factores-salario-real",
-  // "tabuladores-salario", "tabuladores-escalafon", "tabuladores-matriz" y
-  // "tabuladores-puente" ya traen su propia barra de acciones — no deben
-  // mostrar también la del tab genérico, cableada a `dataGridRef`.
+  // "tabuladores-salario", "tabuladores-escalafon", "tabuladores-matriz",
+  // "tabuladores-puente" y "herramienta" ya traen su propia barra de
+  // acciones — no deben mostrar también la del tab genérico, cableada a `dataGridRef`.
   const catalogoIdActivo = activeTab?.id.startsWith(CATALOGO_PREFIX)
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
@@ -434,6 +436,7 @@ export default function App() {
     "tabuladores-escalafon",
     "tabuladores-matriz",
     "tabuladores-puente",
+    "herramienta",
   ];
   const catalogoActivoConfig =
     catalogoIdActivo && !CATALOGOS_BESPOKE.includes(catalogoIdActivo)

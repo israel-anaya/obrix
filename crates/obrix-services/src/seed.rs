@@ -13,6 +13,7 @@ use crate::categoria_fasar::CategoriaFasarService;
 use crate::cliente::ClienteService;
 use crate::factor_salario_real::FactorSalarioRealService;
 use crate::familia_insumo::FamiliaInsumoService;
+use crate::herramienta::HerramientaService;
 use crate::moneda::MonedaService;
 use crate::organizacion::OrganizacionService;
 use crate::proveedor::ProveedorService;
@@ -36,5 +37,7 @@ pub async fn sembrar_catalogos_generales(
     FactorSalarioRealService::sembrar(repo).await?;
     // Depende de `organizacion`, `unidad_medida` y `familia_insumo`.
     CategoriaFasarService::sembrar(repo).await?;
+    // Depende de `organizacion`, `unidad_medida` y `familia_insumo`.
+    HerramientaService::sembrar(repo).await?;
     Ok(())
 }

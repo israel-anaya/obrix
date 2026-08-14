@@ -194,6 +194,10 @@ fn main() {
             commands::salarios_categoria_fasar::list_salarios_categoria_fasar,
             commands::salarios_categoria_fasar::create_salario_categoria_fasar,
             commands::salarios_categoria_fasar::create_salarios_categoria_fasar_lote,
+            commands::herramientas::list_herramientas,
+            commands::herramientas::create_herramienta,
+            commands::herramientas::update_herramienta,
+            commands::herramientas::delete_herramienta,
             commands::archivo_json::escribir_archivo_texto,
             commands::archivo_json::leer_archivo_texto,
         ])
@@ -367,6 +371,34 @@ mod tests {
             Some(familia_aluminero.id.as_str()),
             "Herrería de Aluminero debe ser hija de Mano de obra, no de Cancelería y vidrio"
         );
+
+        let insumos_herramienta = obrix_db::entities::insumo::Entity::find()
+            .filter(
+                obrix_db::entities::insumo::Column::Tipo
+                    .eq(obrix_db::entities::insumo::TipoInsumo::EquipoHerramienta),
+            )
+            .all(portafolio.conexion())
+            .await
+            .expect("listar insumos de equipo/herramienta");
+        assert_eq!(
+            insumos_herramienta.len(),
+            2,
+            "2 herramientas de data/initial/herramienta.csv, sin duplicar"
+        );
+        let herramienta_mano = insumos_herramienta
+            .iter()
+            .find(|i| i.descripcion == "Herramienta de mano")
+            .expect("Herramienta de mano");
+        assert_eq!(herramienta_mano.clave, "HER-001");
+        let herramientas = obrix_db::entities::herramienta::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .expect("listar herramienta");
+        let porcentaje_herramienta_mano = herramientas
+            .iter()
+            .find(|h| h.insumo_id == herramienta_mano.id)
+            .expect("herramienta de Herramienta de mano");
+        assert_eq!(porcentaje_herramienta_mano.porcentaje_mano_obra, Some(3));
 
         let factores = obrix_db::entities::factor_salario_real::Entity::find()
             .order_by_asc(obrix_db::entities::factor_salario_real::Column::CreatedAt)
