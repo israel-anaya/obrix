@@ -312,7 +312,7 @@ export function CategoriaFasarSeccion() {
                   <ResizableHandle withHandle />
                   <ResizablePanel
                     id="fasar-salario"
-                    defaultSize="53"
+                    defaultSize="35"
                     minSize="22"
                     className="flex min-h-0 min-w-0 flex-col overflow-hidden"
                   >

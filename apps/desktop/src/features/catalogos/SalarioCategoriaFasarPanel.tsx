@@ -384,8 +384,6 @@ export function SalarioCategoriaFasarPanel({
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="py-1 pr-2 font-medium">Región</th>
-                    <th className="py-1 pr-2 text-right font-medium">Base</th>
-                    <th className="py-1 pr-2 text-right font-medium">FSR</th>
                     <th className="py-1 pr-2 text-right font-medium">Salario real</th>
                     <th className="py-1 pr-2 font-medium">Usuario</th>
                     <th className="py-1 pr-2 text-right font-medium">Desde</th>
@@ -396,8 +394,6 @@ export function SalarioCategoriaFasarPanel({
                   {salarios.map((s) => (
                     <tr key={s.id} className="border-b border-border/50 last:border-none">
                       <td className="py-1 pr-2">{s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}</td>
-                      <td className="py-1 pr-2 text-right tabular-nums">${s.salario_base_diario}</td>
-                      <td className="py-1 pr-2 text-right tabular-nums">{s.factor_salario_real}</td>
                       <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
                       <td className="py-1 pr-2">{nombresPorUsuarioId[s.created_by] ?? s.created_by}</td>
                       <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>

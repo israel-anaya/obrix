@@ -1,28 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { DataGrid, type DataGridConfig, type Row } from "@/components/grid/DataGrid";
 import { listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
 import type { Region, SalarioCategoriaFasar } from "@/lib/types";
+import { formatearFecha } from "@/lib/fecha";
 
 const NACIONAL = "Nacional";
 
-const CONFIG: DataGridConfig = {
-  title: "Histórico de salarios",
-  columns: [
-    { field: "region", header: "Región", width: 160, readOnly: true },
-    { field: "salario_base_diario", header: "Base", width: 110, readOnly: true, numeric: true },
-    { field: "factor_salario_real", header: "FSR", width: 110, readOnly: true, numeric: true },
-    { field: "salario_real_diario", header: "Salario real", width: 130, readOnly: true, numeric: true },
-    { field: "usuario", header: "Usuario", width: 220, readOnly: true },
-    { field: "desde", header: "Desde", width: 110, readOnly: true, date: true },
-    { field: "hasta", header: "Hasta", width: 110, readOnly: true, date: true },
-  ],
-};
-
 /**
- * Grid de solo lectura con el historial completo de vigencias de salario de
+ * Tabla de solo lectura con el historial completo de vigencias de salario de
  * la categoría seleccionada — pensado como panel inferior junto al grid de
- * categorías FASAR, vista "tabla completa" alternativa al resumen que ya
- * ofrece `SalarioCategoriaFasarPanel`.
+ * categorías FASAR.
  */
 export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | null }) {
   const [salarios, setSalarios] = useState<SalarioCategoriaFasar[]>([]);
@@ -65,31 +51,47 @@ export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | nu
 
   const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
 
-  const filas: Row[] = useMemo(
-    () =>
-      salarios.map((s) => ({
-        _id: s.id,
-        region: s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL,
-        salario_base_diario: `$${s.salario_base_diario}`,
-        factor_salario_real: s.factor_salario_real,
-        salario_real_diario: `$${s.salario_real_diario}`,
-        usuario: nombresPorUsuarioId[s.created_by] ?? s.created_by,
-        desde: s.fecha_vigencia_desde,
-        hasta: s.fecha_vigencia_hasta ?? "",
-      })),
-    [salarios, nombrePorRegionId, nombresPorUsuarioId],
-  );
-
   if (!categoriaId) {
     return <p className="p-3 text-xs text-muted-foreground">Selecciona una categoría para ver su historial de salarios.</p>;
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
-      <div className="min-h-0 flex-1">
-        <DataGrid config={CONFIG} initialRows={filas} loading={cargando} />
-      </div>
+    <div className="flex h-full flex-col overflow-auto p-3">
+      {error && <p className="pb-2 text-xs text-destructive">{error}</p>}
+      {cargando ? (
+        <p className="text-xs text-muted-foreground">Cargando…</p>
+      ) : salarios.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Sin historial.</p>
+      ) : (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-left text-muted-foreground">
+              <th className="py-1 pr-2 font-medium">Región</th>
+              <th className="py-1 pr-2 text-right font-medium">Base</th>
+              <th className="py-1 pr-2 text-right font-medium">FSR</th>
+              <th className="py-1 pr-2 text-right font-medium">Salario real</th>
+              <th className="py-1 pr-2 font-medium">Usuario</th>
+              <th className="py-1 pr-2 text-right font-medium">Desde</th>
+              <th className="py-1 text-right font-medium">Hasta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {salarios.map((s) => (
+              <tr key={s.id} className="border-b border-border/50 last:border-none">
+                <td className="py-1 pr-2">{s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}</td>
+                <td className="py-1 pr-2 text-right tabular-nums">${s.salario_base_diario}</td>
+                <td className="py-1 pr-2 text-right tabular-nums">{s.factor_salario_real}</td>
+                <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
+                <td className="py-1 pr-2">{nombresPorUsuarioId[s.created_by] ?? s.created_by}</td>
+                <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>
+                <td className="py-1 text-right tabular-nums text-muted-foreground">
+                  {s.fecha_vigencia_hasta ? formatearFecha(s.fecha_vigencia_hasta) : "vigente"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
