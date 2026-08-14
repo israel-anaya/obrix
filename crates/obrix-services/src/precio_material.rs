@@ -175,6 +175,7 @@ mod tests {
             id: Set("um-1".into()),
             simbolo: Set("m2".into()),
             simbolo_impresion: Set("m2".into()),
+            variantes: Set("".into()),
             clave_sat: Set(None),
             descripcion: Set("Metro cuadrado".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Area),

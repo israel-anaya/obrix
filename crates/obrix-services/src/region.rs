@@ -5,6 +5,10 @@ use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, QueryOrder};
 use crate::usuario::UsuarioService;
 use crate::{nuevo_id, DatosIniciales, ServiceError};
 
+/// Catálogo de regiones de referencia — fuente de verdad en
+/// `data/initial/region.csv`, embebido tal cual en el binario.
+const REGIONES_CSV: &str = include_str!("../../../data/initial/region.csv");
+
 #[derive(serde::Deserialize)]
 pub struct RegionData {
     pub nombre: String,
@@ -66,22 +70,29 @@ impl RegionService {
 }
 
 impl DatosIniciales for RegionService {
+    /// Una región por cada fila de `data/initial/region.csv`.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if Entity::find().one(repo.conexion()).await?.is_some() {
             return Ok(());
         }
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
-        let regiones = [
-            ("Zona Metropolitana CDMX", "Ciudad de México"),
-            ("Frontera Norte", "Baja California"),
-            ("Sureste", "Quintana Roo"),
-        ];
-        for (nombre, estado) in regiones {
+        let mut lector = csv::ReaderBuilder::new().from_reader(REGIONES_CSV.as_bytes());
+        for (i, registro) in lector.deserialize::<RegistroCsvRegion>().enumerate() {
+            let fila = i + 2;
+            let registro = registro.map_err(|e| {
+                ServiceError::Validacion(format!("region.csv fila {fila}: {e}"))
+            })?;
+            let nombre = registro.nombre.trim().to_string();
+            if nombre.is_empty() {
+                return Err(ServiceError::Validacion(format!(
+                    "region.csv fila {fila}: nombre vacío"
+                )));
+            }
             Self::crear(
                 repo,
                 RegionData {
-                    nombre: nombre.to_string(),
-                    estado: estado.to_string(),
+                    nombre,
+                    estado: registro.estado.trim().to_string(),
                     factor_ajuste: None,
                 },
                 admin.id.clone(),
@@ -90,4 +101,12 @@ impl DatosIniciales for RegionService {
         }
         Ok(())
     }
+}
+
+#[derive(serde::Deserialize)]
+struct RegistroCsvRegion {
+    #[serde(rename = "Nombre")]
+    nombre: String,
+    #[serde(rename = "Estado")]
+    estado: String,
 }

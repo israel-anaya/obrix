@@ -238,6 +238,7 @@ mod tests {
             id: Set("um-1".into()),
             simbolo: Set("jor".into()),
             simbolo_impresion: Set("jor".into()),
+            variantes: Set("".into()),
             clave_sat: Set(None),
             descripcion: Set("Jornal".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),

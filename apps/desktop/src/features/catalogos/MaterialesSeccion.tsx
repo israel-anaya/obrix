@@ -34,7 +34,7 @@ const COLUMNAS_CONTROL = [
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
-export function MaterialesSeccion() {
+export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: string | null) => void }) {
   const gridRef = useRef<DataGridHandle>(null);
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
@@ -87,6 +87,7 @@ export function MaterialesSeccion() {
     if (!path || Array.isArray(path)) return;
     setImportando(true);
     setResultadoImportacion(null);
+    onProgreso?.("Importando materiales…");
     try {
       const resultado = await importarMaterialesCsv(path);
       setResultadoImportacion(resultado);
@@ -95,6 +96,7 @@ export function MaterialesSeccion() {
       setError(String(e));
     } finally {
       setImportando(false);
+      onProgreso?.(null);
     }
   };
 
@@ -324,6 +326,7 @@ export function MaterialesSeccion() {
               <X size={13} />
             </button>
           </div>
+          {resultadoImportacion.aviso && <p className="mt-1 text-muted-foreground">{resultadoImportacion.aviso}</p>}
           {resultadoImportacion.errores.length > 0 && (
             <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-auto pl-4 text-muted-foreground">
               {resultadoImportacion.errores.map((e, i) => (

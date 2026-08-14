@@ -195,6 +195,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(UnidadMedida::Simbolo).text().not_null())
                     .col(ColumnDef::new(UnidadMedida::SimboloImpresion).text().not_null())
+                    .col(ColumnDef::new(UnidadMedida::Variantes).text().not_null())
                     .col(ColumnDef::new(UnidadMedida::ClaveSat).text())
                     .col(ColumnDef::new(UnidadMedida::Descripcion).text().not_null())
                     .col(ColumnDef::new(UnidadMedida::TipoMagnitud).text().not_null())
@@ -492,6 +493,7 @@ enum UnidadMedida {
     Id,
     Simbolo,
     SimboloImpresion,
+    Variantes,
     ClaveSat,
     Descripcion,
     TipoMagnitud,

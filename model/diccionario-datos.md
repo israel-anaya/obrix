@@ -117,6 +117,7 @@ conciliación con CFDI de proveedores (catálogo `c_ClaveUnidad` del SAT).
 | id | uuid | PK |
 | simbolo | text | ej. `M2`, `M3`, `PZA`, `KG`, `JOR` (jornal) |
 | simbolo_impresion | text | símbolo a usar en documentos impresos — por defecto igual a `simbolo`, editable independientemente |
+| variantes | text | grafías equivalentes separadas por coma; la primera es el `simbolo` (ej. `pieza, pza`). Al importar CSV, `UnidadMedidaService::variantes` junta este campo con `simbolo`, `simbolo_impresion` y `descripcion` para resolver el token — no es un LIKE en SQL |
 | clave_sat | text | nullable — clave del catálogo SAT c_ClaveUnidad |
 | descripcion | text | ej. "Metro cuadrado" |
 | tipo_magnitud | enum | `longitud`, `area`, `volumen`, `masa`, `pieza`, `tiempo`, `otro` |
@@ -303,7 +304,7 @@ A diferencia de un primer bosquejo con columnas de porcentaje sueltas
 variables existen y cómo se combinan (`VariableCalculo[]`) — vive en
 `modelo_calculo_json`, editable con el ícono "Editar modelo de cálculo" (ver
 `apps/desktop/src/lib/formulaEngine.ts` y `modeloCalculo.ts` para el
-intérprete; `data/modelo-calculo-fasar.json` es el modelo estándar con el
+intérprete; `data/initial/factor_salario_real.json` es el modelo estándar con el
 que se siembra un renglón nuevo). `parametros_json` trae, por separado, los
 valores concretos de los parámetros tipo `numero`/`booleano` que ese modelo
 declara para este renglón (UMA, salario mínimo, tasas IMSS, días LFT...).

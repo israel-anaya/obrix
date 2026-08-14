@@ -150,6 +150,7 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
     columns: [
       { field: "simbolo", header: "Símbolo", width: 100 },
       { field: "simbolo_impresion", header: "Símbolo de impresión", width: 160 },
+      { field: "variantes", header: "Variantes", width: 220 },
       { field: "clave_sat", header: "Clave SAT", width: 120 },
       { field: "descripcion", header: "Descripción", width: 320 },
       { field: "tipo_magnitud", header: "Tipo de magnitud", width: 160, options: TIPOS_MAGNITUD },
@@ -166,6 +167,7 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
     _id: m.id,
     simbolo: m.simbolo,
     simbolo_impresion: m.simbolo_impresion,
+    variantes: m.variantes,
     clave_sat: m.clave_sat ?? "",
     descripcion: m.descripcion,
     tipo_magnitud: m.tipo_magnitud,
@@ -174,6 +176,7 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
   vacio: {
     simbolo: "NVA",
     simbolo_impresion: "NVA",
+    variantes: "",
     clave_sat: null,
     descripcion: "Nueva unidad",
     tipo_magnitud: "otro",
@@ -181,6 +184,7 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
   filaANuevo: (f) => ({
     simbolo: String(f.simbolo),
     simbolo_impresion: String(f.simbolo_impresion),
+    variantes: String(f.variantes),
     clave_sat: String(f.clave_sat) || null,
     descripcion: String(f.descripcion),
     // La celda usa un selector (opciones: TIPOS_MAGNITUD), así que el valor

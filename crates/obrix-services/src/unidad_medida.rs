@@ -5,10 +5,15 @@ use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, QueryOrder};
 use crate::usuario::UsuarioService;
 use crate::{nuevo_id, DatosIniciales, ServiceError};
 
+/// Catálogo de unidades de medida de referencia — fuente de verdad en
+/// `data/initial/unidad_medida.csv`, embebido tal cual en el binario.
+const UNIDADES_CSV: &str = include_str!("../../../data/initial/unidad_medida.csv");
+
 #[derive(serde::Deserialize)]
 pub struct UnidadMedidaData {
     pub simbolo: String,
     pub simbolo_impresion: String,
+    pub variantes: String,
     pub clave_sat: Option<String>,
     pub descripcion: String,
     pub tipo_magnitud: TipoMagnitud,
@@ -21,6 +26,20 @@ impl UnidadMedidaService {
         Ok(Entity::find().order_by_asc(Column::Simbolo).all(repo.conexion()).await?)
     }
 
+    /// Grafías equivalentes de una unidad, en minúsculas.
+    /// Expande `simbolo`, `simbolo_impresion`, `descripcion` y el campo
+    /// `variantes` (separado por comas). No consulta la base: el import
+    /// carga las filas y con esta lista arma el mapa token → id.
+    pub fn variantes(unidad: &Model) -> Vec<String> {
+        std::iter::once(unidad.simbolo.as_str())
+            .chain(std::iter::once(unidad.simbolo_impresion.as_str()))
+            .chain(std::iter::once(unidad.descripcion.as_str()))
+            .chain(unidad.variantes.split(','))
+            .map(|t| t.trim().to_lowercase())
+            .filter(|t| !t.is_empty())
+            .collect()
+    }
+
     pub async fn crear(
         repo: &dyn PortafolioRepository,
         datos: UnidadMedidaData,
@@ -30,6 +49,7 @@ impl UnidadMedidaService {
             id: Set(nuevo_id()),
             simbolo: Set(datos.simbolo),
             simbolo_impresion: Set(datos.simbolo_impresion),
+            variantes: Set(datos.variantes),
             clave_sat: Set(datos.clave_sat),
             descripcion: Set(datos.descripcion),
             tipo_magnitud: Set(datos.tipo_magnitud),
@@ -54,6 +74,7 @@ impl UnidadMedidaService {
             .into();
         modelo.simbolo = Set(datos.simbolo);
         modelo.simbolo_impresion = Set(datos.simbolo_impresion);
+        modelo.variantes = Set(datos.variantes);
         modelo.clave_sat = Set(datos.clave_sat);
         modelo.descripcion = Set(datos.descripcion);
         modelo.tipo_magnitud = Set(datos.tipo_magnitud);
@@ -68,67 +89,98 @@ impl UnidadMedidaService {
     }
 }
 
+#[derive(serde::Deserialize)]
+struct RegistroCsvUnidad {
+    #[serde(rename = "Símbolo")]
+    simbolo: String,
+    #[serde(rename = "Símbolo impresión")]
+    simbolo_impresion: String,
+    #[serde(rename = "Variantes")]
+    variantes: String,
+    #[serde(rename = "Clave SAT")]
+    clave_sat: Option<String>,
+    #[serde(rename = "Descripción")]
+    descripcion: String,
+    #[serde(rename = "Tipo magnitud")]
+    tipo_magnitud: TipoMagnitud,
+}
+
 impl DatosIniciales for UnidadMedidaService {
+    /// Una unidad por cada fila de `data/initial/unidad_medida.csv`.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if Entity::find().one(repo.conexion()).await?.is_some() {
             return Ok(());
         }
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
-        // `simbolo_impresion` arranca igual a `simbolo` en cada fila, pero es
-        // un valor propio y editable — no se deriva de `simbolo` en el código.
-        let unidades = [
-            ("m", "m", "MTR", "Metro", TipoMagnitud::Longitud),
-            ("ml", "ml", "MTR", "Metro lineal", TipoMagnitud::Longitud),
-            ("cm", "cm", "CMT", "Centímetro", TipoMagnitud::Longitud),
-            ("mm", "mm", "MMT", "Milímetro", TipoMagnitud::Longitud),
-            ("km", "km", "KTM", "Kilómetro", TipoMagnitud::Longitud),
-            ("m2", "m²", "MTK", "Metro cuadrado", TipoMagnitud::Area),
-            ("ha", "ha", "HAR", "Hectárea", TipoMagnitud::Area),
-            ("m3", "m³", "MTQ", "Metro cúbico", TipoMagnitud::Volumen),
-            ("dm3", "dm³", "DMQ", "Decímetro cúbico", TipoMagnitud::Volumen),
-            ("m3/Est", "m³/Est", "", "Metro cúbico por estación de 20 metros", TipoMagnitud::Volumen),
-            ("m3/hm", "m³/hm", "", "Metro cúbico por hectómetro", TipoMagnitud::Volumen),
-            ("m3/km", "m³/km", "", "Metro cúbico por kilómetro", TipoMagnitud::Volumen),
-            ("l", "l", "LTR", "Litro", TipoMagnitud::Volumen),
-            ("kg", "kg", "KGM", "Kilogramo", TipoMagnitud::Masa),
-            ("ton", "t", "TNE", "Tonelada", TipoMagnitud::Masa),
-            ("pieza", "pza", "H87", "Pieza", TipoMagnitud::Pieza),
-            ("millar", "millar", "MIL", "Millar", TipoMagnitud::Pieza),
-            ("juego", "juego", "SET", "Juego", TipoMagnitud::Pieza),
-            ("lote", "lote", "XLT", "Lote", TipoMagnitud::Pieza),
-            ("saco", "saco", "XSA", "Saco", TipoMagnitud::Pieza),
-            ("cubeta", "cubeta", "XBJ", "Cubeta", TipoMagnitud::Pieza),
-            ("bulto", "bulto", "XUN", "Bulto", TipoMagnitud::Pieza),
-            ("caja", "caja", "XBX", "Caja", TipoMagnitud::Pieza),
-            ("rollo", "rollo", "XRO", "Rollo", TipoMagnitud::Pieza),
-            ("hoja", "hoja", "XSH", "Hoja", TipoMagnitud::Pieza),
-            ("tambor", "tambor", "XDR", "Tambor", TipoMagnitud::Pieza),
-            ("viaje", "viaje", "XUN", "Viaje", TipoMagnitud::Pieza),
-            ("flete", "flete", "E48", "Flete", TipoMagnitud::Otro),
-            ("jor", "jor", "DAY", "Jornal", TipoMagnitud::Tiempo),
-            ("hr", "h", "HUR", "Hora", TipoMagnitud::Tiempo),
-            ("dia", "dia", "DAY", "Día", TipoMagnitud::Tiempo),
-            ("sem", "sem", "WEE", "Semana", TipoMagnitud::Tiempo),
-            ("mes", "mes", "MON", "Mes", TipoMagnitud::Tiempo),
-            ("global", "global", "ACT", "Global", TipoMagnitud::Otro),
-            ("%", "%", "", "Porcentaje", TipoMagnitud::Otro),
-            ("%mo", "%mo", "", "Porcentaje de mano de obra", TipoMagnitud::Otro),
-            ("%ma", "%ma", "", "Porcentaje de materiales", TipoMagnitud::Otro),
-        ];
-        for (simbolo, simbolo_impresion, clave_sat, descripcion, tipo_magnitud) in unidades {
+        let mut lector = csv::ReaderBuilder::new().from_reader(UNIDADES_CSV.as_bytes());
+        for (i, registro) in lector.deserialize::<RegistroCsvUnidad>().enumerate() {
+            let fila = i + 2;
+            let registro = registro.map_err(|e| {
+                ServiceError::Validacion(format!("unidad_medida.csv fila {fila}: {e}"))
+            })?;
+            let simbolo = registro.simbolo.trim().to_string();
+            if simbolo.is_empty() {
+                return Err(ServiceError::Validacion(format!(
+                    "unidad_medida.csv fila {fila}: símbolo vacío"
+                )));
+            }
             Self::crear(
                 repo,
                 UnidadMedidaData {
-                    simbolo: simbolo.to_string(),
-                    simbolo_impresion: simbolo_impresion.to_string(),
-                    clave_sat: Some(clave_sat.to_string()),
-                    descripcion: descripcion.to_string(),
-                    tipo_magnitud,
+                    simbolo,
+                    simbolo_impresion: registro.simbolo_impresion.trim().to_string(),
+                    variantes: registro.variantes,
+                    clave_sat: registro
+                        .clave_sat
+                        .map(|c| c.trim().to_string())
+                        .filter(|c| !c.is_empty()),
+                    descripcion: registro.descripcion.trim().to_string(),
+                    tipo_magnitud: registro.tipo_magnitud,
                 },
                 admin.id.clone(),
             )
             .await?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn variantes_incluye_grafias_separadas_por_coma() {
+        let unidad = Model {
+            id: "u1".into(),
+            simbolo: "pieza".into(),
+            simbolo_impresion: "pza".into(),
+            variantes: "pieza, pza".into(),
+            clave_sat: None,
+            descripcion: "Pieza".into(),
+            tipo_magnitud: TipoMagnitud::Pieza,
+            created_at: String::new(),
+            updated_at: None,
+            created_by: String::new(),
+            updated_by: None,
+        };
+        let grafias = UnidadMedidaService::variantes(&unidad);
+        assert!(grafias.contains(&"pieza".into()));
+        assert!(grafias.contains(&"pza".into()));
+    }
+
+    #[test]
+    fn primera_variante_es_el_simbolo() {
+        let mut lector = csv::ReaderBuilder::new().from_reader(UNIDADES_CSV.as_bytes());
+        for registro in lector.deserialize::<RegistroCsvUnidad>() {
+            let registro = registro.expect("parsear unidad_medida.csv");
+            let primera = registro.variantes.split(',').next().map(str::trim);
+            assert_eq!(
+                primera,
+                Some(registro.simbolo.trim()),
+                "{}",
+                registro.simbolo
+            );
+        }
     }
 }

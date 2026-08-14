@@ -9,8 +9,8 @@ use crate::{nuevo_id, DatosIniciales, ServiceError};
 
 /// Modelo de cálculo estándar (FSR, Art. 160 RLOPSRM) con el que se siembra un
 /// renglón nuevo cuando no se especifica uno propio — fuente de verdad en
-/// `data/modelo-calculo-fasar.json`, embebido tal cual en el binario.
-const MODELO_ESTANDAR_VARIABLES_JSON: &str = include_str!("../../../data/modelo-calculo-fasar.json");
+/// `data/initial/factor_salario_real.json`, embebido tal cual en el binario.
+const MODELO_ESTANDAR_VARIABLES_JSON: &str = include_str!("../../../data/initial/factor_salario_real.json");
 
 /// Valores `valor_default` de los parámetros `numero`/`booleano` de un
 /// modelo de cálculo, como `parametros_json` inicial de un renglón nuevo

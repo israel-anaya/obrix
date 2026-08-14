@@ -90,7 +90,9 @@ export default function App() {
   const [portafolio, setPortafolio] = useState<{ path: string } | null>(null);
   const [portafolioError, setPortafolioError] = useState<string | null>(null);
   const [confirmacionPendiente, setConfirmacionPendiente] = useState<{ path: string } | null>(null);
-  const [progresoPortafolio, setProgresoPortafolio] = useState<string | null>(null);
+  // Mensaje de la operación en curso mostrado en la barra de estado inferior
+  // (crear portafolio, importar materiales, …) — solo una a la vez.
+  const [progreso, setProgreso] = useState<string | null>(null);
   const portafolioAbierto = portafolio !== null;
 
   const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([]);
@@ -174,7 +176,7 @@ export default function App() {
   const handleCrearPortafolio = async () => {
     const path = await save({ filters: FILTROS_PORTAFOLIO, defaultPath: "portafolio.obx" });
     if (!path) return;
-    setProgresoPortafolio("Creando portafolio…");
+    setProgreso("Creando portafolio…");
     try {
       await crearPortafolio(path);
       setPortafolio({ path });
@@ -182,7 +184,7 @@ export default function App() {
     } catch (e) {
       setPortafolioError(String(e));
     } finally {
-      setProgresoPortafolio(null);
+      setProgreso(null);
     }
   };
 
@@ -384,7 +386,7 @@ export default function App() {
       const catalogoId = activeTab.id.slice(CATALOGO_PREFIX.length);
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
       if (catalogoId === "clientes") return <ClientesSeccion />;
-      if (catalogoId === "materiales-item") return <MaterialesSeccion />;
+      if (catalogoId === "materiales-item") return <MaterialesSeccion onProgreso={setProgreso} />;
       if (catalogoId === "materiales-estanteria") return <EstanteriaMaterialesSeccion />;
       if (catalogoId === "materiales-mesa") return <MesaEquivalentesSeccion />;
       if (catalogoId === "materiales-radar") return <RadarMaterialesSeccion />;
@@ -579,7 +581,7 @@ export default function App() {
         <StatusBar
           proyecto="Boceto de interfaz · sin datos"
           conteo={`${proyectos.length} proyectos`}
-          progreso={progresoPortafolio}
+          progreso={progreso}
         />
 
         <AlertDialog

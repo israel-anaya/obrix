@@ -8,6 +8,12 @@ use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
 use crate::{nuevo_id, DatosIniciales, ServiceError};
 
+/// Proveedores de referencia de la industria de la construcción en México.
+/// Fuente de verdad en `data/initial/proveedor.csv`, embebido tal cual en el
+/// binario. El RFC genérico (`XAXX010101000`) es el placeholder de "público
+/// en general" — no se inventan RFCs reales de estas empresas.
+const PROVEEDORES_CSV: &str = include_str!("../../../data/initial/proveedor.csv");
+
 #[derive(serde::Deserialize)]
 pub struct ProveedorData {
     pub razon_social: String,
@@ -77,35 +83,16 @@ impl ProveedorService {
     }
 }
 
-/// Proveedores reconocidos de la industria de la construcción en México —
-/// cemento, acero, pinturas, recubrimientos, tubería, herramienta y
-/// distribución. El RFC genérico (`XAXX010101000`) es el mismo placeholder
-/// de "público en general" ya usado en el resto de los datos demo — no se
-/// inventan RFCs reales de estas empresas.
-const PROVEEDORES_DEMO: &[(&str, &str)] = &[
-    ("CEMEX", "5"),
-    ("Holcim México", "5"),
-    ("Cementos Moctezuma", "4.5"),
-    ("Grupo Cementos de Chihuahua (GCC)", "4.5"),
-    ("Cementos Fortaleza", "4"),
-    ("Deacero", "4.5"),
-    ("Ternium México", "5"),
-    ("Grupo Simec", "4"),
-    ("ArcelorMittal México", "4.5"),
-    ("Grupo Collado", "4"),
-    ("Comex", "4.5"),
-    ("Sika México", "4.5"),
-    ("Interceramic", "4"),
-    ("Vitromex", "4"),
-    ("Orbia (Mexichem)", "4.5"),
-    ("Grupo Industrial Saltillo (GIS)", "4"),
-    ("Truper", "4.5"),
-    ("Pochteca", "4"),
-    ("Grupo Cuprum", "4"),
-    ("The Home Depot México", "4"),
-];
+#[derive(serde::Deserialize)]
+struct RegistroCsvProveedor {
+    #[serde(rename = "Razón social")]
+    razon_social: String,
+    #[serde(rename = "Calificación")]
+    calificacion: String,
+}
 
 impl DatosIniciales for ProveedorService {
+    /// Un proveedor por cada fila de `data/initial/proveedor.csv`.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if Entity::find().one(repo.conexion()).await?.is_some() {
             return Ok(());
@@ -114,15 +101,31 @@ impl DatosIniciales for ProveedorService {
             return Ok(());
         };
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
-        for (razon_social, calificacion) in PROVEEDORES_DEMO {
+        let mut lector = csv::ReaderBuilder::new().from_reader(PROVEEDORES_CSV.as_bytes());
+        for (i, registro) in lector.deserialize::<RegistroCsvProveedor>().enumerate() {
+            let fila = i + 2;
+            let registro = registro.map_err(|e| {
+                ServiceError::Validacion(format!("proveedor.csv fila {fila}: {e}"))
+            })?;
+            let razon_social = registro.razon_social.trim().to_string();
+            if razon_social.is_empty() {
+                return Err(ServiceError::Validacion(format!(
+                    "proveedor.csv fila {fila}: razón social vacía"
+                )));
+            }
+            let calificacion = registro.calificacion.trim().to_string();
             Self::crear(
                 repo,
                 &organizacion.id,
                 ProveedorData {
-                    razon_social: razon_social.to_string(),
+                    razon_social,
                     rfc: "XAXX010101000".to_string(),
                     contacto: None,
-                    calificacion: Some(calificacion.to_string()),
+                    calificacion: if calificacion.is_empty() {
+                        None
+                    } else {
+                        Some(calificacion)
+                    },
                 },
                 admin.id.clone(),
             )

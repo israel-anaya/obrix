@@ -7,6 +7,7 @@ pub struct Model {
     pub id: String,
     pub simbolo: String,
     pub simbolo_impresion: String,
+    pub variantes: String,
     pub clave_sat: Option<String>,
     pub descripcion: String,
     pub tipo_magnitud: TipoMagnitud,

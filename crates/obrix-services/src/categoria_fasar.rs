@@ -12,13 +12,14 @@ use sea_orm::{
 
 use crate::organizacion::OrganizacionService;
 use crate::salario_categoria_fasar::SalarioCategoriaFasarService;
+use crate::unidad_medida::UnidadMedidaService;
 use crate::usuario::UsuarioService;
 use crate::{nuevo_id, DatosIniciales, ServiceError};
 
 /// Catálogo de categorías FASAR de referencia — fuente de verdad en
-/// `data/categorias.csv`, embebido tal cual en el binario (mismo patrón que
-/// `modelo-calculo-fasar.json` en `FactorSalarioRealService`).
-const CATEGORIAS_CSV: &str = include_str!("../../../data/categorias.csv");
+/// `data/initial/categoria_fasar.csv`, embebido tal cual en el binario (mismo
+/// patrón que `factor_salario_real.json` en `FactorSalarioRealService`).
+const CATEGORIAS_CSV: &str = include_str!("../../../data/initial/categoria_fasar.csv");
 
 #[derive(serde::Deserialize)]
 pub struct CategoriaFasarData {
@@ -187,12 +188,12 @@ struct RegistroCsvCategoria {
 }
 
 impl DatosIniciales for CategoriaFasarService {
-    /// Una categoría por cada fila de `data/categorias.csv`. Depende de
-    /// `organizacion`, `unidad_medida` y `familia_insumo` (Unidad/Familia/
-    /// Subfamilia del CSV se resuelven por nombre), ya sembradas antes — ver
-    /// orden en `seed::sembrar_catalogos_generales`. Clave `MO-001`… en el
-    /// orden del archivo. Sin salario: eso vive en `salario_categoria_fasar`
-    /// y lo carga el usuario después.
+    /// Una categoría por cada fila de `data/initial/categoria_fasar.csv`. Depende de
+    /// `organizacion`, `unidad_medida` y `familia_insumo` ya sembradas — ver
+    /// orden en `seed::sembrar_catalogos_generales`. Unidad del CSV se
+    /// resuelve con `UnidadMedidaService::variantes`; Familia/Subfamilia por
+    /// nombre. Clave `MO-001`… en el orden del archivo. Sin salario: eso
+    /// vive en `salario_categoria_fasar` y lo carga el usuario después.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if categoria_fasar::Entity::find().one(repo.conexion()).await?.is_some() {
             return Ok(());
@@ -201,13 +202,13 @@ impl DatosIniciales for CategoriaFasarService {
         let organizacion = OrganizacionService::buscar_admin_obrix(repo).await?;
 
         let unidades = unidad_medida::Entity::find().all(repo.conexion()).await?;
+        // Igual que el import de materiales: mapa en memoria, no un LIKE.
         let unidad_id_por_texto: std::collections::HashMap<String, String> = unidades
             .iter()
             .flat_map(|u| {
-                [
-                    (u.simbolo.to_lowercase(), u.id.clone()),
-                    (u.descripcion.to_lowercase(), u.id.clone()),
-                ]
+                UnidadMedidaService::variantes(u)
+                    .into_iter()
+                    .map(|t| (t, u.id.clone()))
             })
             .collect();
 
@@ -230,24 +231,24 @@ impl DatosIniciales for CategoriaFasarService {
         for (i, registro) in lector.deserialize::<RegistroCsvCategoria>().enumerate() {
             let fila = i + 2;
             let registro = registro.map_err(|e| {
-                ServiceError::Validacion(format!("categorias.csv fila {fila}: {e}"))
+                ServiceError::Validacion(format!("categoria_fasar.csv fila {fila}: {e}"))
             })?;
             let descripcion = registro.categoria.trim().to_string();
             if descripcion.is_empty() {
                 return Err(ServiceError::Validacion(format!(
-                    "categorias.csv fila {fila}: categoría vacía"
+                    "categoria_fasar.csv fila {fila}: categoría vacía"
                 )));
             }
 
             let unidad_texto = registro.unidad.trim();
             if unidad_texto.is_empty() {
                 return Err(ServiceError::Validacion(format!(
-                    "categorias.csv fila {fila}: unidad vacía"
+                    "categoria_fasar.csv fila {fila}: unidad vacía"
                 )));
             }
             let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto.to_lowercase()).cloned() else {
                 return Err(ServiceError::Validacion(format!(
-                    "categorias.csv fila {fila}: unidad \"{unidad_texto}\" no encontrada"
+                    "categoria_fasar.csv fila {fila}: unidad \"{unidad_texto}\" no encontrada"
                 )));
             };
 
@@ -257,7 +258,7 @@ impl DatosIniciales for CategoriaFasarService {
                 .cloned()
                 .ok_or_else(|| {
                     ServiceError::NoEncontrado(format!(
-                        "categorias.csv fila {fila}: familia \"{familia_texto}\" no encontrada"
+                        "categoria_fasar.csv fila {fila}: familia \"{familia_texto}\" no encontrada"
                     ))
                 })?;
 
@@ -267,7 +268,7 @@ impl DatosIniciales for CategoriaFasarService {
                 .cloned()
                 .ok_or_else(|| {
                     ServiceError::NoEncontrado(format!(
-                        "categorias.csv fila {fila}: subfamilia \"{subfamilia_texto}\" no encontrada dentro de \"{familia_texto}\""
+                        "categoria_fasar.csv fila {fila}: subfamilia \"{subfamilia_texto}\" no encontrada dentro de \"{familia_texto}\""
                     ))
                 })?;
 
@@ -354,6 +355,7 @@ mod tests {
             id: Set("um-1".into()),
             simbolo: Set("jor".into()),
             simbolo_impresion: Set("jor".into()),
+            variantes: Set("".into()),
             clave_sat: Set(None),
             descripcion: Set("Jornal".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
@@ -487,6 +489,7 @@ mod tests {
             id: Set("um-m".into()),
             simbolo: Set("m".into()),
             simbolo_impresion: Set("m".into()),
+            variantes: Set("".into()),
             clave_sat: Set(None),
             descripcion: Set("Metro".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Longitud),

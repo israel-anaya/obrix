@@ -239,21 +239,50 @@ mod tests {
             .expect("listar unidades");
         assert_eq!(
             unidades.len(),
-            37,
-            "deben quedar las 37 unidades default, sin duplicar"
+            47,
+            "deben quedar las 47 unidades de data/initial/unidad_medida.csv, sin duplicar"
+        );
+        let pieza = unidades
+            .iter()
+            .find(|u| u.simbolo == "pieza")
+            .expect("unidad pieza");
+        assert!(
+            pieza.variantes.split(',').any(|v| v.trim() == "pza"),
+            "pieza debe reconocer la variante pza: {}",
+            pieza.variantes
         );
 
         let monedas = obrix_db::entities::moneda::Entity::find()
             .all(portafolio.conexion())
             .await
             .expect("listar monedas");
-        assert_eq!(monedas.len(), 2, "deben quedar las 2 monedas default, sin duplicar");
+        assert_eq!(monedas.len(), 2, "deben quedar las 2 monedas de data/initial/moneda.csv, sin duplicar");
+
+        let regiones = obrix_db::entities::region::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .expect("listar regiones");
+        assert_eq!(
+            regiones.len(),
+            3,
+            "deben quedar las 3 regiones de data/initial/region.csv, sin duplicar"
+        );
+
+        let proveedores = obrix_db::entities::proveedor::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .expect("listar proveedores");
+        assert_eq!(
+            proveedores.len(),
+            20,
+            "deben quedar los 20 proveedores de data/initial/proveedor.csv, sin duplicar"
+        );
 
         let familias = obrix_db::entities::familia_insumo::Entity::find()
             .all(portafolio.conexion())
             .await
             .expect("listar familias");
-        assert_eq!(familias.len(), 232, "21 familias padre + 211 hijas, sin duplicar");
+        assert_eq!(familias.len(), 232, "21 familias padre + 211 hijas de data/initial/familia_insumo.csv, sin duplicar");
         let hija = familias
             .iter()
             .find(|f| f.nombre == "Concreto premezclado")
@@ -299,8 +328,8 @@ mod tests {
             .expect("listar categorias_fasar");
         assert_eq!(
             categorias.len(),
-            32,
-            "32 categorías de data/categorias.csv, sin duplicar"
+            33,
+            "33 categorías de data/initial/categoria_fasar.csv, sin duplicar"
         );
 
         let insumos_mo = obrix_db::entities::insumo::Entity::find()
@@ -311,7 +340,7 @@ mod tests {
             .all(portafolio.conexion())
             .await
             .expect("listar insumos de mano de obra");
-        assert_eq!(insumos_mo.len(), 32);
+        assert_eq!(insumos_mo.len(), 33);
 
         let aluminero = insumos_mo
             .iter()

@@ -14,6 +14,7 @@ use sea_orm::{
 };
 
 use crate::precio_material::{PrecioMaterialData, PrecioMaterialService};
+use crate::unidad_medida::UnidadMedidaService;
 use crate::{nuevo_id, ServiceError};
 
 #[derive(serde::Deserialize)]
@@ -223,26 +224,40 @@ impl MaterialService {
     }
 
     /// Importa materiales desde un CSV con columnas
-    /// `Descripción,Unidad,Costo,Familia,Subfamilia` (Familia/Subfamilia
-    /// opcionales). No falla la operación completa por una fila mala — cada
-    /// fila se procesa de forma independiente y los problemas se acumulan en
-    /// `errores` en vez de abortar el resto del archivo.
+    /// `Clave,Descripción,Unidad,Costo,Familia,Subfamilia` (Clave/Familia/Subfamilia
+    /// opcionales). Si la fila trae `Clave`, se usa tal cual; si no, se genera
+    /// una consecutiva `MAT-<n>` continuando desde la clave `MAT-` más alta ya
+    /// registrada para la organización. No falla la operación completa por una
+    /// fila mala — cada fila se procesa de forma independiente y los problemas
+    /// se acumulan en `errores` en vez de abortar el resto del archivo.
     pub async fn importar_csv(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
         contenido_csv: &str,
         creado_por: String,
     ) -> Result<ResultadoImportacion, ServiceError> {
+        let mut siguiente_consecutivo_mat = insumo::Entity::find()
+            .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
+            .filter(insumo::Column::Clave.starts_with("MAT-"))
+            .all(repo.conexion())
+            .await?
+            .iter()
+            .filter_map(|i| i.clave.strip_prefix("MAT-")?.parse::<u32>().ok())
+            .max()
+            .unwrap_or(0)
+            + 1;
+
         let unidades = obrix_db::entities::unidad_medida::Entity::find()
             .all(repo.conexion())
             .await?;
+        // Token de la columna Unidad → id. Se arma en memoria con
+        // `UnidadMedidaService::variantes`; no hay WHERE sobre `variantes`.
         let unidad_id_por_texto: std::collections::HashMap<String, String> = unidades
             .iter()
             .flat_map(|u| {
-                [
-                    (u.simbolo.to_lowercase(), u.id.clone()),
-                    (u.descripcion.to_lowercase(), u.id.clone()),
-                ]
+                UnidadMedidaService::variantes(u)
+                    .into_iter()
+                    .map(|t| (t, u.id.clone()))
             })
             .collect();
 
@@ -262,6 +277,21 @@ impl MaterialService {
         let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
         let mut importados = 0u32;
         let mut errores = Vec::new();
+
+        // Si el archivo no trae columna `Clave`, se avisa una sola vez de que
+        // todas las filas recibirán una consecutiva `MAT-<n>` autogenerada.
+        let tiene_columna_clave = lector
+            .headers()
+            .map(|h| h.iter().any(|columna| columna.trim().eq_ignore_ascii_case("clave")))
+            .unwrap_or(false);
+        let aviso = if tiene_columna_clave {
+            None
+        } else {
+            Some(
+                "El archivo no tiene columna \"Clave\"; se generarán claves automáticas con el prefijo MAT-."
+                    .to_string(),
+            )
+        };
 
         for (i, registro) in lector.deserialize::<RegistroCsvMaterial>().enumerate() {
             let fila = i + 2; // +1 por índice 0-based, +1 por la fila de encabezados
@@ -326,7 +356,14 @@ impl MaterialService {
                 None
             };
 
-            let clave = format!("IMP-{}", &nuevo_id()[..8]);
+            let clave = match registro.clave.as_deref().map(str::trim) {
+                Some(clave_archivo) if !clave_archivo.is_empty() => clave_archivo.to_string(),
+                _ => {
+                    let clave = format!("MAT-{siguiente_consecutivo_mat}");
+                    siguiente_consecutivo_mat += 1;
+                    clave
+                }
+            };
             let creacion = Self::crear(
                 repo,
                 organizacion_id,
@@ -374,7 +411,7 @@ impl MaterialService {
             importados += 1;
         }
 
-        Ok(ResultadoImportacion { importados, errores })
+        Ok(ResultadoImportacion { importados, errores, aviso })
     }
 }
 
@@ -382,10 +419,15 @@ impl MaterialService {
 pub struct ResultadoImportacion {
     pub importados: u32,
     pub errores: Vec<String>,
+    /// Aviso informativo (no error) — hoy solo se usa cuando el archivo no
+    /// trae columna `Clave` y las claves se autogeneraron con prefijo `MAT-`.
+    pub aviso: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
 struct RegistroCsvMaterial {
+    #[serde(rename = "Clave")]
+    clave: Option<String>,
     #[serde(rename = "Descripción")]
     descripcion: String,
     #[serde(rename = "Unidad")]
@@ -472,6 +514,7 @@ mod tests {
             id: Set("um-1".into()),
             simbolo: Set("m2".into()),
             simbolo_impresion: Set("m2".into()),
+            variantes: Set("".into()),
             clave_sat: Set(None),
             descripcion: Set("Metro cuadrado".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Area),
@@ -609,6 +652,7 @@ mod tests {
             id: Set("um-1".into()),
             simbolo: Set("m2".into()),
             simbolo_impresion: Set("m2".into()),
+            variantes: Set("".into()),
             clave_sat: Set(None),
             descripcion: Set("Metro cuadrado".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Area),
@@ -659,6 +703,10 @@ mod tests {
 
         assert_eq!(resultado.importados, 2, "solo las 2 filas válidas deben importarse");
         assert_eq!(resultado.errores.len(), 2, "las 2 filas inválidas deben reportarse como error");
+        assert!(
+            resultado.aviso.is_some_and(|a| a.contains("MAT-")),
+            "sin columna Clave debe avisarse que se autogeneran claves MAT-"
+        );
 
         let materiales = MaterialService::listar(&portafolio, "org-1")
             .await
@@ -679,5 +727,37 @@ mod tests {
             .expect("arena importada");
         assert_eq!(arena.familia_id, None);
         assert_eq!(arena.precio_vigente, Some("80".parse().unwrap()));
+
+        assert_eq!(cemento.clave, "MAT-1");
+        assert_eq!(arena.clave, "MAT-2");
+
+        // Una segunda importación sin `Clave` para "Yeso" y con `Clave` explícita
+        // ("ARE-99") para "Arena fina" debe: usar la clave del archivo cuando
+        // viene presente, y continuar la consecutiva `MAT-` desde la más alta
+        // ya registrada (MAT-2 → MAT-3), sin verse afectada por la clave ajena.
+        let csv2 = "Clave,Descripción,Unidad,Costo\n\
+                     ARE-99,Arena fina,m2,90\n\
+                     ,Yeso,m2,60\n";
+        let resultado2 = MaterialService::importar_csv(&portafolio, "org-1", csv2, "usr-1".into())
+            .await
+            .expect("importar csv2");
+        assert_eq!(resultado2.importados, 2);
+        assert_eq!(resultado2.aviso, None, "con columna Clave presente no debe avisarse nada");
+
+        let materiales2 = MaterialService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar materiales");
+
+        let arena_fina = materiales2
+            .iter()
+            .find(|m| m.descripcion == "Arena fina")
+            .expect("arena fina importada");
+        assert_eq!(arena_fina.clave, "ARE-99");
+
+        let yeso = materiales2
+            .iter()
+            .find(|m| m.descripcion == "Yeso")
+            .expect("yeso importado");
+        assert_eq!(yeso.clave, "MAT-3");
     }
 }

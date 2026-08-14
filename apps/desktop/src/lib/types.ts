@@ -105,6 +105,7 @@ export interface UnidadMedida extends CamposControl {
   id: string;
   simbolo: string;
   simbolo_impresion: string;
+  variantes: string;
   clave_sat: string | null;
   descripcion: string;
   tipo_magnitud: TipoMagnitud;
@@ -113,6 +114,7 @@ export interface UnidadMedida extends CamposControl {
 export interface UnidadMedidaData {
   simbolo: string;
   simbolo_impresion: string;
+  variantes: string;
   clave_sat: string | null;
   descripcion: string;
   tipo_magnitud: TipoMagnitud;
@@ -178,6 +180,7 @@ export interface Material extends CamposControl {
 export interface ResultadoImportacion {
   importados: number;
   errores: string[];
+  aviso: string | null;
 }
 
 export interface PrecioMaterial {
@@ -349,7 +352,7 @@ export interface CampoCalculado {
 /** Cualquier variable de un modelo de cálculo — parámetro o campo calculado, para consumidores que necesitan ambos juntos (ej. el grafo de dependencias). */
 export type VariableCalculo = Parametro | CampoCalculado;
 
-/** Forma serializada de `modelo_calculo_json` — el mismo modelo de `parametros`/`calculados` de `data/modelo-calculo-fasar.json`. */
+/** Forma serializada de `modelo_calculo_json` — el mismo modelo de `parametros`/`calculados` de `data/initial/factor_salario_real.json`. */
 export interface ModeloCalculo {
   parametros: Parametro[];
   calculados: CampoCalculado[];
