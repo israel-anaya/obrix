@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DollarSign, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { DollarSign, FileSpreadsheet, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import {
+  ActualizarSalariosLoteDialog,
+  type EstadoActualizacionLote,
+} from "@/features/catalogos/ActualizarSalariosLoteDialog";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
+import { validarCsvSalarioNominal } from "@/lib/csvSalarioNominal";
 import { cn } from "@/lib/utils";
 import {
   createCategoriaFasar,
   deleteCategoriaFasar,
+  leerArchivoTexto,
   listCategoriasFasar,
   listFamiliasInsumo,
   listUnidadesMedida,
@@ -18,6 +25,8 @@ import {
   updateCategoriaFasar,
 } from "@/lib/tauri";
 import type { CategoriaFasar, CategoriaFasarData, FamiliaInsumo, UnidadMedida } from "@/lib/types";
+
+const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
@@ -53,6 +62,8 @@ export function CategoriaFasarSeccion() {
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
   const [estadoGuardado, setEstadoGuardado] = useState<{ tipo: "error" | "exito"; mensaje: string } | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLote | null>(null);
+  const [importandoLote, setImportandoLote] = useState(false);
 
   useEffect(() => {
     if (estadoGuardado?.tipo !== "exito") return;
@@ -75,6 +86,30 @@ export function CategoriaFasarSeccion() {
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
+  };
+
+  const actualizarSalariosLote = async () => {
+    const path = await open({ filters: FILTRO_CSV, multiple: false });
+    if (!path || Array.isArray(path)) return;
+    setImportandoLote(true);
+    setError(null);
+    try {
+      const contenido = await leerArchivoTexto(path);
+      const resultado = validarCsvSalarioNominal(contenido, categorias);
+      if (resultado.ok) {
+        setEstadoLote({ tipo: "listo", filas: resultado.filas });
+      } else {
+        setEstadoLote({
+          tipo: "invalido",
+          categoriasNoRegistradas: resultado.categoriasNoRegistradas,
+          errores: resultado.errores,
+        });
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setImportandoLote(false);
+    }
   };
 
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -116,6 +151,8 @@ export function CategoriaFasarSeccion() {
         { field: "clave", header: "Clave", width: 110 },
         { field: "descripcion", header: "Descripción", width: 320 },
         { field: "unidad", header: "Unidad", width: 110, options: unidades.map((u) => u.simbolo) },
+        { field: "salario_base_diario", header: "Salario base diario", width: 150, readOnly: true, numeric: true },
+        { field: "factor_salario_real", header: "FSR", width: 110, readOnly: true, numeric: true },
         { field: "salario_real_diario", header: "Salario real vigente", width: 160, readOnly: true, numeric: true },
         {
           field: "familia",
@@ -147,6 +184,8 @@ export function CategoriaFasarSeccion() {
         clave: c.clave,
         descripcion: c.descripcion,
         unidad: simboloPorUnidadId[c.unidad_id] ?? c.unidad_id,
+        salario_base_diario: c.salario_vigente ? `$${c.salario_vigente.salario_base_diario}` : "$0",
+        factor_salario_real: c.salario_vigente?.factor_salario_real ?? "0",
         salario_real_diario: c.salario_vigente ? `$${c.salario_vigente.salario_real_diario}` : "$0",
         familia: (c.familia_id && nombrePorFamiliaId[c.familia_id]) || SIN_FAMILIA,
         subfamilia: (c.sub_familia_id && nombrePorFamiliaId[c.sub_familia_id]) || SIN_SUBFAMILIA,
@@ -227,6 +266,12 @@ export function CategoriaFasarSeccion() {
                 disabled: !puedeEliminar,
               },
               {
+                icono: FileSpreadsheet,
+                titulo: importandoLote ? "Leyendo CSV…" : "Actualizar salarios en lote",
+                onClick: () => void actualizarSalariosLote(),
+                disabled: importandoLote || categorias.length === 0,
+              },
+              {
                 icono: DollarSign,
                 titulo: panelSalarioAbierto ? "Ocultar salario" : "Ver salario",
                 onClick: () => setPanelSalarioAbierto((v) => !v),
@@ -298,6 +343,14 @@ export function CategoriaFasarSeccion() {
           ) : null}
         </ResizablePanelGroup>
       </div>
+      <ActualizarSalariosLoteDialog
+        estado={estadoLote}
+        onCerrar={() => setEstadoLote(null)}
+        onAplicado={(mensaje) => {
+          setEstadoGuardado({ tipo: "exito", mensaje });
+          void recargarCategorias();
+        }}
+      />
     </div>
   );
 }

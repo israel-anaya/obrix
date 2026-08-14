@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
+import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
-import { ErrorFormula } from "@/lib/formulaEngine";
-import { evaluarModelo, validarModelo, type ValoresEntrada } from "@/lib/modeloCalculo";
-import type { FactorSalarioReal, ModeloCalculo, Region, SalarioCategoriaFasar } from "@/lib/types";
+import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
@@ -21,30 +20,6 @@ function formatearFecha(fecha: string): string {
 
 function fmt(valor: number, decimales = 2): string {
   return valor.toLocaleString("es-MX", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
-}
-
-/**
- * Valores de entrada para evaluar el modelo de cálculo de un FSR: los
- * parámetros capturados en `parametros_json` de esa configuración, con
- * `salario_nominal` pisado por el salario base que se está registrando —
- * mismo patrón que `CalcularFsrPage`/`PruebaModeloCalculo`. Los parámetros
- * tipo `rango` no se leen de aquí — `evaluarModelo` los toma siempre de
- * `valor_default` en el modelo, nunca de `parametros_json`.
- */
-function valoresParaCalculo(modelo: ModeloCalculo, parametrosJson: string, salarioNominal: number): ValoresEntrada {
-  let capturados: ValoresEntrada = {};
-  try {
-    capturados = JSON.parse(parametrosJson);
-  } catch {
-    capturados = {};
-  }
-  const valores: ValoresEntrada = {};
-  for (const p of modelo.parametros) {
-    if (p.tipo === "rango") continue;
-    valores[p.id] =
-      p.id === "salario_nominal" ? salarioNominal : (capturados[p.id] ?? p.valor_default ?? (p.tipo === "booleano" ? false : 0));
-  }
-  return valores;
 }
 
 /**
@@ -169,21 +144,7 @@ export function SalarioCategoriaFasarPanel({
     if (!factorNuevo) return null;
     const numero = Number(salarioNuevo);
     if (!Number.isFinite(numero) || numero <= 0) return null;
-    try {
-      const modelo: ModeloCalculo = JSON.parse(factorNuevo.modelo_calculo_json);
-      const errorModelo = validarModelo(modelo.parametros, modelo.calculados);
-      if (errorModelo) return { error: errorModelo };
-      const valores = valoresParaCalculo(modelo, factorNuevo.parametros_json, numero);
-      const resultado = evaluarModelo(modelo.parametros, modelo.calculados, valores);
-      const fsr = resultado.scope.fsr;
-      const salarioReal = resultado.scope.monto_salario_real;
-      if (typeof fsr !== "number" || typeof salarioReal !== "number") {
-        return { error: "El modelo de cálculo de este FSR no produjo fsr/monto_salario_real." };
-      }
-      return { fsr, salarioReal };
-    } catch (e) {
-      return { error: e instanceof ErrorFormula ? e.message : String(e) };
-    }
+    return calcularSalarioConFsr(factorNuevo, numero);
   }, [factorNuevo, salarioNuevo]);
 
   const registrarSalario = async () => {

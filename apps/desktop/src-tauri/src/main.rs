@@ -193,6 +193,7 @@ fn main() {
             commands::categorias_fasar::delete_categoria_fasar,
             commands::salarios_categoria_fasar::list_salarios_categoria_fasar,
             commands::salarios_categoria_fasar::create_salario_categoria_fasar,
+            commands::salarios_categoria_fasar::create_salarios_categoria_fasar_lote,
             commands::archivo_json::escribir_archivo_texto,
             commands::archivo_json::leer_archivo_texto,
         ])

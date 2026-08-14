@@ -10,13 +10,13 @@ use obrix_db::entities::salario_categoria_fasar::{ActiveModel, Column, Entity, M
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
+    QueryOrder, TransactionTrait,
 };
 
 use crate::{nuevo_id, ServiceError};
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 pub struct SalarioCategoriaFasarData {
     pub salario_base_diario: Decimal,
     pub factor_salario_real_id: String,
@@ -24,6 +24,35 @@ pub struct SalarioCategoriaFasarData {
     pub salario_real_diario: Decimal,
     pub region_id: Option<String>,
     pub fecha_vigencia_desde: String,
+}
+
+/// Una vigencia a registrar en lote — mismos campos que
+/// `SalarioCategoriaFasarData` más el `insumo_id` de la categoría.
+#[derive(serde::Deserialize)]
+pub struct SalarioLoteItem {
+    pub insumo_id: String,
+    pub salario_base_diario: Decimal,
+    pub factor_salario_real_id: String,
+    pub factor_salario_real: Decimal,
+    pub salario_real_diario: Decimal,
+    pub region_id: Option<String>,
+    pub fecha_vigencia_desde: String,
+}
+
+impl From<SalarioLoteItem> for (String, SalarioCategoriaFasarData) {
+    fn from(item: SalarioLoteItem) -> Self {
+        (
+            item.insumo_id,
+            SalarioCategoriaFasarData {
+                salario_base_diario: item.salario_base_diario,
+                factor_salario_real_id: item.factor_salario_real_id,
+                factor_salario_real: item.factor_salario_real,
+                salario_real_diario: item.salario_real_diario,
+                region_id: item.region_id,
+                fecha_vigencia_desde: item.fecha_vigencia_desde,
+            },
+        )
+    }
 }
 
 pub struct SalarioCategoriaFasarService;
@@ -42,7 +71,40 @@ impl SalarioCategoriaFasarService {
         creado_por: String,
     ) -> Result<Model, ServiceError> {
         let txn = repo.conexion().begin().await?;
+        let modelo = Self::registrar_en_txn(&txn, insumo_id, datos, &creado_por).await?;
+        txn.commit().await?;
+        Ok(modelo)
+    }
 
+    /// Misma semántica que `crear`, para todas las categorías del lote, en
+    /// una sola transacción: o se actualizan todas o no se toca ninguna.
+    pub async fn crear_lote(
+        repo: &dyn PortafolioRepository,
+        items: Vec<SalarioLoteItem>,
+        creado_por: String,
+    ) -> Result<Vec<Model>, ServiceError> {
+        if items.is_empty() {
+            return Err(ServiceError::Validacion(
+                "no hay salarios para actualizar".into(),
+            ));
+        }
+        let txn = repo.conexion().begin().await?;
+        let mut creados = Vec::with_capacity(items.len());
+        for item in items {
+            let (insumo_id, datos) = item.into();
+            let modelo = Self::registrar_en_txn(&txn, &insumo_id, datos, &creado_por).await?;
+            creados.push(modelo);
+        }
+        txn.commit().await?;
+        Ok(creados)
+    }
+
+    async fn registrar_en_txn(
+        txn: &DatabaseTransaction,
+        insumo_id: &str,
+        datos: SalarioCategoriaFasarData,
+        creado_por: &str,
+    ) -> Result<Model, ServiceError> {
         let mut buscar_anterior = Entity::find()
             .filter(Column::InsumoId.eq(insumo_id))
             .filter(Column::FechaVigenciaHasta.is_null());
@@ -50,15 +112,15 @@ impl SalarioCategoriaFasarService {
             Some(region_id) => buscar_anterior.filter(Column::RegionId.eq(region_id.clone())),
             None => buscar_anterior.filter(Column::RegionId.is_null()),
         };
-        if let Some(anterior) = buscar_anterior.one(&txn).await? {
+        if let Some(anterior) = buscar_anterior.one(txn).await? {
             let mut anterior: ActiveModel = anterior.into();
             anterior.fecha_vigencia_hasta = Set(Some(datos.fecha_vigencia_desde.clone()));
             anterior.updated_at = Set(Some(crate::ahora()));
-            anterior.updated_by = Set(Some(creado_por.clone()));
-            anterior.update(&txn).await?;
+            anterior.updated_by = Set(Some(creado_por.to_string()));
+            anterior.update(txn).await?;
         }
 
-        let modelo = ActiveModel {
+        Ok(ActiveModel {
             id: Set(nuevo_id()),
             insumo_id: Set(insumo_id.to_string()),
             region_id: Set(datos.region_id),
@@ -70,14 +132,11 @@ impl SalarioCategoriaFasarService {
             fecha_vigencia_hasta: Set(None),
             created_at: Set(crate::ahora()),
             updated_at: Set(None),
-            created_by: Set(creado_por),
+            created_by: Set(creado_por.to_string()),
             updated_by: Set(None),
         }
-        .insert(&txn)
-        .await?;
-
-        txn.commit().await?;
-        Ok(modelo)
+        .insert(txn)
+        .await?)
     }
 
     /// Salario nacional vigente (`region_id IS NULL`, `fecha_vigencia_hasta
@@ -333,5 +392,120 @@ mod tests {
             segundo_actualizado.fecha_vigencia_hasta.is_none(),
             "la vigencia nacional vigente no debe cerrarse al registrar una vigencia regional"
         );
+    }
+
+    #[tokio::test]
+    async fn crear_lote_actualiza_varias_categorias_en_una_transaccion() {
+        let portafolio = portafolio_con_fixtures().await;
+
+        let albanil = CategoriaFasarService::crear(
+            &portafolio,
+            "org-1",
+            CategoriaFasarData {
+                clave: "CAT-1".into(),
+                descripcion: "Oficial albañil".into(),
+                unidad_id: "um-1".into(),
+                familia_id: None,
+                sub_familia_id: None,
+                activo: true,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear albañil");
+
+        let peon = CategoriaFasarService::crear(
+            &portafolio,
+            "org-1",
+            CategoriaFasarData {
+                clave: "CAT-2".into(),
+                descripcion: "Ayudante oficial".into(),
+                unidad_id: "um-1".into(),
+                familia_id: None,
+                sub_familia_id: None,
+                activo: true,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear peón");
+
+        let fsr = FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            FactorSalarioRealData {
+                nombre: "FSR nacional".into(),
+                region_id: None,
+                modelo_calculo_json: String::new(),
+                parametros_json: String::new(),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear FSR");
+
+        let _previo = SalarioCategoriaFasarService::crear(
+            &portafolio,
+            &albanil.id,
+            SalarioCategoriaFasarData {
+                salario_base_diario: Decimal::from_str("300").unwrap(),
+                factor_salario_real_id: fsr.id.clone(),
+                factor_salario_real: Decimal::from_str("2").unwrap(),
+                salario_real_diario: Decimal::from_str("600").unwrap(),
+                region_id: None,
+                fecha_vigencia_desde: "2026-01-01".into(),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("vigencia previa del albañil");
+
+        let creados = SalarioCategoriaFasarService::crear_lote(
+            &portafolio,
+            vec![
+                SalarioLoteItem {
+                    insumo_id: albanil.id.clone(),
+                    salario_base_diario: Decimal::from_str("349.31").unwrap(),
+                    factor_salario_real_id: fsr.id.clone(),
+                    factor_salario_real: Decimal::from_str("2.1").unwrap(),
+                    salario_real_diario: Decimal::from_str("733.55").unwrap(),
+                    region_id: None,
+                    fecha_vigencia_desde: "2026-08-13".into(),
+                },
+                SalarioLoteItem {
+                    insumo_id: peon.id.clone(),
+                    salario_base_diario: Decimal::from_str("214.33").unwrap(),
+                    factor_salario_real_id: fsr.id.clone(),
+                    factor_salario_real: Decimal::from_str("2.1").unwrap(),
+                    salario_real_diario: Decimal::from_str("450.09").unwrap(),
+                    region_id: None,
+                    fecha_vigencia_desde: "2026-08-13".into(),
+                },
+            ],
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear lote");
+        assert_eq!(creados.len(), 2);
+
+        let vigente_albanil = SalarioCategoriaFasarService::vigente_nacional(&portafolio, &albanil.id)
+            .await
+            .expect("vigente albañil")
+            .expect("debe haber vigente");
+        assert_eq!(vigente_albanil.salario_base_diario, Decimal::from_str("349.31").unwrap());
+        assert!(vigente_albanil.fecha_vigencia_hasta.is_none());
+
+        let historial_albanil = SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &albanil.id)
+            .await
+            .expect("historial albañil");
+        assert_eq!(historial_albanil.len(), 2);
+        let cerrado = historial_albanil.iter().find(|v| v.id != vigente_albanil.id).expect("previo");
+        assert_eq!(cerrado.fecha_vigencia_hasta.as_deref(), Some("2026-08-13"));
+
+        let vigente_peon = SalarioCategoriaFasarService::vigente_nacional(&portafolio, &peon.id)
+            .await
+            .expect("vigente peón")
+            .expect("debe haber vigente");
+        assert_eq!(vigente_peon.salario_base_diario, Decimal::from_str("214.33").unwrap());
     }
 }

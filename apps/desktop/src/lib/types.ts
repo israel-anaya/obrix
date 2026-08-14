@@ -280,6 +280,11 @@ export interface SalarioCategoriaFasarData {
   fecha_vigencia_desde: string;
 }
 
+/** Una vigencia a registrar en la actualización de salarios en lote. */
+export interface SalarioLoteItem extends SalarioCategoriaFasarData {
+  insumo_id: string;
+}
+
 /**
  * Un renglón de una variable de tipo `"rango"` — un valor que depende de en
  * qué rango de pesos cae un dato (ej. la tabla de cesantía-vejez del IMSS,

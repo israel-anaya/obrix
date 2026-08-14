@@ -20,6 +20,7 @@ import type {
   ResultadoImportacion,
   SalarioCategoriaFasar,
   SalarioCategoriaFasarData,
+  SalarioLoteItem,
   UnidadMedidaData,
   ClienteData,
   MonedaData,
@@ -232,6 +233,9 @@ export function createSalarioCategoriaFasar(
   salario: SalarioCategoriaFasarData,
 ): Promise<SalarioCategoriaFasar> {
   return invoke("create_salario_categoria_fasar", { insumoId, salario });
+}
+export function createSalariosCategoriaFasarLote(salarios: SalarioLoteItem[]): Promise<SalarioCategoriaFasar[]> {
+  return invoke("create_salarios_categoria_fasar_lote", { salarios });
 }
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {
