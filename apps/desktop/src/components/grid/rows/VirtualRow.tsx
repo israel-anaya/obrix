@@ -15,9 +15,14 @@ type TableCell = { id: string; column: { id: string } };
  * because `row` is a stable reference that does not change when `rowSelection`
  * does, so reading `row.getIsSelected()` here would freeze the row on the
  * previous value.
+ *
+ * The columns travel as ids for the same reason: the cells hang off `row`,
+ * which does not change when the user reorders or hides a column, so a row that
+ * read them from `row` alone would keep painting the previous layout.
  */
 export const VirtualRow = memo(function VirtualRow({
   row,
+  columnIds,
   itemIndex,
   rowRefs,
   headerHeight,
@@ -30,8 +35,10 @@ export const VirtualRow = memo(function VirtualRow({
   row: {
     id: string;
     original: Row;
-    getAllCells: () => TableCell[];
+    getVisibleCellsByColumnId: () => Record<string, TableCell | undefined>;
   };
+  /** Visible columns, in the order they are painted. */
+  columnIds: string[];
   itemIndex: number;
   rowRefs: React.RefObject<Map<string, HTMLTableRowElement>>;
   headerHeight: number;
@@ -72,6 +79,8 @@ export const VirtualRow = memo(function VirtualRow({
     [headerHeight],
   );
 
+  const cellsById = row.getVisibleCellsByColumnId();
+
   return (
     <tr
       data-index={itemIndex}
@@ -88,8 +97,9 @@ export const VirtualRow = memo(function VirtualRow({
         !isDraft && visuallySelected && "bg-accent",
       )}
     >
-      {row.getAllCells().map((cell) => {
-        const columnId = cell.column.id;
+      {columnIds.map((columnId) => {
+        const cell = cellsById[columnId];
+        if (!cell) return null;
         const pinned = pinnedColumns.has(columnId);
         return (
           <td

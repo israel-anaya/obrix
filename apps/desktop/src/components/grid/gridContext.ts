@@ -1,12 +1,19 @@
 import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 import type { SelectionStore, Store } from "./gridStore";
-import type { DataGridMeta, DraftKind, GridChrome, OpenCell } from "./types";
+import type { DataGridColumn, DataGridMeta, DraftKind, GridChrome, OpenCell } from "./types";
 
 export type GridUi = {
   selection: SelectionStore;
   openCell: Store<OpenCell | null>;
   chrome: Store<GridChrome>;
   meta: { current: DataGridMeta };
+  /**
+   * The columns as the user sees them: in their order and without the hidden
+   * ones (see `useGridLayout`). A ref, not a prop, so that reordering or hiding
+   * a column does not re-render every mounted cell — the only thing that reads
+   * it is Tab navigation between editors, at the moment the key is pressed.
+   */
+  columns: { current: DataGridColumn[] };
 };
 
 export const GridUiContext = createContext<GridUi | null>(null);

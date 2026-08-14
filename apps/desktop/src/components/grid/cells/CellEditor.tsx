@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useGridUi } from "../gridContext";
 import { parseNumber } from "../gridValues";
 import type { DataGridColumn, DataGridMeta, Row } from "../types";
 import { CellCombobox } from "./CellCombobox";
@@ -16,15 +17,14 @@ export function CellEditor({
   column,
   row,
   meta,
-  columns,
   forcedValue,
 }: {
   column: DataGridColumn;
   row: Row;
   meta: DataGridMeta;
-  columns: DataGridColumn[];
   forcedValue?: string;
 }) {
+  const columnsRef = useGridUi().columns;
   // When `forcedValue` is given (the editor opened by typing straight over the
   // selected cell, without a double click), it starts by replacing the existing
   // value — just like Excel.
@@ -54,7 +54,9 @@ export function CellEditor({
   };
 
   const navigate = (delta: 1 | -1, openEditor: boolean) => {
-    const editable = columns.filter((c) => !c.readOnly);
+    // Read when the key is pressed, not when the editor mounts: Tab has to walk
+    // the columns as they are on screen — the user's order, hidden ones out.
+    const editable = columnsRef.current.filter((c) => !c.readOnly);
     const currentIdx = editable.findIndex((c) => c.field === column.field);
     const next = editable[currentIdx + delta];
     meta.selectCell(row._id, next ? next.field : column.field);
@@ -136,6 +138,10 @@ export function CellEditor({
       }}
       onBlur={commit}
       onKeyDown={onKeyDown}
+      // Dentro del editor manda el menú nativo del navegador (deshacer,
+      // seleccionar todo…): sin frenar la propagación, el menú del grid —que
+      // escucha en el contenedor— lo taparía.
+      onContextMenu={(e) => e.stopPropagation()}
       className={className}
     />
   );

@@ -16,13 +16,19 @@ export interface CatalogoGeneralApi<T, Nuevo> {
 export function useCatalogoGeneral<T extends { id: string }, Nuevo>(api: CatalogoGeneralApi<T, Nuevo>) {
   const [items, setItems] = useState<T[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
+  // cero filas, y sin esto diría "Sin registros" cuando aún no ha preguntado.
+  const [cargando, setCargando] = useState(true);
 
   const reload = useCallback(async () => {
+    setCargando(true);
     try {
       setItems(await api.list());
       setError(null);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setCargando(false);
     }
   }, [api]);
 
@@ -72,5 +78,5 @@ export function useCatalogoGeneral<T extends { id: string }, Nuevo>(api: Catalog
 
   const limpiarError = useCallback(() => setError(null), []);
 
-  return { items, error, crear, actualizar, eliminar, reload, limpiarError };
+  return { items, error, cargando, crear, actualizar, eliminar, reload, limpiarError };
 }

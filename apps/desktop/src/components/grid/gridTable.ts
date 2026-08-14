@@ -1,7 +1,9 @@
 import {
   columnFilteringFeature,
+  columnOrderingFeature,
   columnResizingFeature,
   columnSizingFeature,
+  columnVisibilityFeature,
   createColumnHelper,
   createFilteredRowModel,
   createSortedRowModel,
@@ -21,6 +23,10 @@ export const features = tableFeatures({
   sortedRowModel: createSortedRowModel(),
   columnSizingFeature,
   columnResizingFeature,
+  // Order and visibility are arranged by the user and persisted (see
+  // `useGridLayout`); the table only applies them.
+  columnOrderingFeature,
+  columnVisibilityFeature,
   tableMeta: {} as DataGridMeta,
 });
 

@@ -41,6 +41,10 @@ export function CategoriaFasarSeccion() {
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
+  // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
+  // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
+  const [cargando, setCargando] = useState(true);
+
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
@@ -56,7 +60,13 @@ export function CategoriaFasarSeccion() {
     return () => clearTimeout(espera);
   }, [estadoGuardado]);
 
-  const recargarCategorias = () => listCategoriasFasar().then(setCategorias).catch((e) => setError(String(e)));
+  const recargarCategorias = () => {
+    setCargando(true);
+    return listCategoriasFasar()
+      .then(setCategorias)
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
+  };
 
   const recargarTodo = () => {
     void recargarCategorias();
@@ -172,6 +182,7 @@ export function CategoriaFasarSeccion() {
       ref={gridRef}
       config={config}
       initialRows={filas}
+      loading={cargando}
       selectionMode="single"
       highlightSelection={panelSalarioAbierto || panelHistorialAbierto}
       initialSelectedId={categoriaSeleccionadaId}

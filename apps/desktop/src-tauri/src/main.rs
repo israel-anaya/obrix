@@ -238,8 +238,8 @@ mod tests {
             .expect("listar unidades");
         assert_eq!(
             unidades.len(),
-            33,
-            "deben quedar las 33 unidades default, sin duplicar"
+            37,
+            "deben quedar las 37 unidades default, sin duplicar"
         );
 
         let monedas = obrix_db::entities::moneda::Entity::find()
@@ -252,7 +252,7 @@ mod tests {
             .all(portafolio.conexion())
             .await
             .expect("listar familias");
-        assert_eq!(familias.len(), 84, "18 familias padre + 66 hijas, sin duplicar");
+        assert_eq!(familias.len(), 104, "21 familias padre + 83 hijas, sin duplicar");
         let hija = familias
             .iter()
             .find(|f| f.nombre == "Concreto premezclado")
@@ -266,6 +266,16 @@ mod tests {
             Some(padre.id.as_str()),
             "la hija debe apuntar al padre"
         );
+        for nombre in ["Instalaciones de gas", "Jardinería", "Muebles, cocinas y accesorios"] {
+            let raiz = familias
+                .iter()
+                .find(|f| f.nombre == nombre && f.parent_id.is_none())
+                .unwrap_or_else(|| panic!("falta familia padre {nombre}"));
+            assert!(
+                familias.iter().any(|f| f.parent_id.as_deref() == Some(raiz.id.as_str())),
+                "{nombre} debe tener hijas"
+            );
+        }
 
         let usuarios = obrix_db::entities::usuario::Entity::find()
             .all(portafolio.conexion())

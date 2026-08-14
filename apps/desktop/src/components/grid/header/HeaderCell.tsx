@@ -4,17 +4,15 @@ import { useIsFieldActive } from "../gridContext";
 export function HeaderCell({
   columnId,
   className,
-  style,
   children,
+  ...rest
 }: {
   columnId: string;
-  className?: string;
-  style?: React.CSSProperties;
   children: React.ReactNode;
-}) {
+} & React.ThHTMLAttributes<HTMLTableCellElement>) {
   const active = useIsFieldActive(columnId);
   return (
-    <th style={style} className={cn(className, active && "text-foreground")}>
+    <th {...rest} className={cn(className, active && "text-foreground")}>
       {children}
     </th>
   );

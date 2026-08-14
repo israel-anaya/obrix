@@ -48,7 +48,7 @@ const MAESTRO_GRID: DataGridConfig = {
  * baja y activo/inactivo de sus organizaciones.
  */
 export function UsuariosSeccion() {
-  const { items, error, crear, actualizar, eliminar, reload } = useCatalogoGeneral(USUARIO_API);
+  const { items, error, cargando, crear, actualizar, eliminar, reload } = useCatalogoGeneral(USUARIO_API);
   // Igual que en `OrganizacionSeccion` — el sidebar (switcher, default de
   // moneda, etc.) lee la lista de organizaciones de `OrganizacionContext`,
   // que no se entera por su cuenta cuando cambia una membresía desde acá.
@@ -125,6 +125,7 @@ export function UsuariosSeccion() {
         <VistaMaestroDetalle
           maestroGrid={MAESTRO_GRID}
           maestroFilas={maestroFilas}
+          maestroCargando={cargando}
           onRecargarMaestro={reload}
           onAgregarMaestro={(fila) => crear(filaAUsuarioData(fila))}
           onEditarMaestro={(fila) => actualizar(fila._id, filaAUsuarioData(fila))}

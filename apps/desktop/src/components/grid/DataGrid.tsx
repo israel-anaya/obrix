@@ -13,18 +13,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { GridUiContext, type GridUi } from "./gridContext";
 import { ROW_HEIGHT, widthVar } from "./gridLayout";
 import { createSelectionStore, createStore, EMPTY_CHROME } from "./gridStore";
 import { features } from "./gridTable";
 import { displayValue, emptyRow, emptyValue, firstEditableField } from "./gridValues";
+import { ColumnMenu } from "./header/ColumnMenu";
 import { HeaderCell } from "./header/HeaderCell";
 import { ResizeHandle } from "./header/ResizeHandle";
+import { useColumnDrag } from "./header/useColumnDrag";
+import { RowContextMenu } from "./rows/RowContextMenu";
+import { SkeletonRows } from "./rows/SkeletonRows";
 import { VirtualRow } from "./rows/VirtualRow";
 import { useGridClipboard } from "./useGridClipboard";
 import { useGridColumns } from "./useGridColumns";
+import { useGridLayout } from "./useGridLayout";
 import { useRowEditing } from "./useRowEditing";
-import type { DataGridConfig, DataGridHandle, DataGridMeta, DataGridPersistProps, GridChrome, OpenCell, Row } from "./types";
+import type { DataGridColumn, DataGridConfig, DataGridHandle, DataGridMeta, DataGridPersistProps, GridChrome, OpenCell, Row } from "./types";
 
 export type { DataGridColumn, DataGridConfig, DataGridHandle, DataGridPersistProps, Row } from "./types";
 
@@ -91,6 +97,20 @@ export const DataGrid = forwardRef<
      */
     search?: string;
     onSearchChange?: (search: string) => void;
+    /**
+     * Name under which this grid's layout is remembered — column widths, order,
+     * hidden columns and sort (see `useGridLayout`). Defaults to `config.title`,
+     * which is what tells one catalog from another; only worth setting when two
+     * different grids share a title and each should keep its own layout.
+     */
+    layoutKey?: string;
+    /**
+     * Data on its way. The grid shows the shape of the table instead of the
+     * "Sin registros." it would otherwise show while the rows have not arrived,
+     * which reads as "there is nothing" rather than "wait a moment". On a
+     * reload it keeps the rows on screen and only marks the wait at the top.
+     */
+    loading?: boolean;
   } & DataGridPersistProps
 >(function DataGrid(
   {
@@ -109,6 +129,8 @@ export const DataGrid = forwardRef<
     onCancelEdit,
     search: controlledSearch,
     onSearchChange,
+    layoutKey,
+    loading = false,
   },
   ref,
 ) {
@@ -116,12 +138,31 @@ export const DataGrid = forwardRef<
   const openCellStore = useRef(createStore<OpenCell | null>(null)).current;
   const chromeStore = useRef(createStore<GridChrome>(EMPTY_CHROME)).current;
   const metaRef = useRef<DataGridMeta>(null as unknown as DataGridMeta);
+  const visibleColumnsRef = useRef<DataGridColumn[]>(config.columns);
   const uiStore = useRef<GridUi>({
     selection: selectionStore,
     openCell: openCellStore,
     chrome: chromeStore,
     meta: metaRef,
+    columns: visibleColumnsRef,
   }).current;
+
+  const {
+    orderedFields,
+    orderedColumns,
+    visibleColumns,
+    hiddenFields,
+    columnVisibility,
+    sorting,
+    onSortingChange,
+    moveColumn,
+    toggleColumn,
+    resetLayout,
+    initialWidths,
+    savedWidths,
+    saveWidths,
+  } = useGridLayout(layoutKey ?? config.title, config.columns);
+  visibleColumnsRef.current = visibleColumns;
 
   const {
     rows,
@@ -183,6 +224,20 @@ export const DataGrid = forwardRef<
     return () => observer.disconnect();
   }, []);
 
+  // How many skeleton rows fill the viewport. Only measured while loading:
+  // observing the container the rest of the time would re-render the grid on
+  // every frame of dragging a panel divider.
+  const [bodyHeight, setBodyHeight] = useState(0);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!loading || !el) return;
+    const measure = () => setBodyHeight(el.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading]);
+
   const meta: DataGridMeta = {
     editing,
     highlightSelection,
@@ -212,7 +267,10 @@ export const DataGrid = forwardRef<
   // every keystroke in the search box *and* on every cell commit (the identity
   // of `rows` changes). Editing a cell makes only that row a new object, so
   // only that one is recomputed; the rest comes from the cache.
-  const rowTextCache = useMemo(() => new WeakMap<Row, string>(), [config.columns]);
+  //
+  // It only looks at the columns on screen: searching for something in a column
+  // the user hid would find rows with nothing visible to explain the match.
+  const rowTextCache = useMemo(() => new WeakMap<Row, string>(), [visibleColumns]);
   const globalFilter = useMemo<FilterFn<typeof features, Row>>(() => {
     let lastFilter: unknown;
     let lastFilterLower = "";
@@ -226,7 +284,7 @@ export const DataGrid = forwardRef<
       }
       let text = rowTextCache.get(row.original);
       if (text === undefined) {
-        text = config.columns
+        text = visibleColumns
           .map((c) => displayValue(row.original, c))
           .join(" ")
           .toLowerCase();
@@ -235,7 +293,7 @@ export const DataGrid = forwardRef<
       return text.includes(lastFilterLower);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.columns, rowTextCache]);
+  }, [visibleColumns, rowTextCache]);
 
   const {
     columnByField,
@@ -250,15 +308,36 @@ export const DataGrid = forwardRef<
   const pinnedWidthRef = useRef(0);
   pinnedWidthRef.current = pinnedWidth;
 
+  // The `__` columns stay pinned to the left edge, always ahead of the user's
+  // order: a partial `columnOrder` would push every unlisted column to the end.
+  const columnOrder = useMemo(
+    () => [...columns.map((c) => String(c.id)).filter((id) => id.startsWith("__")), ...orderedFields],
+    [columns, orderedFields],
+  );
+
+  // What each row paints. Derived here, not from `table.getVisibleLeafColumns()`,
+  // so its identity only changes when the layout does: it is a prop of a
+  // memoized `VirtualRow`, and a fresh array on every render would defeat it.
+  const leafColumnIds = useMemo(
+    () => columnOrder.filter((id) => !hiddenFields.has(id)),
+    [columnOrder, hiddenFields],
+  );
+
   const table = useTable(
     {
       features,
       data: rows,
       columns,
       getRowId: (f) => f._id,
-      state: { rowSelection, globalFilter: deferredSearch },
+      state: { rowSelection, globalFilter: deferredSearch, columnOrder, columnVisibility, sorting },
+      // Widths are the one slice the table keeps for itself: they change on
+      // every `mousemove` of a resize, and routing that through React state
+      // would repaint the grid on each one. They come in as `initialState` and
+      // leave through the subscription below (see `saveWidths`).
+      initialState: { columnSizing: initialWidths },
       onRowSelectionChange: setRowSelection,
       onGlobalFilterChange: (updater) => setSearch(typeof updater === "function" ? updater(search) : updater),
+      onSortingChange,
       enableMultiRowSelection: selectionMode === "multiple",
       globalFilterFn: globalFilter,
       getColumnCanGlobalFilter: (column) => !String(column.id).startsWith("__"),
@@ -269,7 +348,74 @@ export const DataGrid = forwardRef<
     (state) => ({ rowSelection: state.rowSelection, globalFilter: state.globalFilter }),
   );
 
-  const visibleRows = table.getRowModel().rows;
+  // Persists the widths without going through React: the store notifies on
+  // every change and `saveWidths` waits for the hand to stop.
+  const tableRef = useRef(table);
+  tableRef.current = table;
+  useEffect(() => {
+    let last = tableRef.current.store.state.columnSizing;
+    const sub = tableRef.current.store.subscribe((state) => {
+      if (state.columnSizing === last) return;
+      last = state.columnSizing;
+      saveWidths(last);
+    });
+    return () => sub.unsubscribe();
+  }, [saveWidths]);
+
+  // Restores the stored widths when the grid switches to another layout
+  // without unmounting — on the first mount `initialState` already did it.
+  const appliedLayoutRef = useRef(layoutKey ?? config.title);
+  useLayoutEffect(() => {
+    const key = layoutKey ?? config.title;
+    if (appliedLayoutRef.current === key) return;
+    appliedLayoutRef.current = key;
+    tableRef.current.setColumnSizing(savedWidths);
+  }, [layoutKey, config.title, savedWidths]);
+
+  const resetGridLayout = () => {
+    resetLayout();
+    // Widths do not live in the layout's React state (see above), so clearing
+    // the stored ones is not enough — the table has to drop its own.
+    tableRef.current.resetColumnSizing(true);
+  };
+
+  // Hiding the column the cursor was in would leave the selection pointing at
+  // something that is no longer on screen.
+  useEffect(() => {
+    const sel = selectionStore.get();
+    if (!sel || visibleColumns.some((c) => c.field === sel.field)) return;
+    const field = firstEditableField(visibleColumns) ?? visibleColumns[0]?.field;
+    selectionStore.set(field ? { rowId: sel.rowId, field } : null);
+  }, [visibleColumns, selectionStore]);
+
+  const visibleFields = useMemo(() => visibleColumns.map((c) => c.field), [visibleColumns]);
+  const columnDrag = useColumnDrag({ fields: visibleFields, onMove: moveColumn });
+
+  const modelRows = table.getRowModel().rows;
+
+  // With a column sorted, editing a cell of that column would slide the row out
+  // from under the hand the moment the value changes — the record looks lost.
+  // So while a row is in draft the order stays put, and it is on ✓ or ✗ that the
+  // row takes its new place.
+  //
+  // The snapshot has to be taken *before* the edit: `commitCellChange` applies
+  // the value and opens the draft in the same batch, so by the time the grid
+  // re-renders the row has already moved. It is refreshed on every model of a
+  // grid at rest, and simply stops being refreshed while the draft is open.
+  const orderRef = useRef<{ source: unknown; index: Map<string, number> } | null>(null);
+  const sorted = sorting.length > 0;
+  if (!editing && sorted && orderRef.current?.source !== modelRows) {
+    orderRef.current = { source: modelRows, index: new Map(modelRows.map((r, i) => [r.id, i])) };
+  }
+  const frozenOrder = editing && sorted ? orderRef.current?.index : undefined;
+  const visibleRows = frozenOrder
+    ? // A brand new row is not in the snapshot: it stays at the end, which is
+      // where an unsorted grid puts it too, instead of jumping around as the
+      // first fields get filled in.
+      [...modelRows].sort(
+        (a, b) => (frozenOrder.get(a.id) ?? Infinity) - (frozenOrder.get(b.id) ?? Infinity),
+      )
+    : modelRows;
   const visibleRowsRef = useRef(visibleRows);
   visibleRowsRef.current = visibleRows;
 
@@ -323,11 +469,10 @@ export const DataGrid = forwardRef<
 
   const rowSelectionRef = useRef(rowSelection);
   rowSelectionRef.current = rowSelection;
-  const columnsRef = useRef(config.columns);
-  columnsRef.current = config.columns;
-
   const moveByKey = (key: HoldKey, opts: { toEdge: boolean; focus: boolean }) => {
-    const cols = columnsRef.current;
+    // The arrows walk the columns as they are on screen, in the user's order
+    // and skipping the hidden ones.
+    const cols = visibleColumnsRef.current;
     const visible = visibleRowsRef.current;
     const sel = selectionStore.get();
 
@@ -509,9 +654,9 @@ export const DataGrid = forwardRef<
     row.toggleSelected(true);
     const sel = selectionStore.get();
     const field =
-      (sel && config.columns.some((c) => c.field === sel.field)
+      (sel && visibleColumns.some((c) => c.field === sel.field)
         ? sel.field
-        : firstEditableField(config.columns));
+        : firstEditableField(visibleColumns));
     if (field) selectionStore.set({ rowId: row.original._id, field });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionMode, rows, rowSelection, initialSelectedId]);
@@ -557,12 +702,21 @@ export const DataGrid = forwardRef<
 
   // With many records, the new row or the one being edited can end up outside
   // the visible area — scrolls to it.
+  //
+  // Also when the draft closes: the order was frozen while it was open (see
+  // `frozenOrder`), so accepting it is what moves the row to its place under the
+  // sort. Without following it, the viewport stays where it was and the record
+  // is just as lost, only later.
+  const lastDraftRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!editing) return;
-    const idx = visibleRows.findIndex((r) => r.original._id === editing.id);
-    if (idx >= 0) rowVirtualizer.scrollToIndex(idx, { align: "auto" });
+    const closed = editing ? null : lastDraftRef.current;
+    lastDraftRef.current = editing?.id ?? null;
+    const rowId = editing?.id ?? closed;
+    if (!rowId || (closed && !sorted)) return;
+    const idx = visibleRowsRef.current.findIndex((r) => r.original._id === rowId);
+    if (idx >= 0) rowVirtualizerRef.current.scrollToIndex(idx, { align: "auto" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing]);
+  }, [editing, sorted]);
 
   // Brings the row into the viewport (virtualizer) and, once mounted, the column.
   useEffect(() => {
@@ -615,8 +769,10 @@ export const DataGrid = forwardRef<
     return openCellStore.subscribe(onClose);
   }, []);
 
-  const { onCopy, onCut, onPaste } = useGridClipboard({
-    columns: config.columns,
+  const { copy: onMenuCopy, cut: onMenuCut, paste: onMenuPaste, onCopy, onCut, onPaste } = useGridClipboard({
+    // Copy and paste follow what is on screen: the TSV carries the visible
+    // columns, in their order, so a round trip to a spreadsheet lines up.
+    columns: visibleColumns,
     columnByField,
     selection: selectionStore,
     openCell: openCellStore,
@@ -690,9 +846,10 @@ export const DataGrid = forwardRef<
     if ((e.key === "Home" || e.key === "End") && (selectedCell || Object.keys(rowSelection).length > 0)) {
       e.preventDefault();
       const toEdge = e.ctrlKey || e.metaKey;
+      const cols = visibleColumnsRef.current;
       if (toEdge && !editing) {
         const row = e.key === "Home" ? visibleRows[0] : visibleRows[visibleRows.length - 1];
-        const field = e.key === "Home" ? config.columns[0]?.field : config.columns[config.columns.length - 1]?.field;
+        const field = e.key === "Home" ? cols[0]?.field : cols[cols.length - 1]?.field;
         if (row && field) {
           scrollAlignRef.current = e.key === "Home" ? "start" : "end";
           selectionStore.set({ rowId: row.original._id, field });
@@ -701,7 +858,7 @@ export const DataGrid = forwardRef<
         }
         return;
       }
-      const field = e.key === "Home" ? config.columns[0]?.field : config.columns[config.columns.length - 1]?.field;
+      const field = e.key === "Home" ? cols[0]?.field : cols[cols.length - 1]?.field;
       const rowId = editing?.id ?? selectedCell?.rowId ?? Object.keys(rowSelection)[0];
       if (field && rowId) selectionStore.set({ rowId, field });
       return;
@@ -755,7 +912,9 @@ export const DataGrid = forwardRef<
     }
   };
 
-  useImperativeHandle(ref, () => ({
+  // Named so the right-click menu can reach the same two actions the parent's
+  // action bar does, instead of a second copy of them.
+  const handle: DataGridHandle = {
     addRow: () => {
       if (editingRef.current) return;
       const newRow = emptyRow(config.columns);
@@ -766,7 +925,7 @@ export const DataGrid = forwardRef<
       editingRef.current = nextEditing;
       setEditing(nextEditing);
       setRowSelection({ [newRow._id]: true });
-      const field = firstEditableField(config.columns);
+      const field = firstEditableField(visibleColumnsRef.current);
       if (field) {
         selectionStore.set({ rowId: newRow._id, field });
         openCellStore.set({ rowId: newRow._id, field });
@@ -783,7 +942,8 @@ export const DataGrid = forwardRef<
       if (selectedRows.length === 0) return;
       setPendingDelete(selectedRows);
     },
-  }));
+  };
+  useImperativeHandle(ref, () => handle);
 
   const confirmDelete = async () => {
     if (!pendingDelete) return;
@@ -822,8 +982,32 @@ export const DataGrid = forwardRef<
     const columnId = target.closest("td")?.dataset.columnId;
     if (columnId && !columnId.startsWith("__")) return;
     copyWholeRowRef.current = columnId === "__index";
-    const field = firstEditableField(config.columns);
+    const field = firstEditableField(visibleColumnsRef.current);
     if (field) selectionStore.set({ rowId, field });
+  };
+
+  // Right-click puts the cursor where it was clicked before the menu opens —
+  // otherwise Copy would act on whatever was selected beforehand, somewhere
+  // else entirely. On a `__` column it takes the whole row, same as a left
+  // click does there.
+  const onBodyContextMenu = (e: React.MouseEvent<HTMLTableSectionElement>) => {
+    const target = e.target as HTMLElement;
+    const tr = target.closest<HTMLTableRowElement>("tr[data-index]");
+    if (!tr) return;
+    const row = visibleRowsRef.current[Number(tr.dataset.index)];
+    if (!row) return;
+    const rowId = row.original._id;
+    if (editingRef.current && editingRef.current.id !== rowId) return;
+    tr.focus();
+    const columnId = target.closest("td")?.dataset.columnId;
+    const onData = columnId !== undefined && !columnId.startsWith("__");
+    copyWholeRowRef.current = !onData;
+    const field = onData ? columnId : firstEditableField(visibleColumnsRef.current);
+    if (field) selectionStore.set({ rowId, field });
+    // Right-clicking outside the checked rows moves the selection onto that
+    // one, the way a file manager does, so Delete acts on what is under the
+    // pointer. Right-clicking inside them leaves the whole set alone.
+    if (selectionMode === "multiple" && !row.getIsSelected()) setRowSelection({ [rowId]: true });
   };
 
   const virtualItems = rowVirtualizer.getVirtualItems();
@@ -832,6 +1016,12 @@ export const DataGrid = forwardRef<
     virtualItems.length > 0
       ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end + 25
       : 0;
+
+  // Only stands in for the body when there is nothing to show yet. A reload
+  // with rows already on screen keeps them and just marks the wait at the top:
+  // blanking data the user is reading is worse than a stale second.
+  const showSkeleton = loading && visibleRows.length === 0;
+  const skeletonCount = Math.max(3, Math.ceil((bodyHeight - headerHeight) / ROW_HEIGHT));
 
   return (
     <GridUiContext.Provider value={uiStore}>
@@ -852,6 +1042,27 @@ export const DataGrid = forwardRef<
           {saveError}
         </div>
       )}
+      {/* A reload over rows that are already on screen: they stay, and the wait
+          shows as a thread of light crossing the top edge. */}
+      {loading && !showSkeleton && (
+        <div data-t="grid-loading" aria-hidden className="h-[3px] shrink-0 overflow-hidden bg-primary/25">
+          <div className="barra-progreso-indeterminada h-full w-1/3 rounded-full bg-primary" />
+        </div>
+      )}
+      <RowContextMenu
+        editing={!!editing}
+        canAdd={!isControlled || !!onAddRow}
+        canDelete={
+          selectionMode === "single"
+            ? selectionStore.get() !== null
+            : Object.keys(rowSelection).length > 0
+        }
+        onCopy={() => void onMenuCopy()}
+        onCut={() => void onMenuCut()}
+        onPaste={() => void onMenuPaste()}
+        onAddRow={() => handle.addRow()}
+        onDeleteRows={() => handle.deleteSelectedRows()}
+      >
       <div
         ref={scrollRef}
         tabIndex={0}
@@ -885,20 +1096,26 @@ export const DataGrid = forwardRef<
                   <tr key={headerGroup.id} className="flex">
                     {headerGroup.headers.map((header) => {
                       const columnId = header.column.id;
-                      const isSortable = !columnId.startsWith("__");
+                      const isData = !columnId.startsWith("__");
                       const sorted = header.column.getIsSorted();
                       return (
                         <HeaderCell
                           key={header.id}
                           columnId={columnId}
+                          data-column-id={columnId}
                           style={cellStyles.get(columnId)}
-                          className={thClasses.get(columnId)}
+                          className={cn(thClasses.get(columnId), isData && columnDrag.cellClass(columnId))}
+                          {...(isData && !editing ? columnDrag.cellProps(columnId) : null)}
                         >
-                          {isSortable ? (
+                          {isData ? (
                             <button
                               type="button"
                               tabIndex={-1}
                               disabled={!!editing}
+                              // Dragging the header reorders the column; the
+                              // handle is this button and not the `<th>`, so
+                              // grabbing the edge still resizes.
+                              {...(editing ? null : columnDrag.handleProps(columnId))}
                               onClick={editing ? undefined : header.column.getToggleSortingHandler()}
                               className={thButtonClasses.get(columnId)}
                             >
@@ -906,6 +1123,13 @@ export const DataGrid = forwardRef<
                               {sorted === "asc" && <ArrowUp size={11} />}
                               {sorted === "desc" && <ArrowDown size={11} />}
                             </button>
+                          ) : columnId === "__index" ? (
+                            <ColumnMenu
+                              columns={orderedColumns}
+                              hiddenFields={hiddenFields}
+                              onToggle={toggleColumn}
+                              onReset={resetGridLayout}
+                            />
                           ) : (
                             <table.FlexRender header={header} />
                           )}
@@ -923,8 +1147,15 @@ export const DataGrid = forwardRef<
                   </tr>
                 ))}
               </thead>
-              <tbody onClick={onBodyClick}>
-                {visibleRows.length === 0 ? (
+              <tbody onClick={onBodyClick} onContextMenu={onBodyContextMenu}>
+                {showSkeleton ? (
+                  <SkeletonRows
+                    count={skeletonCount}
+                    columnIds={leafColumnIds}
+                    cellStyles={cellStyles}
+                    cellClasses={cellClasses}
+                  />
+                ) : visibleRows.length === 0 ? (
                   <tr className="flex" style={{ width: "100%" }}>
                     <td className="flex-1 px-2 py-4 text-center text-xs text-muted-foreground">
                       Sin registros.
@@ -944,6 +1175,7 @@ export const DataGrid = forwardRef<
                         <VirtualRow
                           key={row.id}
                           row={row}
+                          columnIds={leafColumnIds}
                           itemIndex={item.index}
                           rowRefs={rowRefs}
                           headerHeight={headerHeight}
@@ -970,6 +1202,7 @@ export const DataGrid = forwardRef<
           )}
         </table.Subscribe>
       </div>
+      </RowContextMenu>
 
       <AlertDialog
         open={pendingDelete !== null}

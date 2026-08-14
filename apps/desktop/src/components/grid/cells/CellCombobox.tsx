@@ -132,6 +132,9 @@ export function CellCombobox({
           onBlur={() => {
             if (!discardedRef.current) commitFilter();
           }}
+          // Igual que en `CellEditor`: dentro del editor manda el menú nativo
+          // del navegador, no el del grid.
+          onContextMenu={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               discardedRef.current = true;

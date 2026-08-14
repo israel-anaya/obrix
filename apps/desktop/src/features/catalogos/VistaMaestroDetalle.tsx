@@ -29,6 +29,8 @@ export interface VistaMaestroDetalleProps<D> {
   maestroFilas: Row[];
   /** Recarga `maestroFilas` desde el padre — si se omite, el botón de recargar del panel maestro queda deshabilitado. */
   onRecargarMaestro?: () => void;
+  /** `maestroFilas` viene en camino — el detalle lleva su propio estado (ver `cargandoDetalle`). */
+  maestroCargando?: boolean;
   /** Si se omite, el botón de agregar del panel maestro queda deshabilitado. Recibe la fila ya editada por el usuario. */
   onAgregarMaestro?: (fila: Row) => void | Promise<void>;
   /** Si se omite, las celdas editables del maestro no persisten (solo cambian visualmente). */
@@ -98,6 +100,7 @@ export function VistaMaestroDetalle<D>({
   maestroGrid,
   maestroFilas,
   onRecargarMaestro,
+  maestroCargando = false,
   onAgregarMaestro,
   onEditarMaestro,
   onEliminarMaestro,
@@ -171,6 +174,7 @@ export function VistaMaestroDetalle<D>({
             ref={maestroGridRef}
             config={maestroGrid}
             initialRows={maestroFilas}
+            loading={maestroCargando}
             selectionMode="single"
             search={busquedaMaestro}
             onSearchChange={setBusquedaMaestro}
@@ -200,7 +204,10 @@ export function VistaMaestroDetalle<D>({
             <DataGrid
               ref={detalleGridRef}
               config={detalle.grid}
-              initialRows={cargandoDetalle ? [] : filasDetalle}
+              // Antes se vaciaba la rejilla mientras cargaba, que es justo lo
+              // que hace que parezca que el maestro no tiene detalle.
+              initialRows={filasDetalle}
+              loading={cargandoDetalle}
               selectionMode="single"
               search={busquedaDetalle}
               onSearchChange={setBusquedaDetalle}

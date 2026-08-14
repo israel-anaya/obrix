@@ -50,6 +50,10 @@ export function MaterialesSeccion() {
   const [materialSeleccionadoId, setMaterialSeleccionadoId] = useState<string | null>(null);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
+  // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
+  const [cargando, setCargando] = useState(true);
+
 
   useEffect(() => {
     if (!guardadoExitoso) return;
@@ -57,7 +61,13 @@ export function MaterialesSeccion() {
     return () => clearTimeout(espera);
   }, [guardadoExitoso]);
 
-  const recargarMateriales = () => listMateriales().then(setMateriales).catch((e) => setError(String(e)));
+  const recargarMateriales = () => {
+    setCargando(true);
+    return listMateriales()
+      .then(setMateriales)
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
+  };
 
   // Recarga todo lo que se muestra en esta vista — el catálogo en sí, y las
   // listas auxiliares (unidades, proveedores, familias, nombres de usuario)
@@ -222,6 +232,7 @@ export function MaterialesSeccion() {
       ref={gridRef}
       config={config}
       initialRows={filas}
+      loading={cargando}
       selectionMode="single"
       highlightSelection={panelPreciosAbierto || panelFichaAbierto}
       initialSelectedId={materialSeleccionadoId}

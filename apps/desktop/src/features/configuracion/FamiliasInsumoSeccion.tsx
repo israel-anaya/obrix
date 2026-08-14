@@ -29,6 +29,9 @@ function familiaAFila(f: FamiliaInsumo, nombresPorUsuarioId: Record<string, stri
 
 export function FamiliasInsumoSeccion() {
   const [raices, setRaices] = useState<FamiliaInsumo[]>([]);
+  // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
+  // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const recargar = () => setVersion((v) => v + 1);
@@ -41,9 +44,11 @@ export function FamiliasInsumoSeccion() {
   }, []);
 
   useEffect(() => {
+    setCargando(true);
     listFamiliasInsumo()
       .then((todas) => setRaices(todas.filter((f) => f.parent_id === null)))
-      .catch((e) => setError(String(e)));
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
   }, [version]);
 
   const detalle = useMemo<DetalleConfig<FamiliaInsumo>>(
@@ -66,6 +71,7 @@ export function FamiliasInsumoSeccion() {
         <VistaMaestroDetalle
           maestroGrid={GRID_FAMILIA}
           maestroFilas={raices.map((f) => familiaAFila(f, nombresPorUsuarioId))}
+          maestroCargando={cargando}
           onRecargarMaestro={recargar}
           onAgregarMaestro={(fila) => createFamiliaInsumo({ nombre: String(fila.nombre) }).then(recargar)}
           onEditarMaestro={(fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(recargar)}

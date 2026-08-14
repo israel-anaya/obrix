@@ -29,6 +29,9 @@ export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | nu
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  // Sin categoría no hay nada que pedir, así que tampoco hay espera: el estado
+  // arranca a `false` y solo se enciende cuando de verdad se sale a buscar.
+  const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
@@ -44,12 +47,16 @@ export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | nu
       return;
     }
     let cancelado = false;
+    setCargando(true);
     listSalariosCategoriaFasar(categoriaId)
       .then((r) => {
         if (!cancelado) setSalarios(r);
       })
       .catch((e) => {
         if (!cancelado) setError(String(e));
+      })
+      .finally(() => {
+        if (!cancelado) setCargando(false);
       });
     return () => {
       cancelado = true;
@@ -81,7 +88,7 @@ export function SalarioHistorialGrid({ categoriaId }: { categoriaId: string | nu
     <div className="flex h-full flex-col">
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
-        <DataGrid config={CONFIG} initialRows={filas} />
+        <DataGrid config={CONFIG} initialRows={filas} loading={cargando} />
       </div>
     </div>
   );

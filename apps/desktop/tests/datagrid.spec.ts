@@ -379,3 +379,113 @@ test.describe("búsqueda", () => {
     await expect(page.locator("tbody")).toContainText("Sin registros.");
   });
 });
+
+test.describe("menú contextual", () => {
+  /** Abre el menú sobre una celda y devuelve sus ítems. */
+  async function abrirMenu(page: Page, fila: number, campo: string) {
+    await cell(page, fila, campo).click({ button: "right" });
+    await expect(page.getByRole("menuitem").first()).toBeVisible();
+    return page.getByRole("menuitem");
+  }
+
+  test("el clic derecho selecciona lo que hay debajo antes de abrirse", async ({ page }) => {
+    await ready(page);
+    // Con otra celda ya seleccionada: el menú tiene que actuar sobre la nueva,
+    // no sobre la de antes.
+    await select(page, 0, "codigo");
+    await abrirMenu(page, 4, "descripcion");
+
+    await expect(cell(page, 4, "descripcion").locator("div").first()).toHaveClass(/ring-primary/);
+    await expect(cell(page, 4, "__select").locator("input")).toBeChecked();
+  });
+
+  test("copiar toma la celda sobre la que se pinchó", async ({ page }) => {
+    await ready(page);
+    const menu = await abrirMenu(page, 2, "codigo");
+    await menu.filter({ hasText: "Copiar" }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("INS-0002");
+  });
+
+  test("pegar escribe en el borrador", async ({ page }) => {
+    await ready(page);
+    await page.evaluate(() => navigator.clipboard.writeText("MENU-1\tPegado desde el menú"));
+    const menu = await abrirMenu(page, 0, "codigo");
+    await menu.filter({ hasText: "Pegar" }).click();
+
+    await expect(cell(page, 0, "codigo")).toContainText("MENU-1");
+    await expect(page.locator("tbody tr.row-edit")).toHaveCount(1);
+  });
+
+  test("agregar fila abre un borrador nuevo", async ({ page }) => {
+    await ready(page);
+    const menu = await abrirMenu(page, 1, "codigo");
+    await menu.filter({ hasText: "Agregar fila" }).click();
+    await expect(page.locator("tbody tr.row-new")).toHaveCount(1);
+  });
+
+  test("eliminar pide confirmación sobre la fila pinchada", async ({ page }) => {
+    await ready(page);
+    const menu = await abrirMenu(page, 1, "codigo");
+    await menu.filter({ hasText: "Eliminar" }).click();
+    await page.getByRole("button", { name: "Eliminar" }).click();
+    await expect(log(page)).toContainText('delete ["r1"]');
+  });
+
+  test("con un borrador abierto no deja agregar ni eliminar", async ({ page }) => {
+    await ready(page);
+    await select(page, 0, "codigo");
+    await page.keyboard.type("BORRADOR");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("tbody tr.row-edit")).toHaveCount(1);
+
+    const menu = await abrirMenu(page, 0, "codigo");
+    await expect(menu.filter({ hasText: "Agregar fila" })).toBeDisabled();
+    await expect(menu.filter({ hasText: "Eliminar" })).toBeDisabled();
+    // Copiar y pegar sí siguen disponibles sobre el propio borrador.
+    await expect(menu.filter({ hasText: "Copiar" })).toBeEnabled();
+  });
+
+  test("dentro del editor manda el menú nativo, no el del grid", async ({ page }) => {
+    await ready(page);
+    await select(page, 0, "descripcion");
+    await page.keyboard.press("F2");
+    await page.locator("tbody input[type=text]").click({ button: "right" });
+    await expect(page.getByRole("menuitem")).toHaveCount(0);
+  });
+});
+
+test.describe("estado de carga", () => {
+  test("sin filas todavía muestra el esqueleto, no «Sin registros»", async ({ page }) => {
+    await ready(page);
+    await page.locator('[data-t="empty"]').check();
+    await expect(page.locator("tbody")).toContainText("Sin registros.");
+
+    await page.locator('[data-t="loading"]').check();
+    await expect(page.locator("tbody")).not.toContainText("Sin registros.");
+    // Suficientes filas falsas para llenar el alto disponible.
+    expect(await page.locator("tbody tr[data-skeleton]").count()).toBeGreaterThan(10);
+    // Y con la misma altura que las de verdad, para que nada salte al llegar.
+    const alturas = await page.locator("tbody tr[data-skeleton]").evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().height)),
+    );
+    expect(new Set(alturas)).toEqual(new Set([ROW_HEIGHT]));
+  });
+
+  test("una recarga con filas en pantalla las conserva y marca la espera arriba", async ({ page }) => {
+    await ready(page);
+    await page.locator('[data-t="loading"]').check();
+
+    await expect(page.locator('[data-t="grid-loading"]')).toBeVisible();
+    await expect(page.locator("tbody tr[data-skeleton]")).toHaveCount(0);
+    await expect(cell(page, 0, "codigo")).toContainText("INS-0000");
+  });
+
+  test("al terminar la carga no queda ni barra ni esqueleto", async ({ page }) => {
+    await ready(page);
+    await page.locator('[data-t="loading"]').check();
+    await page.locator('[data-t="loading"]').uncheck();
+
+    await expect(page.locator('[data-t="grid-loading"]')).toHaveCount(0);
+    await expect(page.locator("tbody tr[data-skeleton]")).toHaveCount(0);
+  });
+});

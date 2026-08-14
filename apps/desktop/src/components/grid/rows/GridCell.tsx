@@ -5,15 +5,7 @@ import { CellView } from "../cells/CellView";
 import { CELL_ERROR, CELL_LOCKED, CELL_SAVING, useCellState, useGridUi, useIsCellSelected, useOpenCell } from "../gridContext";
 import type { DataGridColumn, Row } from "../types";
 
-function GridCell({
-  column,
-  row,
-  columns,
-}: {
-  column: DataGridColumn;
-  row: Row;
-  columns: DataGridColumn[];
-}) {
+function GridCell({ column, row }: { column: DataGridColumn; row: Row }) {
   const ui = useGridUi();
   const meta = ui.meta.current;
   const openCell = useOpenCell(row._id, column.field);
@@ -40,13 +32,7 @@ function GridCell({
   );
   if (!column.readOnly && openCell && !column.boolean) {
     return (
-      <CellEditor
-        column={column}
-        row={row}
-        meta={meta}
-        columns={columns}
-        forcedValue={openCell.initialValue}
-      />
+      <CellEditor column={column} row={row} meta={meta} forcedValue={openCell.initialValue} />
     );
   }
   const canMutate = !column.readOnly && (state & (CELL_SAVING | CELL_LOCKED)) === 0;

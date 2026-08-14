@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGeneralDescriptor<any, any> }) {
   const gridRef = useRef<DataGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
-  const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(descriptor.api);
+  const { items, error, cargando, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(descriptor.api);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
 
@@ -85,6 +85,7 @@ export function CatalogoGeneralSeccion({ descriptor }: { descriptor: CatalogoGen
           ref={gridRef}
           config={descriptor.grid}
           initialRows={filas}
+          loading={cargando}
           selectionMode="single"
           search={busqueda}
           onSearchChange={setBusqueda}

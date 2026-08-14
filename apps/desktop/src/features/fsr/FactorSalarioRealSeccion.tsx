@@ -32,7 +32,7 @@ export function FactorSalarioRealSeccion({
 }) {
   const gridRef = useRef<DataGridHandle>(null);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
-  const { items, error, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(FACTOR_SALARIO_REAL_API);
+  const { items, error, cargando, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(FACTOR_SALARIO_REAL_API);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -143,6 +143,7 @@ export function FactorSalarioRealSeccion({
           ref={gridRef}
           config={config}
           initialRows={filas}
+          loading={cargando}
           selectionMode="single"
           search={busqueda}
           onSearchChange={setBusqueda}

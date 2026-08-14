@@ -31,6 +31,7 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
         size: 36,
         minSize: 36,
         enableResizing: false,
+        enableHiding: false,
         cell: (ctx) => <RowIndex rowId={ctx.row.original._id} index={ctx.row.index + 1} />,
       }),
     );
@@ -42,6 +43,7 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
           size: 36,
           minSize: 36,
           enableResizing: false,
+          enableHiding: false,
           cell: (ctx) => (
             <div className="flex h-full items-center justify-center">
               <input
@@ -62,6 +64,7 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
         size: 54,
         minSize: 54,
         enableResizing: false,
+        enableHiding: false,
         cell: (ctx) => <RowActions rowId={ctx.row.original._id} />,
       }),
     );
@@ -73,7 +76,10 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
           size: c.width,
           minSize: 48,
           enableGlobalFilter: true,
-          cell: (ctx) => <GridCellMemo column={c} row={ctx.row.original} columns={configColumns} />,
+          // The first click always sorts ascending, numeric columns included —
+          // the library would start those the other way round.
+          sortDescFirst: false,
+          cell: (ctx) => <GridCellMemo column={c} row={ctx.row.original} />,
         }),
       );
     }

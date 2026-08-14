@@ -39,7 +39,7 @@ export function OrganizacionSeccion() {
   const gridRef = useRef<DataGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const { items, error, crear, actualizar, eliminar, reload } = useCatalogoGeneral(ORGANIZACION_API);
+  const { items, error, cargando, crear, actualizar, eliminar, reload } = useCatalogoGeneral(ORGANIZACION_API);
   // `useCatalogoGeneral` solo refresca su propia lista local (`items`) — el
   // resto de la app lee organizaciones de `OrganizacionContext`, que no se
   // entera de estos cambios por su cuenta (ver `App.recargarOrganizaciones`).
@@ -145,6 +145,7 @@ export function OrganizacionSeccion() {
           ref={gridRef}
           config={config}
           initialRows={filas}
+          loading={cargando}
           selectionMode="single"
           search={busqueda}
           onSearchChange={setBusqueda}

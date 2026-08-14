@@ -172,6 +172,12 @@ export function useGridClipboard({
     };
   }, []);
   return {
+    // The same three actions the Edit menu and the right-click menu invoke:
+    // there is no clipboard event to ride on there, so they go through
+    // `navigator.clipboard` instead of `e.clipboardData`.
+    copy,
+    cut,
+    paste,
     onCopy: (e: React.ClipboardEvent<HTMLDivElement>) => {
       if (isFormField(e.target)) return;
       const text = textToCopy();

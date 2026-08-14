@@ -68,6 +68,8 @@ function Harness() {
   const [rows, setRows] = useState<Row[]>(() => makeRows(500));
   const [single, setSingle] = useState(false);
   const [failNext, setFailNext] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [vacio, setVacio] = useState(false);
   const [log, setLog] = useState("");
   const ref = useRef<DataGridHandle>(null);
 
@@ -98,6 +100,14 @@ function Harness() {
           <input data-t="fail" type="checkbox" checked={failNext} onChange={(e) => setFailNext(e.target.checked)} />
           fallar guardado
         </label>
+        <label className="flex items-center gap-1">
+          <input data-t="loading" type="checkbox" checked={cargando} onChange={(e) => setCargando(e.target.checked)} />
+          cargando
+        </label>
+        <label className="flex items-center gap-1">
+          <input data-t="empty" type="checkbox" checked={vacio} onChange={(e) => setVacio(e.target.checked)} />
+          sin filas
+        </label>
         <span data-t="count">filas:{rows.length}</span>
         <span data-t="log" className="truncate font-mono">
           {log}
@@ -109,7 +119,8 @@ function Harness() {
           ref={ref}
           config={config}
           selectionMode={single ? "single" : "multiple"}
-          initialRows={rows}
+          initialRows={vacio ? [] : rows}
+          loading={cargando}
           onAddRow={async (row) => {
             if (failNext) throw new Error("El campo descripción no puede estar vacío");
             record("add", row.codigo);

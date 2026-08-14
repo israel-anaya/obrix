@@ -89,7 +89,7 @@ impl DatosIniciales for FamiliaInsumoService {
         let arbol: &[(&str, &[&str])] = &[
             (
                 "Cementos, cales y yesos",
-                &["Cemento", "Cal", "Yeso"],
+                &["Cemento", "Cal", "Yeso", "Tablaroca"],
             ),
             (
                 "Agregados",
@@ -97,7 +97,7 @@ impl DatosIniciales for FamiliaInsumoService {
             ),
             (
                 "Concretos y morteros",
-                &["Concreto premezclado", "Concreto elaborado en obra", "Mortero"],
+                &["Concreto premezclado", "Concreto elaborado en obra", "Mortero", "Aditivos"],
             ),
             (
                 "Aceros",
@@ -111,7 +111,7 @@ impl DatosIniciales for FamiliaInsumoService {
             ),
             (
                 "Mampostería",
-                &["Block", "Tabique", "Adoquín", "Prefabricados de concreto"],
+                &["Block", "Tabique", "Adoquín", "Prefabricados de concreto", "Teja"],
             ),
             (
                 "Maderas",
@@ -131,7 +131,7 @@ impl DatosIniciales for FamiliaInsumoService {
             ),
             (
                 "Pisos y azulejos",
-                &["Loseta", "Azulejo", "Piso vinílico", "Alfombra"],
+                &["Loseta", "Azulejo", "Piso vinílico", "Alfombra", "Piso laminado", "Piedra natural", "Mosaico"],
             ),
             (
                 "Cancelería y vidrio",
@@ -139,7 +139,7 @@ impl DatosIniciales for FamiliaInsumoService {
             ),
             (
                 "Instalaciones hidráulicas",
-                &["Tubería PVC", "Tubería cobre", "Conexiones", "Válvulas"],
+                &["Tubería PVC", "Tubería cobre", "Conexiones", "Válvulas", "Tinacos y cisternas"],
             ),
             (
                 "Instalaciones sanitarias",
@@ -156,7 +156,7 @@ impl DatosIniciales for FamiliaInsumoService {
             ),
             (
                 "Ferretería",
-                &["Clavos y tornillería", "Herrajes", "Consumibles"],
+                &["Clavos y tornillería", "Herrajes", "Consumibles", "Adhesivos"],
             ),
             (
                 "Combustibles y lubricantes",
@@ -184,6 +184,18 @@ impl DatosIniciales for FamiliaInsumoService {
                     "Andamios y cimbra",
                     "Transporte",
                 ],
+            ),
+            (
+                "Instalaciones de gas",
+                &["Tubería", "Conexiones", "Válvulas"],
+            ),
+            (
+                "Jardinería",
+                &["Tierra", "Plantas", "Pasto"],
+            ),
+            (
+                "Muebles, cocinas y accesorios",
+                &["Cocinas", "Gabinetes", "Accesorios"],
             ),
             (
                 "Básicos auxiliares",
