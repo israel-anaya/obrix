@@ -252,7 +252,7 @@ mod tests {
             .all(portafolio.conexion())
             .await
             .expect("listar familias");
-        assert_eq!(familias.len(), 104, "21 familias padre + 83 hijas, sin duplicar");
+        assert_eq!(familias.len(), 232, "21 familias padre + 211 hijas, sin duplicar");
         let hija = familias
             .iter()
             .find(|f| f.nombre == "Concreto premezclado")
