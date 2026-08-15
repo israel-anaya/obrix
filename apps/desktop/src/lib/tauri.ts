@@ -9,6 +9,10 @@ import type {
   CuadrillaDetalle,
   CuadrillaDetalleData,
   DireccionMovimiento,
+  EquipoCostoHorario,
+  EquipoCostoHorarioData,
+  EquipoCostoHorarioDetalle,
+  EquipoCostoHorarioDetalleData,
   FactorSalarioReal,
   FactorSalarioRealData,
   FamiliaInsumo,
@@ -289,6 +293,40 @@ export function deleteCuadrillaDetalle(id: string): Promise<Cuadrilla> {
 }
 export function moveCuadrillaDetalle(id: string, direccion: DireccionMovimiento): Promise<Cuadrilla> {
   return invoke("move_cuadrilla_detalle", { id, direccion });
+}
+
+export function listEquiposCostoHorario(): Promise<EquipoCostoHorario[]> {
+  return invoke("list_equipos_costo_horario");
+}
+export function createEquipoCostoHorario(equipo: EquipoCostoHorarioData): Promise<EquipoCostoHorario> {
+  return invoke("create_equipo_costo_horario", { equipo });
+}
+export function updateEquipoCostoHorario(id: string, equipo: EquipoCostoHorarioData): Promise<EquipoCostoHorario> {
+  return invoke("update_equipo_costo_horario", { id, equipo });
+}
+export function deleteEquipoCostoHorario(id: string): Promise<void> {
+  return invoke("delete_equipo_costo_horario", { id });
+}
+export function listEquipoCostoHorarioDetalles(equipoCostoHorarioInsumoId: string): Promise<EquipoCostoHorarioDetalle[]> {
+  return invoke("list_equipo_costo_horario_detalles", { equipoCostoHorarioInsumoId });
+}
+export function createEquipoCostoHorarioDetalle(
+  equipoCostoHorarioInsumoId: string,
+  detalle: EquipoCostoHorarioDetalleData,
+): Promise<EquipoCostoHorario> {
+  return invoke("create_equipo_costo_horario_detalle", { equipoCostoHorarioInsumoId, detalle });
+}
+export function updateEquipoCostoHorarioDetalle(
+  id: string,
+  detalle: EquipoCostoHorarioDetalleData,
+): Promise<EquipoCostoHorario> {
+  return invoke("update_equipo_costo_horario_detalle", { id, detalle });
+}
+export function deleteEquipoCostoHorarioDetalle(id: string): Promise<EquipoCostoHorario> {
+  return invoke("delete_equipo_costo_horario_detalle", { id });
+}
+export function moveEquipoCostoHorarioDetalle(id: string, direccion: DireccionMovimiento): Promise<EquipoCostoHorario> {
+  return invoke("move_equipo_costo_horario_detalle", { id, direccion });
 }
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {

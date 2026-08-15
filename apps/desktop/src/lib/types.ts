@@ -351,6 +351,97 @@ export interface CuadrillaDetalleData {
 export type DireccionMovimiento = "arriba" | "abajo";
 
 /**
+ * Extensión de `insumo` cuando `tipo = equipo_herramienta` y se trata de
+ * equipo **propio** costado por depreciación/consumo (metodología SCT/CMIC),
+ * a diferencia de `herramienta` (sin depreciación) — ver
+ * `equipo_costo_horario` en el diccionario de datos. Los campos `cf_*`
+ * salvo los 9 de captura directa son cache que recalcula el backend cada
+ * vez que se edita el equipo; `cargo_variable_hora`/`costo_horario_total`
+ * son cache de la composición (`equipo_costo_horario_detalle`). Serializados
+ * como texto para no perder precisión.
+ */
+export interface EquipoCostoHorario extends CamposControl {
+  id: string;
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  /** Debe ser hija (`parent_id`) de `familia_id`. */
+  sub_familia_id: string | null;
+  activo: boolean;
+  /** `null` = nacional — solo descriptivo, no participa en ningún cálculo. */
+  region_id: string | null;
+  cf_costo_maquina: string;
+  cf_valor_llantas: string;
+  cf_valor_piezas_especiales: string;
+  cf_valor_maquina: string;
+  cf_valor_rescate_porcentaje: string;
+  cf_valor_rescate: string;
+  cf_vida_economica_anios: string;
+  cf_horas_uso_anual: string;
+  cf_vida_util_horas: string;
+  cf_tasa_interes_anual_porcentaje: string;
+  cf_tasa_seguros_anual_porcentaje: string;
+  cf_mantenimiento_porcentaje: string;
+  cf_depreciacion_hora: string;
+  cf_inversion_hora: string;
+  cf_seguro_hora: string;
+  cf_mantenimiento_hora: string;
+  cf_cargo_fijo_hora: string;
+  subtotal_consumo: string;
+  subtotal_operacion: string;
+  cargo_variable_hora: string;
+  costo_horario_total: string;
+}
+
+export interface EquipoCostoHorarioData {
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  sub_familia_id: string | null;
+  activo: boolean;
+  region_id: string | null;
+  cf_costo_maquina: string;
+  cf_valor_llantas: string;
+  cf_valor_piezas_especiales: string;
+  cf_valor_rescate_porcentaje: string;
+  cf_vida_economica_anios: string;
+  cf_horas_uso_anual: string;
+  cf_tasa_interes_anual_porcentaje: string;
+  cf_tasa_seguros_anual_porcentaje: string;
+  cf_mantenimiento_porcentaje: string;
+}
+
+/**
+ * Un renglón de la composición plana de un `equipo_costo_horario` — un
+ * consumo (`tipo: "consumo"`, material) o una operación (`tipo:
+ * "operacion"`, categoría FASAR o cuadrilla), nunca otro equipo de costo
+ * horario. `costo`/`importe` los calcula el backend, no son editables
+ * directamente.
+ */
+export interface EquipoCostoHorarioDetalle {
+  id: string;
+  equipo_costo_horario_insumo_id: string;
+  detalle_insumo_id: string;
+  tipo: "consumo" | "operacion";
+  orden: number;
+  /** Cantidad consumida (o jornales/horas de operador) por hora de máquina. */
+  cantidad: string;
+  costo: string;
+  importe: string;
+  created_at: string;
+  updated_at: string | null;
+  created_by: string;
+  updated_by: string | null;
+}
+
+export interface EquipoCostoHorarioDetalleData {
+  detalle_insumo_id: string;
+  cantidad: string;
+}
+
+/**
  * Vigencia de salario+FSR de una `categoria_fasar` — historizada por
  * región, nunca se sobrescribe. `factor_salario_real` y
  * `salario_real_diario` los calcula el cliente (`modeloCalculo.ts`, campo

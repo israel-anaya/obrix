@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { HardHat, Package, Percent, Users } from "lucide-react";
+import { Gauge, HardHat, Package, Percent, Users } from "lucide-react";
 import type { DataGridConfig } from "@/components/grid/DataGrid";
 
 export interface NodoCatalogo {
@@ -51,7 +51,7 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     label: "Maquinaria y Equipo",
     hijos: [
       { id: "herramienta", label: "Herramienta" },
-      { id: "costos-horarios", label: "Costos Horarios" },
+      { id: "costos-horarios", label: "Costos Horarios", icon: Gauge },
       { id: "equipo-rentado", label: "Equipo rentado" },
     ],
   },
@@ -99,15 +99,6 @@ export const CATALOGO_GRID_CONFIG: Record<string, DataGridConfig> = {
       { field: "descripcion", header: "Descripción", width: 320 },
       { field: "unidad", header: "Unidad", width: 100 },
       { field: "precio", header: "Precio unitario", numeric: true, width: 140 },
-    ],
-  },
-  "costos-horarios": {
-    title: "Costos Horarios",
-    columns: [
-      { field: "clave", header: "Clave", width: 100 },
-      { field: "descripcion", header: "Descripción", width: 320 },
-      { field: "tipo", header: "Tipo", width: 130 },
-      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
     ],
   },
   "equipo-rentado": {

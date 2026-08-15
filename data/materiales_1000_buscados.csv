@@ -1,0 +1,1005 @@
+﻿Clave,Descripción,Unidad,Precio,Familia
+ACEEST-001,"Acero de refuerzo varilla corrugada del núm. 3, (3/8"") fyp = 4200 kg/cm2.",ton,16704,ACERO
+ACEEST-008,"Acero de refuerzo, varilla corrugada del núm. 4, (1/2"") fyp = 4200 kg/cm2.",ton,16704,ACERO
+ACEEST-009,"Acero de refuerzo, varilla corrugada del núm. 5, (5/8"") fyp = 4200 kg/cm2.",ton,16704,ACERO
+ACEEST-010,"Acero de refuerzo, varilla corrugada del núm. 6, (3/4"") fyp = 4200 kg/cm2.",ton,16704,ACERO
+ACEEST-011,"Acero de refuerzo, varilla corrugada del núm. 8, (1"") fyp = 4200 kg/cm2.",ton,16704,ACERO
+ACCH-007,"Acero de refuerzo, varilla corrugada del núm. 10, (1 1/4"") fyp = 4200 kg/cm2.",ton,16800,ACERO
+AACE-0007,"Ángulo de fierro de 1"" x 1/4"" de espesor.",kg,24.04,ACERO
+AACE-0070,"Ángulo de fierro de 1"" x 1/8"" de espesor.",kg,24.04,ACERO
+AACE-0084,"Ángulo de fierro de 2"" x 5/16"" de espesor.",kg,22.8,ACERO
+AACE-0089,"Ángulo de fierro de 2"" x 3/8"" de espesor.",kg,22.8,ACERO
+AACE-0018,"Cuadrado macizo de fierro de 1/2"" de diámetro (1.26 kg/cm2).",kg,21.57,ACERO
+AACE-0178,"Cuadrado macizo de fierro de 1 1/2"" de diámetro y 6.10 mts. de longitud.",kg,21.57,ACERO
+AACE-0028,Lámina rectangular R101 acanalada galvanizada de 1.07 x 2.44 mts. calibre 24.,pza,1316.65,ACERO
+AACE-0319,Lámina rectangular R101 acanalada pintada de 1.07 x 3.05 mts. calibre 24.,pza,789.99,ACERO
+AACE-0036,Lámina losacero sección 4 de 0.95 x 6.10 mts. calibre 22 peralte de 6.35 cms. (8.00 kg/cm2).,pza,1427.454,ACERO
+AACE-0338,"Lámina antiderrapante fundida calibre 3/16"" de 0.91 x 2.44 mts. (3"" x 8"").",kg,21.49,ACERO
+AACE-0044,"Lámina antiderrapante zarpa troquelada calibre 16 de 0.91 x 3.05 mts. (3"" x 10"").",kg,17.6167,ACERO
+AACE-0331,"Lámina antiderrapante calibre 11 de 0.91 x 2.44 mts. (3"" x 8"").",kg,21.49,ACERO
+AACE-0334,"Lámina antiderrapante calibre 14 de 0.91 x 2.44 mts. (3"" x 10"").",kg,21.49,ACERO
+AACE-0381,Lámina galvanizada lisa de 1.22 x 3.05 mts. calibre 28.,pza,90.06,ACERO
+ACEL-025,Lamina pintro lisa calibre 26 de 1.22 x 3.05 mts.,pza,484.83,ACERO
+AACE-0199,Lámina tablero zintro calibre 20 0.98 x 1.22 mts.,pza,30.4,ACERO
+FREY-001,"Conector para varilla del número 6 (3/4"") marca Freyssinet",pza,71.19,ACERO
+FREY-002,"Conector para varilla del número 8 (1"") marca Freyssinet.",pza,83.055,ACERO
+FREY-003,"Conector para varilla del número 10 (1 1/4"") marca Freyssinet.",pza,142.38,ACERO
+FREY-004,"Conector para varilla del número 12 (1 1/2"") marca Freyssinet.",pza,243.515,ACERO
+FREY-005,"Reductor para varilla del número 10 (1 1/4"") al 8 (1"") marca Freyssinet.",pza,452,ACERO
+FREY-006,"Reductor para varilla del número 12 (1 1/2"") al 10 (1 1/4"") marca Freyssinet.",pza,621.5,ACERO
+AACE-0098,"Solera de fierro de 1"" x 1/8"" de espesor.",kg,23.94,ACERO
+AACE-0113,"Solera de fierro de 1"" x 1/4"" de espesor.",kg,23.94,ACERO
+AACE-0130,"Solera de fierro de 1"" x 3/8"" de espesor.",kg,23.94,ACERO
+AACE-0139,"Solera de fierro de 1"" x 1/2"" de espesor.",kg,21.9446,ACERO
+AACE-0158,"Solera de fierro de 2"" x 3/4"" de espesor.",kg,20.7581,ACERO
+AACE-0168,"Redondo macizo de fierro de 1 1/2"" de diámetro y 6.10 mts. de longitud.",kg,23.28,ACERO
+AACE-0188,"Redondo pulido de fierro de 1/2"" de diámetro y 6.10 mts. de longitud.",kg,22.7243,ACERO
+AACE-0194,Perfil pintado calibre 18 Y 20.,kg,25.7188,ACERO
+AACE-0248,"Placa cortada comercial A36 espesor de 1"".",kg,23.56,ACERO
+AACE-0255,Malla electrosoldada 66-1010 rollo de 100 m2.,roll,1805,ACERO
+AACE-0256,Malla electrosoldada 66-88 rollo de 100 m2.,roll,2535,ACERO
+AACE-0257,Malla electrosoldada 66-66 rollo de 100 m2.,roll,3716,ACERO
+ACEL-024,Malla electrosoldada 66-44 rollo de 100 m2.,roll,5040,ACERO
+AACE-0408,"Viga IPR de 6"" x 40"" .",kg,26.125,ACERO
+AACE-0268,"Viga IPS de 3"".",kg,22.2836,ACERO
+AACE-0269,"Viga IPS de 6"".",kg,22.2836,ACERO
+AACE-0523,"Canal de acero CPS de 6"" de 15.6 kg/ml",kg,22.99,ACERO
+AACE-0524,"Canal de acero CPS de 6"" de 19.3 kg/ml",kg,22.99,ACERO
+ACEEST-004,Alambre recocido del número 10.,kg,23.04,ACERO
+ACEEST-005,"Metal desplegado E-600 calibre 26 de 0.91 ancho x 22.00 mts. de largo, en rollo.",m2,38.44,ACERO
+SUV-TEMP2,"Clavo de 2"" a 4"" con cabeza.",kg,23.3797,ACERO
+ACEL-012,"Clavo de 1 1/2"", 2"", 2 1/2"" y 3"" sin cabeza.",kg,18.6676,ACERO
+ACEEST-013,Clavo sin cabeza para concreto caja con 25 kg.,kg,79.8,ACERO
+ACES-008,"Escalerilla p/muro de block de 12 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,14.4,ACERO
+ACES-009,"Escalerilla p/muro de block de 15 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,14.88,ACERO
+ACES-010,"Escalerilla p/muro de block de 20 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,15.36,ACERO
+ACEEST-014,"Castillo prefabricado de 15 x 15 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,207.36,ACERO
+ACEEST-015,"Castillo prefabricado de 15 x 20 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,218.88,ACERO
+ACEEST-016,"Castillo prefabricado de 15 x 25 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,230.4,ACERO
+ACEEST-017,"Castillo prefabricado de 15 x 30 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,241.92,ACERO
+ACES-015,"Castillo prefabricado de 12 x 12 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,77.97,ACERO
+SOLD-002,"Soldadura 6013-3 (1/8"").",kg,155.21,ACERO
+SOLD-003,"Soldadura 6013-2 (3/32"").",kg,167.39,ACERO
+SOLD-004,"Soldadura 7018-3 (1/8"").",kg,163.98,ACERO
+CRUZA-001,"Concreto premezclado no bombeable F´c=100 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2134.35,CONCRETO PREMEZCLADO
+CRUZA-003,"Concreto premezclado no bombeable F´c=200 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2340.81,CONCRETO PREMEZCLADO
+CRUZA-004,"Concreto premezclado no bombeable F´c=250 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2431.02,CONCRETO PREMEZCLADO
+CRUZA-005,"Concreto premezclado no bombeable F´c=300 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,1917.61,CONCRETO PREMEZCLADO
+CRUZA-006,"Concreto premezclado no bombeable F´c=350 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2061.12,CONCRETO PREMEZCLADO
+CRUZA-007,"Concreto premezclado no bombeable F´c=400 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2215.93,CONCRETO PREMEZCLADO
+CRUZA-013,"Concreto premezclado no bombeable F´c=400 Kg/cm2, rápido clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2382.04,CONCRETO PREMEZCLADO
+CRUZA-018A,"Concreto premezclado no bombeable F´c=400 Kg/cm2, retardante clase II, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2490.52,CONCRETO PREMEZCLADO
+CRUZA-019,"Concreto premezclado no bombeable F´c=250 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2557.5,CONCRETO PREMEZCLADO
+CRUZA-020,"Concreto premezclado no bombeable F´c=300 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2743.5,CONCRETO PREMEZCLADO
+CRUZA-021,"Concreto premezclado no bombeable F´c=350 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2957.4,CONCRETO PREMEZCLADO
+CRUZA-022,"Concreto premezclado no bombeable F´c=400 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,3180.6,CONCRETO PREMEZCLADO
+CRUZA-023,"Concreto premezclado no bombeable F´c=450 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,3450.3,CONCRETO PREMEZCLADO
+CRUZA-023E,"Concreto premezclado no bombeable F´c=450 Kg/cm2, rápido clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,2777.54,CONCRETO PREMEZCLADO
+CRUZA-023J,"Concreto premezclado no bombeable F´c=450 Kg/cm2, retardante clase I, 20 mm. revenimiento hasta 10 +- 2.5 cms. Concretos Cruz Azul.",m3,3072.47,CONCRETO PREMEZCLADO
+CRUZA-024,"Concreto premezclado bombeable F´c=150 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,1644.15,CONCRETO PREMEZCLADO
+CRUZA-025,"Concreto premezclado bombeable F´c=200 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,1760.54,CONCRETO PREMEZCLADO
+CRUZA-026,"Concreto premezclado bombeable F´c=250 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azull.",m3,1872.41,CONCRETO PREMEZCLADO
+CRUZA-027,"Concreto premezclado bombeable F´c=300 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azull.",m3,2012.53,CONCRETO PREMEZCLADO
+CRUZA-028,"Concreto premezclado bombeable F´c=350 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azull.",m3,2170.73,CONCRETO PREMEZCLADO
+CRUZA-029,"Concreto premezclado bombeable F´c=400 Kg/cm2, normal clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azull.",m3,2336.84,CONCRETO PREMEZCLADO
+CRUZA-040A,"Concreto premezclado bombeable F´c=400 Kg/cm2, retardante clase II, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2534.59,CONCRETO PREMEZCLADO
+CRUZA-041,"Concreto premezclado bombeable F´c=250 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2108.58,CONCRETO PREMEZCLADO
+CRUZA-042,"Concreto premezclado bombeable F´c=300 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2269.04,CONCRETO PREMEZCLADO
+CRUZA-043,"Concreto premezclado bombeable F´c=350 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2428.37,CONCRETO PREMEZCLADO
+CRUZA-044,"Concreto premezclado bombeable F´c=400 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2601.26,CONCRETO PREMEZCLADO
+CRUZA-044A,"Concreto premezclado bombeable F´c=450 Kg/cm2, normal clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2777.54,CONCRETO PREMEZCLADO
+CRUZA-048A,"Concreto premezclado bombeable F´c=450 Kg/cm2, rápido clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,2975.29,CONCRETO PREMEZCLADO
+CRUZA-052A,"Concreto premezclado bombeable F´c=450 Kg/cm2, retardante clase I, 20 mm. revenimiento hasta 14 +- 3.5 cms. Concretos Cruz Azul.",m3,3141.4,CONCRETO PREMEZCLADO
+CRUZA-054,Bombeo de concreto premezclado de 29 a 32 mts. de alcance con bomba pluma y revenimiento de 18 cms.,m3,352.56,BOMBEO DE CONCRETO
+CRUZA-053,Bombeo de concreto premezclado de 16 a 28 mts. de alcance con bomba pluma y revenimiento de 18 cms.,m3,290.52,BOMBEO DE CONCRETO
+CRUZA-055,Bombeo de concreto premezclado de 33 a 36 mts. de alcance con bomba pluma y revenimiento de 18 cms.,m3,381.94,BOMBEO DE CONCRETO
+CRUZA-056A,Bombeo de concreto premezclado de 43 a 44 mts. de alcance con bomba pluma y revenimiento de 18 cms.,m3,496.07,BOMBEO DE CONCRETO
+CRUZA-056C,Bombeo de concreto premezclado de 51 a 52 mts. de alcance con bomba pluma y revenimiento de 18 cms.,m3,615.85,BOMBEO DE CONCRETO
+CRUZA-058,Bombeo de concreto premezclado de 17 hasta 30 mts. de altura con bomba estacionaria y revenimiento de 18 cms.,m3,284.76,BOMBEO DE CONCRETO
+CRUZA-060,Bombeo de concreto premezclado de 43 hasta 54 mts. de altura con bomba estacionaria y revenimiento de 18 cms.,m3,340.13,BOMBEO DE CONCRETO
+AGAS-001,"Arena triturada 1/4"" a finos para base asfáltica considerar flete por separado consultar proveedor.",m3,447,AGREGADOS
+AGAS-002,"Grava triturada 3/4"" para base asfáltica.",m3,465,AGREGADOS
+AGAS-006,"Base grava - arena triturada 1 1/2"" finos para base asfáltica L.A.B. Mina de San Luis c/promedio de acarreo de 1 a 80 km.",m3,146.9,AGREGADOS
+AGAS-008,"Base grava 1""- tepetate 1 1/2"" finos para base asfáltica L.A.B. Mina de San Luis con promedio de acarreo de 1 a 80 km.",m3,214,AGREGADOS
+AGAS-010,Piedra sin seleccionar grande para base asfáltica L.A.B. Mina de San Luis.,m3,135.78,AGREGADOS
+AGAS-011,"Piedra para filtro de tamaño 3"" a 10"" para base asfáltica L.A.B. Mina de San Luis.",m3,233,AGREGADOS
+AGAS-012,Tepetate con promedio de 1 a 80 km de acarreo.,m3,307,AGREGADOS
+AGAS-021,Mezcla de tepetate con arenilla,m3,62.15,AGREGADOS
+AGRE-001,Arena en camión de 6 m3.,Camion,3125,AGREGADOS
+AGRE-002,"Grava de 3/4"" (19 mm) en camión de 6 m3.",camion,3255,AGREGADOS
+AGRE-005,Tezontle de 20 mm. espeso o grueso en camión de 7 m3.,m3,438,AGREGADOS
+AGRE-007,Piedra braza para mampostería (en camión con 5 m3).,m3,744,AGREGADOS
+AGRE-008,Piedra bola limón o matatena (1 m3 es equivalente a 44 botes).,m3,2983.2,AGREGADOS
+AGRE-014,Calhidra.,ton,3496,AGREGADOS
+AGRE-016C,Pipa de agua (cotizado a zonas aledañas al proveedor) cap. 8000 lt.,pipa,1860,AGREGADOS
+AGRE-033,Agua potable de uso no doméstico diámetro de la toma de 19 a 26 mm cuota fija bimestral.,cuo,33922.035,AGREGADOS
+AGRE-037,Agua potable de uso no doméstico diámetro de la toma de 51 a 64 mm cuota fija bimestral.,cuo,180124.5,AGREGADOS
+AGRE-041,Agua potable de uso no doméstico diámetro de la toma de 150 a 200 mm cuota fija bimestral.,cuo,313932,AGREGADOS
+AGRE-045,"Agua potable de uso no doméstico de 0 a 10,000 lts de consumo tarifa bimestral sin subsidio.",cuo,389.85,AGREGADOS
+AGRE-048,"Agua potable de uso no doméstico de 30,000 a 50,000 lts de consumo tarifa bimestral sin subsidio cuota adicional de 35.00 por cada 1000 lts excedentes.",cuo,1045.25,AGREGADOS
+AGRE-051,"Agua potable de uso no doméstico de 90,000 a 120,000 lts de consumo tarifa bimestral sin subsidio cuota adicional de 41.00 por cada 1000 lts excedentes.",cuo,3463.45,AGREGADOS
+AGRE-052,"Agua potable de uso no doméstico de 0 a 10,000 lts de consumo tarifa bimestral con subsidio",cuo,152.55,AGREGADOS
+AGRE-055,"Agua potable de uso no doméstico de 30,000 a 50,000 lts de consumo tarifa bimestral con subsidio cuota adicional de 29.00 por cada 1000 lts excedentes.",cuo,598.674,AGREGADOS
+AGRE-058,"Agua potable de uso no doméstico de 90,000 a 120,000 lts de consumo tarifa bimestral con subsidio cuota adicional de 40.00 por cada 1000 lts excedentes.",cuo,2789.744,AGREGADOS
+FRIG-51,Perla preexpandida de poliestireno para aligerar concreto marca Frigocel,kg,67.8,AGREGADOS
+AGRE-015,Cero fino y grueso polvo de mármol.,ton,4929,AGREGADOS
+SPGC-046,"Pigmento integral para concreto color café oscuro saco de 25 kg, marca SPG.",sac,967.28,AGREGADOS
+PASA-214,"Endurecedor de superficies, tipo protecto dur S, endurecedor superficial mineral, saco de 50 kg.",sac,378.55,ADITIVOS PARA CONCRETO
+PASA-215,"Aditivos modificadores de concreto, protecto fluid N súper fluidificante p/concreto, tambo de 200 lt.",tmb,4300.78,ADITIVOS PARA CONCRETO
+PASA-216,"Aditivos modificadores de concreto, protecto fluid R retardante y fluidificante, tambo de 200 lt.",tmb,5453.38,ADITIVOS PARA CONCRETO
+PASA-217,"Aditivos modificadores de concreto, protecto fluid ALC acelerante libre de cloruros, tambo de 200 lt.",tmb,4828.49,ADITIVOS PARA CONCRETO
+PASA-220,"Aditivos modificadores de concreto, protecto dis N reductor de agua p/concreto, tambo de 200 lt.",tmb,2932.35,ADITIVOS PARA CONCRETO
+PASA-229,"Refuerzo sec. p/concreto, tipo pasa fiber, incrementa la resistencia al impacto, la tensión y la flexión, evita agrietamiento 120 bolsas de 100 g.",caj,1627.2,ADITIVOS PARA CONCRETO
+PASA-187,"Desmoldantes para cimbra, tipo desmoldante líquido listo para usarse solventado, tambor de 200 lt.",tmb,5651.13,ADITIVOS PARA CONCRETO
+SPGC-017,"Endurecedor color negro, presentación de 27 kg, para concreto estampado.",caj,327.7,ADITIVOS PARA CONCRETO
+SPGC-022,"Endurecedor color blanco, presentación de 27 kg, para concreto estampado.",caj,282.5,ADITIVOS PARA CONCRETO
+SPGC-285,"Oxidantes para concreto SPG, color ladrillo, presentación en 1 galón.",gal,1039.6,ADITIVOS PARA CONCRETO
+SPGC-296,"Oxidantes para concreto SPG, color terracota, presentación en 1/4 de galón.",cb,268.94,ADITIVOS PARA CONCRETO
+DIMA-068,"Pegamento blanco resistol 850, presentación en cubeta de 20 kg.",cb,1575.1861,PEGAMENTOS Y ADHESIVOS
+MFIB-096,"Unecreto plaf, adhesivo para concreto y selladores, presentación en cubeta de 19 lt.",cb,1180.85,PEGAMENTOS Y ADHESIVOS
+MFIB-101,"Unecreto, alto desempeño, adhesivo para concreto y selladores, presentación en cubeta de 19 lt.",cb,1421.97,PEGAMENTOS Y ADHESIVOS
+MFIB-104,"Unecon, uso profesional, adhesivo para concreto y selladores, presentación en cubeta de 19 lt.",cb,791,PEGAMENTOS Y ADHESIVOS
+PASA-191,"Adhesivos para mortero y concreto (acrílico y vinílico), tipo elite bond adhesivo premium, en tambo de 200 lt.",tmb,11164.4,PEGAMENTOS Y ADHESIVOS
+PASA-201,"Adhesivos para mortero y concreto (epóxidos), tipo epoxibond líquido repara concretos 2 componentes (4 lt).",jgo,1480.3,PEGAMENTOS Y ADHESIVOS
+DURA-301,"Pegamento látex D-850, presentación en cubeta de 15 lt.",cb,751.45,PEGAMENTOS Y ADHESIVOS
+PRVI-040,"Pegamento tapizol 1125, presentación en lata de 3.785 lt.",gal,654.35,PEGAMENTOS Y ADHESIVOS
+PRVI-043,"Pegamento adhepiso 1190, presentación en cubeta de 19 lt.",cb,1394.73,PEGAMENTOS Y ADHESIVOS
+CMC-21660,Adhesivo multiusos cemento blanco contenido 20 kg por saco marca Crest.,sac,84.8969,PEGAMENTOS Y ADHESIVOS
+COMB-004,"Gasolina magna, no incluye IVA ni IEPYS.",lt,20.6,ENERGÉTICOS Y LUBRICANTES
+COMB-009,"Gasolina premium, no incluye IVA ni IEPYS",lt,,ENERGÉTICOS Y LUBRICANTES
+COMB-005,Gas butano (Lp).,kg,10.9723,ENERGÉTICOS Y LUBRICANTES
+COMB-006,"Diesel, no incluye IVA ni IEPYS.",lt,24.83,ENERGÉTICOS Y LUBRICANTES
+COMB-007,Aceite verde para motor a diesel marca Mexlub.,lt,78.12,ENERGÉTICOS Y LUBRICANTES
+COMB-008,Aceite azul Akron multigrado para motor a gasolina.,lt,78.12,ENERGÉTICOS Y LUBRICANTES
+COMB-010,Tarifa 2 de energía eléctrica servicio general en baja tensión rango de 1 a 50 kw.,kw/hr,2.4634,ENERGÉTICOS Y LUBRICANTES
+COMB-011,Tarifa 2 de energía eléctrica servicio general en baja tensión rango de 51 a 100 kw.,kw/hr,2.9719,ENERGÉTICOS Y LUBRICANTES
+COMB-012,Tarifa 2 de energía eléctrica servicio general en baja tensión rango adicional a 100 kw.,kw/hr,2.9719,ENERGÉTICOS Y LUBRICANTES
+ROCA-001,Vigueta de 0.08 x 0.50 mts marca Rocacero.,pza,19.8767,VIGUETA Y BOVEDILLA
+ROCA-006,Vigueta de 0.08 x 1.00 mts marca Rocacero.,pza,39.7534,VIGUETA Y BOVEDILLA
+ROCA-016,Vigueta de 0.08 x 2.00 mts marca Rocacero.,pza,79.5068,VIGUETA Y BOVEDILLA
+ROCA-026,Vigueta de 0.08 x 3.00 mts marca Rocacero.,pza,119.2602,VIGUETA Y BOVEDILLA
+ROCA-032,Vigueta de 0.11 x 0.50 mts marca Rocacero.,pza,24.7357,VIGUETA Y BOVEDILLA
+ROCA-038,Vigueta de 0.11 x 1.20 mts marca Rocacero.,pza,59.3702,VIGUETA Y BOVEDILLA
+ROCA-044,Vigueta de 0.11 x 2.10 mts marca Rocacero.,pza,103.9148,VIGUETA Y BOVEDILLA
+ROCA-051,Vigueta de 0.11 x 3.10 mts marca Rocacero.,pza,170.3475,VIGUETA Y BOVEDILLA
+ROCA-060,Vigueta de 0.11 x 4.00 mts marca Rocacero.,pza,241.6844,VIGUETA Y BOVEDILLA
+ROCA-064,Vigueta de 0.14 x 0.50 mts marca Rocacero.,pza,24.7357,VIGUETA Y BOVEDILLA
+ROCA-069,Vigueta de 0.14 x 1.00 mts marca Rocacero.,pza,49.4827,VIGUETA Y BOVEDILLA
+ROCA-074,Vigueta de 0.14 x 1.50 mts marca Rocacero.,pza,74.2184,VIGUETA Y BOVEDILLA
+ROCA-079,Vigueta de 0.14 x 2.00 mts marca Rocacero.,pza,98.9654,VIGUETA Y BOVEDILLA
+ROCA-084,Vigueta de 0.14 x 2.50 mts marca Rocacero.,pza,123.7011,VIGUETA Y BOVEDILLA
+ROCA-089,Vigueta de 0.14 x 3.00 mts marca Rocacero.,pza,148.4481,VIGUETA Y BOVEDILLA
+ROCA-099,Vigueta de 0.14 x 4.00 mts marca Rocacero.,pza,241.6844,VIGUETA Y BOVEDILLA
+ROCA-109,Vigueta de 0.14 x 5.10 mts marca Rocacero.,pza,498.782,VIGUETA Y BOVEDILLA
+ROCA-117,Vigueta de 0.14 x 6.00 mts marca Rocacero.,pza,638.2692,VIGUETA Y BOVEDILLA
+ROCA-127,Vigueta de 0.14 x 7.00 mts marca Rocacero.,pza,990.332,VIGUETA Y BOVEDILLA
+ROCA-201,Bovedilla de tepexil 85 x 25 x 16 cms marca Rocacero.,pza,12.995,VIGUETA Y BOVEDILLA
+ROCA-202,Bovedilla de tepexil 85 x 25 x 14 cms marca Rocacero.,pza,12.4074,VIGUETA Y BOVEDILLA
+ROCA-203,Bovedilla de tepexil 75 x 25 x 26 cms marca Rocacero.,pza,15.6844,VIGUETA Y BOVEDILLA
+ROCA-205,Bovedilla de tepexil 75 x 25 x 16 cms marca Rocacero.,pza,11.074,VIGUETA Y BOVEDILLA
+ROCA-207,Bovedilla de tepexil 60 x 25 x 20 cms marca Rocacero.,pza,8.9722,VIGUETA Y BOVEDILLA
+ROCA-208,Bovedilla de tepexil 60 x 25 x 16 cms marca Rocacero.,pza,10.3395,VIGUETA Y BOVEDILLA
+ROCA-211,Bovedilla de tepexil 50 x 25 x 16 cms marca Rocacero.,pza,6.6557,VIGUETA Y BOVEDILLA
+FRIG-21,Bovedilla de poliestireno expandido de baja densidad (varias medidas) marca Frigocel.,m3,886.76,VIGUETA Y BOVEDILLA
+FRIG-22,Bovedilla de poliestireno expandido de baja densidad 122 x 64 x 13 cms marca Frigocel,pza,95.05,VIGUETA Y BOVEDILLA
+FRIG-24,Bovedilla de poliestireno expandido de baja densidad 122 x 64 x 15 cms marca Frigocel,pza,116.72,VIGUETA Y BOVEDILLA
+FRIG-01,Casetón de poliestireno expandido de baja densidad marca Frigocel.,pza,855.6,VIGUETA Y BOVEDILLA
+FRIG-03,Casetón de poliestireno expandido de baja densidad 40 x 40 x 30 cms marca Frigocel.,pza,21.696,VIGUETA Y BOVEDILLA
+FRIG-05,Casetón de poliestireno expandido de baja densidad 60 x 60 x 30 cms marca Frigocel.,pza,48.816,VIGUETA Y BOVEDILLA
+AGLU-001,"Cemento blanco Tolteca, presentación en saco de 50 kg.",ton,9310,AGLUTINANTES
+DIMA-100,"Cemento blanco Apasco, presentación en saco de 50 kg.",sac,465.5,AGLUTINANTES
+AGLU-002,"Cemento gris normal Tolteca, presentación en saco de 50 kg.",ton,4750,AGLUTINANTES
+DIMA-099,"Cemento gris Apasco, presentación en saco de 50 kg.",sac,237.5,AGLUTINANTES
+AGLU-005,"Mortero Tolteca, presentación en saco de 50 kg.",ton,4256,AGLUTINANTES
+CMC-39550,"Mortero Cruz azul, presentación en saco de 50 kg.",ton,4256,AGLUTINANTES
+AGLU-003,Yeso amarrado.,ton,2774,AGLUTINANTES
+CMC-21670,"Boquicrest ultra adobe, presentación en saco de 10 kg, Crest.",sac,137.98,AGLUTINANTES
+CMC-21672,"Boquicrest ultra azul místico, presentación en saco de 10 kg, Crest.",sac,137.98,AGLUTINANTES
+AGLU-007,Boquilla o junta piso presentación en saco de 10 kg.,sac,66.2413793103448,AGLUTINANTES
+CMC-21687,"Juntacrest blanco, presentación en saco de 5 kg marca Crest.",sac,147.49,AGLUTINANTES
+AGLU-TEMP,Pegazulejo blanco saco de 20 kg marca Crest.,sac,113,AGLUTINANTES
+CMC-21708,"Epoxy Crest blanco Himalaya, Crest.",cb,1158.0353,AGLUTINANTES
+PASA-211,"Grouts tipo epoxi resanador mortero epóxico resanador 3 componentes, presentación en saco de 4 kg.",sac,609.07,AGLUTINANTES
+PASA-291,"Recubrimiento superficies deportivas, protecto mezcla como aglutinante en canchas deportivas, tambo de 200 lt.",tmb,5136.98,AGLUTINANTES
+SPGC-059,"Mortero ultramix para pisos ultradelgados, color gris, presentación en cubeta de 27 kg.",cb,146.9,AGLUTINANTES
+ROCA-402,Block aparente rosa 40 x 20 x 12 cms de resistencia 60 kg/cm3 marca Rocacero.,pza,7.2998,BLOCK
+ROCA-403,Block aparente gris 40 x 20 x 12 cms de resistencia 40 kg/cm3 marca Rocacero.,pza,5.9325,BLOCK
+ROCA-408,Block hueco 40 x 20 x 12 cms de resistencia 60kg/cm3 marca Rocacero.,pza,13.77,BLOCK
+ROCA-409,Block hueco 40 x 20 x 15 cms de resistencia 60kg/cm3 marca Rocacero.,pza,14.79,BLOCK
+ROCA-410,Block hueco 40 x 20 x 20 cms de resistencia 60kg/cm3 marca Rocacero.,pza,15.8,BLOCK
+ROCA-411,Block hueco 40 x 20 x 10 cms de resistencia 40kg/cm3 marca Rocacero.,pza,12.65,BLOCK
+ROCA-417,Block hueco ligero 40 x 20 x 15 cms de resistencia 30kg/cm3 marca Rocacero.,pza,6.3732,BLOCK
+ROCA-419,Block macizo 40 x 20 x 10 cms de resistencia 40kg/cm3 marca Rocacero.,pza,13.86,BLOCK
+ROCA-420,Block macizo 40 x 20 x 12 cms de resistencia 40kg/cm3 marca Rocacero.,pza,14.79,BLOCK
+ROCA-424,Block hueco 40 x 20 x 10 cms color rojo de resistencia 60kg/cm3 marca Rocacero.,pza,5.2545,BLOCK
+ROCA-432,Block hueco 40 x 20 x 15 cms color rojo de resistencia 60kg/cm3 marca Rocacero.,pza,7.8535,BLOCK
+ROCA-434,Block hueco 40 x 20 x 20 cms color cafe de resistencia 60kg/cm3 marca Rocacero.,pza,27.25,BLOCK
+ROCA-439,Block hueco 40 x 20 x 10 cms color negro de resistencia 40kg/cm3 marca Rocacero.,pza,22.23,BLOCK
+ROCA-441,Block hueco 40 x 20 x 12 cms color ocre de resistencia 40kg/cm3 marca Rocacero.,pza,23.07,BLOCK
+ROCA-446,Block hueco 40 x 20 x 15 cms color cafe de resistencia 40kg/cm3 marca Rocacero.,pza,24.93,BLOCK
+ROCA-452,Block hueco 40 x 20 x 20 cms color rojo de resistencia 40kg/cm3 marca Rocacero.,pza,28.56,BLOCK
+CMC-51820,"Tabique vintex-multex, 12 x 12 x 24 cms. 5,824 piezas. Novaceramic.",tor,22040.8308,TABIQUE
+CMC-58948,"Tabique tabicimbra-12, 12 x 12 x 23 cms. 6,240 piezas. Novaceramic.",tor,24256.128,TABIQUE
+PRMB-028,Tabique tabimax 10 12 x 10 x 25 cms. marca Novaceramic.,mill,7830,TABIQUE
+PRMB-029,Tabique tabimax-15 12 x 15 x 25 cms. marca Novaceramic.,mill,11620,TABIQUE
+PRMB-030,Tabique vintex-6 6 x 12 x 24 cms. marca Novaceramic.,mill,1830.6,TABIQUE
+CMC-62952,"Tabique multex-12, 12 x 12 x 24 cms. 5,824 piezas, Novaceramic.",tor,22040.8308,TABIQUE
+PRMB-031,Tabique vintex esmaltado 1 cara 6 x 12 x 24 cms. marca Novaceramic.,mill,17530,TABIQUE
+PRMB-032,Tabique vintex esmaltado 2 caras 6 x 12 x 24 cms. marca Novaceramic.,mill,24680,TABIQUE
+MSAL-060,Tabicón sólido tipo pesado Rbs-100 de 7 x 12 x 24 cms. (precio en fábrica).,mill,1243,TABIQUE
+MSAL-061,Tabicón sólido tipo pesado Rbs-100 de 9 x 13 x 27 cms. (precio en fábrica).,mill,1728.9,TABIQUE
+MSAL-062,Tabicón sólido tipo ligero Rbs-70 de 7 x 12 x 24 cms. (precio en fábrica).,mill,1457.7,TABIQUE
+MSAL-063,Tabicón sólido tipo ligero Rbs-70 de 9 x 13 x 27 cms. (precio en fábrica).,mill,1898.4,TABIQUE
+DIMA-007,Tabicón ligero o pesado.,mill,3701.4,TABIQUE
+PRMA-002,Tabique rojo recocido 6 x 12 x 23 cms.,mill,3.91,TABIQUE
+DIMA-008,Tabique rojo recocido 6 x 11 x 23 cms.,mill,3907.21,TABIQUE
+CMC-58959,Ladrillo recocido 2 x 10 x 20 cms. Promotora de resistencia.,mill,3797.29,TABIQUE
+DIMA-006,Ladrillo rojo 2 x 12 x 24 cms. Cholula.,mill,1763.1842,TABIQUE
+MATR-001,"Tablaroca-sheetrock normal de 2.44 mts. de largo x 1.22 mts. de ancho x 9.6 mm. espesor, de la línea USG.",pza,106.22,PANEL-YESO
+MATR-003,"Tablaroca-sheetrock FC, firecode tipo X de 2.44 mts. de largo x 1.22 mts. de ancho x 12.7 mm. espesor, de la línea USG.",pza,135.4192,PANEL-YESO
+MATR-007,"Tablaroca-sheetrock WR de 2.44 mts. de largo x 1.22 mts. de ancho x 12.7 mm. espesor, de la línea USG.",pza,171.7261,PANEL-YESO
+MATR-009,"Tablacemento durock multiusos de 2.44 mts. de largo x 1.22 m de ancho x 12.7 mm. espesor, de la línea USG.",pza,411.094,PANEL-YESO
+MATR-010,"Poste metálico 4.10, calibre 26 de 2.44 mts. de longitud, de la línea USG.",pza,35.7419,PANEL-YESO
+MATR-011,"Poste metálico 4.10, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,43.1547,PANEL-YESO
+MATR-013,"Poste metálico 6.35, calibre 26 de 2.44 mts. de longitud, de la línea USG.",pza,41.2902,PANEL-YESO
+MATR-016,"Poste metálico 9.20, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,64.975,PANEL-YESO
+MATR-012,"Canal metálico 4.10, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,35.8775,PANEL-YESO
+MATR-015,"Canal metálico 6.35, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,42.8722,PANEL-YESO
+MATR-019,"Canal listón de calibre 26 de 3.05 mts. de largo, de la línea USG.",pza,37.7081,PANEL-YESO
+MATR-020,"Canaleta de carga 4.10, calibre 22 de 3.05 mts. de longitud, de la línea USG.",pza,33.8096,PANEL-YESO
+MATR-041,"Redimix compuesto multiusos en cubeta de 6.0 kg, de la línea USG.",cb,72.0036,PANEL-YESO
+MATR-047,"Perfacinta cinta de refuerzo para juntas en tablero de yeso, de la línea USG.",roll,23.3345,PANEL-YESO
+MATR-049,"Easy sand 45 compuesto de 8.1 kg secado controlado para el tratamiento de juntas en tableros de yeso, de la línea USG.",sac,176.2348,PANEL-YESO
+MATR-057,"Tornillo autoroscable tipo S, BH S de 1"" para tablaroca y para metal calibre 26, de la línea USG.",kg,59.5284,PANEL-YESO
+MATR-060,"Tornillo tipo tek broca 1"" para tablaroca y para metal calibre 14, de la línea USG.",kg,83.2245,PANEL-YESO
+MATR-080,Plafón astral texturizado de 0.61 x 122 cms. espesor de 9.6 mm. orilla de cuadrada.,pza,34.9057,PANEL-YESO
+MATR-081,Plafón clean room auratone de 0.61 x 1.22 cms. espesor de 12.7 mm. de orilla cuadrada.,caj,1682.4683,PANEL-YESO
+MATR-082,"Plafón eclipse auratone antimicrobial de 0.61 x 0.61cms, espesor de 12.7 mm. orilla de fine line.",caj,1039.6565,PANEL-YESO
+MATR-084,Plafón fissured acoustone de 0.61 x 0.61 cms. espesor de 12.7 mm. orilla de línea de sombra.,caj,635.7945,PANEL-YESO
+MATR-100,"Larguero en ""T"" Armstrong de 3.66 mts. de largo (principal).",pza,57.2684,PANEL-YESO
+MATR-102,"Larguero en ""T"" Armstrong de 0.61 mts. de largo (conector).",pza,10.3056,PANEL-YESO
+ROCA-301,Adocreto cruz tabasco 25X22 rojo de 8cm de peralte con resistencia de 300kg/cm3 marca Rocacero.,m2,452.08,ADOQUINES
+ROCA-303,Adocreto cruz tabasco 25X22 cafe de 8cm de peralte con resistencia de 300kg/cm3 marca Rocacero.,m2,147.1486,ADOQUINES
+ROCA-304,Adocreto cruz tabasco 25X22 gris de 8cm de peralte con resistencia de 250kg/cm3 marca Rocacero.,m2,88.931,ADOQUINES
+ROCA-305,Adocreto cruz tabasco 25X22 rojo de 8cm de peralte con resistencia de 250kg/cm3 marca Rocacero.,m2,104.4346,ADOQUINES
+ROCA-309,Adocreto hexagonal 27X24 gris de 8cm de peralte con resistencia de 300kg/cm3 marca Rocacero.,m2,98.8185,ADOQUINES
+ROCA-315,Adocreto hexagonal 27X24 rojo de 8cm de peralte con resistencia de 250kg/cm3 marca Rocacero.,m2,104.4346,ADOQUINES
+ROCA-319,Adocreto cuadrado 20x20 gris de 8cm de peralte con resistencia de 300kg/cm3 marca Rocacero.,m2,98.8185,ADOQUINES
+ROCA-320,Adocreto cuadrado 20x20 rojo de 8cm de peralte con resistencia de 300kg/cm3 marca Rocacero.,m2,115.2826,ADOQUINES
+ROCA-323,Adocreto cuadrado 20x20 rojo de 8cm de peralte con resistencia de 250kg/cm3 marca Rocacero.,m2,104.4346,ADOQUINES
+MIFE-213,Acritón extra rápido 5 años rojo en cubeta de 19 lts. marca Fester.,cb,2794.65,IMPERMEABILIZANTES
+MIFE-214,Acritón extra rápido 7 años blanco en cubeta de 19 lts. marca Fester.,cb,3288.48,IMPERMEABILIZANTES
+MFIB-006R,"Aero uniplas SBS 4.0 PA, poliéster arenado de 4.0 mm. impermeabilizante prefábricado con ventilación antibolsas de aire a base de bitumen modificado SBS soldable con soplete, alto desempeño plus.",roll,2440.7,IMPERMEABILIZANTES
+MFIB-011R,"Aero uniplas APP plus 4.5 PG, poliéster rojo granulado de 4.5 mm. impermeabilizante prefábricado.",roll,2719.51,IMPERMEABILIZANTES
+MFIB-076,Guardquim RA 26 epóxico catalizador altos sólidos blanco prsentación en cubeta de 18 lt recubrimiento anticorrosivo especial.,cb,3559.5,IMPERMEABILIZANTES
+MFIB-113,"Elastobit RH, alto desempeño, presentación en cubeta de 19 lts.",cb,1240.0959,IMPERMEABILIZANTES
+RECO-147,"Impermeabilizante prefábricado 3.0 mm. fibra de vidrio, modificado con S.B.S. (1.00 x 10.00 mts) top roll.",roll,935.075,IMPERMEABILIZANTES
+RECO-149,"Impermeabilizante prefábricado 3.5 mm. fibra de vidrio, modificado con SBS acabado granulado (1.00 x 10.00 mts).",roll,1224.92,IMPERMEABILIZANTES
+MIFE-208,Festermip 10 app ps 4.0 gravilla blanca en rollo de 1.00 m de ancho x 10.00 mts. de largo marca Fester.,roll,3108.99,IMPERMEABILIZANTES
+MIFE-210,Festermip 12 sbs ps 4.5 gravilla terracota en rollo de 1.00 m de ancho x 10.00 mts. de largo marca Fester,roll,3108.99,IMPERMEABILIZANTES
+MIFE-212,Festermip 15 app ps 4.5 gravilla terracota en rollo de 1.00 m de ancho x 10.00 mts. de largo marca Fester,roll,3387.06,IMPERMEABILIZANTES
+MIFE-092,Microseal 2F cubeta de 19 lt.,cb,1622.85,IMPERMEABILIZANTES
+MIFE-106,"Xypex concentrado blanco, en cubeta de 25 kg.",cb,8033.81,IMPERMEABILIZANTES
+CMC-00010,"Celotex placa de 1.22 x 1.22 mts. de 12 mm (1/2"") de espesor.",pza,478.77,JUNTAS CONSTRUCTIVAS
+MIFE-005,"Banda flexible pvc ojillada 6"" de 25 mts. el rollo.",roll,6842.01,JUNTAS CONSTRUCTIVAS
+MIFE-006,"Banda flexible pvc ojillada 7.5"" de 25 mts. el rollo.",roll,8068.68,JUNTAS CONSTRUCTIVAS
+MIFE-007,"Banda flexible pvc ojillada 9"" de 25 mts. el rollo.",roll,11084.67,JUNTAS CONSTRUCTIVAS
+MFIB-115,"Banda pvc blanca ancho 30 cms. (12""), alto desempeño, presentación en rollo de 25 mts.",roll,4522.1436,JUNTAS CONSTRUCTIVAS
+MFIB-116,"Banda pvc blanca ancho 22 cms. (9""), alto desempeño, presentación en rollo de 25 mts.",roll,11084.75,JUNTAS CONSTRUCTIVAS
+MFIB-117,"Banda pvc blanca ancho 20 cms. (7.5""), alto desempeño, presentación en rollo de 25 mts.",roll,8068.75,JUNTAS CONSTRUCTIVAS
+MFIB-118,"Banda pvc blanca ancho 15 cms. (6""), alto desempeño, presentación en rollo de 25 mts.",roll,6842.25,JUNTAS CONSTRUCTIVAS
+MFIB-119,"Banda pvc ojillada blanca ancho 30 cms. (12""), alto desempeño, presentación en rollo de 25 mts.",roll,5685.65,JUNTAS CONSTRUCTIVAS
+MSAL-163,"Tubo de concreto simple de 10 cms. de diámetro x 0.85 m de albañal (cumple con la norma C-9 vigente, precio en fábrica).",pza,57.79,TUBERÍA DE CONCRETO
+MSAL-164,"Tubo de concreto simple de 10 cms. de diámetro x 1.07 m de albañal (cumple con la norma C-9 vigente, precio en fábrica).",pza,106.69,TUBERÍA DE CONCRETO
+MSAL-165,"Tubo de concreto simple de 15 cms. de diámetro x 0.85 m de albañal (cumple con la norma C-9 vigente, precio en fábrica).",pza,182.24,TUBERÍA DE CONCRETO
+MSAL-166,"Tubo de concreto simple de 15 cms. de diámetro x 1.07 m de albañal (cumple con la norma C-9 vigente, precio en fábrica).",pza,27.12,TUBERÍA DE CONCRETO
+MSAL-167,"Tubo de concreto simple de 20 cms. de diámetro x 1.07 m de albañal (cumple con la norma C-9 vigente, precio en fábrica).",pza,248.91,TUBERÍA DE CONCRETO
+MSAL-168,"Tubo de concreto simple de 25 cms. de diámetro x 1.07 m de albañal (cumple con la norma C-9 vigente, precio en fábrica).",pza,453.1,TUBERÍA DE CONCRETO
+PLAS-007,Cisterna de 2800 lts equipada marca Rotoplas.,pza,9486,DEPÓSITOS
+PRMA-009,"Cisterna de 10,000 lts eqipada marca Rotoplas.",pza,37665,DEPÓSITOS
+PLAS-004,"Tinaco tricapa vertical 1100 lt. con accesorios, Rotoplas.",pza,3292.2,DEPÓSITOS
+PLAS-006,"Tinaco  tricapa vertical 2500 lt. con accesorios, Rotoplas.",pza,6996.39,DEPÓSITOS
+CMC-24640,"Fosa séptica 9000 lt. (180 pers), Rotoplas.",pza,64077,DEPÓSITOS
+CMC-24650,"Fosaplas 2100 lt. (2 módulos), Rotoplas.",pza,14043,DEPÓSITOS
+CMC-24040,"Tanque estacionario 1000 lt. reg/tapa Tatsa, Tanques de Acero Trinity.",pza,2844.1648,DEPÓSITOS
+CMC-24070,"Tanque estacionario 2800 lt. reg/rapa Tatsa, Tanques de Acero Trinity.",pza,5457.3576,DEPÓSITOS
+CMC-00026,Tubo fofo Tisa de 250 x 1.,pza,2028.3048,INST. SANITARIA
+CMC-00039,Tubo fofo Tisa de 100 x 1.,pza,302.3428,INST. SANITARIA
+CMC-00040,Tubo fofo Tisa de 150 x 1.,pza,1921.35,INST. SANITARIA
+MPPL-0932,"Tubo pvc alcant. 4"" serie 20 - E=3.6mm - tramo 6 mts.",ml,141.36,INST. SANITARIA
+MPPL-0934,"Tubo pvc alcant. 6"" serie 20 - E=3.6mm - tramo 6 mts.",ml,851.88,INST. SANITARIA
+CMC-00434,"Adaptador sanitario a galvanizado 75, tubos flex (Sanit Anger).",pza,21.5491,INST. SANITARIA
+CMC-00435,"Adaptador sanitario a galvanizado 100, tubos flex (Sanit Anger).",pza,32.2615,INST. SANITARIA
+CMC-00496,Casquillo hierro cromado fregadero.,pza,9.5146,INST. SANITARIA
+CMC-00499,Casquillo céspol latón.,pza,70.1278,INST. SANITARIA
+CMC-00508,Céspol lavabo latón.,pza,0,INST. SANITARIA
+CMC-00514,Céspol y contra s/rebosadero sat.,pza,889.16,INST. SANITARIA
+CMC-00546,Céspol rugo lavabo.,pza,158.0418,INST. SANITARIA
+CMC-00561,Céspol lavabo flexible.,pza,72.66,INST. SANITARIA
+CMC-00565,Céspol fregadero flexible eco.,pza,17.37,INST. SANITARIA
+CMC-00601,Codo fofo de 45° x 150 mm marca Tisa.,pza,283.291,INST. SANITARIA
+CMC-00605,Codo fofo de 90° x 100 mm marca Tisa.,pza,198.9139,INST. SANITARIA
+CMC-00606,Codo fofo de 90° x 150 mm marca Tisa.,pza,361.6678,INST. SANITARIA
+CMC-59151,"Codo 45° x 100 mm (4"") PPR termofusión marca Tubo plus.",pza,237.5034,INST. SANITARIA
+CMC-59152,"Codo 90° x 100 mm (4"") PPR termofusión marca Tubo plus.",pza,359.5999,INST. SANITARIA
+MPPL-4011,"Tubo pvc sanitario 2"", norma - cementar - tramo de 6 mts.",ml,160.78,INST. SANITARIA
+MPPL-4012,"Tubo pvc sanitario 3"", norma - cementar - tramo de 6 mts.",ml,256.68,INST. SANITARIA
+MPPL-4013,"Tubo pvc sanitario 4"", norma - cementar - tramo de 6 mts.",ml,337.59,INST. SANITARIA
+MPPL-4014,"Tubo pvc sanitario 6"", norma - cementar - tramo de 6 mts.",ml,95.1234,INST. SANITARIA
+MPPL-4020,Cople - pvc sanitario - cementar (Hh) 2''.,pza,7.34,INST. SANITARIA
+MPPL-4021,Cople - pvc sanitario - cementar (Hh) 3''.,pza,14.79,INST. SANITARIA
+MPPL-4022,Cople - pvc sanitario - cementar (Hh) 4''.,pza,16.15,INST. SANITARIA
+MPPL-4023,Cople - pvc sanitario - cementar (Hh) 6''.,pza,55.75,INST. SANITARIA
+MPPL-4043,Codo 45º - pvc sanitario - cementar (Hh) 2''.,pza,7.34,INST. SANITARIA
+MPPL-4044,Codo 45º - pvc sanitario - cementar (Hh) 3''.,pza,15.62,INST. SANITARIA
+MPPL-4045,Codo 45º - pvc sanitario - cementar (Hh) 4''.,pza,30.56,INST. SANITARIA
+MPPL-4046,Codo 45º - pvc sanitario - cementar (Hh) 6''.,pza,88.01,INST. SANITARIA
+CMC-00771,Codo 87° pvc sanitario a cementar (Hh) 2'' marca Duralón,pza,7.34,INST. SANITARIA
+CMC-00772,Codo 87° pvc sanitario a cementar (Hh) 3'' marca Duralón,pza,22.01,INST. SANITARIA
+CMC-00773,Codo 87° pvc sanitario a cementar (Hh) 4'' marca Duralón,pza,34.23,INST. SANITARIA
+CMC-00774,Codo 87° pvc sanitario a cementar (Hh) 6'' marca Duralón,pza,88.01,INST. SANITARIA
+VIBR-313,"Tubería de presión de fibrocemento de 150 mm. (6"") de diámetro de clase A-5, incluye coples y anillos.",ml,218.09,INST. SANITARIA
+VIBR-316,"Tubería de presión de fibrocemento de 300 mm. (12"") de diámetro de clase A-5, incluye coples y anillos.",ml,447.48,INST. SANITARIA
+VIBR-323,"Tubería de presión de fibrocemento de 900 mm (36"") de diámetro de clase A-5, incluye coples y anillos.",ml,3453.28,INST. SANITARIA
+VIBR-379,Adaptador para tubería de alcantarillado de fibrocemento de 150 mm.,pza,65.54,INST. SANITARIA
+VIBR-382,Adaptador para tubería de alcantarillado de fibrocemento de 300 mm.,pza,179.67,INST. SANITARIA
+VIBR-389,Adaptador para tubería de alcantarillado de fibrocemento de 900 mm.,pza,1601.21,INST. SANITARIA
+CMC-00060,Tubo cpvc rd-11 13 x 3.05 mts.,tmo,35.0978,INST. HIDRÁULICA
+CMC-00061,Tubo cpvc rd-11 19 x 3.05 mts.,tmo,66.2971,INST. HIDRÁULICA
+CMC-00065,Tubo cpvc rd-11 51 x 3.05 mts.,tmo,521.269,INST. HIDRÁULICA
+CMC-00066,Tubo cpvc rd-11 13 x 6.10 mts.,tmo,122.07,INST. HIDRÁULICA
+CMC-00067,Tubo cpvc rd-11 19 x 6.10 mts.,tmo,175.64,INST. HIDRÁULICA
+CMC-00078,"Tubo cobre tipo ""M"" de 10 mm.",tmo,634.23,INST. HIDRÁULICA
+CMC-00079,"Tubo cobre tipo ""M"" de 13 mm.",tmo,765.63,INST. HIDRÁULICA
+CMC-00080,"Tubo cobre tipo ""M"" de 19 mm.",tmo,1251.2,INST. HIDRÁULICA
+CMC-00081,"Tubo cobre tipo ""M"" de 25 mm.",tmo,1771.93,INST. HIDRÁULICA
+CMC-00082,"Tubo cobre tipo ""M"" de 32 mm.",tmo,2909.53,INST. HIDRÁULICA
+CMC-00083,"Tubo cobre tipo ""M"" de 38 mm.",tmo,3987.03,INST. HIDRÁULICA
+CMC-00084,"Tubo cobre tipo ""M"" de 75 mm.",tmo,6257.58,INST. HIDRÁULICA
+CMC-00085,"Tubo cobre tipo ""M"" de 51 mm.",tmo,11825.81,INST. HIDRÁULICA
+CMC-00086,"Tubo cobre tipo ""M"" de 64 mm.",tmo,15721.36,INST. HIDRÁULICA
+CMC-00087,"Tubo cobre tipo ""M"" de 100 mm.",tmo,26578.51,INST. HIDRÁULICA
+CMC-00122,Tubo tubflex agua de 19.,ml,27.11,INST. HIDRÁULICA
+CMC-00123,Tubo tubflex agua de 25.,ml,42.78,INST. HIDRÁULICA
+CMC-00124,Tubo hidráulico de 13 rd-13.5.,tmo,66.19,INST. HIDRÁULICA
+CMC-00125,Tubo hidráulico de 19 rd-13.5.,tmo,92.52,INST. HIDRÁULICA
+CMC-00126,Tubo hidráulico de 25 rd-13.5.,tmo,89.1683,INST. HIDRÁULICA
+CMC-00127,Tubo hidráulico de 32 rd-26.,tmo,160.5,INST. HIDRÁULICA
+CMC-00128,Tubo hidráulico de 38 rd-26.,tmo,221.35,INST. HIDRÁULICA
+CMC-00129,Tubo hidráulico de 50 rd-26.,tmo,278.92,INST. HIDRÁULICA
+CMC-00130,Tubo hidráulico de 60 rd-26.,tmo,412.4,INST. HIDRÁULICA
+CMC-00131,Tubo hidráulico de 75 rd-26.,tmo,609.64,INST. HIDRÁULICA
+CMC-00132,Tubo hidráulico de 100 rd-26.,tmo,1014.04,INST. HIDRÁULICA
+CMC-00133,Tubo hidráulico de 150 rd-26.,tmo,1016.2881,INST. HIDRÁULICA
+CMC-00275,Tubo galvanizado c-40 6.40 c/r 13.,tmo,485.68,INST. HIDRÁULICA
+CMC-00276,Tubo galvanizado c-40 6.40 c/r 19.,tmo,645.15,INST. HIDRÁULICA
+CMC-00277,Tubo galvanizado c-40 6.40 c/r 25.,tmo,2001.25,INST. HIDRÁULICA
+CMC-00278,Tubo galvanizado c-40 6.40 c/r 32.,tmo,1246.8,INST. HIDRÁULICA
+CMC-00279,Tubo galvanizado c-40 6.40 c/r 38.,tmo,1496.74,INST. HIDRÁULICA
+CMC-00280,Tubo galvanizado c-40 6.40 c/r 51.,tmo,2001.25,INST. HIDRÁULICA
+CMC-00281,Tubo galvanizado c-40 6.40 c/r 64.,tmo,3178.44,INST. HIDRÁULICA
+CMC-00282,Tubo galvanizado c-40 6.40 c/r 75.,tmo,4179.06,INST. HIDRÁULICA
+CMC-00283,Tubo galvanizado c-40 6.40 c/r 100.,tmo,5914.57,INST. HIDRÁULICA
+CMC-00413,"Adaptador hidráulico hembra 13, tubo flex (hidr cementar).",pza,5.6,INST. HIDRÁULICA
+CMC-00414,"Adaptador hidráulico hembra 19, tubo flex (hidr cementar).",pza,7.12,INST. HIDRÁULICA
+CMC-00415,"Adaptador hidráulico hembra 25, tubo flex (hidr cementar).",pza,18.66,INST. HIDRÁULICA
+CMC-00416,"Adaptador hidráulico hembra 32, tubo flex (hidr cementar).",pza,17.49,INST. HIDRÁULICA
+CMC-00422,"Adaptador hidráulico macho 13, tubo flex (hidr cementar).",pza,4.44,INST. HIDRÁULICA
+CMC-00423,"Adaptador hidráulico macho 19, tubo flex (hidr cementar).",pza,4.92,INST. HIDRÁULICA
+CMC-00424,"Adaptador hidráulico macho 25, tubo flex (hidr cementar).",pza,8.98,INST. HIDRÁULICA
+CMC-00425,"Adaptador hidráulico macho 32, tubo flex (hidr cementar).",pza,10.86,INST. HIDRÁULICA
+MHPV-346,Reducción bushing hidráulica cédula 40 de pvc a cementar de 100 X 50 mm. sistema inglés.,pza,122.34,INST. HIDRÁULICA
+MHPV-347,Reducción bushing hidráulica cédula 40 de pvc a cementar de 100 X 60 mm. sistema inglés.,pza,122.34,INST. HIDRÁULICA
+MHPV-348,Reducción bushing hidráulica cédula 40 de pvc a cementar de 100 X 75 mm. sistema inglés.,pza,122.34,INST. HIDRÁULICA
+CMC-00572,Codo c/c de 19 x 90 Urrea.,pza,23.4136,INST. HIDRÁULICA
+CMC-00576,Codo c/c de 51 x 90 Urrea.,pza,144.6626,INST. HIDRÁULICA
+CMC-00581,Codo c/c de 19 x 45 Urrea.,pza,22.5774,INST. HIDRÁULICA
+CMC-00583,Codo c/c de 32 x 45 Urrea.,pza,61.0426,INST. HIDRÁULICA
+CMC-02631,Llave globo de 10 fig. 58.,pza,910.75,INST. HIDRÁULICA
+CMC-02633,Llave globo de 19 fig. 58.,pza,1190.78,INST. HIDRÁULICA
+CMC-02634,Llave globo de 25 fig. 58.,pza,1621.83,INST. HIDRÁULICA
+CMC-02635,Llave globo de 32 fig. 58.,pza,2237.77,INST. HIDRÁULICA
+CMC-02640,Llave globo de 100 fig. 58.,pza,18985.86,INST. HIDRÁULICA
+CMC-02646,Llave globo de 51 fig. 95.,pza,2273.6278,INST. HIDRÁULICA
+CMC-02653,Llave globo de fig. 120-03.,pza,87.123,INST. HIDRÁULICA
+CMC-02659,Llave globo de fig. 75-t de 13.,pza,132.9558,INST. HIDRÁULICA
+CMC-02665,Llave globo de 13 fig. 625.,pza,115.3956,INST. HIDRÁULICA
+CMC-02685,Llave inserción fig.40-f 19.,pza,207.3776,INST. HIDRÁULICA
+CMC-02688,Llave inserción de 13 fig. 40 pad.,pza,136.3006,INST. HIDRÁULICA
+CMC-02692,Llave inserción de 19 fig. 40 fn.,pza,186.4726,INST. HIDRÁULICA
+CMC-02707,Llave macho de 13 fig. 14.,pza,163.059,INST. HIDRÁULICA
+CMC-02712,Llave macho de 64 fig. 14.,pza,767.5864,INST. HIDRÁULICA
+CMC-02713,Llave macho de 75 fig. 14.,pza,3063.8368,INST. HIDRÁULICA
+TUMO-0317,Tee reducida de 25 mm. conexión de cobre.,pza,136.8,INST. HIDRÁULICA
+TUMO-0322,Tee roscado cent. de 13 mm. conexión de cobre.,pza,104.54,INST. HIDRÁULICA
+TUMO-0326,Tee roscado cent. de 38 mm. conexión de cobre.,pza,784.62,INST. HIDRÁULICA
+TUMO-0330,"Tee roscado lado, de 13 mm. conexión de cobre.",pza,103.14,INST. HIDRÁULICA
+TUMO-0331,"Tee roscado lado, de 25 mm. conexión de cobre.",pza,618.05,INST. HIDRÁULICA
+TUMO-0410,Yee de 38 mm. conexión de cobre.,pza,984.3,INST. HIDRÁULICA
+TUMO-0476,Tubo de cobre flexible U.G. Nacobre de 13 mm. (15.24 mts).,pza,230.54,INST. HIDRÁULICA
+TUMO-0494,"Codo 90º de 25 mm. galvanizada, conexión de hierro maleable.",pza,19.63,INST. HIDRÁULICA
+TUMO-0496,"Codo 90º de 38 mm. galvanizada, conexión de hierro maleable.",pza,39.24,INST. HIDRÁULICA
+CMC-12959,"Calentador de agua tipo depósito G-20 para gas Lp, marca Calorex.",pza,6558.25,INST. HIDRÁULICA
+CMC-12961,"Calentador de agua tipo depósito G-40 para gas Lp, marca Calorex.",pza,8065.79,INST. HIDRÁULICA
+CMC-12962,"Calentador de agua tipo depósito G-60 para gas Lp, marca Calorex.",pza,10923.89,INST. HIDRÁULICA
+CMC-13036,"Calentador de agua instantáneo L16XIM para gas Lp línea extreme, marca Calorex.",pza,5525.14,INST. HIDRÁULICA
+CMC-12999,"Calentador de agua de paso 9 lts. gas natural, marca Calorex.",pza,3933.14,INST. HIDRÁULICA
+CMC-13000,"Calentador de agua de paso 9 lts. gas natural, marca Calorex.",pza,3933.14,INST. HIDRÁULICA
+ENER-01,Calentador solar modelo EN G-118 por gravedad con un tanque de almacenamiento de 100 lts capacidad de colectores de 18 lts para 2 a 3 personas marca Energisol,pza,,INST. HIDRÁULICA
+ENER-04,Calentador solar modelo EN G-241 por gravedad con un tanque de almacenamiento de 205 lts capacidad de colectores de 36 lts para 6 personas marca Energisol,pza,,INST. HIDRÁULICA
+ENER-10,Calentador solar modelo EN HP-180 por presión colector heat pipe con un tanque de almacenamiento de 180 lts para 4 personas marca Energisol,pza,,INST. HIDRÁULICA
+ENER-14,Calentador solar modelo EN HS-330 por presión colector de serpentin de cobre con un tanque de almacenamiento de 330 lts para 8 personas marca Energisol,pza,,INST. HIDRÁULICA
+ENER-16,Calentador solar modelo EN H-1053 por presión con un tanque de almacenamiento de 753 lts capacidad de colectores de 300 lts para 24 personas marca Energisol,pza,,INST. HIDRÁULICA
+MHSVG-0009,"Tubo de cobre tipo ""L"" de 10 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,881.6,INST. DE GAS
+MHSVG-0010,"Tubo de cobre tipo ""L"" de 13 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,1091.53,INST. DE GAS
+MHSVG-0011,"Tubo de cobre tipo ""L"" de 19 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,1743.56,INST. DE GAS
+MHSVG-0012,"Tubo de cobre tipo ""L"" de 25 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,3014.28,INST. DE GAS
+MHSVG-0013,"Tubo de cobre tipo ""L"" de 32 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,3837.73,INST. DE GAS
+MHSVG-0014,"Tubo de cobre tipo ""L"" de 38 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,5002.62,INST. DE GAS
+MHSVG-0015,"Tubo de cobre tipo ""L"" de 51 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,7992.19,INST. DE GAS
+MHSVG-0015A,"Tubo de cobre tipo ""L"" de 64 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,14787.44,INST. DE GAS
+MHSVG-0015B,"Tubo de cobre tipo ""L"" de 75 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,19944.43,INST. DE GAS
+MHSVG-0015C,"Tubo de cobre tipo ""L"" de 100 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,33098.88,INST. DE GAS
+MHSVG-0016,"Tubo de cobre flexible de 13 mm. (rollo 15.24 mts. 50 pies), marca Nacobre.",roll,1752.4718,INST. DE GAS
+MHSVG-0108,Tuerca cónica corta de 13 mm. marca Nacobre.,pza,12.8481,INST. DE GAS
+MHSVG-0109,Tuerca cónica corta de 19 mm. marca Nacobre.,pza,34.6345,INST. DE GAS
+MHSVG-0117,"Campana niple abocinado 45º con rosca interior NPT 6 x 13, marca Nacobre.",pza,19.3569,INST. DE GAS
+MHSVG-0120,"Campana niple abocinado 45º con rosca interior NPT 10 X 13, marca Nacobre.",pza,16.5545,INST. DE GAS
+MHSVG-0130,Niple unión abocinado 45º de 13 mm. marca Nacobre.,pza,22.9277,INST. DE GAS
+MHSVG-0131,"Codo 90º terminal abocinado 45º con rosca interior NPT 6 x 3, marca Nacobre.",pza,13.8199,INST. DE GAS
+MHSVG-0132,"Codo 90º terminal abocinado 45º con rosca interior NPT 6 x 6, marca Nacobre.",pza,16.1251,INST. DE GAS
+MHSVG-0133,"Codo 90º terminal abocinado 45º con rosca interior NPT 8 x 6, marca Nacobre.",pza,20.8372,INST. DE GAS
+MHSVG-0134,"Codo 90º terminal abocinado 45º con rosca interior NPT 10 X 6, marca Nacobre.",pza,22.0237,INST. DE GAS
+MHSVG-0135,"Codo 90º terminal abocinado 45º con rosca interior NPT 10 X 10, marca Nacobre.",pza,21.583,INST. DE GAS
+MHSVG-0142,Tee unión abocinado 45º de 13 mm. marca Nacobre.,pza,37.9002,INST. DE GAS
+MHSVG-0146,"Niple terminal abocinado 45º con rosca interior NPT 6 x 13, marca Nacobre.",pza,15.3228,INST. DE GAS
+MHSVG-0158,"Codo estufa abocinado 45º rosca interior NPT de 8 x 13, marca Nacobre.",pza,20.2383,INST. DE GAS
+MHSVG-0161,"Codo estufa abocinado 45º rosca interior NPT de 10 x 13, marca Nacobre.",pza,22.1367,INST. DE GAS
+MHSVG-0164,"Codo estufa abocinado 45º rosca interior NPT de 13 x 13, marca Nacobre.",pza,41.019,INST. DE GAS
+MHSVG-0217,"Regulador para gas de 2 vías con dos PTI, dos tuercas de 3/8"" y un niple terminal de 3/8"" X 3/8"", marca Nacobre.",pza,124.4695,INST. DE GAS
+MHSVG-0223,Válvula de aguja soldable a flare ligeras de 13 x 13 mm. marca Nacobre.,pza,49.8669,INST. DE GAS
+MEAC-467,"Cable de cu 600V TF-LS 90° vinanel XXI LS calibre 20 AWG/KCM, en rollo de 100 mts.",carrt,3,ELÉCTRICO
+MEAC-468,"Cable de cu 600V TF-LS 90° vinanel XXI LS calibre 16 AWG/KCM, en rollo de 100 mts.",carrt,6.18,ELÉCTRICO
+MEAC-469,"Cable de cu 600V CT-SR vinanel XXI LS calibre 12 AWG/KCM, en rollo de 100 mts.",carrt,14.35,ELÉCTRICO
+MEAC-470,"Cable de cu 600V CT-SR vinanel XXI LS calibre 10 AWG/KCM, en rollo de 100 mts.",carrt,2280,ELÉCTRICO
+MEAC-471,"Cable de cu 600V CT-SR° vinanel XXI LS calibre 8 AWG/KCM, en rollo de 100 mts.",carrt,3705,ELÉCTRICO
+MEAC-472,"Cable de cu 600V CT-SR° vinanel XXI LS calibre 6 AWG/KCM, en rollo de 100 mts.",carrt,5890,ELÉCTRICO
+MEAC-473,"Alambre cu 600V TF-LS 90° vinanel XXI LS calibre 18 AWG, en rollo de 100 mts.",carrt,320.92,ELÉCTRICO
+MEAC-474,"Alambre cu 600V TF-LS 90° vinanel XXI LS calibre 16 AWG, en rollo de 100 mts.",carrt,447.48,ELÉCTRICO
+MEAC-475,"Alambre cu 600V CT-SR vinanel XXI LS calibre 14 AWG, en rollo de 100 mts.",carrt,554.83,ELÉCTRICO
+MEAC-476,"Alambre cu 600V CT-SR vinanel XXI LS calibre 12 AWG, en rollo de 100 mts.",carrt,837.33,ELÉCTRICO
+MEAC-477,"Alambre cu 600V CT-SR vinanel XXI LS calibre 10 AWG, en rollo de 100 mts.",carrt,1313.06,ELÉCTRICO
+MEAC-478,"Alambre cu 600V CT-SR vinanel XXI LS calibre 8 AWG, en rollo de 100 mts.",carrt,2163.95,ELÉCTRICO
+ANCL-002,Tubería conduit metálico flexible tipo greenfield (conduit helix) de 19 mm. de diámetro marca Anclo.,ml,25.086,ELÉCTRICO
+ANCL-003,Tubería conduit metálico flexible tipo greenfield (conduit helix) de 25 mm. de diámetro marca Anclo.,ml,29.6286,ELÉCTRICO
+ANCL-004,Tubería conduit metálico flexible tipo greenfield (conduit helix) de 51 mm. de diámetro marca Anclo.,ml,78.0491,ELÉCTRICO
+ANCL-007,Conector fxr recto para tubo conduit helix de 19 mm. de diámetro marca Anclo.,pza,17.27,ELÉCTRICO
+ANCL-008,Conector fxr recto para tubo conduit helix de 25 mm. de diámetro marca Anclo.,pza,25.13,ELÉCTRICO
+ANCL-009,Conector fxr recto para tubo conduit helix de 51 mm. de diámetro marca Anclo.,pza,147.8,ELÉCTRICO
+ANCL-012,Conector fxc curvo para tubo conduit helix de 19 mm. de diámetro marca Anclo.,pza,9.39,ELÉCTRICO
+ANCL-013,Conector fxc curvo para tubo conduit helix de 25 mm. de diámetro marca Anclo.,pza,15.11,ELÉCTRICO
+ANCL-014,Conector fxc curvo para tubo conduit helix de 51 mm. de diámetro marca Anclo.,pza,35.61,ELÉCTRICO
+ANCL-022,"Conector hermet liquidtight recto 19 mm. (3/4"").",pza,50.85,ELÉCTRICO
+ANCL-023,"Conector hermet liquidtight recto 25 mm. (1"").",pza,72.91,ELÉCTRICO
+ANCL-024,"Conector hermet liquidtight recto 51 mm. (2"").",pza,181,ELÉCTRICO
+ANCL-027,"Conector hermet liquidtight curvo 19 mm. (3/4"").",pza,42.83,ELÉCTRICO
+ANCL-028,"Conector hermet liquidtight curvo 25 mm. (1"").",pza,101.95,ELÉCTRICO
+ANCL-029,"Conector hermet liquidtight curvo 51 mm. (2"").",pza,331.88,ELÉCTRICO
+ANCL-104,"Ovalet tipo LB de 19 mm. (3/4"") serie 9.",pza,136.16,ELÉCTRICO
+ANCL-105,"Ovalet tipo LB de 25 mm. (1"") serie 9.",pza,204.05,ELÉCTRICO
+ANCL-106,"Ovalet tipo LB de 51 mm. (2"") serie 9.",pza,816.36,ELÉCTRICO
+ANCL-114,"Ovalet tipo LL de 19 mm. (3/4"") serie 9.",pza,244.87,ELÉCTRICO
+ANCL-115,"Ovalet tipo LL de 25 mm. (1"") serie 9.",pza,425.39,ELÉCTRICO
+ANCL-116,"Ovalet tipo LL de 51 mm. (2"") serie 9.",pza,1100.66,ELÉCTRICO
+ANCL-124,"Ovalet tipo CE de 19 mm. (3/4"") serie 9.",pza,136.16,ELÉCTRICO
+ANCL-125,"Ovalet tipo CE de 25 mm. (1"") serie 9.",pza,204.05,ELÉCTRICO
+ANCL-126,"Ovalet tipo CE de 51 mm. (2"") serie 9.",pza,816.36,ELÉCTRICO
+CMC-01221,Cople eléctrico 20 (13) Tuboplus.,pza,5.96,ELÉCTRICO
+CMC-01222,Cople eléctrico 25 (19) Tuboplus.,pza,12,ELÉCTRICO
+CMC-01225,Cople eléctrico 50 (38) Tuboplus.,pza,55.34,ELÉCTRICO
+CMC-01226,Cople eléctrico 63 (51) Tuboplus.,pza,83.43,ELÉCTRICO
+CMC-01229,Curva 90 de 20 (13) Tuboplus.,pza,19.3117,ELÉCTRICO
+CMC-01230,Curva 90 de 25 (19) Tuboplus.,pza,20.7581,ELÉCTRICO
+CMC-01231,Curva 90 de 32 (25) Tuboplus.,pza,26.8262,ELÉCTRICO
+MBTI-0001,"Interruptor sencillo 1 mod. 16 A, 127-277V, línea light, segmento lujo.",pza,47.78,ELÉCTRICO
+MBTI-0008,"Interruptor tres vías sin cubretecla 1 mod. 16 A, 127-277V, línea living, segmento lujo.",pza,62.1726,ELÉCTRICO
+MBTI-0031,"Interruptor termomagnético 1 mod. 16 A 127/220V, familia living y light, segmento lujo.",pza,513.2799,ELÉCTRICO
+MBTI-0032,"Interruptor diferencial salvavidas 2 mod. 16 A 127/220V, familia living y light, segmento lujo.",pza,1605.6961,ELÉCTRICO
+MBTI-0069,"Placa para intemperie 3 módulos color blanco (no requiere chasís), línea light, segmento lujo.",pza,112.1186,ELÉCTRICO
+MBTI-0070,"Placa resina color blanco 3 módulos línea living, segmento lujo.",pza,35.0413,ELÉCTRICO
+MBTI-0096,"Placa de madera ""nogal"" 3 módulos línea living, segmento lujo.",pza,514.4325,ELÉCTRICO
+MBTI-0244,"Placa color blanco light 3 módulos línea light, segmento lujo.",pza,35.0413,ELÉCTRICO
+MBTI-0484,"Placa ciega de resina color márfil con chasis, línea quinziño evolución, segmento medio.",pza,66.4779,ELÉCTRICO
+MBTI-0494,"Placa ciega de aluminio color champagne con chasis, líena quinziño evolución, segmento medio.",pza,81.9702,ELÉCTRICO
+COOP-4609,Placa de 1 unidad plástico con chasis de metal.,pza,13.1645,ELÉCTRICO
+COOP-4610,Placa de 2 unidades plástico con chasis de metal.,pza,12.3509,ELÉCTRICO
+COOP-4611,Placa de 3 unidades plástico con chasis de metal.,pza,13.1645,ELÉCTRICO
+COOP-4614,Placa ciega plástico color marfil Fabricación Cooper Fabricación Cooper.,pza,9.7858,ELÉCTRICO
+TUPO-001,Tubería de poliducto naranja de 9 mm. en rollo de 100 mts. Marca Poliflex.,roll,367.25,ELÉCTRICO
+TUPO-002,Tubería de poliducto naranja de 13 mm. en rollo de 100 mts. Marca Poliflex.,roll,7.15,ELÉCTRICO
+TUPO-007,Tubería de poliducto naranja de 19 mm. en rollo de 200 mts. Marca Poliflex.,roll,1378.6,ELÉCTRICO
+TUPO-004,Tubería de poliducto naranja de 25 mm. en rollo de 50 mts marca Poliflex.,roll,20.03,ELÉCTRICO
+COOP-3585,Contacto sencillo plano 15 a 127 v color marfil Fabricación Cooper.,pza,15.8426,ELÉCTRICO
+COOP-3587,Contacto dúplex sencillo 15 a 127 v color marfil Fabricación Cooper.,pza,24.8148,ELÉCTRICO
+COOP-3589,Contacto dúplex aterrizado 15 a 127 v color marfil Fabricación Cooper.,pza,39.0302,ELÉCTRICO
+COOP-3593,Apagador sencillo plano 10 a 127 v color marfil Fabricación Cooper.,pza,20.8485,ELÉCTRICO
+COOP-3596,Apagador de paso grande 10 a 127 v color café Fabricación Cooper,pza,18.2947,ELÉCTRICO
+COOP-4231,Apagador tipo escalera 10 a 127 v color blanco solarius Fabricación Cooper.,pza,30.058,ELÉCTRICO
+LAOS-005,"Lámpara incandescente de uso generalizado, 125 volts A19 100 125 E26 claro.",pza,33.11,ILUMINACIÓN
+LAOS-008,"Lámpara incandescente de altas potencias, A23 200 125 E26 perla.",pza,83.52,ILUMINACIÓN
+LAOS-015,"Lámpara incandescente 140 volts, A19 100 140 E26 perla.",pza,34.6,ILUMINACIÓN
+LAOS-019,"Lámpara incandescente 140 volts, A23 200 140 E26 claro.",pza,80.64,ILUMINACIÓN
+LAOS-023,"Lámpara incandescente luz de día, 125 volts, A19 100 125 E26 luz de día.",pza,22.0915,ILUMINACIÓN
+LAOS-026,"Lámpara incandescente repelente para insectos, 125 volts, A19 100 125 E26 repelente.",pza,16.611,ILUMINACIÓN
+LAOS-033,"Lámpara incandescente en colores, 125 volts, A19 40 125 E26 amarillo mate.",pza,15.933,ILUMINACIÓN
+LAOS-039,"Lámpara decorativa bellalux, 125 volts en colores, bellalux 60 125 E26 T60 amarillo.",pza,16.2155,ILUMINACIÓN
+LAOS-049,"Lámpara decorativa vela lisa, 125 volts, B35 40 125 E26 claro.",pza,15.255,ILUMINACIÓN
+LAOS-054,"Lámpara incandescente decorativa flama americana, 125 volts, F15 40 125 E26 iridiscente.",pza,16.611,ILUMINACIÓN
+LAOS-059,"Lámpara incandescente decorativa esfera, 125 volts, P45 40 125 E26 blanco.",pza,17.289,ILUMINACIÓN
+LAOS-095,"Lámpara incandescente reflector concentra uso interior, 125 volts, BR30 100 125 E26 difusa.",pza,44.296,ILUMINACIÓN
+LAOS-107,"Lámpara incandescente reflector concentra uso exterior, 125 Volts, Par38 75 125 E26 concentra.",pza,81.812,ILUMINACIÓN
+LAOS-112,"Lámpara incandescente reflector concentra uso exterior, 125 volts en colores, par38 75 125 E26 rojo.",pza,89.609,ILUMINACIÓN
+LAOS-125,"Lámpara fluorescente ahorradora de energía, Is slim F48t12/Cw/Ss 32 Fa8 T12 Bf Ah.",pza,54.918,ILUMINACIÓN
+LAOS-139,"Lámpara fluorescente slimline, arranque instantáneo, Is slim F96t12/D 75 Fa8 T12 Ldd.",pza,45.4825,ILUMINACIÓN
+LAOS-146,"Lámpara fluorescente slimline, en colores, Is slim F96t12/B 75 Fa8 T12 azul.",pza,163.1155,ILUMINACIÓN
+LAOS-154,"Lámpara de descarga de luz mixta, 220 volts Hwl, Hwl 250 220 E39 Eo90 luz mixta b lujo.",pza,184.2465,ILUMINACIÓN
+LAOS-159,"Lámpara de descarga de vapor de mercurio, Hql, Hql 1000 E39 Bt56 mercurio b lujo.",pza,850.7205,ILUMINACIÓN
+LAOS-166,"Lámpara de descarga de sodio alta presión, Nav T 150w súper 4y E40.",pza,316.4,ILUMINACIÓN
+CMC-26170,"Lámpara bajo voltaje fit open L-1106-0 blanco, Magg.",pza,356.854,ILUMINACIÓN
+CMC-27430,"Lámpara empotrar mi nidado K-1059-0 blanco, Magg.",pza,184.1222,ILUMINACIÓN
+CMC-27770,"Lámpara riel eco cilindro L-3301-0 blanco, Magg.",pza,76.5462,ILUMINACIÓN
+CMC-28370,"Lámpara sky indirecta 1X54W L-1438-0 blanca, Magg.",pza,835.7819,ILUMINACIÓN
+CMC-28620,"Lámpara exterior blue L-7059-0 blanco, Magg.",pza,398.9465,ILUMINACIÓN
+CMC-29270,"Lámpara 13W senc Gx 23 2700K F-9072-0, Magg.",pza,23.6283,ILUMINACIÓN
+CMC-29330,"Lámpara dicroica Mr16 50W/12V F-9047-0, Magg.",pza,10.848,ILUMINACIÓN
+CMC-29340,"Farol Mérida soportado V-2000-0 blanco, Magg.",pza,170.7317,ILUMINACIÓN
+CMC-29460,"Farol San Miguel colgar V-2004-0 blanco, Magg.",pza,337.5649,ILUMINACIÓN
+CMC-29550,"Farol Guanajuato suspendido V-2007-0 blanco, Magg.",pza,446.8133,ILUMINACIÓN
+CMC-29860,"Lámpara jardín sub-a cubierta, a L-1300-1 negro, Magg.",pza,194.9702,ILUMINACIÓN
+ANCL-175,"Expansor anclo Z con tornillo y rondana de 4.7 mm. (3/16"").",pza,6.1,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-176,"Expansor anclo Z con tornillo y rondana de 6.5 mm. (1/4"").",pza,7.89,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-177,"Expansor anclo Z con tornillo y rondana de 7.9 mm. (5/16"").",pza,13.87,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-182,"Ancla TX camisa gruesa corta de 6.5 x 63 mm. (1/4 x 2 1/2"").",pza,2.8928,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-183,"Ancla TX camisa gruesa corta de 7.9 x 63 mm. (5/16 x 2 1/2 "").",pza,6.102,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-193,"Taquete de plástico anclo de 4.5 x 25 mm. (3/16"").",pza,0.23,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-194,"Taquete de plástico anclo de 6.4 x 30 mm. (1/4"").",pza,0.23,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-196,"Taquete de plástico anclo de 7.9 x 40 mm. (5/16"").",pza,0.23,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-206,"Taquete de plomo de 7.9 mm. (5/16 x 1 1/4"").",pza,3.7184,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-207,"Taquete de plomo de 9.5 mm. (3/8 x 1 1/2"").",pza,2.1675,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-462,Unicanal comercial-hidráulico sólido USC pared gruesa 4 x 2 cms. x 3 mts.,pza,179.444,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+ANCL-469,Unicanal perfoval industrial UOR 4 x 4 cms. x 3 mts.,pza,598.0525,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00308,Abrazadera toma sencilla 100x19 tusa.,pza,60.342,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00315,Abrazadera sinfín 13-19.,pza,11.38,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00316,Abrazadera sinfín de 25.,pza,11.38,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00317,Abrazadera sinfín 32-38.,pza,12.06,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00318,Abrazadera sinfín de 50.,pza,16.7,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00319,Abrazadera sinfín de 64.,pza,19.03,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00328,Abrazadera para toma con salida roscada 160 x 13.,pza,103.2481,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00329,Abrazadera 75 mm dab-3 Milber,pza,5.4127,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00333,Abrazadera anclo uña conduit uc 25.,pza,6.05,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00334,Abrazadera anclo uña conduit uc 32.,pza,6.51,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00339,Abrazadera anclo omega conduit oc 25.,pza,3.28,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00340,Abrazadera anclo omega conduit oc 32.,pza,7.89,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00341,Abrazadera anclo omega conduit oc 38.,pza,9.14,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00354,Abrazadera anclo omega galvanizada de 19.,pza,7.89,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00355,Abrazadera anclo omega galvanizada de 25.,pza,7.89,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+CMC-00356,Abrazadera anclo omega galvanizada de 32.,pza,9.14,TORNILLERÍA Y ELEMENTOS DE FIJACIÓN
+AACE-0065,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 1/8"" x 3/4"".",pza,8087.94,HERRERÍA Y REJILLAS DE ACERO
+AACE-0066,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 1/8"" x 1"".",pza,9814.83,HERRERÍA Y REJILLAS DE ACERO
+AACE-0273,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 3/16 x 1"".",pza,13847.86,HERRERÍA Y REJILLAS DE ACERO
+AACE-0274,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 3/16 x 1 1/4"".",pza,17159.54,HERRERÍA Y REJILLAS DE ACERO
+AACE-0275,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 3/16 x 1 1/2"".",pza,20657.02,HERRERÍA Y REJILLAS DE ACERO
+AACE-0301,Malla rejacero de 0.91 x 2.44 mts. (3' x 8') clásico.,pza,921.2438,HERRERÍA Y REJILLAS DE ACERO
+ALUP-01274,"Ángulo de 1"" x 1"" x 1/8"" de aluminio acabado natural, tramo de 3.66 mts.",pza,197.2302,CANCELERÍA
+ALUP-01276,"Ángulo de 1 1/2"" x 3/16"" de aluminio acabado natural, tramo de 3.66 mts.",pza,439.005,CANCELERÍA
+ALUP-01279,"Canal 3/8"" de aluminio blanco, tramo de 6.00 mts.",pza,65.088,CANCELERÍA
+ALUP-01280,"Solera 1"" x 1/16"" de aluminio acabado natural, tramo de 3.66 mts.",pza,60.907,CANCELERÍA
+ALUP-01281,"Solera 2"" x 1/8"" de aluminio acabado natural, tramo de 3.66 mts.",pza,217.525,CANCELERÍA
+AACE-0407,"Duela lisa 5"" de aluminio con acabado natural, tramo de 6.10 mts.",pza,336.7852,CANCELERÍA
+ALUP-01283,"Tubo rectangular de 2"" x 1"" de aluminio acabado natural, tramo de 6.10 mts.",pza,321.937,CANCELERÍA
+ALUP-01285,"Tubo cuadrado de 1"" de aluminio en color blanco, tramo de 6.10 mts.",pza,205.999,CANCELERÍA
+ALUP-01286,"Tubo cuadrado de 1 1/2"" de aluminio acabado natural, tramo de 6.10 mts.",pza,951.21,CANCELERÍA
+ALUP-00118,"Moldura unión 2"" para fijo y corrediza sin anodizar, línea pesada, tramo de 6.10 mts.",pza,236.735,CANCELERÍA
+ALUP-00629,"Junquillo portavidrio 1 1/2"" para fijos y corrediza sin anodizar, línea panorama, tramo de 6.10 mts.",pza,81.134,CANCELERÍA
+AACE-0406,"Junquillo 2"" p/224  para fijos y corrediza natural, línea pesada, tramo de 6.10 mts.",pza,120.5597,CANCELERÍA
+ALUP-00656,"Riel de 1 1/2"" para fijos y corrediza sin anodizar, línea panorama, tramo de 6.10 mts.",pza,143.736,CANCELERÍA
+ALUP-00730,"Riel con mosquitero 2"" para fijos y corrediza natural, línea panorama, tramo de 6.10 mts.",pza,365.442,CANCELERÍA
+ALUP-00933,"Riel para mosquitero de 3"" para fijos y corrediza blanco, línea panorama, tramo de 6.10 mts.",pza,454.712,CANCELERÍA
+ALUP-00684,"Perfil bolsa de 1 1/2"" para fijos y corrediza natural, línea panorama, tramo de 6.10. mts.",pza,331.203,CANCELERÍA
+ALUP-00245,"Perfil bolsa 2"" para fijos y corrediza sin anodizar, línea pesada, tramo de 6.10 mts.",pza,456.068,CANCELERÍA
+ALUP-00440,"Perfil bolsa 3"" x 1 3/4"" para fijo y corrediza blanco, línea pesada, tramo de 6.10 mts.",pza,799.249,CANCELERÍA
+ALUP-00693,"Tapa bolsa de 1 1/2"" para fijos y corrediza natural, línea panorama, tramo de 6.10. mts.",pza,147.804,CANCELERÍA
+ALUP-00263,"Tapa bolsa 2"" para fijos y corrediza sin anodizar, línea pesada, tramo de 6.10 mts.",pza,193.004,CANCELERÍA
+ALUP-00458,"Tapa bolsa 3"" para fijo y corrediza blanco, línea pesada, tramo de 6.10 mts.",pza,332.672,CANCELERÍA
+ALUP-00666,"Jamba contramarco 1 1/2"" para fijos y corrediza natural, línea panorama, tramo de 6.10 mts.",pza,263.064,CANCELERÍA
+ALUP-00216,"Jamba contramarco 2"" para fijo y corrediza en colores, línea pesada,  tramo de 6.10 mts.",pza,673.48,CANCELERÍA
+ALUP-00639,"Zoclo cabezal 1 1/2"" para fijos y corrediza natural, línea panorama, tramo de 6.10 mts.",pza,164.302,CANCELERÍA
+ALUP-00765,"Zoclo cabezal corredizo 2"" para fijos y corrediza sin anodizar, línea panorama, tramo de 6.10 mts.",pza,180.8,CANCELERÍA
+ALUP-00119,"Cerco ventana 2"" para fijo y corrediza sin anodizar, línea pesada, tramo de 6.10 mts.",pza,257.414,CANCELERÍA
+ALUP-00296,"Cerco oxxo 3"" para fijo y corrediza blanco, línea pesada, tramo de 6.10 mts.",pza,635.625,CANCELERÍA
+CMC-22162,"Kit cancel corredizo 5 blanco cv 680, Inter. de Accesorios México.",pza,2152.0059,CANCELERÍA
+CMC-22164,"Kit cancel corredizo 5 blanco cv 810, Inter. de Accesorios México.",pza,2403.1597,CANCELERÍA
+CMC-22166,"Kit cancel corredizo 6 blanco cv 930, Inter. de Accesorios México.",pza,2672.9698,CANCELERÍA
+VIDR-016,Cristal claro de 3 mm. de 1er grupo de 1 x 1 m al corte.,m2,195.3,VIDRIERÍA
+VIDR-017,Cristal claro de 4 mm. de 1er grupo de 1 x 1 m al corte.,m2,236.22,VIDRIERÍA
+VIDR-018,Cristal claro de 5 mm. de 1er grupo de 1 x 1 m al corte.,m2,358.05,VIDRIERÍA
+VIDR-019,Cristal claro de 6 mm. de 1er grupo de 1 x 1 mts. al corte.,m2,358.05,VIDRIERÍA
+VIDR-020,Cristal claro de 10 mm. de 1er grupo de 1 x 1 mts. al corte.,m2,809.1,VIDRIERÍA
+VIDR-021,"Vidrio templado claro, 1er grupo CL-4 de: 4 mm. 1 x 1 mt. lado: 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,466.125,VIDRIERÍA
+VIDR-022,"Vidrio templado claro, 1er grupo CL-5 de 5 mm. 1 x 1 m lado 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,916.05,VIDRIERÍA
+VIDR-023,"Vidrio templado claro, 1er grupo CL-6 de 6 mm. 1 x 1 m lado 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,1506.6,VIDRIERÍA
+VIDR-024,"Vidrio templado claro, 1er grupo CL-10 de 10 mm. 1 x 1 m lado 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,1506.6,VIDRIERÍA
+VIDR-016,Cristal claro de 3 mm. de 1er grupo de 1 x 1 m al corte.,m2,195.3,VIDRIERÍA
+VIDR-017,Cristal claro de 4 mm. de 1er grupo de 1 x 1 m al corte.,m2,236.22,VIDRIERÍA
+VIDR-018,Cristal claro de 5 mm. de 1er grupo de 1 x 1 m al corte.,m2,358.05,VIDRIERÍA
+VIDR-019,Cristal claro de 6 mm. de 1er grupo de 1 x 1 mts. al corte.,m2,358.05,VIDRIERÍA
+VIDR-020,Cristal claro de 10 mm. de 1er grupo de 1 x 1 mts. al corte.,m2,809.1,VIDRIERÍA
+VIDR-021,"Vidrio templado claro, 1er grupo CL-4 de: 4 mm. 1 x 1 mt. lado: 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,466.125,VIDRIERÍA
+VIDR-022,"Vidrio templado claro, 1er grupo CL-5 de 5 mm. 1 x 1 m lado 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,916.05,VIDRIERÍA
+VIDR-023,"Vidrio templado claro, 1er grupo CL-6 de 6 mm. 1 x 1 m lado 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,1506.6,VIDRIERÍA
+VIDR-024,"Vidrio templado claro, 1er grupo CL-10 de 10 mm. 1 x 1 m lado 1/2/3/4 ml= 4.00, T canto pulido redondo a delgados, templado (proceso) flotado delgado.",m2,1506.6,VIDRIERÍA
+ACRI-001,Domo cuadrado de 44 x 44 cms. burbuja en acrílico de 3 mm. color opalino (cúpula sin marco) marca Mafra.,pza,847.1,ACRÍLICOS
+ACRI-004,Domo cuadrado de 90 x 90 cms. burbuja en acrílico de 3 mm. color opalino (cúpula sin marco) marca Mafra.,pza,1993.26,ACRÍLICOS
+ACRI-007,Domo cuadrado de 150 x 150 cms. burbuja en acrílico de 4 mm. color opalino (cúpula sin marco) marca Mafra.,pza,6574.66,ACRÍLICOS
+ACRI-010,Domo rectangular de 44 x 90 cms. burbuja en acrílico de 3 mm. color opalino (cúpula sin marco) marca Mafra.,pza,1276.71,ACRÍLICOS
+ACRI-014,Domo rectangular de 60 x 240 cms. burbuja en acrílico de 3 mm. color opalino sin ventilación marca Mafra.,pza,4414.48,ACRÍLICOS
+ACRI-019,Domo circular de 60 cms. burbuja en acrílico de 3 mm. color opalino (cúpula sin marco) marca Mafra.,pza,1132.29,ACRÍLICOS
+ACRI-023,Domo circular de 120 cms. burbuja en acrílico de 3 mm. color opalino sin ventilación marca Mafra.,pza,3217.76,ACRÍLICOS
+ACRI-029,"Lámina de policarbonato transparente en 6 mm. de espesor anchos 1.22, 1.83 y 2.10 mts. largos de 10.96 y 12.20 mts.",m2,208.4285,ACRÍLICOS
+ACRI-030,"Lámina de policarbonato transparente en 8 mm. de espesor anchos 1.22, 1.83 y 2.10 mts. largos de 10.96 y 12.20 mts.",m2,223.7965,ACRÍLICOS
+ACRI-032,"Lámina de policarbonato en 8 mm. de espesor en color anchos 1.22, 1.83 y 2.10 mts. largos de 10.96 y 12.20 mts.",m2,208.4285,ACRÍLICOS
+MSAL-141,"Celosía tipo cuadro de 10 X 20 X 20 cms. color gris (resistencia mínima a la ruptura 250 Kg/cm2, precio en fábrica).",m2,90.4,CELOSÍAS
+MSAL-142,"Celosía tipo cuadro de 10 X 20 X 20 cms. color (resistencia mínima a la ruptura 250 Kg/cm2, precio en fábrica).",m2,102.83,CELOSÍAS
+MSAL-143,"Celosía tipo cuadro de 10 X 20 X 20 cms. color negro (resistencia mínima a la ruptura 250 Kg/cm2, precio en fábrica).",m2,115.26,CELOSÍAS
+MRMX-101,Granito de importación baltic brown presentación en placa.,m2,2204.1,RECINTOS NATURALES
+MRMX-104,Granito de importación giallo sole presentación en placa.,m2,783.6776,RECINTOS NATURALES
+MRMX-106,Granito de importación gris oxford pulido 2 cms presentación en loseta 120 x 60 cms.,m2,452.113,RECINTOS NATURALES
+MRMX-109,Granito de importación gris oxford flameado y cepillado 1.5 cms presentación loseta 120 x 60 cms.,m2,391.8388,RECINTOS NATURALES
+MRMX-113,Granito de importación gris serena presentación loseta 60 x 60 x 1 cms.,m2,248.6791,RECINTOS NATURALES
+MRMX-119,Granito de importación grissal presentación placa.,m2,527.4162,RECINTOS NATURALES
+MRMX-121,Granito de importación juparana presentación en placa.,m2,836.3695,RECINTOS NATURALES
+MRMX-001,Mármol de importación amarillo triana presentación en placa.,m2,2050.65,RECINTOS NATURALES
+MRMX-002,Mármol de importación blanco arabescato primera presentación en placa.,m2,1912.08,RECINTOS NATURALES
+MRMX-004,Mármol de importación blanco carrara primera presentación en placa.,m2,1578.21,RECINTOS NATURALES
+MRMX-007,Mármol de importación blanco perlino comercial presentación en placa.,m2,1070.0083,RECINTOS NATURALES
+MRMX-013,Mármol de importación crema imperial presentación en loseta de 40 x 40 x 2 cms.,m2,930,RECINTOS NATURALES
+MRMX-015,Mármol de importación crema marfil pulido presentación en placa.,m2,1057.41,RECINTOS NATURALES
+MRMX-017,Mármol de importación crema marfil pulido presentación loseta de 40 x 40 x 1 cms.,m2,760.74,RECINTOS NATURALES
+MRMX-022,Mármol nacional travertino fiorito cepillado presentación 30 x largo libre x 1 cms.,m2,696.57,RECINTOS NATURALES
+MRMX-024,Mármol nacional travertino fiorito pulido mate presentación  40 x 40 x 1 cms.,m2,237.3,RECINTOS NATURALES
+MRMX-038,Mármol nacional dorado tepeji pulido mate presentación 30 x largo libre x 1 cms.,m2,885.36,RECINTOS NATURALES
+MRMX-040,Mármol nacional dorado tepeji  martelinado cantos perfilados presentación largo libre 30 x 2 cms.,m2,384.2,RECINTOS NATURALES
+MRMX-045,Mármol nacional dorado tepeji tomboleado presentación 40 x 40 x 1 cms.,m2,395.5,RECINTOS NATURALES
+MRMX-201,Caliza de importación  azul presentación placa marca Marmex.,m2,557.6211,RECINTOS NATURALES
+MRMX-203,Caliza de importación crema fantasía presentación placa.,m2,527.4162,RECINTOS NATURALES
+MRMX-204,Caliza de importación dorada presentación placa.,m2,542.4452,RECINTOS NATURALES
+MRMX-209,Caliza de importación pietra serena presentación placa.,m2,670.5759,RECINTOS NATURALES
+MACE-016,Cantera blanca mexicana de 40 x 40 cms.,m2,220.35,RECINTOS NATURALES
+TEBA-001,Teja de barro natural acabado terracota marca El águila.,m2,426.69,TEJA
+TEBA-002,Teja de barro natural acabado negro blanco marca El águila.,m2,494.67,TEJA
+TEBA-005,Teja de barro natural acabado engobe negro marca El águila.,m2,190.97,TEJA
+TEBA-010,Teja de barro esmaltada acabado tabaco claro marca El águila.,m2,242.95,TEJA
+TEBA-022,"Teja, accesorio cumbrera de barro terracota marca El águila.",pza,39.55,TEJA
+TEBA-025,"Teja, accesorio conchas de barro terracota marca El águila.",pza,73.45,TEJA
+TEBA-027,"Teja, accesorio tapa pájaros de barro terracota marca El águila.",pza,16.95,TEJA
+TEBA-028,"Teja, accesorio tapa pájaros de barro flameado marca El águila.",pza,28.25,TEJA
+TEBA-030,"Teja, accesorio remate media caña terracota marca El águila.",pza,28.25,TEJA
+MOVE-002,"Mosaico veneciano línea Akua, modelo azul turquesa de 5 x 5 cms.",m2,847.77,MOSAICOS
+MOVE-015,"Mosaico veneciano línea Akua, modelo azul cobalto (Claro) de 2 x 2 cms.",m2,849.72,MOSAICOS
+MOVE-052,"Mosaico veneciano línea Solar, modelo rojo escarlata de 5 x 5 cms.",m2,796.65,MOSAICOS
+MOVE-053,"Mosaico veneciano línea Solar, modelo rojo carmín de 2 x 2 cms.",m2,1074.34,MOSAICOS
+MOVE-060,"Mosaico veneciano línea Iris, modelo celeste de 2 x 2 cms.",m2,849.72,MOSAICOS
+MOVE-071,"Mosaico veneciano línea Metálica, modelo ciano de 5 x 5 cms.",m2,906.36,MOSAICOS
+MOVE-083,"Mosaico veneciano línea Murano, modelo terra de 2 x 2 cms.",m2,1074.34,MOSAICOS
+MOVE-096,"Mosaico veneciano línea Venturina, modelo EL-20 aquamarina de 2 x 2 cms.",m2,1265.6,MOSAICOS
+MOVE-107,"Mosaico veneciano línea Mezclas, modelo caribe de 2 x 2 cms.",m2,849.72,MOSAICOS
+MOVE-113,"Mosaico veneciano línea Mezclas, modelo atlántico de 5 x 5 cms.",m2,906.36,MOSAICOS
+MOVE-136,"Mosaico línea vitrogota, modelo rubí, montado en hoja de papel de 30 x 30 cms.",m2,1241.87,MOSAICOS
+MOVE-187,"Mosaico veneciano (grupo) línea diseños Tecnicolor, figura de sol 01 de 1.50 x 1.50 mts.",pza,7064.76,MOSAICOS
+MOVE-215,"Mosaico veneciano (grupo) línea diseños Tecnicolor, figura de arrecife de coral 11 de 3.34 x 0.88 mts.",pza,8830.95,MOSAICOS
+MOVE-218,"Mosaico veneciano (grupo) línea diseños Tecnicolor, figura de coral 9 (piso) de 5.50 x 2.00 mts.",pza,25651,MOSAICOS
+MOVE-251,"Mosaico veneciano (grupo) línea diseños Bizantino, figura de tortuga tradicional verde de 92 x 80 cms.",pza,4350.5,MOSAICOS
+CORV-036,"Pasta vinicement (D), texturizados clásicos, pasta sin grano para todo tipo de textura, blanco o color estándar en planta.",cb,1304.05,PASTAS
+CORV-037,"Pasta vinicement (Y), texturizados clásicos, grano fino para aplicar sobre paneles de yeso y plafones, blanco o color estándar en planta.",cb,1255.5,PASTAS
+CORV-038,"Pasta vinicement (F), texturizados clásicos, grano medio, muros, columnas, dinteles, plafones, etc; blanco o color estándar en planta.",cb,1465.59,PASTAS
+CORV-039,"Pasta vinicement (R), texturizados clásicos, grano grueso para texturas ásperas y rugosas, blanco o color estándar en planta.",cb,1465.59,PASTAS
+CORV-041,"Pasta silcoplast, texturizados tradicionales, gran calidad sin grano, blanco o color estándar en planta.",cb,3620.49,PASTAS
+CORV-042,"Pasta finnoplast, texturizados tradicionales, textura rugosa suave granulometría extra fina, blanco o color estándar en planta.",cb,2224.56,PASTAS
+CORV-043,"Pasta muroplast, texturizados tradicionales, texturas de mediana granulometría, blanco o color estándar en planta.",cb,2538.9,PASTAS
+CORV-044,"Pasta cuarzoplast, texturizados tradicionales, texturas rugosa grano grueso, blanco o color estándar en planta.",cb,2538.9,PASTAS
+CORV-001,"Pasta coverall (T), texturizados tradicionales, sin grano, blanco o color estándar en planta.",cb,1125.3,PASTAS
+CORV-005,"Pasta plasteflex (T), texturizados tradicionales, pasta incolora sin grano pintable.",cb,463.3,PASTAS
+CORV-006,"Pasta plasteflex (Y), texturizados tradicionales, con grano fino pintable.",cb,463.3,PASTAS
+RECO-156,"Pasta acrílica con grano de mármol y aditivos, sirve para obtener gran variedad de texturas, lista para usarse en int. y ext. con color integrado.",cb,511.89,PASTAS
+RECO-158,"Pasta acrílica económica lista para usarse, color blanco línea Kontextura, presentación en 33 kg.",cb,398.89,PASTAS
+RECO-007,"Pintura vinimex easy clean 100% acrílica semimate repelente a las manchas y de fácil limpieza, en cubeta de 19 lt.",cb,1465.5,PINTURAS
+RECO-011,"Pintura vinimex 700, vinil acrílica de lujo para interiores y exteriores, blanco y regulares, en tambo de 200 lt.",tmb,13909.18,PINTURAS
+RECO-023,"Pintura vinimex 800 mate blanco vinil acrílica de lujo para interiores y exteriores en acabado mate, en tambo de 200 lt.",tmb,13909.18,PINTURAS
+RECO-026,"Pintura vinimex ultra (uv), vinil acrílica especialmente diseñada para pigmentos resistentes a la decoloración y magnífica resistencia a la alcalinidad, en cubeta de 19 lt.",cb,2698.96,PINTURAS
+RECO-030,"Pintura real flex 11-00, vinil acrílica para interiores y exteriores, blanco y colores regulares, en tambo de 200 lt.",tmb,11823.65,PINTURAS
+RECO-038,"Pintura pro-1000-plus 300, vinílica mate para interiores y exteriores. blanco y colores pastel, en tambo de 200 lt.",tmb,9724.36,PINTURAS
+RECO-054,"Pintura durex / máster 14-00, vinil-acrílica económica color blanco y colores regulares, en tambo de 200 lt.",tmb,6630.35,PINTURAS
+PIES-411,"Pintura para alberca, en cubeta de 19 lt.",cb,6381.66,PINTURAS
+PIES-412,"Pintura para tráfico amarilla o blanco, en cubeta de 19 lt.",cb,3821.44,PINTURAS
+PIES-413,"Pintura para señalamientos amarilla blanca, en cubeta de 19 lt.",cb,2628.18,PINTURAS
+MFIB-038,"Pintura modelo liso profesional blanco, en tambo de 200 lt.",tmb,11823.65,PINTURAS
+MFIB-041,"Pintura modelo liso contratista blanco / base p /base m, en cubeta de 19 lt.",cb,1024.49,PINTURAS
+MFIB-046,"Pintura modelo esmalte profesional blanco, en cubeta de 19 lt.",cb,1465.5,PINTURAS
+MFIB-053,Pintura modelo espacios textura barniz agua en cubeta de 4 lt.,cub,224.97,PINTURAS
+RECO-070,"Sellador 5 x 1 reforzado, reductor recomendado, agua limpia en una proporción de 3 partes de agua por 1 de sellador, en cubeta de 19 lt.",cb,718.43,PINTURAS
+RECO-093,"Esmalte acqua 100 con teflón es un esmalte 100%, acabado brillante, en cubeta de 19 lt.",cb,1689.26,PINTURAS
+RECO-097,"Esmalte acqua 100 con teflón es un esmalte 100%, acabado brillante, blancos y colores regulares, en cubeta de 19 lt.",cb,1587.61,PINTURAS
+RECO-113,"Esmalte alquidálico anticorrosivo Comex 100 mate y satinado blanco y negro, esmalte alquidal modificado de secado rápido, para uso profesional en exteriores e interiores, en cubeta de 19 lt.",cb,3360.86,PINTURAS
+RECO-114C,"Esmalte alquidálico anticorrosivo Comex 100 metal rústico, esmalte ideal para la decoración en interiores y exteriores con 38 colores, en cubeta de 19 lt.",cb,1954.12,PINTURAS
+RECO-127,"Primario anticorrosivo alquidálico base agua, color gris claro, línea acqua 100 primer, en cubeta de 19 litros.",cb,1315.77,PINTURAS
+RECU-058,"Thinner tipo americano, presentación en cubeta de 4 litros.",cb,132.84,PINTURAS
+RECU-062,"Thinner regular, presentación en cubeta de 4 litros.",cb,33.21,PINTURAS
+CMC-04867,"Azulejo muro alicante 22.7 x 35.2 cms. capuch 2.00 m2/caja, marca Cesantoni.",caj,216.4854,AZULEJOS
+CMC-04902,"Azulejo muro antique 33 x 60 cms. atlas 1.00 m2/caja, marca Keraben.",caj,501.8556,AZULEJOS
+CMC-04906,"Azulejo muro antique 32 x 59 cms. Jerusalem 0.94 m2/caja, marca Keraben.",caj,612.1323,AZULEJOS
+CMC-04907,"Azulejo muro aqua 33 x 44 cms. azul 1.19 m2/caja, marca Keraben.",caj,534.1736,AZULEJOS
+CMC-04909,"Azulejo muro caminos 20 x 20 cms. burg 1.12 m2/caja, marca Keraben.",caj,439.4118,AZULEJOS
+CMC-04914,"Azulejo muro cool 33 x 60 cms. azul 1.00 m2/caja, marca Keraben.",caj,451.8192,AZULEJOS
+CMC-04918,"Azulejo muro creta 33 x 44 cms. beige 1.17 m2/caja, marca Keraben.",caj,406.0655,AZULEJOS
+CMC-04928,"Azulejo muro element 33 x 70 cms. nuez 1.00 m2/caja, marca Keraben.",caj,232.0003,AZULEJOS
+CMC-05016,"Azulejo muro Pacific 25 x 38 cms. white 1.33 m2/caja, Peñarroya.",caj,287.9466,AZULEJOS
+CMC-05018,"Azulejo muro Careyes 14.5 x 44 cms. beige 1.02 m2/caja, marca Lamosa.",caj,110.7626,AZULEJOS
+CMC-05027,"Azulejo muro San Miguel 20 x 20 cms. blanco 1.48 m2/caja, marca Lamosa.",caj,175.8167,AZULEJOS
+CMC-05048,"Azulejo muro Verona 20 x 25 cms. blanco 1.50 m2/caja, marca Lamosa.",caj,129.9952,AZULEJOS
+CMC-05056,"Azulejo muro Brasilia 20 x 30 cms. blanco 1.50 m2/caja, marca Lamosa.",caj,163.9404,AZULEJOS
+CMC-05133,"Azulejo muro Amazonas 25 x 33.3 cms. blanco 1.50 m2/caja, marca Lamosa.",caj,192.5181,AZULEJOS
+VITR-001,"Azulejo Interceramic 31.5 x 31.5 cm, color blanco o beige, modelo marina caja con 1.60 m2, marca interceramic.",m2,202.74,AZULEJOS
+VITR-003,"Azulejo de 20 X 20 cms. modelo class color blanco caja con 1 m2, marca Interceramic.",m2,170.63,AZULEJOS
+VITR-005,"Azulejo de 30 x 60 cms. rectangular línea duomo color abruzzi caja con 1.44 m2, marca Interceramic.",m2,377.42,AZULEJOS
+VITR-007,"Azulejo de 30 x 45 cms. modelo pisano marmoleado, en colores beige, gris y marrón caja con 1.48 m2, marca Interceramic.",m2,183.6702,AZULEJOS
+CMC-32510,Loseta crema 33 x 33 cms. blanco 1.50 mts. marca Porcelanite.,caj,123.9384,LOSETAS
+CMC-32590,Loseta padua 55 x 55 cms. café 1.49 mts. marca Porcelanite.,caj,154.6857,LOSETAS
+CMC-32610,Loseta raffio 20 x 20 cms. blanco 1.00 mt. marca Porcelanite.,caj,94.8635,LOSETAS
+CMC-32690,"Loseta porcelana legno 15 x 60 cms. mogno 0.53m, Rocersa.",caj,281.3135,LOSETAS
+CMC-32720,Loseta porcelana 50 x 50 cms. Córdoba 3pc31 1.75 mts. Gireco.,caj,254.8263,LOSETAS
+CMC-32840,Loseta travertino 44.7 x 44.7 cms. marf 1.40 mts. Rocersa.,caj,259.9226,LOSETAS
+CMC-35450,Loseta delfos 35 x 60 cms. gris 2.10 mts. marca Porcelanite.,caj,212.6208,LOSETAS
+CMC-36090,Loseta denver 33 x 33 cms. beige 1.50 mts. marca Porcelanite.,caj,108.2088,LOSETAS
+CMC-37300,Loseta estambul 20 x 30 cms. beige 1.50 mts. marca Porcelanite.,caj,147.9283,LOSETAS
+CMC-37910,Loseta denver 33 x 33 cms. beige 1.50 mts. marca Porcelanite.,caj,117.746,LOSETAS
+CMC-38800,Loseta merino 55 x 55 cms. beige 1.49 mts. marca Porcelanite.,caj,236.2265,LOSETAS
+CMC-41550,Loseta celine 33 x 33 cms. sand 1.50 mts. marca Porcelanite.,caj,136.6509,LOSETAS
+CMC-42370,Loseta cometa eco 20 x 30 cms. hueso 1.50 mts. marca Porcelanite.,caj,111.1016,LOSETAS
+DURA-161,Loseta vinílica colección eternolux vis modelo 410 de 30.5 x 30.5 x 0.13 cms. marca Durapiso,m2,54.24,LOSETAS
+DURA-156,Loseta vinílica colección eternolux modelo 210 de 30.5 x 30.5 x 0.16 cms. marca Durapiso,m2,61.02,LOSETAS
+DURA-158,Loseta vinílica colección eternolux modelo 210 de 30.5 x 30.5 x 0.31 cms. marca Durapiso,m2,126.56,LOSETAS
+DURA-116,Loseta vinílica colección century modelo 810 de 30.5 x 30.5 x 0.16 cms. marca Durapiso,m2,63.28,LOSETAS
+VITR-169,"Loseta para piso 33 x 33 cms. monteo beige, marca Vitromex.",m2,138.425,LOSETAS
+VITR-165,"Loseta para piso 45 x 45 cms. vitropiso mate satinado, modelo pacific color beige, blanco, 72 piezas por caja, marca Vitromex.",m2,118.763,LOSETAS
+CMC-09899,"Loseta para piso 33 x 33 cms. de segunda, modelo Roma, color beige, caja con 1.50 m2 marca Porcelanite.",caj,147.7814,LOSETAS
+VITR-209,"Loseta para piso 40 x 40 cms. modelo Roma, color arena, gris y hueso marca Vitromex.",m2,118.763,LOSETAS
+VITR-125,"Loseta joya para piso de 20 x 20 cms. color azul cielo, beige, blanco y verde marca Vitromex.",m2,127.69,LOSETAS
+CMC-05280,Loseta para muro bali 20 x 30 cms. caja con 1.5 m2 modelo itálica color beige marca Porcelanite.,caj,150.9567,LOSETAS
+VITR-233,"Loseta para piso 45 x 45 cms. vitropiso mate satinado, modelo monteo color beige, 48 piezas por caja, marca Vitromex.",m2,159.556,LOSETAS
+CMC-32890,"Círculo progetto (radio 14.50) sup blanco, Rocersa.",pza,541.7898,LOSETAS
+CMC-12524,Piso tipo piedra cantera amarilla piso 1.00 mt. Perdura Stone.,caj,280.2061,LOSETAS
+CMC-41740,Piso pedregal 30 x 30 cms. beige 1.53 mts. marca Lamosa.,caj,168.3135,LOSETAS
+DURA-216,Zoclo vinílico de 7 cms de ancho color café presentación bolsa con un rollo de 100 mts marca Durapiso,ml,14.88,LOSETAS
+DURA-226,Zoclo vinílico de 10 cms de ancho color café presentación bolsa con un rollo de 100 mts. marca Durapiso,ml,16.74,LOSETAS
+DURA-271,Tira de remate de 2.5 cms de altura x 3.1 mm de espesor en color café presentación en bolsa con 2 rollos de 50 mts marca Durapiso,ml,16.78,LOSETAS
+CMC-63437,Loseta porcelanizada eiffel de 60 x 60 cms. color óxido contenido 1.08 m2 marca Cercosa.,caj,931.1087,LOSETAS
+VITR-309,"Cenefa flecha 6 x 20 cms. altea, color azul, beige, gris, verde, piezas por caja 24, línea decorado para muro.",pza,10.057,LOSETAS
+VITR-318,"Cenefa flecha 8 x 25 cms. alegra, color blue, orange, piezas por caja 20, línea decorado para muro.",pza,19.21,LOSETAS
+VITR-359,"Cenefa flecha cuarzo 16.4 X 33.3 cms. color café, piezas por caja 20, línea decorado para vitropiso.",pza,26.555,LOSETAS
+VITR-332,"Listel de 4 x 33 cms. madera, color fresno, canela, cacao, piezas por caja 20, línea decorado para muro.",pza,0,LOSETAS
+VITR-333,"Tozzeto 10 X 10 cms. olas, color coco, coral, laguna, mar, sol, piezas por caja 50, línea decorado para muro.",pza,2.599,LOSETAS
+CMC-07936,"Inserto 25 x 40 cms. tavola vitr inv día blanco, marca Porcelanite.",pza,35.3012,LOSETAS
+VITR-340,"Inserto 20 x 25 cms delizia bahia, color azul cielo, beige, gris, rosa, línea decorado para muro.",pza,20.792,LOSETAS
+VITR-347,"Inserto 33.3 x 45.1 cms. oporto, color blanco, mostaza, rojo, salmón, piezas por caja 6, línea decorado para muro.",pza,50.398,LOSETAS
+VITR-375,"Esquina flecha 16.4 x 16.4 cms. olimpo, color beige, 16 piezas por caja, linea decorado para vitropiso.",pza,21.809,LOSETAS
+VITR-367,"Esquina 14.5 x 14.5 cms. alicante, color café, rojo, piezas por caja 32, línea decorado para vitropiso.",pza,17.854,LOSETAS
+VITR-402,"Rodapié 8 x 33 cms. encino, color brillante, mate, 36 piezas por caja, línea decorado para vitropiso.",pza,6.554,LOSETAS
+VITR-422,"Rodapié 10 x 45 cms. alicante, color café, crema, rojo, 22 piezas por caja, linea decorado para vitropiso.",pza,12.769,LOSETAS
+CMC-21849,"Separador de loseta de 1/4"", 3/8"", 3/16"" y 1/2"",  Industrias Perdura.",pza,12.656,LOSETAS
+CMC-61699,"Duela laminada basic home cerezo marb, Dupomex.",caj,270.9966,LAMINADOS
+CMC-61703,"Duela laminada textura noblesse cerezo, Dupomex.",caj,350.4921,LAMINADOS
+CMC-61707,Cuarto bocel laminado maple 2.44 mts. Dupomex.,pza,28.6229,LAMINADOS
+CMC-61711,Nariz escalera laminado haya 2.44 mts. Dupomex.,pza,116.955,LAMINADOS
+CMC-61714,Reductor laminado maple 2.44 mts. Dupomex.,pza,84.9082,LAMINADOS
+CMC-61718,Remate laminado maple 2.44 mts. Dupomex.,pza,84.9082,LAMINADOS
+CMC-61726,Zoclo laminado kr haya 2 x 6 cms. x 2.40 mts. Dupomex.,pza,40.3636,LAMINADOS
+CMC-61728,Zoclo laminado Kr maple 2 x 4 cms. x 2.44 mts. Dupomex.,pza,30.2727,LAMINADOS
+CMC-61963,"Bajo suelo laminado, Kronoswiss.",m2,8.6671,LAMINADOS
+PIEU-081,"Piso de madera laminada acabado rústico con textura, sin bisel, de 7.00 mm. x 19.40 mm. de ancho y de 1.29 mts. de largo, 1,2,3 lamas, línea Eurohome ""Dominio"", tráfico alto en oficinas y comercios punto inicial de abrasión, 2.376 m2 por caja.",m2,265.98,LAMINADOS
+PIEU-082,"Piso de madera laminada acabado rústico con textura, con bisel, de 7.00 mm. x 19.40 mm. de ancho y de 1.29 mts. de largo, 1,2,3 lamas, línea Eurohome ""Dominio"", tráfico alto en oficinas y comercios punto inicial de abrasión, 2.424 m2 por caja.",m2,265.98,LAMINADOS
+PIEU-083,Zoclo de madera laminada 4 cms. de alto.,ml,46.5,LAMINADOS
+PIEU-086,Nariz de escalera de madera laminada de 2.70 mts.,pza,305.97,LAMINADOS
+ALFO-003,"Alfombra residencial Terza, estilo bertinni de poliprop berber.",m2,319.55,ALFOMBRA
+ALFO-006,"Alfombra residencial Terza, estilo sisal supreme de poliprop berber.",m2,275.94,ALFOMBRA
+ALFO-009,"Alfombra residencial Terza, estilo monticello de poliéster rasurado.",m2,714.99,ALFOMBRA
+ALFO-010,"Alfombra institucional Terza, estilo eminence 36 de nylon rasurado.",m2,384.84,ALFOMBRA
+ALFO-015,"Alfombra institucional Terza, estilo field de pasto uv antihormigas, marca Terza.",m2,336.76,ALFOMBRA
+ALFO-017,"Alfombra institucional Terza, estilo parksville de nylon rizo.",m2,252.22,ALFOMBRA
+ALFO-035,"Alfombra mohawk, estilo handicap, poliésterras.",m2,120.797,ALFOMBRA
+ALFO-039,"Alfombra mohawk, estilo pasto Garden, polipropileno.",m2,70.286,ALFOMBRA
+ALFO-054,Bajo alfombra poli pad blanco.,m2,69.66,ALFOMBRA
+ALFO-095,"Alfombra luxor, estilo arquitextura poliéster rasurado.",m2,410.79,ALFOMBRA
+ALFO-125,"Alfombra modular, estilo in a snap de nylon.",m2,334.9998,ALFOMBRA
+ALFO-126,"Alfombra modular, estilo simply done de nylon.",m2,377.9511,ALFOMBRA
+MACI-001,"Polín 3 1/2 x 3 1/2"" x 8 1/4'.",pt,106.02,MADERA Y CARPINTERÍA
+MACI-004,"Duela económica 3/4"" x 3 1/2"" x 8 1/4'.",pza,48.55,MADERA Y CARPINTERÍA
+MACI-006,"Tablón 1 1/2 x 10"" x 8 1/4' de madera de pino de 2a.",pt,16.2494,MADERA Y CARPINTERÍA
+MACI-010,"Barrote 1 1/2"" x 4"" x 8 1/4'.",pt,58.59,MADERA Y CARPINTERÍA
+MACI-014,"Chaflán 1"" x 3/4"" x 8 1/4' de madera de pino de 3a.",pza,18.6,MADERA Y CARPINTERÍA
+MAOB-013C,Triplay de pino delgado de 3 mm. de espesor de 1a hoja de 1.22 x 2.44 mts.,pza,406.41,MADERA Y CARPINTERÍA
+MAOB-013D,Triplay de pino delgado de 6 mm. de espesor de 1a hoja de 1.22 x 2.44 mts.,pza,406.41,MADERA Y CARPINTERÍA
+MAOB-013E,Triplay de pino delgado de 16 mm. de espesor para cimbra hoja de 1.22 x 2.44 mts.,pza,851.88,MADERA Y CARPINTERÍA
+MAOB-013F,Triplay de pino delgado de 19 mm. de espesor para cimbra hoja de 1.22 x 2.44 mts.,pza,1022.07,MADERA Y CARPINTERÍA
+PIEU-103,Zoclo en madera natural ébano de 1.7 mm. de grosor x 7 cms. de alto.,ml,206.46,MADERA Y CARPINTERÍA
+CMC-61735,Duela classic encino 7.5 mm. 2.208 mts. Dupomex.,caj,1192.9297,MADERA Y CARPINTERÍA
+CMC-61775,Cuarto bocel encino 2.5 mm. Dupomex.,pza,135.4079,MADERA Y CARPINTERÍA
+CMC-61785,"Nariz escalón encino 7.5 mm. 2.5 m, Dupomex.",pza,265.8664,MADERA Y CARPINTERÍA
+CMC-61809,Reducción encino 7.5 mm. 2.5 mts. Dupomex.,pza,209.2534,MADERA Y CARPINTERÍA
+CMC-61833,Remate encino 7.5 mm. 2.5 mts. Dupomex.,pza,187.1054,MADERA Y CARPINTERÍA
+CMC-61881,Zoclo boleado encino 6 cms. 2.5 mts. Dupomex.,pza,219.107,MADERA Y CARPINTERÍA
+CMC-61893,Duela Fix It 7 mm. maple 2.397 mts. Kronoswiss.,caj,286.0595,MADERA Y CARPINTERÍA
+CMC-61902,Cuarto bocel maple 2.44 mts. Kronoswiss.,pza,32.0016,MADERA Y CARPINTERÍA
+CMC-61911,Nariz escalón maple 2.44 mts. Kronoswiss.,pza,108.8077,MADERA Y CARPINTERÍA
+CMC-61929,Perfil borde maple 2.44 mts. Kronoswiss.,pza,83.2019,MADERA Y CARPINTERÍA
+CMC-61947,Zoclo 6cms maple 2.44 mts. Kronoswiss.,pza,44.7932,MADERA Y CARPINTERÍA
+CMC-61980,"Duela bogal natural 5 3.72 m wmd551, Wood Master Hardwood.",caj,2161.125,MADERA Y CARPINTERÍA
+CMC-61991,"Zoclo haya real 2.39 m wmpieza-605/610, Wood Master Hardwood.",pza,69.5741,MADERA Y CARPINTERÍA
+CMC-61997,"Cuarto bocel haya Real 2.39 m wmpb-105, Wood Master Hardwood.",pza,64.7038,MADERA Y CARPINTERÍA
+CMC-62009,"Reducción haya real 2.39 m wmpr-105, Wood Master Hardwood.",pza,75.258,MADERA Y CARPINTERÍA
+MAOB-172,"Puerta interior Lr-03, 0.35 x 0.90 x 2.13 mts. de pino con moldura cuadrada resaltada a dos caras, tablero plano 12 mm línea recta Montealbán.",pza,1188.8504,MADERA Y CARPINTERÍA
+MAOB-174,"Puerta interior LR-03, 0.35 X 0.75  X 2.13 mts. de pino con moldura cuadrada resaltada a dos caras, tablero plano 12 mm línea recta Montealbán.",pza,1140.6446,MADERA Y CARPINTERÍA
+MAOB-022,Puerta de triplay de caobilla de 6 mm. de 0.91 x 2.40 mts. de la línea tambor de Montealbán.,pza,1672.14,MADERA Y CARPINTERÍA
+MAOB-026,Puerta de triplay de caobilla de 3 mm. de 0.91 x 2.40 mts. de la línea tambor de Montealbán.,pza,1094.61,MADERA Y CARPINTERÍA
+MAOB-042,Puerta eucaplac mahogany de 0.91 x 2.40 mts. de la línea tambor de Montealbán.,pza,548.7732,MADERA Y CARPINTERÍA
+MAOB-044,Puerta eucaplac mahogany de 0.75 x 2.40 mts. de la línea tambor de Montealbán.,pza,499.5165,MADERA Y CARPINTERÍA
+MAOB-048,Puerta colonist de 0.91 x 2.13 mts. de la línea tambor de Montealbán.,pza,432.3154,MADERA Y CARPINTERÍA
+MAOB-051,Puerta colonist de 0.75 x 2.13 mts. de la línea tambor de Montealbán.,pza,406.4045,MADERA Y CARPINTERÍA
+MAOB-059,Puerta eucapanel de 0.91 x 2.40 mts. de la línea tambor de Montealbán.,pza,1017.0678,MADERA Y CARPINTERÍA
+MAOB-033,Puerta eucaplac arena de 0.91 x 2.12 mts. de la línea tambor de Montealbán.,pza,329.3837,MADERA Y CARPINTERÍA
+MAOB-057,Puerta eucamixta de 0.91 x 2.12 mts. de la línea tambor de Montealbán.,pza,800.0965,MADERA Y CARPINTERÍA
+MAOB-053,Puerta colonist bifold de 0.91 x 2.13 mts. de la línea Montealbán.,pza,493.4032,MADERA Y CARPINTERÍA
+MAOB-058,Puerta eucalisa de 0.91 x 2.12 mts. de la línea tambor de Montealbán.,pza,1290.4374,MADERA Y CARPINTERÍA
+MAOB-182,"Puerta interior LR-03, 0.35 X 0.90  X 2.13 mts. de maple con moldura cuadrada resaltada a dos caras, tablero plano 12 mm. línea recta Montealbán.",pza,1576.1805,MADERA Y CARPINTERÍA
+MAOB-195,"Puerta interior LR-7H de 35 X 90 X 213 cms. de encino con retícula de mdf con canto oculto, acanalado horizontal en ambas caras a lo ancho de la puerta.",pza,1554.0212,MADERA Y CARPINTERÍA
+MAOB-205,"Puerta interior LR-7H de 35 X 80 X 213 cms. de maple con retícula de mdf con canto oculto, acanalado horizontal en ambas caras.",pza,1585.8533,MADERA Y CARPINTERÍA
+MAOB-207,"Puerta interior LR-7H de 35 X 90 X 213 cms. de chopo con retícula de mdf con canto oculto, acanalado horizontal en ambas caras.",pza,1527.8278,MADERA Y CARPINTERÍA
+PIEU-151,Cuarto bocel en madera natural ébano.,ml,182.28,MADERA Y CARPINTERÍA
+PIEU-110,Zoclo en madera natural nogal grosor de 1.7 mm x 7 cms. de alto.,ml,272.49,MADERA Y CARPINTERÍA
+PIEU-144,Nariz de escalera en madera natural roble de 1.20 mts.,ml,324.57,MADERA Y CARPINTERÍA
+PIMA-001,"Duela de ingeniería de encino americano de 6"" x 9/16"" de espesor y 1.11 mts. de largo, de la línea Inndeco.",m2,1158.78,MADERA Y CARPINTERÍA
+PIMA-008,"Duela pre-acabada de tzalam selecta de 4 1/4"" de ancho x 3/4"" de espesor, de la línea Inndeco.",m2,1158.78,MADERA Y CARPINTERÍA
+ASTE-0659,Manija aluminio vector con escudos dos rosetas XMVECAL fabricación Tesa.,pza,845.92,CERRAJERÍA
+ASTE-0743,Cerradura institucional master baño XP3903 CM  fabricación Tesa.,pza,531.73,CERRAJERÍA
+ASTE-0910,Cerrojo institucional 546 e-principal llave-mariposa X546/60 LP  fabricación Tesa.,pza,523.4,CERRAJERÍA
+CMC-22295,"Cerradura pomo barrilete baño latón acabado natural 2603la, cerradura Tesa.",pza,98.4343,CERRAJERÍA
+ASTE-0998,Cierrapuerta uso rudo 7500 689 sin retención XTE7500AL aluminio  fabricación Tesa.,pza,1726.64,CERRAJERÍA
+ASTE-0951,Combo master 440 entrada llave-llave X440/4910/CMC  fabricación Tesa.,pza,621.952,CERRAJERÍA
+ASTE-0888,Manija Eifel ac paso 10SXEIF26DXN  fabricación Tesa.,pza,717.7195,CERRAJERÍA
+CMC-22337,"Cerradura ojo llave mariposa latón acabado natural 516la, cerradura Tesa.",pza,984.73,CERRAJERÍA
+CMC-22543,"Cerradura eléctrica s/ botón izquierdo Te67860, cerradura Tesa.",pza,1043.7471,CERRAJERÍA
+CMC-58935,"Cerradura pomo astra en-re izquierdo b.an xsas10bai, cerradura Tesa.",pza,547.7336,CERRAJERÍA
+ASTE-0845,Manija Toledo serie x3 grado 2 baño X3T03/60/CMC  fabricación Tesa.,pza,532.456,CERRAJERÍA
+ASYA-0677,Cerradura digital in touch c/cil AU E5361 626 (26D) cromo mate  fabricación Yale.,pza,8633.2,CERRAJERÍA
+CMC-54710,"Cerrojo delfos doble b.ant xsde17ba, cerradura Tesa.",pza,384.2452,CERRAJERÍA
+ASYA-0462,Cerrojo de seguridad adicional X506 CM 506 (residencial) cromo mate  fabricación Yale.,pza,123.848,CERRAJERÍA
+ASTE-0367,Cerrojo solid delfo e-principal XSDE17NST6  fabricación Tesa,pza,705.12,CERRAJERÍA
+ASTE-0991,Cierrapuerta CT 2000 hal aluminio XCT2000HAL  fabricación Tesa.,pza,613.816,CERRAJERÍA
+ASTE-0279,Tope design cromo PH-T45CM10 fabricación Tesa.,pza,51.98,CERRAJERÍA
+ASPH-0570,Tope magnético 1054 C BP cromo brillante blister pack fabricación Phillips.,pza,54.24,CERRAJERÍA
+ASPH-0529,Resbalón 46 C cromo brillante  fabricación Phillips.,pza,58.76,CERRAJERÍA
+ASPH-0557,Mirilla 200º C cromo brillante  fabricación Phillips.,pza,47.008,CERRAJERÍA
+ASPH-0291,Candado de latón macizo 14 GL BP gancho largo blister pack  fabricación Phillips.,pza,232.49,CERRAJERÍA
+CMC-19260,"Manija metálica c/logo 12-001, American Standard (refacciones).",pza,27.1539,CERRAJERÍA
+CMC-19261,"Manija plástica cr. 12-280, American Standard (refacciones).",pza,69.5289,CERRAJERÍA
+CMC-19262,"Manija heritage cr. 12-400, American Standard (refacciones).",pza,151.3296,CERRAJERÍA
+CMC-22168,"Manija escorpión doble 140 cromo brillante, Internacional de Accesorios México.",pza,376.7194,CERRAJERÍA
+ASTE-0413,Manija mare roseta cuadrada baño MAREC03CM  fabricación Tesa.,pza,1640.76,CERRAJERÍA
+ASYA-0671,Gatillo para entrada principal New York xny llave/llave apollo XNY96017CMT60 cromo mate blister  fabricación Yale.,pza,1280.968,CERRAJERÍA
+CMC-03007,"Manera regadera monticel pla/cr t3124pmc, marca Moen.",jgo,3357.03,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-03632,"Monomando lavabo Catania 9408ca-9 a inoxidable, marca Urrea.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-03649,"Monomando tin/reg Catania 9445ca-9 a inoxidable, marca Urrea.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-03701,"Mezcladora p/lavabo pared scala tipo cruceta cromada 20200921, marca Stanza.",pza,6748.74,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-18125,"Regadera bych 2295b9 acero inoxidable, catania, marca Urrea.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-19394,"Regadera plástico negra Sr-006-N, marca Helvex.",pza,125.1362,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-49290,"Regadera teléfono 3008bm cromada, marca Dica.",pza,760.78,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17226,"Fluxómetro para inodoro fig.2532, marca Urrea.",pza,3256.16,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17229,"Fluxómetro p/ming. palanca 1312, marca Urrea.",pza,2658.22,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17230,"Fluxómetro p/ming. pedal 1315, marca Urrea.",pza,2249.378,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17232,"Fluxómetro elec. pilas taza fig.2533, marca Urrea.",pza,4556.4538,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-14870,"Lavabo s/poner griego blanco, Gabinetes Aldi.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-14881,"Lavabo empotrar standard blanco, Gabinetes Aldi.",pza,1162.5,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-14895,"Lavabo ártica de resina, Gabinetes Aldi.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-15108,"Lavabo cristal azul con céspol, marca Qually.",pza,5375.4,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-15115,"Lavabo mármol neo brillante blanco, marca Qually.",pza,7194.7778,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-15183,"Lavabo cerámico 19"" wasser lc-001, Vand.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-14893,"Ovalín acero inoxidable, Gabinetes Aldi.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-14282,"Espejo - gabinete c/luz 70 x 95 gamma, Mirage new d' brisol.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-14284,"Espejo -gabinete c/luz 63 x 95 vassari, Mirage new d' brisol.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-62113,"Inodoro de 1 pieza champion blanco 01492.020, marca American Standard.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-62146,"Inodoro de 1 pieza D.Flush Dubái con asiento blanco, marca Gireco.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-35580,"Inodoro de 2 piezas veleza df con asiento blanco 399802, marca Lamosa.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-15206,"Mingitorio Rienzi blanco, marca Anfora.",pza,1485.51,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-15209,"Mingitorio Verona blanco 3620 02, marca Lamosa.",pza,2620.31,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17000,"Mingitorio acero inoxidable 2.00 m, marca Aminox.",pza,5241.1434,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17718,"Porta rollo empotrar 3304 cromo, marca Urrea.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17749,"Porta rollo isy cromo 63.6301.21, Stanza.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17865,"Porta rollo innovex cuad11104-ai inoxidable, marca Helvex.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17896,"Porta rollo sencillo latón cr a140, marca Moen.",pza,408.608,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17082,"Accesorios tanzi 6 piezas t.20 cromo, marca Urrea.",jgo,1665.43,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17086,"Accesorios catania 5 piezas ca.20.9 acero inoxidable, marca Urrea.",jgo,2696.745,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17092,"Accesorios hábitat blanco 5 piezas, Hábitat.",jgo,154.5727,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17101,"Accesorios mallorca blanco 5 piezas, marca Anfora.",jgo,97.6885,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17119,"Accesorios 6 piezas blanco 3722 02, marca Lamosa.",jgo,183.8284,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17281,"Gancho doble 306, marca Urrea.",pza,0,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17289,"Gancho contemporáneo 9306 cromo, marca Urrea.",pza,178.27,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17298,"Gancho massimo ms. 06 cromo, marca Urrea.",pza,629.52,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17368,"Gancho sencillo oasis cromo 6106, marca Helvex.",pza,349.4186,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-17019,"Agarradera tina coh-19-1 cromo/dorado, marca Urrea.",pza,300.1958,"BAÑOS, MUEBLES Y ACCESORIOS"
+MBPB-010,"Tina con relax incluye desagüe, línea clásica moderna plus de 167 x 91 x 45 cms. (largo, ancho, alto) con descansa brazos, para 1 persona, cap. de 230 lt.",pza,66798,"BAÑOS, MUEBLES Y ACCESORIOS"
+MBPB-014,"Tina con relax incluye desagüe, línea clásica moderna plus de 152 x 120 x 45 cms. (largo, ancho, alto) con descansa brazos, para 2 personas, cap. de 280 lt.",pza,13402.7,"BAÑOS, MUEBLES Y ACCESORIOS"
+CMC-02628,"Llave fregadero fig. 18ch cromo, marca Urrea.",pza,280.92,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-02629,"Llave fregadero fig. 18l cromo, marca Urrea.",pza,115.89,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-03654,"Monomando fregadero nemo 9422ne-9 a inoxidable, marca Urrea.",pza,0,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-04066,"Monomando fregadero e-36 cromo, marca Helvex.",pza,5487.75,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16761,"Cocina int. económica ec54 1.50, marca Mygmesa.",pza,6558.4974,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16762,"Cocina int. Italia it54 1.50, marca Mygmesa.",pza,8101.6028,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16763,"Cocina int. casablanca cb73 1.80, marca Mygmesa.",pza,9060.7016,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16765,"Cocina int. navarra na73 2.20, marca Mygmesa.",pza,12072.3211,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16767,"Parrilla mabe 1c3011n negro, marca Vinca.",pza,3363.1738,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16775,"Gabinete p/fregadero .85 izquierdo blanco, marca Inmecha.",pza,596.3349,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16776,"Gabinete p/fregadero 1.05 derecho blanco, marca Inmecha.",pza,705.1426,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16778,"Base fregadero s/cub bfi .85 derecho encino, marca Inmecha.",pza,1000.1743,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16780,"Base fregadero s/cub bfi 102 derecho encino, marca Inmecha.",pza,1130.9379,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16783,"Gabinete de acero Ibiza tarja blanco, derecho, 80 x 50 cms. marca Mygmesa.",pza,1415.7657,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16789,"Gabinete de acero inoxidable con tarja color blanco, derecho, 100 x 50 cms. marca Mygmesa.",pza,1654.546,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16795,"Gabinete de acero inoxidable con tarja, color blanco, 137 x 53 cms. marca Mygmesa.",pza,2793.7329,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16800,Tarja acero inoxidable c 100 con tarja 51 x 48 cms. marca EB-Técnica.,pza,1402.34,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16803,Tarja doble inoxidable c 110 con tarja 84 x 56 cms. marca EB-Técnica.,pza,2049.61,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16812,Tarja inoxidable c-251 izq. 144 x 54 cms. marca EB-Técnica.,pza,1479.8,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16829,"Tarja Ibiza blanca, vinca 100 92 x 52 cms. marca Vinca.",pza,2547.1217,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16849,"Tarja Ibiza blanco, ibem-100 41 x 50 cms. marca Vinca.",pza,1429.1336,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16854,"Tarja Ibiza almendra, ibem-200 49 x 51 cms. marca Vinca.",pza,1586.3957,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16889,"Triturador in-sink 75 c/switch, marca Nutone.",pza,6953.1725,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16954,"Extractor e-style 120 2mu7233 elicent, marca Datalink.",pza,774.7732,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16958,"Extractor centrífugo flux 100 2fx1073, marca Datalink.",pza,707.2331,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16959,"Extractor ministyle 2mi4005 elicent, marca Datalink.",pza,368.0975,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16968,"Extractor aire 808, marca Nutone.",pza,559.7116,"COCINAS, MUEBLES Y ACCESORIOS"
+CMC-16987,"Interceptor para grasa ig-10, marca Helvex.",pza,3616.7232,"COCINAS, MUEBLES Y ACCESORIOS"
+BELA-301,Tierra vegetal.,m3,502.2,JARDINERÍA
+BELA-302,Tierra negra.,m3,502.2,JARDINERÍA
+BELA-004,Árbol laurel de 1.20 mts de altura.,pza,146.9,JARDINERÍA
+BELA-013,"Árbol grevillea de 2.00 a 2.50 mts de altura y 1"" de fuste",pza,169.5,JARDINERÍA
+BELA-014,Árbol acacia mimosa de 2 mts de altura.,pza,339,JARDINERÍA
+BELA-201,Árbol cipres blanqueado de 2.50 mts de altura y 6 cms de diámetro.,pza,621.5,JARDINERÍA
+BELA-206,Árbol ciprés dorado de 1.00 m de altura.,pza,508.5,JARDINERÍA
+BELA-208,Árbol fresno de 4.00 mts de altura y 10 cms de diámetro.,pza,4520,JARDINERÍA
+BELA-001,Arbusto marginata de 1.20 mts de altura.,pza,73.45,JARDINERÍA
+BELA-015,Arbusto bougambilia de 1.00 m.,pza,180.8,JARDINERÍA
+BELA-101,Palma zica de 1.50 mts de diámetro.,pza,2260,JARDINERÍA
+BELA-102,Palma rafis de 1.20 mts de altura.,pza,113,JARDINERÍA
+BELA-104,Palma areca de 2.00 mts de altura en maceta de plástico.,pza,169.5,JARDINERÍA
+BELA-105,"Palma yuca maceta de 4´, 20 cms de altura y 4 cms de diámetro del tallo aproximadamente.",pza,565,JARDINERÍA
+BELA-106,Palma pata de elefante de 1.00 m de altura.,pza,565,JARDINERÍA
+BELA-108,Palma robelina de 1.00 m de altura.,pza,678,JARDINERÍA
+BELA-107,Palo de Brasil de 1.00 m de altura.,pza,33.9,JARDINERÍA
+BELA-303,Semilla de pasto tipo ingles.,kg,56.5,JARDINERÍA
+BELA-304,Semilla de pasto.,kg,56.5,JARDINERÍA
+BELA-305,Pasto en rollo San Agustin tipo alfombra.,m2,44.64,JARDINERÍA
+BELA-306,Pasto en rollo tipo kikuyo.,m2,44.64,JARDINERÍA
+HEMN-118,"Cimbra metálica modular, pieza de 1.50 x 0.45 (en contrato por 30 días mínimo).",rent/d,3.2092,ANDAMIOS Y CIMBRAS
+HEMN-119,"Cimbra metálica modular, pieza de 1.00 x 0.35 (en contrato por 30 días mínimo).",rent/d,3.2092,ANDAMIOS Y CIMBRAS
+HEMN-120,Torre de trabajo de 2 mts. de alto con ruedas.,rent/d,27.0974,ANDAMIOS Y CIMBRAS
+HEMN-121,Torre de trabajo de 2 mts. de alto sin ruedas.,rent/d,27.0974,ANDAMIOS Y CIMBRAS
+HEMN-122,Marco (en contrato por 30 días mínimo).,rent/d,2.5877,ANDAMIOS Y CIMBRAS
+HEMN-123,Cruceta (en contrato por 30 días mínimo).,rent/d,3.2092,ANDAMIOS Y CIMBRAS
+HEMN-124,Plataforma (en contrato por 30 días mínimo).,rent/d,3.2431,ANDAMIOS Y CIMBRAS
+HEMN-125,Bases planas (1) (en contrato por 30 días mínimo).,rent/d,3.2092,ANDAMIOS Y CIMBRAS
+HEMN-126,Ruedas (1) (en contrato por 30 días mínimo).,rent/d,3.2318,ANDAMIOS Y CIMBRAS
+CAU-001,Separador tipo moño de 10 cms de largo marca Consorcio de andamiaje universal.,pza,14.88,ANDAMIOS Y CIMBRAS
+CAU-003,Separador tipo moño de 15 cms de largo marca Consorcio de andamiaje universal.,pza,13.51,ANDAMIOS Y CIMBRAS
+CAU-004,Separador tipo moño de 20 cms de largo marca Consorcio de andamiaje universal.,pza,13.51,ANDAMIOS Y CIMBRAS
+CAU-006,Separador tipo moño de 30 cms de largo marca Consorcio de andamiaje universal.,pza,14.67,ANDAMIOS Y CIMBRAS
+CAU-010,Separador tipo moño de 50 cms de largo marca Consorcio de andamiaje universal.,pza,16.13,ANDAMIOS Y CIMBRAS
+CAU-014,Separador tipo moño de 70 cms de largo marca Consorcio de andamiaje universal.,pza,18.74,ANDAMIOS Y CIMBRAS
+CAU-020,Separador tipo moño de 100 cms de largo marca Consorcio de andamiaje universal.,pza,21.47,ANDAMIOS Y CIMBRAS
+CAU-024,Separador tipo moño de 120 cms de largo marca Consorcio de andamiaje universal.,pza,19.097,ANDAMIOS Y CIMBRAS

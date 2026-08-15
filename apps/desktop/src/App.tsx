@@ -31,6 +31,7 @@ import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccio
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
 import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/CuadrillasSeccion";
+import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/EquipoCostoHorarioSeccion";
 import { EscalafonSalarioSeccion } from "@/features/catalogos/EscalafonSalarioSeccion";
 import { HerramientaSeccion } from "@/features/catalogos/HerramientaSeccion";
 import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/MaterialesCatalogoSeccion";
@@ -136,6 +137,7 @@ export default function App() {
   const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
   const [cuadrillasVista, setCuadrillasVista] = useState<CuadrillasVista>("ficha");
+  const [equipoCostoHorarioVista, setEquipoCostoHorarioVista] = useState<EquipoCostoHorarioVista>("ficha");
   const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("estanteria");
 
   const dataGridRef = useRef<DataGridHandle>(null);
@@ -471,6 +473,7 @@ export default function App() {
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
       if (catalogoId === "cuadrillas-trabajo") return <CuadrillasSeccion vista={cuadrillasVista} />;
       if (catalogoId === "herramienta") return <HerramientaSeccion />;
+      if (catalogoId === "costos-horarios") return <EquipoCostoHorarioSeccion vista={equipoCostoHorarioVista} />;
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
         return (
@@ -510,6 +513,7 @@ export default function App() {
     "tabuladores-puente",
     "cuadrillas-trabajo",
     "herramienta",
+    "costos-horarios",
   ];
   const catalogoActivoConfig =
     catalogoIdActivo && !CATALOGOS_BESPOKE.includes(catalogoIdActivo)
@@ -540,9 +544,17 @@ export default function App() {
     { id: "estanteria", icon: LayoutGrid, titulo: "Modo Estantería" },
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
   ];
+  const EQUIPO_COSTO_HORARIO_TAB_ID = `${CATALOGO_PREFIX}costos-horarios`;
+  const EQUIPO_COSTO_HORARIO_VISTAS: { id: EquipoCostoHorarioVista; icon: LucideIcon; titulo: string }[] = [
+    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
+    { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+  ];
   const renderTabExtra = (tab: EditorTabInfo) => {
     if (tab.id === CUADRILLAS_TAB_ID) return renderVistaSwitcher(CUADRILLAS_VISTAS, cuadrillasVista, setCuadrillasVista);
     if (tab.id === MATERIALES_TAB_ID) return renderVistaSwitcher(MATERIALES_VISTAS, materialesVista, setMaterialesVista);
+    if (tab.id === EQUIPO_COSTO_HORARIO_TAB_ID) {
+      return renderVistaSwitcher(EQUIPO_COSTO_HORARIO_VISTAS, equipoCostoHorarioVista, setEquipoCostoHorarioVista);
+    }
     return null;
   };
 

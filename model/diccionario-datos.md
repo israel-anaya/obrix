@@ -449,35 +449,37 @@ cargos variables (consumos y operación, que dependen del uso) — metodología
 estándar en México (SCT, CMIC): nunca se toma solo la depreciación lineal
 como costo horario.
 
-Los cargos fijos se calculan sobre `valor_maquina` (el costo de adquisición
-**sin** llantas ni piezas especiales, que se deprecian aparte por su propio
-desgaste — las llantas de hecho se cargan como consumo, ver
+Los cargos fijos se calculan sobre `cf_valor_maquina` (el costo de
+adquisición **sin** llantas ni piezas especiales, que se deprecian aparte
+por su propio desgaste — las llantas de hecho se cargan como consumo, ver
 `equipo_costo_horario_detalle`), no sobre el costo total de la máquina.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| costo_maquina | decimal | precio de la máquina nueva, todo incluido (Cm) |
-| valor_llantas | decimal | default 0 — valor de las llantas incluido en `costo_maquina` (Pn), se resta porque se deprecia por desgaste, no por tiempo |
-| valor_piezas_especiales | decimal | default 0 — valor de piezas especiales incluido en `costo_maquina` (Pa) |
-| valor_maquina | decimal | cache = costo_maquina − valor_llantas − valor_piezas_especiales (Vm) |
-| valor_rescate_porcentaje | decimal | % de valor de rescate al final de su vida económica (r) |
-| valor_rescate | decimal | cache = valor_maquina × valor_rescate_porcentaje / 100 (Vr) |
-| vida_economica_anios | decimal | vida económica estimada, en años |
-| horas_uso_anual | decimal | horas efectivas de uso al año (Hea), para prorratear cargos fijos |
-| vida_util_horas | decimal | cache = vida_economica_anios × horas_uso_anual (Ve) |
-| tasa_interes_anual_porcentaje | decimal | costo de capital/oportunidad de la inversión (i) |
-| tasa_seguros_anual_porcentaje | decimal | (s) |
-| mantenimiento_porcentaje | decimal | % de la depreciación que representa el cargo de mantenimiento (Ko) |
-| depreciacion_hora | decimal | cache = (valor_maquina − valor_rescate) / vida_util_horas (D) |
-| inversion_hora | decimal | cache = (valor_maquina + valor_rescate) × tasa_interes_anual_porcentaje/100 / (2 × horas_uso_anual) (Im) |
-| seguro_hora | decimal | cache = (valor_maquina + valor_rescate) × tasa_seguros_anual_porcentaje/100 / (2 × horas_uso_anual) (Sm) |
-| mantenimiento_hora | decimal | cache = mantenimiento_porcentaje/100 × depreciacion_hora (Mn) |
-| cargo_fijo_hora | decimal | cache = depreciacion_hora + inversion_hora + seguro_hora + mantenimiento_hora |
-| cargo_variable_hora | decimal | cache = Σ `equipo_costo_horario_detalle`.importe (consumo + operación) |
-| costo_horario_total | decimal | cache = cargo_fijo_hora + cargo_variable_hora |
+| region_id | uuid | FK → region, nullable — `null` = nacional (sin región específica) |
+| cf_costo_maquina | decimal | precio de la máquina nueva, todo incluido (Cm) |
+| cf_valor_llantas | decimal | default 0 — valor de las llantas incluido en `cf_costo_maquina` (Pn), se resta porque se deprecia por desgaste, no por tiempo |
+| cf_valor_piezas_especiales | decimal | default 0 — valor de piezas especiales incluido en `cf_costo_maquina` (Pa) |
+| cf_valor_maquina | decimal | cache = cf_costo_maquina − cf_valor_llantas − cf_valor_piezas_especiales (Vm) |
+| cf_valor_rescate_porcentaje | decimal | % de valor de rescate al final de su vida económica (r) |
+| cf_valor_rescate | decimal | cache = cf_valor_maquina × cf_valor_rescate_porcentaje / 100 (Vr) |
+| cf_vida_economica_anios | decimal | vida económica estimada, en años |
+| cf_horas_uso_anual | decimal | horas efectivas de uso al año (Hea), para prorratear cargos fijos |
+| cf_vida_util_horas | decimal | cache = cf_vida_economica_anios × cf_horas_uso_anual (Ve) |
+| cf_tasa_interes_anual_porcentaje | decimal | costo de capital/oportunidad de la inversión (i) |
+| cf_tasa_seguros_anual_porcentaje | decimal | (s) |
+| cf_mantenimiento_porcentaje | decimal | % de la depreciación que representa el cargo de mantenimiento (Ko) |
+| cf_depreciacion_hora | decimal | cache = (cf_valor_maquina − cf_valor_rescate) / cf_vida_util_horas (D) |
+| cf_inversion_hora | decimal | cache = (cf_valor_maquina + cf_valor_rescate) × cf_tasa_interes_anual_porcentaje/100 / (2 × cf_horas_uso_anual) (Im) |
+| cf_seguro_hora | decimal | cache = (cf_valor_maquina + cf_valor_rescate) × cf_tasa_seguros_anual_porcentaje/100 / (2 × cf_horas_uso_anual) (Sm) |
+| cf_mantenimiento_hora | decimal | cache = cf_mantenimiento_porcentaje/100 × cf_depreciacion_hora (Mn) |
+| cf_cargo_fijo_hora | decimal | cache = cf_depreciacion_hora + cf_inversion_hora + cf_seguro_hora + cf_mantenimiento_hora |
+| subtotal_consumo | decimal | cache = Σ `equipo_costo_horario_detalle`.importe donde `tipo = consumo` |
+| subtotal_operacion | decimal | cache = Σ `equipo_costo_horario_detalle`.importe donde `tipo = operacion` |
+| cargo_variable_hora | decimal | cache = subtotal_consumo + subtotal_operacion |
+| costo_horario_total | decimal | cache = cf_cargo_fijo_hora + cargo_variable_hora |
 
-Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
 ### `equipo_costo_horario_detalle`
 

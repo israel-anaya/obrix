@@ -11,6 +11,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ComboboxFiltrable } from "@/components/ComboboxFiltrable";
+import { PercentageInput } from "@/components/PercentageInput";
+import { QuantityInput } from "@/components/QuantityInput";
 import {
   createCuadrillaDetalle,
   deleteCuadrillaDetalle,
@@ -166,6 +168,7 @@ export function CuadrillaFichaApu({
   };
 
   const guardarCantidad = async (detalle: CuadrillaDetalle, valorTexto: string) => {
+    if (valorTexto.trim() === "") return;
     const numero = Number(valorTexto);
     if (!Number.isFinite(numero) || numero < 0) {
       setError("La cantidad debe ser un número mayor o igual a 0.");
@@ -175,6 +178,7 @@ export function CuadrillaFichaApu({
     // decimales; herramienta es un porcentaje 0-100, con 2 basta.
     const decimales = detalle.tipo === "categoria_fasar" ? 6 : 2;
     const redondeada = Number(numero.toFixed(decimales));
+    if (redondeada === Number(detalle.cantidad)) return;
     setError(null);
     try {
       const actualizada = await updateCuadrillaDetalle(detalle.id, {
@@ -216,7 +220,7 @@ export function CuadrillaFichaApu({
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <div className="rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
@@ -277,19 +281,11 @@ export function CuadrillaFichaApu({
                     {simboloPorUnidadId[categoriaPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? ""}
                   </td>
                   <td className="py-1 pr-2 text-right">
-                    <input
-                      key={`${d.id}-${d.cantidad}`}
-                      type="number"
-                      min={0}
-                      step={0.000001}
-                      defaultValue={Number(d.cantidad).toFixed(6)}
-                      onBlur={(e) => {
-                        if (e.target.value.trim() !== "" && Number(e.target.value) !== Number(d.cantidad)) {
-                          void guardarCantidad(d, e.target.value);
-                        }
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                      className="campo-decimal w-24 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums hover:border-border focus:border-border focus:bg-background"
+                    <QuantityInput
+                      value={d.cantidad}
+                      onCommit={(v) => void guardarCantidad(d, v)}
+                      decimals={6}
+                      className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                     />
                   </td>
                   <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">${fmt(d.costo)}</td>
@@ -384,24 +380,12 @@ export function CuadrillaFichaApu({
                     {simboloPorUnidadId[herramientaPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? ""}
                   </td>
                   <td className="py-1 pr-2 text-right">
-                    <div className="flex items-center justify-end gap-0.5">
-                      <input
-                        key={`${d.id}-${d.cantidad}`}
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.01}
-                        defaultValue={Number(d.cantidad).toFixed(2)}
-                        onBlur={(e) => {
-                          if (e.target.value.trim() !== "" && Number(e.target.value) !== Number(d.cantidad)) {
-                            void guardarCantidad(d, e.target.value);
-                          }
-                        }}
-                        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                        className="campo-decimal w-14 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums hover:border-border focus:border-border focus:bg-background"
-                      />
-                      <span className="text-muted-foreground">%</span>
-                    </div>
+                    <PercentageInput
+                      value={d.cantidad}
+                      onCommit={(v) => void guardarCantidad(d, v)}
+                      decimals={2}
+                      className="w-16 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
+                    />
                   </td>
                   <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">${fmt(d.costo)}</td>
                   <td className="py-1 text-right font-medium tabular-nums">${fmt(d.importe)}</td>

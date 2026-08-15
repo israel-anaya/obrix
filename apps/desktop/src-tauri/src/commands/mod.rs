@@ -3,6 +3,7 @@ pub mod auth;
 pub mod categorias_fasar;
 pub mod clientes;
 pub mod cuadrillas;
+pub mod equipos_costo_horario;
 pub mod factores_salario_real;
 pub mod familias_insumo;
 pub mod herramientas;
