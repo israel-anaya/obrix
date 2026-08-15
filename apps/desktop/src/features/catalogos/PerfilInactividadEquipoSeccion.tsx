@@ -3,6 +3,8 @@ import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { VerticalGrid, type VerticalGridGroup } from "@/components/grid/VerticalGrid";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createPerfilInactividadEquipo,
@@ -42,20 +44,76 @@ const CONFIG: DataGridConfig = {
 };
 
 /**
+ * El mismo catálogo acostado: cada perfil es una columna y cada porcentaje un
+ * renglón. Bajo el título de su grupo ("En espera", "En reserva") el prefijo
+ * de la etiqueta sobra, así que se recorta — los campos son exactamente los
+ * mismos de `CONFIG`, para que las dos rejillas nunca se separen.
+ */
+const CONFIG_VERTICAL: DataGridConfig = {
+  title: "Perfil",
+  columns: CONFIG.columns.map((c) => ({ ...c, header: c.header.replace(/^(Espera|Reserva) · /, "") })),
+};
+
+const GRUPOS_VERTICAL: VerticalGridGroup[] = [
+  { id: "identificacion", title: "Identificación", fields: ["nombre", "activo"] },
+  {
+    id: "inactividad",
+    title: "Porcentajes de inactividad",
+    groups: [
+      {
+        id: "espera",
+        title: "En espera",
+        fields: [
+          "espera_depreciacion_porcentaje",
+          "espera_inversion_porcentaje",
+          "espera_seguro_porcentaje",
+          "espera_mantenimiento_porcentaje",
+          "espera_consumo_porcentaje",
+          "espera_operacion_porcentaje",
+        ],
+      },
+      {
+        id: "reserva",
+        title: "En reserva",
+        fields: [
+          "reserva_depreciacion_porcentaje",
+          "reserva_inversion_porcentaje",
+          "reserva_seguro_porcentaje",
+          "reserva_mantenimiento_porcentaje",
+          "reserva_consumo_porcentaje",
+          "reserva_operacion_porcentaje",
+        ],
+      },
+    ],
+  },
+  { id: "control", title: "Control", fields: COLUMNAS_CONTROL.map((c) => c.field) },
+];
+
+/**
  * Grid de `perfil_inactividad_equipo` — receta reutilizable (no cuelga de
  * `insumo`, igual que `factor_salario_real`) para derivar el costo horario
  * en espera y en reserva de un `equipo_costo_horario`, ver diccionario de
  * datos. Un renglón por perfil (p. ej. "CMIC frente / patio 2026"), con sus
  * 12 porcentajes editables en la misma fila — mismo patrón maestro que
  * `HerramientaSeccion`/`EquipoCostoHorarioGridVista`.
+ *
+ * La vista va partida en dos sobre los mismos datos: arriba el `DataGrid` de
+ * siempre (un perfil por renglón, para compararlos de un vistazo) y abajo el
+ * `VerticalGrid`, que acuesta la tabla —un perfil por columna, cada porcentaje
+ * un renglón agrupado por espera/reserva— porque son 12 campos y a lo ancho
+ * obligan a pasearse. Las dos rejillas guardan por los mismos comandos y
+ * cualquiera de las dos recarga a las dos.
  */
 export function PerfilInactividadEquipoSeccion() {
   const gridRef = useRef<DataGridHandle>(null);
+  const verticalRef = useRef<DataGridHandle>(null);
   const [perfiles, setPerfiles] = useState<PerfilInactividadEquipo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
+  const [puedeEliminarVertical, setPuedeEliminarVertical] = useState(false);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaVertical, setBusquedaVertical] = useState("");
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -180,25 +238,71 @@ export function PerfilInactividadEquipoSeccion() {
         </div>
       </details>
       <div className="min-h-0 flex-1">
-        <DataGrid
-          ref={gridRef}
-          config={CONFIG}
-          initialRows={filas}
-          loading={cargando}
-          selectionMode="single"
-          search={busqueda}
-          onSearchChange={setBusqueda}
-          onSelectionChange={setPuedeEliminar}
-          onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
-          onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
-          onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
-          onSaveError={(mensaje) => setError(mensaje)}
-          onSaveSuccess={() => setGuardadoExitoso(true)}
-          onCancelEdit={() => {
-            setError(null);
-            setGuardadoExitoso(false);
-          }}
-        />
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel defaultSize="55" minSize="20" className="flex flex-col overflow-hidden">
+            <DataGrid
+              ref={gridRef}
+              config={CONFIG}
+              initialRows={filas}
+              loading={cargando}
+              selectionMode="single"
+              search={busqueda}
+              onSearchChange={setBusqueda}
+              onSelectionChange={setPuedeEliminar}
+              onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
+              onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
+              onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
+              onSaveError={(mensaje) => setError(mensaje)}
+              onSaveSuccess={() => setGuardadoExitoso(true)}
+              onCancelEdit={() => {
+                setError(null);
+                setGuardadoExitoso(false);
+              }}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize="45" minSize="20" className="flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+              <h3 className="text-sm font-semibold">Perfiles acostados</h3>
+              <div className="flex items-center gap-2">
+                <Buscador value={busquedaVertical} onChange={setBusquedaVertical} />
+                <BarraAcciones
+                  acciones={[
+                    { icono: Plus, titulo: "Agregar", onClick: () => verticalRef.current?.addRow() },
+                    {
+                      icono: Trash2,
+                      titulo: "Eliminar seleccionado",
+                      onClick: () => verticalRef.current?.deleteSelectedRows(),
+                      disabled: !puedeEliminarVertical,
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="min-h-0 flex-1">
+              <VerticalGrid
+                ref={verticalRef}
+                config={CONFIG_VERTICAL}
+                groups={GRUPOS_VERTICAL}
+                initialRows={filas}
+                loading={cargando}
+                selectionMode="single"
+                search={busquedaVertical}
+                onSearchChange={setBusquedaVertical}
+                onSelectionChange={setPuedeEliminarVertical}
+                onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
+                onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
+                onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
+                onSaveError={(mensaje) => setError(mensaje)}
+                onSaveSuccess={() => setGuardadoExitoso(true)}
+                onCancelEdit={() => {
+                  setError(null);
+                  setGuardadoExitoso(false);
+                }}
+              />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

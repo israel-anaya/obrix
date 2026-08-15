@@ -26,6 +26,7 @@ export function RowContextMenu({
   onDeleteRows,
   canDelete,
   canAdd,
+  addLabel = "Agregar fila",
 }: {
   children: React.ReactNode;
   editing: boolean;
@@ -36,6 +37,8 @@ export function RowContextMenu({
   onDeleteRows: () => void;
   canDelete: boolean;
   canAdd: boolean;
+  /** Cómo se llama aquí un registro — el `VerticalGrid` los pinta como columnas, no como filas. */
+  addLabel?: string;
 }) {
   return (
     <ContextMenu>
@@ -62,7 +65,7 @@ export function RowContextMenu({
         <ContextMenuSeparator />
         <ContextMenuItem disabled={!canAdd || editing} onSelect={onAddRow}>
           <Plus />
-          Agregar fila
+          {addLabel}
         </ContextMenuItem>
         <ContextMenuItem
           variant="destructive"
