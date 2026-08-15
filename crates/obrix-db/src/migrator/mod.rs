@@ -4,6 +4,7 @@ mod m20260810_000002_organizacion_moneda_default;
 mod m20260810_000004_factor_salario_real;
 mod m20260812_000001_categoria_fasar;
 mod m20260814_000001_herramienta;
+mod m20260814_000002_cuadrilla;
 
 use sea_orm_migration::prelude::*;
 
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260810_000004_factor_salario_real::Migration),
             Box::new(m20260812_000001_categoria_fasar::Migration),
             Box::new(m20260814_000001_herramienta::Migration),
+            Box::new(m20260814_000002_cuadrilla::Migration),
         ]
     }
 }

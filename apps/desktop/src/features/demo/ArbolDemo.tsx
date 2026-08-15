@@ -146,7 +146,7 @@ export function ArbolDemo() {
       <div className="mb-2">
         <p className="text-xs text-muted-foreground">
           Demo — Familias de insumo en árbol real con TanStack Table (expand/collapse), virtualizado
-          para soportar miles de filas, sin ag-Grid Enterprise.
+          para soportar miles de filas.
         </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

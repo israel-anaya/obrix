@@ -6,6 +6,8 @@
 
 pub mod categoria_fasar;
 pub mod cliente;
+pub mod cuadrilla;
+pub mod cuadrilla_detalle;
 pub mod factor_salario_real;
 pub mod familia_insumo;
 pub mod herramienta;

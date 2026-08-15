@@ -7,6 +7,11 @@ export type ResultadoAbrirPortafolio =
   | { estado: "Activado"; path: string }
   | { estado: "RequiereConfirmacion"; path: string };
 
+export interface PortafolioReciente {
+  path: string;
+  abierto_en: number;
+}
+
 /**
  * Campos de auditoría presentes en (casi) todas las entidades — de solo
  * lectura en la UI. `created_by` es requerido salvo en `Usuario`, la única
@@ -279,6 +284,71 @@ export interface HerramientaData {
   porcentaje_mano_obra: number | null;
   activo: boolean;
 }
+
+/**
+ * Extensión de `insumo` cuando `tipo = mano_obra` y se trata de un **equipo
+ * de trabajo compuesto** (varios integrantes/herramientas), a diferencia de
+ * `categoria_fasar` que es un trabajador atómico — ver `cuadrilla` en el
+ * diccionario de datos. Los tres subtotales son cache: los recalcula el
+ * backend a partir de `cuadrilla_detalle` cada vez que su composición
+ * cambia, nunca se editan directamente.
+ */
+export interface Cuadrilla extends CamposControl {
+  id: string;
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  /** Debe ser hija (`parent_id`) de `familia_id`. */
+  sub_familia_id: string | null;
+  activo: boolean;
+  /** Serializados como texto para no perder precisión. */
+  sub_total_mano_obra: string;
+  sub_total_herramienta: string;
+  costo_total: string;
+}
+
+export interface CuadrillaData {
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  sub_familia_id: string | null;
+  activo: boolean;
+}
+
+/**
+ * Un renglón de la composición plana de una `cuadrilla` — un integrante
+ * (`tipo: "categoria_fasar"`) o una herramienta (`tipo:
+ * "equipo_herramienta"`), nunca otra cuadrilla. `costo`/`importe` los
+ * calcula el backend, no son editables directamente.
+ */
+export interface CuadrillaDetalle {
+  id: string;
+  cuadrilla_insumo_id: string;
+  detalle_insumo_id: string;
+  tipo: "categoria_fasar" | "equipo_herramienta";
+  orden: number;
+  /**
+   * Si `tipo = "categoria_fasar"`: número de integrantes. Si `tipo =
+   * "equipo_herramienta"`: porcentaje 0-100 (mismo convenio que
+   * `herramienta.porcentaje_mano_obra`), no una fracción 0-1.
+   */
+  cantidad: string;
+  costo: string;
+  importe: string;
+  created_at: string;
+  updated_at: string | null;
+  created_by: string;
+  updated_by: string | null;
+}
+
+export interface CuadrillaDetalleData {
+  detalle_insumo_id: string;
+  cantidad: string;
+}
+
+export type DireccionMovimiento = "arriba" | "abajo";
 
 /**
  * Vigencia de salario+FSR de una `categoria_fasar` — historizada por

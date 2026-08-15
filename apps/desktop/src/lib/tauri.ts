@@ -4,6 +4,11 @@ import type {
   CategoriaFasar,
   CategoriaFasarData,
   Cliente,
+  Cuadrilla,
+  CuadrillaData,
+  CuadrillaDetalle,
+  CuadrillaDetalleData,
+  DireccionMovimiento,
   FactorSalarioReal,
   FactorSalarioRealData,
   FamiliaInsumo,
@@ -15,6 +20,7 @@ import type {
   OrganizacionData,
   PrecioMaterial,
   PrecioMaterialData,
+  PortafolioReciente,
   Proveedor,
   ProveedorData,
   RegionData,
@@ -57,6 +63,10 @@ export function abrirPortafolio(path: string): Promise<ResultadoAbrirPortafolio>
 
 export function confirmarAperturaPortafolioAjeno(confirmar: boolean): Promise<string | null> {
   return invoke("confirmar_apertura_portafolio_ajeno", { confirmar });
+}
+
+export function listarPortafoliosRecientes(): Promise<PortafolioReciente[]> {
+  return invoke("listar_portafolios_recientes");
 }
 
 export function listOrganizaciones(): Promise<Organizacion[]> {
@@ -251,6 +261,34 @@ export function updateHerramienta(id: string, herramienta: HerramientaData): Pro
 }
 export function deleteHerramienta(id: string): Promise<void> {
   return invoke("delete_herramienta", { id });
+}
+
+export function listCuadrillas(): Promise<Cuadrilla[]> {
+  return invoke("list_cuadrillas");
+}
+export function createCuadrilla(cuadrilla: CuadrillaData): Promise<Cuadrilla> {
+  return invoke("create_cuadrilla", { cuadrilla });
+}
+export function updateCuadrilla(id: string, cuadrilla: CuadrillaData): Promise<Cuadrilla> {
+  return invoke("update_cuadrilla", { id, cuadrilla });
+}
+export function deleteCuadrilla(id: string): Promise<void> {
+  return invoke("delete_cuadrilla", { id });
+}
+export function listCuadrillaDetalles(cuadrillaInsumoId: string): Promise<CuadrillaDetalle[]> {
+  return invoke("list_cuadrilla_detalles", { cuadrillaInsumoId });
+}
+export function createCuadrillaDetalle(cuadrillaInsumoId: string, detalle: CuadrillaDetalleData): Promise<Cuadrilla> {
+  return invoke("create_cuadrilla_detalle", { cuadrillaInsumoId, detalle });
+}
+export function updateCuadrillaDetalle(id: string, detalle: CuadrillaDetalleData): Promise<Cuadrilla> {
+  return invoke("update_cuadrilla_detalle", { id, detalle });
+}
+export function deleteCuadrillaDetalle(id: string): Promise<Cuadrilla> {
+  return invoke("delete_cuadrilla_detalle", { id });
+}
+export function moveCuadrillaDetalle(id: string, direccion: DireccionMovimiento): Promise<Cuadrilla> {
+  return invoke("move_cuadrilla_detalle", { id, direccion });
 }
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {

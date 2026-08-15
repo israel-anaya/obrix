@@ -1,9 +1,13 @@
+import type { LucideIcon } from "lucide-react";
+import { HardHat, Package, Percent, Users } from "lucide-react";
 import type { DataGridConfig } from "@/components/grid/DataGrid";
 
 export interface NodoCatalogo {
   id: string;
   label: string;
   hijos?: NodoCatalogo[];
+  /** Icono propio para el nodo en el árbol — si no se da, se usa Folder/FileText según tenga hijos. */
+  icon?: LucideIcon;
 }
 
 export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
@@ -11,12 +15,18 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     id: "mano-de-obra",
     label: "Mano de Obra",
     hijos: [
-      { id: "factores-salario-real", label: "Factores de Salario Real" },
-      { id: "tabuladores-salario", label: "Tabuladores de Salario" },
-      { id: "tabuladores-escalafon", label: "Escalafón" },
-      { id: "tabuladores-matriz", label: "Matriz oficio × región" },
-      { id: "tabuladores-puente", label: "Puente base → real" },
-      { id: "cuadrillas-trabajo", label: "Cuadrillas de trabajo" },
+      { id: "factores-salario-real", label: "Factores de Salario Real", icon: Percent },
+      { id: "tabuladores-salario", label: "Tabuladores de Salario", icon: HardHat },
+      { id: "cuadrillas-trabajo", label: "Cuadrillas de trabajo", icon: Users },
+      {
+        id: "analisis",
+        label: "Análisis",
+        hijos: [
+          { id: "tabuladores-escalafon", label: "Escalafón" },
+          { id: "tabuladores-matriz", label: "Matriz oficio × región" },
+          { id: "tabuladores-puente", label: "Puente base → real" },
+        ],
+      },
     ],
   },
   {
@@ -24,10 +34,15 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
     label: "Materiales",
     hijos: [
       { id: "fletes", label: "Fletes" },
-      { id: "materiales-item", label: "Materiales" },
-      { id: "materiales-estanteria", label: "Estantería" },
-      { id: "materiales-mesa", label: "Mesa de equivalentes" },
-      { id: "materiales-radar", label: "Radar de costos" },
+      { id: "materiales-item", label: "Materiales", icon: Package },
+      {
+        id: "materiales-analisis",
+        label: "Análisis",
+        hijos: [
+          { id: "materiales-mesa", label: "Mesa de equivalentes" },
+          { id: "materiales-radar", label: "Radar de costos" },
+        ],
+      },
     ],
   },
   { id: "basicos-auxiliares", label: "Básicos y Auxiliares" },
@@ -57,15 +72,6 @@ export const CATALOGO_GRID_CONFIG: Record<string, DataGridConfig> = {
       { field: "concepto", header: "Concepto", width: 280 },
       { field: "diasNoLaborados", header: "Días no laborados", numeric: true, width: 160 },
       { field: "factor", header: "Factor", numeric: true, width: 110 },
-    ],
-  },
-  "cuadrillas-trabajo": {
-    title: "Cuadrillas de trabajo",
-    columns: [
-      { field: "clave", header: "Clave", width: 100 },
-      { field: "descripcion", header: "Descripción", width: 320 },
-      { field: "integrantes", header: "Integrantes", numeric: true, width: 120 },
-      { field: "costoHora", header: "Costo por hora", numeric: true, width: 140 },
     ],
   },
   fletes: {

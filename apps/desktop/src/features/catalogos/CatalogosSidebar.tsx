@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, FilePlus2, FileText, Folder, Layers, Trash2, User } from "lucide-react";
+import { ChevronDown, ChevronRight, FilePlus2, FileText, Folder, Layers, type LucideIcon, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { COSTOS_DIRECTOS_TREE, NODOS_OTROS, type NodoCatalogo } from "@/features/catalogos/costosDirectosTree";
@@ -35,16 +35,17 @@ function NodoArbolFijo({
   nivel: number;
   expandidos: Set<string>;
   onToggle: (id: string) => void;
-  onAbrir: (id: string, label: string) => void;
+  onAbrir: (id: string, label: string, icon?: LucideIcon) => void;
 }) {
   const tieneHijos = !!nodo.hijos && nodo.hijos.length > 0;
   const abierto = expandidos.has(nodo.id);
+  const Icono = nodo.icon ?? (tieneHijos ? Folder : FileText);
 
   return (
     <div>
       <button
         type="button"
-        onClick={() => (tieneHijos ? onToggle(nodo.id) : onAbrir(nodo.id, nodo.label))}
+        onClick={() => (tieneHijos ? onToggle(nodo.id) : onAbrir(nodo.id, nodo.label, nodo.icon))}
         style={{ paddingLeft: `${8 + nivel * 14}px` }}
         className={cn(
           "flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground",
@@ -55,7 +56,7 @@ function NodoArbolFijo({
         ) : (
           <span className="inline-block w-3 shrink-0" />
         )}
-        {tieneHijos ? <Folder size={13} className="shrink-0" /> : <FileText size={13} className="shrink-0" />}
+        <Icono size={13} className="shrink-0" />
         <span className="truncate">{nodo.label}</span>
       </button>
       {tieneHijos && abierto && (
@@ -81,7 +82,7 @@ export function CatalogosSidebar({
   onOpenCatalogo,
 }: {
   onOpenGrupo: (label: string) => void;
-  onOpenCatalogo: (id: string, label: string) => void;
+  onOpenCatalogo: (id: string, label: string, icon?: LucideIcon) => void;
 }) {
   const [itemsPorGrupo, setItemsPorGrupo] = useState<Record<string, ItemCatalogo[]>>({
     "costos-indirectos": [],

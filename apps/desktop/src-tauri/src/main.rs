@@ -2,6 +2,7 @@
 
 mod auth;
 mod commands;
+mod recientes;
 
 use std::path::PathBuf;
 
@@ -124,10 +125,29 @@ pub(crate) async fn resolver_organizacion_id(
         .unwrap_or_default())
 }
 
+/// Wayland no deja leer ni fijar la posición de una ventana, así que el plugin
+/// de window-state guarda siempre `(0, 0)` y reabre en el monitor principal.
+/// Si hay un `DISPLAY` X11 (XWayland, WSLg), GDK lo usa para poder restaurar
+/// monitor y posición. `GDK_BACKEND` ya definido en el entorno no se toca.
+#[cfg(target_os = "linux")]
+fn preferir_x11_para_restaurar_ventana() {
+    if std::env::var_os("GDK_BACKEND").is_some() || std::env::var_os("DISPLAY").is_none() {
+        return;
+    }
+    // SAFETY: se llama al inicio de `main`, antes de crear hilos o GTK.
+    unsafe {
+        std::env::set_var("GDK_BACKEND", "x11");
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "linux")]
+    preferir_x11_para_restaurar_ventana();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(AppState::nuevo())
         .invoke_handler(tauri::generate_handler![
             commands::auth::obtener_sesion,
@@ -136,6 +156,7 @@ fn main() {
             commands::portafolio::crear_portafolio,
             commands::portafolio::abrir_portafolio,
             commands::portafolio::confirmar_apertura_portafolio_ajeno,
+            commands::portafolio::listar_portafolios_recientes,
             commands::portafolio::set_organizacion_activa,
             commands::organizaciones::list_organizaciones,
             commands::organizaciones::list_organizaciones_activas,
@@ -198,6 +219,15 @@ fn main() {
             commands::herramientas::create_herramienta,
             commands::herramientas::update_herramienta,
             commands::herramientas::delete_herramienta,
+            commands::cuadrillas::list_cuadrillas,
+            commands::cuadrillas::create_cuadrilla,
+            commands::cuadrillas::update_cuadrilla,
+            commands::cuadrillas::delete_cuadrilla,
+            commands::cuadrillas::list_cuadrilla_detalles,
+            commands::cuadrillas::create_cuadrilla_detalle,
+            commands::cuadrillas::update_cuadrilla_detalle,
+            commands::cuadrillas::delete_cuadrilla_detalle,
+            commands::cuadrillas::move_cuadrilla_detalle,
             commands::archivo_json::escribir_archivo_texto,
             commands::archivo_json::leer_archivo_texto,
         ])

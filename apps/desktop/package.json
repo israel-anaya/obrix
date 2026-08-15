@@ -23,8 +23,6 @@
     "@univerjs/sheets-numfmt-ui": "0.25.1",
     "@univerjs/sheets-ui": "0.25.1",
     "@univerjs/ui": "0.25.1",
-    "ag-grid-community": "^36.1.0",
-    "ag-grid-react": "^36.1.0",
     "class-variance-authority": "^0.7",
     "clsx": "^2",
     "dagre": "^0.8.5",

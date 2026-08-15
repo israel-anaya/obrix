@@ -21,7 +21,7 @@ function ResizablePanelGroup({
 function ResizablePanel({ style, ...props }: ResizablePrimitive.PanelProps) {
   // `Panel` aplica `overflow: "auto"` inline por defecto (gana sobre cualquier
   // `overflow-hidden` en className), creando un scroll propio que compite con
-  // el de contenido que ya maneja el suyo (p. ej. ag-Grid) y corta la última
+  // el de contenido que ya maneja el suyo y corta la última
   // fila — se sobreescribe a "hidden" salvo que el caller pida lo contrario.
   return (
     <ResizablePrimitive.Panel

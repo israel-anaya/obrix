@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, type LucideIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface EditorTabInfo {
   id: string;
   title: string;
   closable: boolean;
+  icon?: LucideIcon;
 }
 
 const SCROLL_STEP = 160;
@@ -16,12 +17,15 @@ export function EditorTabs({
   onSelect,
   onClose,
   actions,
+  renderTabExtra,
 }: {
   tabs: EditorTabInfo[];
   activeId: string;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   actions?: ReactNode;
+  /** Contenido extra (p.ej. iconos de sub-vista) dentro de una pestaña — solo se pide para la pestaña activa. */
+  renderTabExtra?: (tab: EditorTabInfo) => ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -86,7 +90,9 @@ export function EditorTabs({
                 isActive && "bg-background text-foreground",
               )}
             >
+              {tab.icon && <tab.icon size={13} className="shrink-0" />}
               <span className="truncate">{tab.title}</span>
+              {isActive && renderTabExtra?.(tab)}
               {tab.closable && (
                 <button
                   onClick={(e) => {

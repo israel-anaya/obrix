@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { FolderOpen, FolderPlus, Server } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Proyecto } from "@/features/proyectos/types";
+import { cn, nombreDesdePath } from "@/lib/utils";
+import type { PortafolioReciente } from "@/lib/types";
 
 interface AccionInicio {
   label: string;
@@ -11,16 +11,16 @@ interface AccionInicio {
 }
 
 export function StartScreen({
-  proyectos,
+  recientes,
   onCrearPortafolio,
   onAbrirPortafolio,
-  onAbrirProyecto,
+  onAbrirReciente,
   error,
 }: {
-  proyectos: Proyecto[];
+  recientes: PortafolioReciente[];
   onCrearPortafolio: () => void;
   onAbrirPortafolio: () => void;
-  onAbrirProyecto: (id: string) => void;
+  onAbrirReciente: (path: string) => void;
   error?: string | null;
 }) {
   const acciones: AccionInicio[] = [
@@ -59,18 +59,20 @@ export function StartScreen({
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Recientes</span>
           </div>
-          {proyectos.length === 0 ? (
+          {recientes.length === 0 ? (
             <p className="py-2 text-xs text-muted-foreground">Sin portafolios recientes.</p>
           ) : (
             <div className="flex flex-col">
-              {proyectos.map((proyecto) => (
+              {recientes.map((item) => (
                 <button
-                  key={proyecto.id}
+                  key={item.path}
                   type="button"
-                  onClick={() => onAbrirProyecto(proyecto.id)}
-                  className="flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  title={item.path}
+                  onClick={() => onAbrirReciente(item.path)}
+                  className="flex flex-col rounded-md px-2 py-1.5 text-left hover:bg-muted/60"
                 >
-                  <span className="truncate">{proyecto.nombre}</span>
+                  <span className="truncate text-sm text-foreground">{nombreDesdePath(item.path)}</span>
+                  <span className="truncate text-xs text-muted-foreground">{item.path}</span>
                 </button>
               ))}
             </div>

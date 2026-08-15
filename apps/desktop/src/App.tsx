@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FolderKanban, Plus, Trash2 } from "lucide-react";
+import { BookOpen, FileText, FolderKanban, LayoutGrid, type LucideIcon, Package, Plus, Table2, Trash2, Users } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { BarraAcciones } from "@/components/BarraAcciones";
@@ -7,7 +7,9 @@ import { CuentaFooter } from "@/components/CuentaFooter";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
 import { LoginGate } from "@/components/LoginGate";
 import { MenuBar, type MenuDef } from "@/components/MenuBar";
+import { WindowFrame } from "@/components/WindowFrame";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
+import { EditorEmptyState } from "@/components/EditorEmptyState";
 import { StartScreen } from "@/components/StartScreen";
 import { StatusBar } from "@/components/StatusBar";
 import { Toolbar, type ToolbarItem } from "@/components/Toolbar";
@@ -28,10 +30,10 @@ import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
 import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
+import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/CuadrillasSeccion";
 import { EscalafonSalarioSeccion } from "@/features/catalogos/EscalafonSalarioSeccion";
-import { EstanteriaMaterialesSeccion } from "@/features/catalogos/EstanteriaMaterialesSeccion";
 import { HerramientaSeccion } from "@/features/catalogos/HerramientaSeccion";
-import { MaterialesSeccion } from "@/features/catalogos/MaterialesSeccion";
+import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/MaterialesCatalogoSeccion";
 import { MatrizOficioRegionSeccion } from "@/features/catalogos/MatrizOficioRegionSeccion";
 import { MesaEquivalentesSeccion } from "@/features/catalogos/MesaEquivalentesSeccion";
 import { PuenteBaseRealSeccion } from "@/features/catalogos/PuenteBaseRealSeccion";
@@ -40,7 +42,6 @@ import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
 import { ArbolDemo } from "@/features/demo/ArbolDemo";
 import { MaestroDetalleDemo } from "@/features/demo/MaestroDetalleDemo";
-import { TableDemo } from "@/features/demo/TableDemo";
 import { HojaCalculoPage } from "@/features/hoja-calculo/HojaCalculoPage";
 import { CalcularFsrPage } from "@/features/fsr/CalcularFsrPage";
 import { FactorSalarioRealSeccion } from "@/features/fsr/FactorSalarioRealSeccion";
@@ -50,7 +51,8 @@ import { OrganizacionSwitcher } from "@/features/organizacion/OrganizacionSwitch
 import { ProyectosSidebar } from "@/features/proyectos/ProyectosSidebar";
 import type { Proyecto } from "@/features/proyectos/types";
 import { useTheme } from "@/hooks/useTheme";
-import type { AccountInfo, Organizacion } from "@/lib/types";
+import { nombreDesdePath } from "@/lib/utils";
+import type { AccountInfo, Organizacion, PortafolioReciente } from "@/lib/types";
 import {
   abrirPortafolio,
   cerrarSesion,
@@ -58,6 +60,7 @@ import {
   crearPortafolio,
   iniciarSesion,
   listOrganizacionesActivas,
+  listarPortafoliosRecientes,
   obtenerOrganizacionActiva,
   obtenerSesion,
   setOrganizacionActiva,
@@ -78,6 +81,32 @@ const CATALOGO_PREFIX = "catalogo:";
 const FSR_PREFIX = "fsr:";
 const MODELO_CALCULO_PREFIX = "modelo-calculo:";
 
+/** Selector de sub-vista embebido en una pestaña del editor (ver `renderTabExtra` de `EditorTabs`). */
+function renderVistaSwitcher<T extends string>(
+  vistas: { id: T; icon: LucideIcon; titulo: string }[],
+  actual: T,
+  onCambiar: (id: T) => void,
+) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {vistas.map(({ id, icon: Icon, titulo }) => (
+        <button
+          key={id}
+          type="button"
+          title={titulo}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCambiar(id);
+          }}
+          className="rounded p-0.5 hover:bg-border"
+        >
+          <Icon size={13} className={actual === id ? "text-primary" : "text-muted-foreground/40"} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const { theme, toggle: toggleTheme } = useTheme();
 
@@ -91,6 +120,7 @@ export default function App() {
   const [portafolio, setPortafolio] = useState<{ path: string } | null>(null);
   const [portafolioError, setPortafolioError] = useState<string | null>(null);
   const [confirmacionPendiente, setConfirmacionPendiente] = useState<{ path: string } | null>(null);
+  const [recientes, setRecientes] = useState<PortafolioReciente[]>([]);
   // Mensaje de la operación en curso mostrado en la barra de estado inferior
   // (crear portafolio, importar materiales, …) — solo una a la vez.
   const [progreso, setProgreso] = useState<string | null>(null);
@@ -105,6 +135,8 @@ export default function App() {
 
   const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
+  const [cuadrillasVista, setCuadrillasVista] = useState<CuadrillasVista>("ficha");
+  const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("estanteria");
 
   const dataGridRef = useRef<DataGridHandle>(null);
   const [catalogoPuedeEliminar, setCatalogoPuedeEliminar] = useState(false);
@@ -119,6 +151,20 @@ export default function App() {
       .catch((e) => setSesionError(String(e)))
       .finally(() => setSesionCargando(false));
   }, []);
+
+  const recargarRecientes = () => {
+    listarPortafoliosRecientes()
+      .then(setRecientes)
+      .catch(() => setRecientes([]));
+  };
+
+  useEffect(() => {
+    if (!cuenta) {
+      setRecientes([]);
+      return;
+    }
+    recargarRecientes();
+  }, [cuenta]);
 
   const handleIniciarSesion = async () => {
     try {
@@ -174,14 +220,38 @@ export default function App() {
     setProyectoSeleccionado(null);
   };
 
+  const activarPortafolio = (path: string) => {
+    if (portafolio?.path !== path) {
+      setTabs([]);
+      setActiveTabId("");
+      setProyectos([]);
+      setProyectoSeleccionado(null);
+    }
+    setPortafolio({ path });
+    setPortafolioError(null);
+    recargarRecientes();
+  };
+
+  const abrirPortafolioEnRuta = async (path: string) => {
+    try {
+      const resultado = await abrirPortafolio(path);
+      if (resultado.estado === "RequiereConfirmacion") {
+        setConfirmacionPendiente({ path: resultado.path });
+        return;
+      }
+      activarPortafolio(resultado.path);
+    } catch (e) {
+      setPortafolioError(String(e));
+    }
+  };
+
   const handleCrearPortafolio = async () => {
     const path = await save({ filters: FILTROS_PORTAFOLIO, defaultPath: "portafolio.obx" });
     if (!path) return;
     setProgreso("Creando portafolio…");
     try {
-      await crearPortafolio(path);
-      setPortafolio({ path });
-      setPortafolioError(null);
+      const creado = await crearPortafolio(path);
+      activarPortafolio(creado);
     } catch (e) {
       setPortafolioError(String(e));
     } finally {
@@ -192,21 +262,11 @@ export default function App() {
   const handleAbrirPortafolio = async () => {
     const path = await open({ filters: FILTROS_PORTAFOLIO, multiple: false });
     if (!path || Array.isArray(path)) return;
-    try {
-      const resultado = await abrirPortafolio(path);
-      if (resultado.estado === "RequiereConfirmacion") {
-        setConfirmacionPendiente({ path: resultado.path });
-        return;
-      }
-      setPortafolio({ path: resultado.path });
-      setPortafolioError(null);
-    } catch (e) {
-      setPortafolioError(String(e));
-    }
+    await abrirPortafolioEnRuta(path);
   };
 
   useEffect(() => {
-    if (!portafolioAbierto) {
+    if (!portafolio) {
       setOrganizaciones([]);
       setOrganizacionActivaId(null);
       return;
@@ -217,7 +277,7 @@ export default function App() {
         setOrganizacionActivaId(activa.id);
       },
     );
-  }, [portafolioAbierto]);
+  }, [portafolio]);
 
   // Expuesto vía `OrganizacionContext.reload` — quien edite una organización
   // (p. ej. `OrganizacionSeccion`) lo llama para que el resto de la app deje
@@ -235,9 +295,9 @@ export default function App() {
       setOrganizacionActivaId(organizacionId);
     } catch (e) {
       setPortafolioError(String(e));
-      // `portafolioError` solo se muestra en `StartScreen` — con una pestaña
-      // abierta (el caso normal al usar el switcher del sidebar) ese error
-      // queda invisible. Se relanza para que el propio switcher lo muestre.
+      // `portafolioError` se ve en `StartScreen` / `EditorEmptyState` — con una
+      // pestaña abierta (el caso normal al usar el switcher del sidebar) ese
+      // error queda invisible. Se relanza para que el propio switcher lo muestre.
       throw e;
     }
   };
@@ -255,8 +315,7 @@ export default function App() {
     try {
       const path = await confirmarAperturaPortafolioAjeno(confirmar);
       if (path) {
-        setPortafolio({ path });
-        setPortafolioError(null);
+        activarPortafolio(path);
       }
     } catch (e) {
       setPortafolioError(String(e));
@@ -296,16 +355,12 @@ export default function App() {
     openTab({ id: `${CATALOGO_PREFIX}${grupo}`, title: grupo, closable: true });
   };
 
-  const openCatalogoGridTab = (id: string, label: string) => {
-    openTab({ id: `${CATALOGO_PREFIX}${id}`, title: label, closable: true });
+  const openCatalogoGridTab = (id: string, label: string, icon?: LucideIcon) => {
+    openTab({ id: `${CATALOGO_PREFIX}${id}`, title: label, closable: true, icon });
   };
 
   const openSettingsTab = () => {
     openTab({ id: "settings", title: "Configuración", closable: true });
-  };
-
-  const openTableDemoTab = () => {
-    openTab({ id: "table-demo", title: "Table (demo)", closable: true });
   };
 
   const openArbolDemoTab = () => {
@@ -336,21 +391,36 @@ export default function App() {
       if (!cuenta) {
         return <LoginGate onIniciarSesion={handleIniciarSesion} error={sesionError} />;
       }
+      if (!portafolio) {
+        return (
+          <StartScreen
+            recientes={recientes}
+            onCrearPortafolio={handleCrearPortafolio}
+            onAbrirPortafolio={handleAbrirPortafolio}
+            onAbrirReciente={abrirPortafolioEnRuta}
+            error={portafolioError}
+          />
+        );
+      }
       return (
-        <StartScreen
-          proyectos={proyectos}
-          onCrearPortafolio={handleCrearPortafolio}
-          onAbrirPortafolio={handleAbrirPortafolio}
+        <EditorEmptyState
+          nombre={nombreDesdePath(portafolio.path)}
+          path={portafolio.path}
           error={portafolioError}
-          onAbrirProyecto={(id) => {
-            setProyectoSeleccionado(id);
-            openHojaTab(id);
+          onNuevoProyecto={() => {
+            setSeccion("proyectos");
+            agregarProyecto();
+          }}
+          onAbrirMateriales={() => {
+            setSeccion("catalogos");
+            openCatalogoGridTab("materiales-item", "Materiales", Package);
+          }}
+          onAbrirCuadrillas={() => {
+            setSeccion("catalogos");
+            openCatalogoGridTab("cuadrillas-trabajo", "Cuadrillas de trabajo", Users);
           }}
         />
       );
-    }
-    if (activeTab.id === "table-demo") {
-      return <TableDemo />;
     }
     if (activeTab.id === "arbol-demo") {
       return <ArbolDemo />;
@@ -387,8 +457,9 @@ export default function App() {
       const catalogoId = activeTab.id.slice(CATALOGO_PREFIX.length);
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
       if (catalogoId === "clientes") return <ClientesSeccion />;
-      if (catalogoId === "materiales-item") return <MaterialesSeccion onProgreso={setProgreso} />;
-      if (catalogoId === "materiales-estanteria") return <EstanteriaMaterialesSeccion />;
+      if (catalogoId === "materiales-item") {
+        return <MaterialesCatalogoSeccion vista={materialesVista} onProgreso={setProgreso} />;
+      }
       if (catalogoId === "materiales-mesa") return <MesaEquivalentesSeccion />;
       if (catalogoId === "materiales-radar") return <RadarMaterialesSeccion />;
       if (catalogoId === "factores-salario-real") {
@@ -398,6 +469,7 @@ export default function App() {
       if (catalogoId === "tabuladores-escalafon") return <EscalafonSalarioSeccion />;
       if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
+      if (catalogoId === "cuadrillas-trabajo") return <CuadrillasSeccion vista={cuadrillasVista} />;
       if (catalogoId === "herramienta") return <HerramientaSeccion />;
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
@@ -416,11 +488,12 @@ export default function App() {
     return null;
   };
 
-  // "proveedores", "clientes", "materiales-item", "materiales-estanteria",
-  // "materiales-mesa", "materiales-radar", "factores-salario-real",
-  // "tabuladores-salario", "tabuladores-escalafon", "tabuladores-matriz",
-  // "tabuladores-puente" y "herramienta" ya traen su propia barra de
-  // acciones — no deben mostrar también la del tab genérico, cableada a `dataGridRef`.
+  // "proveedores", "clientes", "materiales-item", "materiales-mesa",
+  // "materiales-radar", "factores-salario-real", "tabuladores-salario",
+  // "tabuladores-escalafon", "tabuladores-matriz", "tabuladores-puente",
+  // "cuadrillas-trabajo" y "herramienta" ya traen su propia barra de
+  // acciones — no deben mostrar también la del tab genérico, cableada a
+  // `dataGridRef`.
   const catalogoIdActivo = activeTab?.id.startsWith(CATALOGO_PREFIX)
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
@@ -428,7 +501,6 @@ export default function App() {
     "proveedores",
     "clientes",
     "materiales-item",
-    "materiales-estanteria",
     "materiales-mesa",
     "materiales-radar",
     "factores-salario-real",
@@ -436,6 +508,7 @@ export default function App() {
     "tabuladores-escalafon",
     "tabuladores-matriz",
     "tabuladores-puente",
+    "cuadrillas-trabajo",
     "herramienta",
   ];
   const catalogoActivoConfig =
@@ -456,6 +529,22 @@ export default function App() {
       ]}
     />
   );
+
+  const CUADRILLAS_TAB_ID = `${CATALOGO_PREFIX}cuadrillas-trabajo`;
+  const CUADRILLAS_VISTAS: { id: CuadrillasVista; icon: LucideIcon; titulo: string }[] = [
+    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
+    { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+  ];
+  const MATERIALES_TAB_ID = `${CATALOGO_PREFIX}materiales-item`;
+  const MATERIALES_VISTAS: { id: MaterialesVista; icon: LucideIcon; titulo: string }[] = [
+    { id: "estanteria", icon: LayoutGrid, titulo: "Modo Estantería" },
+    { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+  ];
+  const renderTabExtra = (tab: EditorTabInfo) => {
+    if (tab.id === CUADRILLAS_TAB_ID) return renderVistaSwitcher(CUADRILLAS_VISTAS, cuadrillasVista, setCuadrillasVista);
+    if (tab.id === MATERIALES_TAB_ID) return renderVistaSwitcher(MATERIALES_VISTAS, materialesVista, setMaterialesVista);
+    return null;
+  };
 
   const renderSidebar = () => {
     if (seccion === "proyectos") {
@@ -486,7 +575,6 @@ export default function App() {
         "separator",
         { label: "Nuevo proyecto", onClick: agregarProyecto, disabled: !portafolioAbierto },
         "separator",
-        { label: "Table", onClick: openTableDemoTab, disabled: !portafolioAbierto },
         { label: "Árbol", onClick: openArbolDemoTab, disabled: !portafolioAbierto },
         { label: "Maestro/detalle", onClick: openMaestroDetalleDemoTab, disabled: !portafolioAbierto },
         { label: "Hoja de cálculo", onClick: openHojaCalculoTab, disabled: !portafolioAbierto },
@@ -551,7 +639,7 @@ export default function App() {
         reload: recargarOrganizaciones,
       }}
     >
-      <div className="flex h-screen flex-col">
+      <WindowFrame>
         <MenuBar
           menus={menus}
           onOpenSettings={openSettingsTab}
@@ -574,6 +662,7 @@ export default function App() {
             <EditorTabs
               tabs={tabs}
               activeId={activeTabId}
+              renderTabExtra={renderTabExtra}
               onSelect={setActiveTabId}
               onClose={closeTab}
               actions={tabActions}
@@ -609,7 +698,7 @@ export default function App() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </WindowFrame>
     </OrganizacionContext.Provider>
   );
 }

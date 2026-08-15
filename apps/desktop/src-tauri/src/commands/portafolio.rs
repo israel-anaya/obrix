@@ -64,6 +64,7 @@ pub async fn crear_portafolio(
     .await
     .map_err(|e| e.to_string())?;
 
+    let path_str = path.display().to_string();
     state
         .reemplazar(PortafolioActivo {
             portafolio,
@@ -71,7 +72,8 @@ pub async fn crear_portafolio(
             usuario_id_activo: usuario.id,
         })
         .await;
-    Ok(path.display().to_string())
+    crate::recientes::registrar(&path_str);
+    Ok(path_str)
 }
 
 #[tauri::command]
@@ -102,6 +104,7 @@ pub async fn abrir_portafolio(
         .await
         .map_err(|e| e.to_string())?;
         if membresia.is_some() {
+            let path_str = path.display().to_string();
             state
                 .reemplazar(PortafolioActivo {
                     portafolio,
@@ -109,9 +112,8 @@ pub async fn abrir_portafolio(
                     usuario_id_activo: usuario.id,
                 })
                 .await;
-            return Ok(ResultadoAbrirPortafolio::Activado {
-                path: path.display().to_string(),
-            });
+            crate::recientes::registrar(&path_str);
+            return Ok(ResultadoAbrirPortafolio::Activado { path: path_str });
         }
     }
 
@@ -192,7 +194,13 @@ pub async fn confirmar_apertura_portafolio_ajeno(
             usuario_id_activo: usuario.id,
         })
         .await;
+    crate::recientes::registrar(&path);
     Ok(Some(path))
+}
+
+#[tauri::command]
+pub fn listar_portafolios_recientes() -> Result<Vec<crate::recientes::PortafolioReciente>, String> {
+    crate::recientes::listar()
 }
 
 /// Cambia la organización activa del portafolio abierto — falla si la
