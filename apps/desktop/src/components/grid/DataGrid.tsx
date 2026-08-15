@@ -1088,7 +1088,15 @@ export const DataGrid = forwardRef<
             }
             return (
             <table
-              className="w-full border-collapse border-l border-t border-border text-sm"
+              // `border-separate` (con `border-spacing: 0`) y no
+              // `border-collapse`: con los bordes colapsados, la línea de 1px
+              // la pinta la tabla y no la celda, así que no viaja con el
+              // `<thead>` pegado — y por esa rendija se alcanzaba a ver el
+              // texto de las filas que pasan por debajo. Cada celda dibuja solo
+              // su borde derecho e inferior, de modo que sin colapsar tampoco
+              // se duplican entre vecinas, y las medidas no cambian: los bordes
+              // van dentro de la caja de la celda (ver ROW_HEIGHT).
+              className="w-full border-separate border-spacing-0 border-l border-t border-border text-sm"
               style={tableStyle as React.CSSProperties}
             >
               <thead ref={theadRef} className="sticky top-0 z-20 bg-muted">

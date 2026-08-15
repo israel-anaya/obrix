@@ -44,6 +44,35 @@ test.describe("virtualización", () => {
   });
 });
 
+/**
+ * El encabezado va pegado arriba: mientras las filas pasan por debajo no debe
+ * dejar ver nada de ellas, ni siquiera por la línea de 1px de su borde (era el
+ * caso con `border-collapse`, ver el `<table>` del `DataGrid`).
+ *
+ * Se compara entre dos posiciones ya desplazadas y no contra la tabla en
+ * reposo: al quedar pegado, el encabezado se rasteriza con otro desfase de
+ * subpíxel y el texto cambia de antialias sin que nada se transparente.
+ */
+test.describe("encabezado opaco", () => {
+  test("no deja ver las filas que pasan por debajo", async ({ page }) => {
+    await ready(page);
+    const caja = scroller(page);
+    const rect = (await caja.boundingBox())!;
+    const alto = await page.locator("thead").evaluate((el) => el.getBoundingClientRect().height);
+    // Estrictamente dentro del encabezado: el último medio pixel ya es cuerpo.
+    const clip = { x: rect.x, y: rect.y, width: 700, height: Math.floor(alto) - 1 };
+    const banda = async (top: number) => {
+      await caja.evaluate((el, t) => (el.scrollTop = t), top);
+      await page.waitForTimeout(120);
+      return (await page.screenshot({ clip })).toString("base64");
+    };
+    const pegado = await banda(40);
+    for (const top of [46, 53, 61]) {
+      expect(await banda(top), `con scrollTop=${top}`).toBe(pegado);
+    }
+  });
+});
+
 test.describe("columnas ancladas", () => {
   test("siguen pegadas al borde al hacer scroll horizontal", async ({ page }) => {
     await ready(page);

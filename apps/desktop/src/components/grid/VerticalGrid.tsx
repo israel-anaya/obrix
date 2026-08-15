@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { activeGridClipboard, setActiveGridClipboard, type GridClipboard } from "./gridClipboard";
 import {
+  DRAFT_PINNED_CELL_CLASS,
   DRAFT_ROW_CLASS,
   GridUiContext,
   useDraftKind,
@@ -64,12 +65,26 @@ const MIN_RECORD_WIDTH = 64;
 const LABEL_KEY = "__label";
 
 /**
+ * Las dos tablas —encabezado y cuerpo— comparten clases para que sus columnas
+ * midan igual. `border-separate` y no `border-collapse`: con los bordes
+ * colapsados la línea de 1px la pinta la tabla y no la celda, así que no viaja
+ * con la columna de etiquetas al desplazarse en horizontal. Cada celda dibuja
+ * solo su borde derecho e inferior, de modo que sin colapsar tampoco se
+ * duplican entre vecinas.
+ */
+const TABLA = "border-separate border-spacing-0 border-l border-t border-border text-xs";
+
+/**
  * Agrupa los campos (renglones) bajo un título que abarca todo el ancho. Un
  * grupo es hoja (`fields`, en el orden en que se pintan) o rama (`groups`,
  * anidados) — exactamente uno de los dos.
  */
 export interface VerticalGridGroup {
   id: string;
+  /**
+   * Vacío (`""`, `null`, `false`) o ausente: el grupo no pinta renglón de
+   * sección, solo junta sus campos — sirve para agrupar sin encabezar.
+   */
   title?: ReactNode;
   /** Sustituye el tamaño/peso del título (los de primer nivel son `text-sm font-semibold`; los anidados, una barra más ligera). */
   titleClassName?: string;
@@ -81,16 +96,34 @@ type FlatItem =
   | { type: "title"; id: string; title: ReactNode; className?: string; depth: number }
   | { type: "field"; field: string };
 
+function tieneTitulo(title: ReactNode): boolean {
+  return title !== undefined && title !== null && title !== false && title !== "";
+}
+
 function flatten(groups: VerticalGridGroup[], depth = 0): FlatItem[] {
   const out: FlatItem[] = [];
   for (const g of groups) {
-    if (g.title !== undefined) {
+    const titulado = tieneTitulo(g.title);
+    if (titulado) {
       out.push({ type: "title", id: g.id, title: g.title, className: g.titleClassName, depth });
     }
-    if (g.groups) out.push(...flatten(g.groups, depth + 1));
+    // Un grupo sin título no cuenta como nivel: sus hijos se pintan con la
+    // jerarquía que se ve, no con la del árbol — si no, el primer título
+    // visible saldría con el estilo de subsección sin nada encima.
+    if (g.groups) out.push(...flatten(g.groups, titulado ? depth + 1 : depth));
     else if (g.fields) for (const field of g.fields) out.push({ type: "field", field });
   }
   return out;
+}
+
+/**
+ * Altura fija para el contenido de una celda del encabezado. Va en un `<div>`
+ * interno y no en el `<th>` a propósito: en una tabla, `height` sobre la celda
+ * es un mínimo —el contenido más alto la estira igual—, así que lo que fija la
+ * altura de verdad es el bloque de adentro, recortando lo que sobre.
+ */
+function fixedHeight(height: number | undefined): React.CSSProperties | undefined {
+  return height === undefined ? undefined : { height, overflow: "hidden" };
 }
 
 /** El texto que titula la columna de un registro cuando no hay `renderRecordHeader`. */
@@ -140,8 +173,8 @@ const RecordCell = memo(function RecordCell({
  */
 const RecordHeader = memo(function RecordHeader({
   row,
-  index,
   label,
+  height,
   selected,
   selectionMode,
   onToggleSelected,
@@ -150,8 +183,8 @@ const RecordHeader = memo(function RecordHeader({
   containerRef,
 }: {
   row: Row;
-  index: number;
   label: ReactNode;
+  height?: number;
   selected: boolean;
   selectionMode: "multiple" | "single";
   onToggleSelected: (rowId: string, checked: boolean) => void;
@@ -168,10 +201,13 @@ const RecordHeader = memo(function RecordHeader({
       scope="col"
       className={cn(
         "relative border-b border-r border-border px-1.5 py-1 align-bottom text-xs font-medium",
-        draftKind !== "" ? DRAFT_ROW_CLASS[draftKind] : visuallySelected ? "bg-accent" : "bg-muted",
+        // Va pegado arriba (`sticky` en el `<thead>`), así que el tinte del
+        // borrador se pinta en su versión opaca: el normal es translúcido en
+        // tema oscuro y dejaría ver los renglones que pasan por debajo.
+        draftKind !== "" ? DRAFT_PINNED_CELL_CLASS[draftKind] : visuallySelected ? "bg-accent" : "bg-muted",
       )}
     >
-      <div className="flex min-w-0 flex-col items-center gap-0.5">
+      <div className="flex min-w-0 flex-col items-center justify-end gap-0.5" style={fixedHeight(height)}>
         <div className="flex w-full min-w-0 items-center gap-1">
           {selectionMode === "multiple" && (
             <input
@@ -181,7 +217,8 @@ const RecordHeader = memo(function RecordHeader({
               onClick={(e) => e.stopPropagation()}
             />
           )}
-          <span className="text-[10px] tabular-nums text-muted-foreground">{index + 1}</span>
+          {/* Sin número de posición: al registro lo nombra su propio título, y
+              el número sería posición en lo filtrado, no identidad. */}
           <span
             title={typeof label === "string" ? label : undefined}
             className={cn("min-w-0 flex-1 truncate text-center", active && "text-foreground")}
@@ -189,7 +226,13 @@ const RecordHeader = memo(function RecordHeader({
             {label}
           </span>
         </div>
-        <RowActions rowId={row._id} />
+        {/* El espacio de los ✓/✗ está siempre reservado, aunque el registro no
+            esté en borrador: si apareciera al empezar a editar, el encabezado
+            crecería de golpe y con `recordHeaderHeight` fija se recortarían los
+            botones — que son la única forma de confirmar con el ratón. */}
+        <div className="flex h-[18px] w-full shrink-0 items-center justify-center">
+          <RowActions rowId={row._id} />
+        </div>
       </div>
       <ResizeHandle
         resizing={resizing}
@@ -215,7 +258,8 @@ const RecordHeader = memo(function RecordHeader({
  * Conserva del `DataGrid` lo que sí tiene sentido transpuesto: selección
  * simple/múltiple, alta y baja de registros (`ref`), búsqueda (propia o del
  * padre), portapapeles en TSV, menú contextual, encabezado y columna de
- * etiquetas fijos, ancho ajustable, skeleton de carga y el aviso de error de
+ * etiquetas fijos, ancho ajustable (y altura fija de encabezado si se pide,
+ * ver `recordHeaderHeight`), skeleton de carga y el aviso de error de
  * guardado.
  *
  * Las flechas quedan invertidas para calzar con el dibujo: ↑/↓ camina los
@@ -260,6 +304,13 @@ export const VerticalGrid = forwardRef<
     labelWidth?: number;
     /** Ancho inicial de cada registro; el usuario puede ajustarlo (todos a la vez). */
     recordWidth?: number;
+    /**
+     * Altura fija (px) del encabezado de registros — el mismo alto para todos,
+     * aunque uno traiga un `renderRecordHeader` de dos renglones y otro de uno.
+     * Sin esto la marca su contenido. Lo que no quepa se recorta, así que hay
+     * que dejar lugar para los ✓/✗ del borrador (18px, siempre reservados).
+     */
+    recordHeaderHeight?: number;
     /** Botón "+" al final del encabezado, además de `ref.addRow()` — solo si hay con qué dar de alta. */
     showAddButton?: boolean;
   } & DataGridPersistProps
@@ -285,6 +336,7 @@ export const VerticalGrid = forwardRef<
     loading = false,
     labelWidth: labelWidthProp = LABEL_WIDTH,
     recordWidth: recordWidthProp = RECORD_WIDTH,
+    recordHeaderHeight,
     showAddButton = true,
   },
   ref,
@@ -364,19 +416,26 @@ export const VerticalGrid = forwardRef<
   // (que repinta el cuerpo entero) va en un render de baja prioridad.
   const deferredSearch = useDeferredValue(search);
 
+  /** El marco: lo que tiene el foco y escucha el teclado (el scroll es del cuerpo). */
+  const frameRef = useRef<HTMLDivElement>(null);
+  /** La tira del encabezado, que sigue en horizontal al cuerpo. */
+  const headRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const theadRef = useRef<HTMLTableSectionElement>(null);
-  // Alto real del `<thead>` (pegado arriba) y ancho de la columna de
-  // etiquetas (pegada a la izquierda): son el margen que hay que respetar al
-  // traer una celda a la vista, para no dejarla debajo de ellos.
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const headerHeightRef = useRef(0);
-  headerHeightRef.current = headerHeight;
+  /** La tira del encabezado sigue al cuerpo en horizontal (en vertical no se mueve). */
+  const sincronizarEncabezado = () => {
+    const head = headRef.current;
+    const body = scrollRef.current;
+    if (head && body) head.scrollLeft = body.scrollLeft;
+  };
 
+  // La barra de scroll vertical del cuerpo se le descuenta al encabezado, que
+  // no tiene ninguna: sin esto las dos tablas dejarían de coincidir a lo ancho
+  // en los sistemas donde la barra ocupa lugar.
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
   useLayoutEffect(() => {
-    const el = theadRef.current;
+    const el = scrollRef.current;
     if (!el) return;
-    const measure = () => setHeaderHeight(el.getBoundingClientRect().height);
+    const measure = () => setScrollbarWidth(el.offsetWidth - el.clientWidth);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
@@ -565,7 +624,7 @@ export const VerticalGrid = forwardRef<
       const c = cell.getBoundingClientRect();
       const b = box.getBoundingClientRect();
       if (c.bottom > b.bottom) box.scrollTop += c.bottom - b.bottom;
-      else if (c.top < b.top + headerHeightRef.current) box.scrollTop -= b.top + headerHeightRef.current - c.top;
+      else if (c.top < b.top) box.scrollTop -= b.top - c.top;
       if (c.right > b.right) box.scrollLeft += c.right - b.right;
       else if (c.left < b.left + labelWidthRef.current) box.scrollLeft -= b.left + labelWidthRef.current - c.left;
     };
@@ -589,7 +648,7 @@ export const VerticalGrid = forwardRef<
   useEffect(() => {
     const onClose = () => {
       if (openCellStore.get()) return;
-      scrollRef.current?.focus({ preventScroll: true });
+      frameRef.current?.focus({ preventScroll: true });
     };
     return openCellStore.subscribe(onClose);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -726,7 +785,7 @@ export const VerticalGrid = forwardRef<
       paste: () => clipboardApiRef.current.paste(),
     };
     const onFocus = () => setActiveGridClipboard(api);
-    const el = scrollRef.current;
+    const el = frameRef.current;
     el?.addEventListener("focusin", onFocus);
     return () => {
       el?.removeEventListener("focusin", onFocus);
@@ -803,7 +862,7 @@ export const VerticalGrid = forwardRef<
 
     if (e.key === "PageUp" || e.key === "PageDown") {
       e.preventDefault();
-      const viewport = (scrollRef.current?.clientHeight ?? 400) - headerHeightRef.current;
+      const viewport = scrollRef.current?.clientHeight ?? 400;
       const perPage = Math.max(1, Math.floor(viewport / ROW_HEIGHT) - 1);
       moveField(e.key === "PageDown" ? perPage : -perPage, false);
       return;
@@ -921,7 +980,7 @@ export const VerticalGrid = forwardRef<
   };
 
   // ── Ratón ────────────────────────────────────────────────────────────────
-  const focusContainer = () => scrollRef.current?.focus({ preventScroll: true });
+  const focusContainer = () => frameRef.current?.focus({ preventScroll: true });
 
   // El foco vive en el contenedor (no en cada celda, que se desmonta al
   // editar): sin él las flechas no llegarían a `onContainerKeyDown`.
@@ -974,6 +1033,31 @@ export const VerticalGrid = forwardRef<
 
   let topLevelTitles = 0;
 
+  // Las dos tablas se dibujan con `table-layout: fixed` y un ancho total
+  // explícito: con el reparto automático, el `<colgroup>` es solo una
+  // sugerencia y cada tabla la estira según su contenido —el cuerpo tiene
+  // texto y el encabezado puede no tenerlo—, así que las columnas dejaban de
+  // coincidir entre una y otra. Fijas, mandan los anchos y nada más.
+  const anchoTotal =
+    labelWidth +
+    (showSkeleton
+      ? skeletonRecords * recordWidthProp
+      : visibleRows.reduce((suma, row) => suma + widthOf(row._id), 0)) +
+    (addColumn ? 32 : 0);
+  const estiloTabla: React.CSSProperties = { width: anchoTotal, tableLayout: "fixed" };
+
+  // Un solo `<colgroup>` para las dos tablas: es lo que las mantiene alineadas
+  // columna por columna.
+  const columnas = (
+    <colgroup>
+      <col style={{ width: labelWidth }} />
+      {showSkeleton
+        ? Array.from({ length: skeletonRecords }, (_, i) => <col key={i} style={{ width: recordWidthProp }} />)
+        : visibleRows.map((row) => <col key={row._id} style={{ width: widthOf(row._id) }} />)}
+      {addColumn && <col style={{ width: 32 }} />}
+    </colgroup>
+  );
+
   return (
     <GridUiContext.Provider value={uiStore}>
       <div className="flex h-full flex-col">
@@ -1019,7 +1103,7 @@ export const VerticalGrid = forwardRef<
           onDeleteRows={() => handle.deleteSelectedRows()}
         >
           <div
-            ref={scrollRef}
+            ref={frameRef}
             tabIndex={0}
             onKeyDown={onContainerKeyDown}
             onMouseDown={onMouseDown}
@@ -1045,31 +1129,33 @@ export const VerticalGrid = forwardRef<
               e.preventDefault();
               applyPaste(parseTsv(e.clipboardData.getData("text/plain")));
             }}
-            className="min-h-0 flex-1 overflow-auto outline-none"
+            className="flex min-h-0 flex-1 flex-col outline-none"
           >
-            <table className="border-collapse border-l border-t border-border text-xs" style={{ width: "max-content" }}>
-              <colgroup>
-                <col style={{ width: labelWidth }} />
-                {showSkeleton
-                  ? Array.from({ length: skeletonRecords }, (_, i) => (
-                      <col key={i} style={{ width: recordWidthProp }} />
-                    ))
-                  : visibleRows.map((row) => <col key={row._id} style={{ width: widthOf(row._id) }} />)}
-                {addColumn && <col style={{ width: 32 }} />}
-              </colgroup>
-              <thead ref={theadRef} className="sticky top-0 z-30">
+            {/* El encabezado vive en su propia tabla, fuera del área que se
+                desplaza, y solo se sincroniza en horizontal. No va pegado con
+                `sticky` sobre el cuerpo a propósito: un encabezado encima del
+                contenido deja una costura de subpíxel por la que, con la
+                pantalla a escalas fraccionarias (125%, 150%), se alcanzan a ver
+                las letras de los renglones que pasan por debajo. Aquí no hay
+                nada debajo del encabezado que pueda asomarse. */}
+            <div ref={headRef} className="shrink-0 overflow-hidden" style={{ paddingRight: scrollbarWidth }}>
+              <table className={TABLA} style={estiloTabla}>
+                {columnas}
+                <thead>
                 <tr>
                   <th
                     scope="col"
                     style={{ width: labelWidth }}
                     className="sticky left-0 z-40 border-b border-r border-border bg-muted px-2 py-1 text-left align-bottom text-xs font-semibold text-muted-foreground"
                   >
-                    <span className="block truncate" title={config.title}>
-                      {config.title}
-                    </span>
+                    <div className="flex flex-col justify-end" style={fixedHeight(recordHeaderHeight)}>
+                      <span className="block truncate" title={config.title}>
+                        {config.title}
+                      </span>
+                    </div>
                     <ResizeHandle
                       resizing={resizingKey === LABEL_KEY}
-                      containerRef={scrollRef}
+                      containerRef={frameRef}
                       onMouseDown={(e) => startResize(LABEL_KEY, e.clientX)}
                       onTouchStart={(e) => {
                         const touch = e.touches[0];
@@ -1080,25 +1166,27 @@ export const VerticalGrid = forwardRef<
                   {showSkeleton
                     ? Array.from({ length: skeletonRecords }, (_, i) => (
                         <th key={i} aria-hidden className="border-b border-r border-border bg-muted px-2 py-1">
-                          <div className="mx-auto h-2.5 w-2/3 animate-pulse rounded bg-muted-foreground/15" />
+                          <div className="flex flex-col justify-end" style={fixedHeight(recordHeaderHeight)}>
+                            <div className="mx-auto h-2.5 w-2/3 animate-pulse rounded bg-muted-foreground/15" />
+                          </div>
                         </th>
                       ))
                     : visibleRows.map((row, index) => (
                         <RecordHeader
                           key={row._id}
                           row={row}
-                          index={index}
                           label={
                             renderRecordHeader?.(row, index) ??
                             (headerColumn ? displayValue(row, headerColumn) : "") ??
                             ""
                           }
+                          height={recordHeaderHeight}
                           selected={!!rowSelection[row._id]}
                           selectionMode={selectionMode}
                           onToggleSelected={toggleSelected}
                           resizing={resizingKey === row._id}
                           onResizeStart={startResize}
-                          containerRef={scrollRef}
+                          containerRef={frameRef}
                         />
                       ))}
                   {addColumn && (
@@ -1115,8 +1203,13 @@ export const VerticalGrid = forwardRef<
                     </th>
                   )}
                 </tr>
-              </thead>
-              <tbody>
+                </thead>
+              </table>
+            </div>
+            <div ref={scrollRef} onScroll={sincronizarEncabezado} className="min-h-0 flex-1 overflow-auto">
+              <table className={cn(TABLA, "border-t-0")} style={estiloTabla}>
+                {columnas}
+                <tbody>
                 {!showSkeleton && visibleRows.length === 0 && (
                   <tr>
                     <td
@@ -1138,14 +1231,22 @@ export const VerticalGrid = forwardRef<
                           className={cn(
                             topLevel
                               ? cn(
-                                  "border-b-2 border-foreground/20 px-4 py-3",
+                                  "border-b-2 border-foreground/20 py-3",
                                   topLevelTitles > 1 && "border-t-2",
                                 )
-                              : "border-b border-r border-border bg-muted/60 px-3 py-1 font-semibold text-foreground",
+                              : "border-b border-r border-border bg-muted/60 py-1 font-semibold text-foreground",
                             item.className ?? (topLevel ? "text-sm font-semibold" : undefined),
                           )}
                         >
-                          {item.title}
+                          {/* La celda abarca todo el ancho, así que su texto se
+                              iría de vista al desplazarse a la derecha: se queda
+                              pegado al borde, encima de la columna de etiquetas,
+                              que es donde el título encabeza a sus campos. El
+                              margen va dentro (no en la celda) para que lo
+                              conserve también ya pegado. */}
+                          <span className={cn("sticky left-0 inline-block", topLevel ? "px-4" : "px-3")}>
+                            {item.title}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -1186,8 +1287,9 @@ export const VerticalGrid = forwardRef<
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
         </RowContextMenu>
 

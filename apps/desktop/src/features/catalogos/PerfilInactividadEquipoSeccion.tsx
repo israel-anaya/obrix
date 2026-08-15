@@ -55,37 +55,66 @@ const CONFIG_VERTICAL: DataGridConfig = {
 };
 
 const GRUPOS_VERTICAL: VerticalGridGroup[] = [
-  { id: "identificacion", title: "Identificación", fields: ["nombre", "activo"] },
+  { id: "identificacion", title: null, fields: ["nombre"] },
   {
-    id: "inactividad",
-    title: "Porcentajes de inactividad",
+    id: "equipo_espera",
+    title: "Maquinaria y equipo en espera ",
     groups: [
       {
-        id: "espera",
-        title: "En espera",
+        id: "costos_fijos_equipo_espera",
+        title: "Costos fijos",
         fields: [
           "espera_depreciacion_porcentaje",
           "espera_inversion_porcentaje",
           "espera_seguro_porcentaje",
           "espera_mantenimiento_porcentaje",
-          "espera_consumo_porcentaje",
-          "espera_operacion_porcentaje",
-        ],
+        ]        
       },
       {
-        id: "reserva",
-        title: "En reserva",
+        id: "costos_x_consumo",
+        title: "Costos por consumo",
+        fields: [
+          "espera_consumo_porcentaje",
+        ]        
+      },
+      {
+        id: "costos_x_operacion_equipo_espera",
+        title: "Costos por operación",
+        fields: [
+          "espera_operacion_porcentaje",
+        ]        
+      },
+    ],
+  },
+  { 
+    id: "equipo_reserva", 
+    title: "Maquinaria y equipo en reserva", 
+    groups: [
+      {
+        id: "costos_fijos_equipo_reserva",
+        title: "Costos fijos",
         fields: [
           "reserva_depreciacion_porcentaje",
           "reserva_inversion_porcentaje",
           "reserva_seguro_porcentaje",
           "reserva_mantenimiento_porcentaje",
-          "reserva_consumo_porcentaje",
-          "reserva_operacion_porcentaje",
-        ],
+        ]        
       },
-    ],
-  },
+      {
+        id: "costos_x_consumo_equipo_reserva",
+        title: "Costos por consumo",
+        fields: [
+          "reserva_consumo_porcentaje",
+        ]        
+      },
+      {
+        id: "costos_x_operacion_equipo_reserva",
+        title: "Costos por operación",
+        fields: [
+          "reserva_operacion_porcentaje",
+        ]        
+      },
+  ]},
   { id: "control", title: "Control", fields: COLUMNAS_CONTROL.map((c) => c.field) },
 ];
 
@@ -284,6 +313,11 @@ export function PerfilInactividadEquipoSeccion() {
                 ref={verticalRef}
                 config={CONFIG_VERTICAL}
                 groups={GRUPOS_VERTICAL}
+                // Encabezado en blanco: el nombre del perfil ya es el primer
+                // renglón de la ficha, repetirlo arriba no agrega nada. Va `""`
+                // y no `null` porque el grid solo cae al valor por omisión
+                // cuando esto es nulo (ver `renderRecordHeader`).
+                renderRecordHeader={() => ""}
                 initialRows={filas}
                 loading={cargando}
                 selectionMode="single"

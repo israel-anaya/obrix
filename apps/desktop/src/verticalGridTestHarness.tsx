@@ -42,7 +42,8 @@ const groups: VerticalGridGroup[] = [
       { id: "reserva", title: "En reserva", fields: ["reserva_depreciacion", "reserva_inversion"] },
     ],
   },
-  { id: "control", title: "Control", fields: ["activo", "created_at"] },
+  // Sin título: agrupa sus campos pero no pinta renglón de sección.
+  { id: "control", title: "", fields: ["activo", "created_at"] },
 ];
 
 function makeRows(n: number): Row[] {
@@ -66,6 +67,7 @@ function Harness() {
   const [cargando, setCargando] = useState(false);
   const [vacio, setVacio] = useState(false);
   const [agrupado, setAgrupado] = useState(true);
+  const [altoFijo, setAltoFijo] = useState(false);
   const [log, setLog] = useState("");
   const ref = useRef<DataGridHandle>(null);
 
@@ -96,6 +98,10 @@ function Harness() {
           agrupado
         </label>
         <label className="flex items-center gap-1">
+          <input data-t="alto" type="checkbox" checked={altoFijo} onChange={(e) => setAltoFijo(e.target.checked)} />
+          alto fijo
+        </label>
+        <label className="flex items-center gap-1">
           <input data-t="fail" type="checkbox" checked={failNext} onChange={(e) => setFailNext(e.target.checked)} />
           fallar guardado
         </label>
@@ -118,6 +124,7 @@ function Harness() {
           ref={ref}
           config={config}
           groups={agrupado ? groups : undefined}
+          recordHeaderHeight={altoFijo ? 48 : undefined}
           selectionMode={single ? "single" : "multiple"}
           initialRows={vacio ? [] : rows}
           loading={cargando}
