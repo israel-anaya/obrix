@@ -65,8 +65,8 @@ impl UsuarioService {
             rol: Set(datos.rol),
             activo: Set(datos.activo),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
         };
         Ok(modelo.insert(repo.conexion()).await?)

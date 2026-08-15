@@ -5,9 +5,9 @@ Convenciones generales:
 - Todas las tablas usan `id UUID` como llave primaria.
 - Campos monetarios y de cantidad usan tipo `decimal` (precisión exacta, nunca
   float) — porcentajes se expresan en base 100 (`8` = 8%), no en fracción.
-- Toda tabla lleva campos de control: `created_at` / `updated_at` (timestamp)
-  y `created_by` / `updated_by` (FK → `usuario`, quién la creó y quién hizo
-  el último cambio) — para colaboración y auditoría. Excepciones: 
+- Toda tabla lleva campos de control: `created_at` / `created_by` y
+  `updated_at` / `updated_by` (timestamp + FK → `usuario`, quién la creó y
+  quién hizo el último cambio) — para colaboración y auditoría. Excepciones: 
   `historial_cambio` (append-only por diseño, ya lleva su propio `usuario_id`
   como autor, no se actualiza nunca).
 - Los enums se listan con sus valores permitidos entre paréntesis.
@@ -15,6 +15,20 @@ Convenciones generales:
 ---
 
 ## 1. Organización y colaboración
+
+### `historial_cambio`
+
+Auditoría append-only. No se actualiza ni se borra.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| entidad | text | nombre de la tabla afectada, ej. `proyecto_presupuesto` |
+| entidad_id | uuid | id del registro afectado |
+| accion | enum | `crear`, `actualizar`, `eliminar` |
+| usuario_id | uuid | FK → usuario, autor del cambio |
+| diff_json | json | snapshot de campos cambiados (antes/después) |
+| created_at | timestamp | |
 
 ### `organizacion`
 
@@ -25,7 +39,8 @@ Convenciones generales:
 | rfc | text | RFC de la persona moral u física titular del despacho/constructora |
 | tipo | enum | `despacho`, `constructora`, `dependencia_publica` |
 | moneda_default_id | uuid | FK → moneda, requerido — moneda con la que arranca la UI al capturar precios (ej. `precio_material`); siempre sembrada con MXN al crear la organización |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
 ### `usuario`
 
@@ -42,7 +57,7 @@ ver vive en `organizacion_usuario`.
 | correo | text | único |
 | rol | enum | `admin`, `propietario`, `editor`, `lector` |
 | activo | bool | cuenta global habilitada para iniciar sesión |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `organizacion_usuario`
 
@@ -54,7 +69,7 @@ ver vive en `organizacion_usuario`.
 | organizacion_id | uuid | FK → organizacion |
 | usuario_id | uuid | FK → usuario |
 | activo | bool | default true — acceso a esta organización revocable sin borrar la cuenta ni la membresía |
-| created_at / updated_at / created_by / updated_by | | `created_by` = quién invitó al usuario |
+| created_at / created_by / updated_at / updated_by | | `created_by` = quién invitó al usuario |
 
 Restricción: única `(organizacion_id, usuario_id)`.
 
@@ -66,27 +81,14 @@ Restricción: única `(organizacion_id, usuario_id)`.
 | organizacion_id | uuid | FK → organizacion |
 | razon_social | text | |
 | rfc | text | |
-| tipo | enum | `privado`, `dependencia_publica` |
+| tipo | enum | `privado`, `gobierno` |
 | contacto_nombre | text | nullable |
 | contacto_correo | text | nullable |
 | contacto_telefono | text | nullable |
 | domicilio_fiscal | text | nullable |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
-### `historial_cambio`
-
-Auditoría append-only. No se actualiza ni se borra.
-
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| proyecto_id | uuid | FK → proyecto |
-| entidad | text | nombre de la tabla afectada, ej. `proyecto_presupuesto` |
-| entidad_id | uuid | id del registro afectado |
-| accion | enum | `crear`, `actualizar`, `eliminar` |
-| usuario_id | uuid | FK → usuario, autor del cambio |
-| diff_json | json | snapshot de campos cambiados (antes/después) |
-| created_at | timestamp | |
 
 ### `comentario`
 
@@ -101,7 +103,9 @@ Polimórfico, estilo colaboración Notion/Linear sobre cualquier entidad.
 | usuario_id | uuid | FK → usuario, autor (equivalente a `created_by`) |
 | texto | text | |
 | resuelto | bool | default false |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ---
 
@@ -121,7 +125,9 @@ conciliación con CFDI de proveedores (catálogo `c_ClaveUnidad` del SAT).
 | clave_sat | text | nullable — clave del catálogo SAT c_ClaveUnidad |
 | descripcion | text | ej. "Metro cuadrado" |
 | tipo_magnitud | enum | `longitud`, `area`, `volumen`, `masa`, `pieza`, `tiempo`, `otro` |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ### `moneda`
 
@@ -136,7 +142,9 @@ para insumos importados).
 | nombre | text | ej. "Peso mexicano" |
 | simbolo | text | ej. `$`, `US$` |
 | decimales | int | número de decimales de la moneda, default 2 |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ### `region`
 
@@ -150,7 +158,9 @@ norte y sureste.
 | nombre | text | ej. "Zona Metropolitana CDMX", "Frontera Norte", "Sureste" |
 | estado | text | entidad federativa |
 | factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ### `familia_insumo`
 
@@ -162,7 +172,9 @@ premezclado").
 | id | uuid | PK |
 | parent_id | uuid | FK → familia_insumo, nullable |
 | nombre | text | |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ---
 
@@ -178,7 +190,9 @@ premezclado").
 | rfc | text | |
 | contacto | text | nullable |
 | calificacion | decimal | nullable — rating interno de confiabilidad, 0–5 |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ### `insumo`
 
@@ -195,8 +209,8 @@ Catálogo maestro a nivel organización — se reutiliza entre proyectos.
 | familia_id | uuid | FK → familia_insumo, nullable |
 | sub_familia_id | uuid | FK → familia_insumo, nullable — debe ser hijo (`parent_id`) de `familia_id` |
 | tags | json | nullable — lista de pares llave/valor libres, definidos por el usuario (ej. `{"norma": "NMX-C-155", "obra_tipo": "hidraulica"}`), sin esquema fijo — no participa en ningún cálculo, solo filtrado/búsqueda en catálogo |
-| activo | bool | default true |
-| created_at / updated_at / created_by / updated_by | | |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
 ---
 
@@ -223,7 +237,7 @@ insumo:
 
 Extensión 1:1 de `insumo` cuando `insumo.tipo = material`. Sin columnas de
 auditoría propias — comparte el ciclo de vida de su `insumo` (mismo
-`insumo_id`), cuyo `created_at`/`updated_at`/`created_by`/`updated_by` ya
+`insumo_id`), cuyo `created_at`/`created_by`/`updated_at`/`updated_by` ya
 cubren la fila completa.
 
 | Campo | Tipo | Notas |
@@ -265,13 +279,13 @@ por declarar la llave.
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| insumo_id | uuid | FK → material (insumo_id) |
+| material_id | uuid | FK → material (insumo_id) |
 | region_id | uuid | FK → region, nullable — ver prioridad de resolución arriba |
 | moneda | text | default `MXN` |
 | precio | decimal | |
 | fecha_vigencia_desde | date | |
 | fecha_vigencia_hasta | date | nullable — null = vigente |
-| created_at / updated_at / created_by / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar el siguiente precio |
+| created_at / created_by / updated_at / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar el siguiente precio |
 
 ### `flete`
 
@@ -289,7 +303,7 @@ precio, para trazabilidad/filtrado.
 | nombre | text | ej. "Planta X", "Cantera Y" |
 | distancia_km | decimal | nullable |
 | notas | text | nullable |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `factor_salario_real`
 
@@ -327,7 +341,7 @@ https://www.youtube.com/watch?v=YFUh-bf7nHQ
 | region_id | uuid | FK → region, nullable — `null` = nacional (sin región específica) |
 | modelo_calculo_json | json | `VariableCalculo[]` — CÓMO se calcula (variables y fórmulas) |
 | parametros_json | json | valores concretos de los parámetros `numero`/`booleano` que declara `modelo_calculo_json` — QUÉ se captura. Nunca incluye parámetros `rango`, ver nota arriba |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `categoria_fasar`
 
@@ -376,7 +390,7 @@ NULL`) debe reforzarse con un índice único parcial o a nivel de aplicación.
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| insumo_id | uuid | FK → categoria_fasar (insumo_id) |
+| categoria_fasar_id | uuid | FK → categoria_fasar (insumo_id) |
 | region_id | uuid | FK → region, nullable — ver prioridad de resolución arriba |
 | salario_base_diario | decimal | salario nominal pactado para esta vigencia/región |
 | factor_salario_real_id | uuid | FK → factor_salario_real elegido para esta vigencia |
@@ -384,49 +398,135 @@ NULL`) debe reforzarse con un índice único parcial o a nivel de aplicación.
 | salario_real_diario | decimal | = salario_base_diario × factor_salario_real, también enviado por el cliente |
 | fecha_vigencia_desde | date | |
 | fecha_vigencia_hasta | date | nullable — null = vigente |
-| created_at / updated_at / created_by / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar la siguiente vigencia |
+| created_at / created_by / updated_at / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar la siguiente vigencia |
 
 ### `cuadrilla`
 
 Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.
 
-Representa un **equipo de trabajo compuesto** (ej. "Cuadrilla de albañilería tipo A" = 1
-oficial + 2 ayudantes; o una cuadrilla de topografía = topógrafo + cadenero
-+ equipo de medición).
-El calculo de un cuadrilla es complejo, pasos de calculo:
-- Primero se calcula sub_total_mano_obra, este es necesario para poder calcular los elementos tipo = equipo_herramienta 
-  (Si cuadrilla_detalle = equipo_herramienta cuadrilla_detalle.costo = sub_total_mano_obra)
-- Segundo se calcula sub_total_herramienta.
-- Finalmente se calcula el costo_total = sub_total_mano_obra + sub_total_herramienta
+Representa un **equipo de trabajo compuesto** (ej. "Cuadrilla de albañilería tipo A"
+= oficial + ayudantes; o una cuadrilla de topografía = topógrafo + cadenero
++ equipo de medición). Tabla delgada, igual que `categoria_fasar`: no guarda
+cantidades ni costos. La receta (quién integra el equipo) vive en
+`cuadrilla_detalle`; la valuación por región (cuánto de cada integrante,
+a qué costo, qué importe) vive en `cuadrilla_costo` /
+`cuadrilla_costo_detalle` — mismo corte que `material`/`precio_material` y
+`categoria_fasar`/`salario_categoria_fasar`.
+
+No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
+región por insumo. Quien consume el costo de la cuadrilla
+(`concepto_componente.precio_unitario`, `basico_auxiliar_componente.importe`,
+`equipo_costo_horario_detalle.costo` si el operador es cuadrilla) toma
+`cuadrilla_costo.costo_total` resuelto por región, no un número en esta
+tabla.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| sub_total_mano_obra | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = categoria_fasar |
-| sub_total_herramienta | decimal | cache = Σ cuadrilla_detalle.importe donde cuadrilla_detalle.tipo = equipo_herramienta |
-| costo_total | decimal | cache = sub_total_mano_obra + sub_total_herramienta (= Σ cuadrilla_detalle.importe) |
 
 Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
-
 ### `cuadrilla_detalle`
 
-Composición **plana, no recursiva** 
-Mantiene las cuadrillas simples y reflejando la realidad
-de campo: un equipo de trabajo es gente y equipo, nunca "un equipo que contiene otro equipo".
+Composición **plana, no recursiva**, compartida entre regiones. Un equipo de
+trabajo es gente y equipo, nunca "un equipo que contiene otro equipo". La
+receta no se copia por región: si un integrante entra o sale, entra o sale
+en todas. `cantidad` / `costo` / `importe` no viven aquí — varían por
+región y cuelgan de `cuadrilla_costo_detalle`.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| cuadrilla_insumo_id | uuid | FK → cuadrilla (insumo_id) |
-| detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `categoria_fasar`) o `equipo_herramienta` |
-| tipo | enum | `categoria_fasar`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla.sub_total_mano_obra` de `cuadrilla.sub_total_herramienta` sin join |
+| cuadrilla_id | uuid | FK → cuadrilla (insumo_id) |
+| detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `categoria_fasar`) o `equipo_herramienta` (con extensión `herramienta`) |
+| tipo | enum | `categoria_fasar`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla_costo.sub_total_mano_obra` de `cuadrilla_costo.sub_total_herramienta` sin join |
 | orden | int | orden de visualización dentro de la cuadrilla |
-| cantidad | decimal | Si tipo = equipo_herramienta, se espera un porcentaje |
-| costo | decimal | referenciado: Si tipo = categoria_fasar costo = salario_categoria_fasar.salario_real_diario vigente, Si tipo = equipo_herramienta costo = cuadrilla.sub_total_mano_obra |
-| importe | decimal | cantidad * costo |
+| created_at / created_by / updated_at / updated_by | | |
 
-| created_at / updated_at / created_by / updated_by | | |
+Restricción: única `(cuadrilla_insumo_id, detalle_insumo_id)`.
+
+Al insertar un renglón de receta hay que insertar también un
+`cuadrilla_costo_detalle` en **cada** `cuadrilla_costo` existente de esa
+cuadrilla (nacional y regionales). Al borrar el renglón, se borran esos
+detalles de valuación.
+
+### `cuadrilla_costo`
+
+Valuación regional de una `cuadrilla` — los tres caches que antes vivían
+en la extensión 1:1. **Sin vigencias**: el costo de la cuadrilla no se
+cotiza solo, se deriva de `salario_categoria_fasar`, que ya historiza por
+fecha. Duplicar la dimensión tiempo aquí desfasaría el cache al registrar
+un salario nuevo. El congelamiento sigue siendo de proyecto
+(`concepto_componente` / `proyecto_presupuesto.precio_unitario`). Al
+cerrar una vigencia de salario se recalcula el `cuadrilla_costo` de esa
+región (y el nacional si el salario tocado es nacional).
+
+`region_id` es **nullable**, igual que en `precio_material` y
+`salario_categoria_fasar`. El costo vigente de una cuadrilla en un
+proyecto se resuelve con la misma prioridad descendente:
+
+1. `(cuadrilla, region_id = región del proyecto)` — valuación regional.
+2. `(cuadrilla, region_id = NULL)` — nacional por defecto, fallback final.
+
+Toda cuadrilla nace con la fila nacional (`region_id = NULL`). Una fila
+regional es opcional: se crea cuando esa zona necesita otras cantidades, o
+cuando se quiere el cache ya resuelto con los salarios de esa región. Al
+crearla se copian las `cantidad` desde la valuación nacional, se resuelve
+`costo` con los salarios vigentes de esa región y se recalcula.
+
+El cálculo se corre **dentro de un** `cuadrilla_costo` (una región), no
+sobre la receta entera:
+
+1. Mano de obra: cada `cuadrilla_costo_detalle` cuyo `cuadrilla_detalle.tipo`
+   = `categoria_fasar` toma `costo` =
+   `salario_categoria_fasar.salario_real_diario` vigente de esa misma
+   región (misma prioridad regional → nacional). Con eso se obtiene
+   `sub_total_mano_obra`.
+2. Herramienta: cada detalle cuyo `cuadrilla_detalle.tipo` =
+   `equipo_herramienta` toma `costo` = el `sub_total_mano_obra` recién
+   calculado de **esta** valuación. Con eso se obtiene
+   `sub_total_herramienta`.
+3. `costo_total` = `sub_total_mano_obra` + `sub_total_herramienta`.
+
+Nota de implementación: igual que en `precio_material`, `NULL` no cuenta
+como igual a `NULL` en una restricción `UNIQUE` estándar, así que la
+unicidad de "una sola valuación por región" (incluyendo cuando `region_id
+IS NULL`) debe reforzarse con un índice único parcial o a nivel de
+aplicación.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| cuadrilla_id | uuid | FK → cuadrilla (insumo_id) |
+| region_id | uuid | FK → region, nullable — ver prioridad de resolución arriba |
+| sub_total_mano_obra | decimal | cache = Σ cuadrilla_costo_detalle.importe donde el `cuadrilla_detalle.tipo` = categoria_fasar, de **esta** valuación |
+| sub_total_herramienta | decimal | cache = Σ cuadrilla_costo_detalle.importe donde el `cuadrilla_detalle.tipo` = equipo_herramienta, de **esta** valuación |
+| costo_total | decimal | cache = sub_total_mano_obra + sub_total_herramienta |
+| created_at / created_by / updated_at / updated_by | | |
+
+### `cuadrilla_costo_detalle`
+
+Números de un renglón de receta **en una valuación**. `region_id` no se
+repite aquí: se hereda de `cuadrilla_costo`, así un renglón no puede
+colgar de una valuación de otra región. Toda valuación tiene exactamente
+un renglón numérico por cada `cuadrilla_detalle` de esa cuadrilla —
+`cantidad = 0` si en esa región el integrante no aplica, sin borrar la
+receta.
+
+`cantidad` es el único campo capturable. `costo` e `importe` son cache y
+los deriva el recálculo del `cuadrilla_costo` padre.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| cuadrilla_costo_id | uuid | FK → cuadrilla_costo |
+| cuadrilla_detalle_id | uuid | FK → cuadrilla_detalle — debe pertenecer a la misma cuadrilla que `cuadrilla_costo.cuadrilla_insumo_id` |
+| cantidad | decimal | **capturable** — jornales/integrantes si el detalle es `categoria_fasar`; porcentaje 0–100 (no fracción 0–1) si es `equipo_herramienta`. Al dar de alta una herramienta en la receta, el default es `herramienta.porcentaje_mano_obra` |
+| costo | decimal | cache: si tipo = categoria_fasar, `salario_categoria_fasar.salario_real_diario` vigente de la región de `cuadrilla_costo`; si tipo = equipo_herramienta, `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación |
+| importe | decimal | cache = cantidad × costo |
+| created_at / created_by / updated_at / updated_by | | |
+
+Restricción: única `(cuadrilla_costo_id, cuadrilla_detalle_id)`.
 
 ### `herramienta`
 
@@ -435,7 +535,7 @@ Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta`
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| porcentaje_mano_obra | int | porcentaje por default |
+| porcentaje_mano_obra | int | porcentaje por default — se copia a `cuadrilla_costo_detalle.cantidad` al integrar la herramienta en una cuadrilla; a partir de ahí la cantidad es de la valuación (puede diferir por región) |
 
 Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
@@ -454,8 +554,13 @@ de respaldo, no asignada a ninguna tarea.
 No hay un porcentaje único sobre `equipo_costo_horario.costo_horario_total`:
 reserva suele conservar inversión y seguro y apagar diesel y operador. Cada
 porcentaje (0–100) se aplica al rubro activo que ya cachea
-`equipo_costo_horario` — los cuatro cargos fijos por separado más
-`subtotal_consumo` y `subtotal_operacion`.
+`equipo_costo_horario` — los cuatro cargos fijos por separado,
+`subtotal_operacion`, y el consumo **partido por naturaleza** (combustible,
+lubricante, llantas), no sobre `subtotal_consumo` entero. CMIC y el
+RLOPSRM desglosan así los costos por consumo; un solo % aplastaría diesel
+(ralentí) y llantas (no se desgastan paradas). El perfil no puede aplicarse
+si las líneas de `equipo_costo_horario_detalle` con `tipo = consumo` no
+llevan `naturaleza`.
 
 No aplica a `herramienta` (es un % sobre mano de obra) ni a
 `equipo_rentado` (la tarifa ya mete ociosidad; horas paradas = más horas de
@@ -476,16 +581,20 @@ inactivo; no fija estos porcentajes.
 | espera_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
 | espera_seguro_porcentaje | decimal | sobre `cf_seguro_hora` |
 | espera_mantenimiento_porcentaje | decimal | sobre `cf_mantenimiento_hora` |
-| espera_consumo_porcentaje | decimal | sobre `subtotal_consumo` |
+| espera_combustible_porcentaje | decimal | sobre Σ importe de detalle `tipo = consumo` y `naturaleza = combustible` |
+| espera_lubricante_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = lubricante` |
+| espera_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
 | espera_operacion_porcentaje | decimal | sobre `subtotal_operacion` (operador) |
 | reserva_depreciacion_porcentaje | decimal | 0–100 — sobre `cf_depreciacion_hora` |
 | reserva_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
 | reserva_seguro_porcentaje | decimal | sobre `cf_seguro_hora` |
 | reserva_mantenimiento_porcentaje | decimal | sobre `cf_mantenimiento_hora` |
-| reserva_consumo_porcentaje | decimal | sobre `subtotal_consumo` |
+| reserva_combustible_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = combustible` |
+| reserva_lubricante_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = lubricante` |
+| reserva_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
 | reserva_operacion_porcentaje | decimal | sobre `subtotal_operacion` |
 | activo | bool | default true |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 Semilla ilustrativa (editable):
 
@@ -495,7 +604,9 @@ Semilla ilustrativa (editable):
 | Inversión | 100 | 100 |
 | Seguro | 100 | 100 |
 | Mantenimiento | 50 | 0 |
-| Consumo | 0 | 0 |
+| Combustible | 0 | 0 |
+| Lubricante | 0 | 0 |
+| Llantas | 0 | 0 |
 | Operación | 100 | 0 |
 
 ### `equipo_costo_horario`
@@ -548,17 +659,25 @@ distinguir **consumo** (diesel, aceites, llantas — insumos `material`) de
 **operación** (el operador, como `salario` o `cuadrilla`, con su cantidad en
 jornales u horas consumidos por hora de máquina).
 
+Cuando `tipo = consumo`, `naturaleza` clasifica el renglón en el desglose
+CMIC/RLOPSRM (combustible, lubricante, llantas). Sin eso,
+`perfil_inactividad_equipo` no puede aplicar un % distinto a diesel y a
+llantas. Piezas especiales y otras fuentes de energía, si se capturan como
+consumo, se tratan como el `naturaleza` que el analista asigne; no hay
+valores extra en el enum todavía.
+
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| equipo_costo_horario_insumo_id | uuid | FK → equipo_costo_horario (insumo_id) |
+| equipo_costo_horario_id | uuid | FK → equipo_costo_horario (insumo_id) |
 | detalle_insumo_id | uuid | FK → insumo — `material` si `tipo = consumo`; `mano_obra`/`cuadrilla` si `tipo = operacion` |
 | tipo | enum | `consumo`, `operacion` |
+| naturaleza | enum | `combustible`, `lubricante`, `llantas` — obligatorio si `tipo = consumo`; `null` si `tipo = operacion` |
 | orden | int | orden de visualización |
 | cantidad | decimal | cantidad consumida (o jornales/horas de operador) por hora de máquina |
-| costo | decimal | precio/costo vigente del insumo referenciado |
+| costo | decimal | precio/costo vigente del insumo referenciado — si es `cuadrilla`, `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |
 | importe | decimal | cache = cantidad × costo |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 
 ### `equipo_rentado`
@@ -626,8 +745,8 @@ usa "mortero" como componente, y "mortero" a su vez es otro auxiliar).
 | componente_insumo_id | uuid | FK → insumo — cualquier tipo, incluyendo otro `basico_auxiliar` o `cuadrilla` (permite recursión) |
 | tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — denormalizado desde `insumo.tipo` del componente, evita un join para saber qué naturaleza tiene la línea |
 | cantidad | decimal | rendimiento del componente por unidad del auxiliar |
-| importe | decimal | cache = cantidad × precio/costo vigente del componente |
-| created_at / updated_at / created_by / updated_by | | |
+| importe | decimal | cache = cantidad × precio/costo vigente del componente — si el componente es `cuadrilla`, el costo es `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |
+| created_at / created_by / updated_at / updated_by | | |
 
 
 ### `concepto`
@@ -651,7 +770,7 @@ eso es responsabilidad de `proyecto_presupuesto`.
 | sub_total_basico_auxiliar | decimal | cache = Σ concepto_componente.importe donde concepto_componente.tipo = basico_auxiliar |
 | costo_total | decimal | cache = sub_total_material + sub_total_mano_obra + sub_total_equipo + sub_total_basico_auxiliar (= Σ concepto_componente.importe) — costo de catálogo, orientativo; no es el costo real de ningún proyecto |
 | activo | bool | default true |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `concepto_componente`
 
@@ -673,10 +792,10 @@ editar el `precio_unitario` copiado.
 | tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — denormalizado de `insumo.tipo` |
 | orden | int | |
 | cantidad | decimal | cantidad de insumo por unidad de concepto |
-| precio_unitario | decimal | precio/costo vigente del insumo al momento de consultar — no historizado, se recalcula (a diferencia de `proyecto_presupuesto.precio_unitario`, que sí se congela por proyecto una vez copiado) |
+| precio_unitario | decimal | precio/costo vigente del insumo al momento de consultar — no historizado, se recalcula (a diferencia de `proyecto_presupuesto.precio_unitario`, que sí se congela por proyecto una vez copiado). Si el insumo es `cuadrilla`, se toma `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |
 | importe | decimal | cache = cantidad × precio_unitario |
 
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ---
 
@@ -709,10 +828,10 @@ región/proyecto aunque el concepto de catálogo sea el mismo).
 | cantidad | decimal | nullable — solo si `tipo = partida`, cantidad contratada de este concepto en el proyecto |
 | precio_unitario | decimal | nullable — solo si `tipo = partida`, copiado de `concepto.costo_total` al instanciar; editable si el proyecto necesita ajustarlo sin tocar el catálogo — no hay matriz de insumos a nivel proyecto, el detalle vive en `concepto_componente` |
 | importe | decimal | nullable — solo si `tipo = partida`, cache = cantidad × precio_unitario |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 | importe | decimal | cache = rendimiento × precio_unitario |
 | importe_herramienta_menor | decimal | cache, solo si el insumo referenciado es `mano_obra`/`cuadrilla` = importe × `porcentaje_herramienta_menor` del insumo — línea visible aparte, no requiere insumo de herramienta en catálogo |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `numero_generador_hoja`
 
@@ -726,7 +845,7 @@ obra.
 | proyecto_presupuesto_id | uuid | FK → proyecto_presupuesto — debe apuntar a un nodo con `tipo = partida` |
 | nombre | text | ej. "Eje A-B, Nivel 1" |
 | orden | int | |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `numero_generador_renglon`
 
@@ -739,7 +858,7 @@ obra.
 | largo / ancho / alto | decimal | nullable — dimensión no usada equivale a factor 1 |
 | subtotal | decimal | cache = cantidad × largo × ancho × alto |
 | orden | int | |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ---
 
@@ -764,7 +883,7 @@ obra. Es la fuente de donde se calculan los porcentajes cacheados en
 | monto_mensual | decimal | |
 | cantidad_meses | decimal | duración estimada de la obra usada para prorratear |
 | importe_total | decimal | cache = monto_mensual × cantidad_meses |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `parametros_indirectos`
 
@@ -784,7 +903,7 @@ renglones. También admiten captura manual directa cuando no se itemiza.
 | porcentaje_financiamiento | decimal | default 0 |
 | tasa_referencia_financiamiento | decimal | nullable — ej. TIIE usada para calcular financiamiento |
 | porcentaje_utilidad | decimal | default 0 |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `cargo_adicional`
 
@@ -801,7 +920,7 @@ porque varía por dependencia y contrato.
 | porcentaje | decimal | |
 | base_calculo | enum | `costo_directo`, `costo_directo_mas_indirectos` |
 | obligatorio | bool | true si es requisito de ley (ej. obra pública federal) |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ---
 
@@ -825,7 +944,7 @@ obligatorias (Art. 48 LOPSRM).
 | amortizacion_anticipo | decimal | cache |
 | retencion_garantia | decimal | cache |
 | monto_neto | decimal | cache = bruto − amortización − retenciones |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `estimacion_concepto`
 
@@ -837,7 +956,7 @@ obligatorias (Art. 48 LOPSRM).
 | cantidad_periodo | decimal | avance de este periodo |
 | cantidad_acumulada | decimal | avance acumulado a la fecha, no puede exceder `proyecto_presupuesto.cantidad` |
 | importe | decimal | cache = cantidad_periodo × precio unitario congelado del concepto |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `anticipo`
 
@@ -848,7 +967,7 @@ obligatorias (Art. 48 LOPSRM).
 | monto | decimal | |
 | porcentaje_del_contrato | decimal | típicamente hasta 30% en obra pública federal |
 | fecha_entrega | date | |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `garantia_fianza`
 
@@ -862,7 +981,7 @@ obligatorias (Art. 48 LOPSRM).
 | monto | decimal | |
 | fecha_emision | date | |
 | fecha_vigencia | date | |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ---
 
@@ -882,7 +1001,7 @@ concepto.
 | fecha_publicacion | date | |
 | licencia | text | nullable |
 | region_id | uuid | FK → region, nullable — algunos bancos son regionales |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ### `banco_precios_item`
 
@@ -896,7 +1015,7 @@ concepto.
 | unidad_id | uuid | FK → unidad_medida |
 | precio | decimal | |
 | matriz_json | json | nullable — si el banco trae análisis detallado de insumos, no solo precio unitario |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |
 
 ---
 
@@ -917,7 +1036,7 @@ cotizaciones en PDF de un proveedor.
 | ruta_o_url | text | |
 | tipo_mime | text | |
 | tamano_bytes | int | |
-| created_at / updated_at / created_by / updated_by | | `created_by` = quién subió el archivo; `updated_by` solo cambia si se reemplaza el archivo |
+| created_at / created_by / updated_at / updated_by | | `created_by` = quién subió el archivo; `updated_by` solo cambia si se reemplaza el archivo |
 
 ---
 
@@ -942,4 +1061,4 @@ cotizaciones en PDF de un proveedor.
 | fecha_termino_contractual | date | nullable |
 | estatus | enum | `borrador`, `en_proceso`, `cerrado`, `cancelado` |
 | modo | enum | `local`, `compartido` — local = archivo aislado, compartido = sincronizado entre colaboradores |
-| created_at / updated_at / created_by / updated_by | | |
+| created_at / created_by / updated_at / updated_by | | |

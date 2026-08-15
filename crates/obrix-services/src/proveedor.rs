@@ -31,6 +31,7 @@ impl ProveedorService {
     ) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
+            .filter(Column::Deleted.eq(false))
             .order_by_asc(Column::RazonSocial)
             .all(repo.conexion())
             .await?)
@@ -49,10 +50,13 @@ impl ProveedorService {
             rfc: Set(datos.rfc),
             contacto: Set(datos.contacto),
             calificacion: Set(datos.calificacion),
+            deleted: Set(false),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         };
         Ok(modelo.insert(repo.conexion()).await?)
     }
@@ -77,8 +81,21 @@ impl ProveedorService {
         Ok(modelo.update(repo.conexion()).await?)
     }
 
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        Entity::delete_by_id(id).exec(repo.conexion()).await?;
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        let mut modelo: ActiveModel = Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("proveedor {id}")))?
+            .into();
+        modelo.deleted = Set(true);
+        modelo.deleted_at = Set(Some(crate::ahora()));
+        modelo.deleted_by = Set(Some(eliminado_por));
+        modelo.update(repo.conexion()).await?;
         Ok(())
     }
 }

@@ -73,8 +73,8 @@ impl EquipoCostoHorarioDetalleService {
             costo: Set(Decimal::ZERO),
             importe: Set(Decimal::ZERO),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(&txn)
@@ -409,8 +409,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(portafolio.conexion())
@@ -424,9 +424,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -439,9 +442,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -456,9 +462,12 @@ mod tests {
             descripcion: Set("Hora".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Tiempo),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -473,9 +482,12 @@ mod tests {
             descripcion: Set("Litro".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -490,9 +502,12 @@ mod tests {
             descripcion: Set("Jornal".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
             created_at: Set(now),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await

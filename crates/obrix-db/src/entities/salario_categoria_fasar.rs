@@ -25,8 +25,8 @@ pub struct Model {
     pub fecha_vigencia_desde: String,
     pub fecha_vigencia_hasta: Option<String>,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 

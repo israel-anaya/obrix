@@ -13,10 +13,13 @@ pub struct Model {
     pub contacto_correo: Option<String>,
     pub contacto_telefono: Option<String>,
     pub domicilio_fiscal: Option<String>,
+    pub deleted: bool,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
+    pub deleted_at: Option<String>,
+    pub deleted_by: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

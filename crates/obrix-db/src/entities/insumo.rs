@@ -14,8 +14,8 @@ pub struct Model {
     pub sub_familia_id: Option<String>,
     pub activo: bool,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 

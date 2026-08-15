@@ -105,8 +105,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         };
         admin
@@ -121,9 +121,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-admin".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         };
         mxn.insert(portafolio.conexion())
             .await
@@ -136,9 +139,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-mxn".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-admin".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         };
         org.insert(portafolio.conexion())
             .await
@@ -155,9 +161,12 @@ mod tests {
             contacto_telefono: Set(None),
             domicilio_fiscal: Set(None),
             created_at: Set(now),
-            updated_at: Set(None),
             created_by: Set("usr-admin".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         };
         cli.insert(portafolio.conexion())
             .await

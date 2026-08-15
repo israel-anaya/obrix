@@ -107,8 +107,8 @@ impl FactorSalarioRealService {
             modelo_calculo_json: Set(modelo_calculo_json),
             parametros_json: Set(parametros_json),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
         };
         Ok(modelo.insert(repo.conexion()).await?)
@@ -165,7 +165,10 @@ impl DatosIniciales for FactorSalarioRealService {
             admin.id.clone(),
         )
         .await?;
-        let regiones = region::Entity::find().all(repo.conexion()).await?;
+        let regiones = region::Entity::find()
+            .filter(region::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
         for r in regiones {
             Self::crear(
                 repo,

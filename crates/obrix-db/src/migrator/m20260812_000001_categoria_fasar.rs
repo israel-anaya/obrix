@@ -79,12 +79,12 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(SalarioCategoriaFasar::UpdatedAt).text())
                     .col(
                         ColumnDef::new(SalarioCategoriaFasar::CreatedBy)
                             .text()
                             .not_null(),
                     )
+                    .col(ColumnDef::new(SalarioCategoriaFasar::UpdatedAt).text())
                     .col(ColumnDef::new(SalarioCategoriaFasar::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -176,7 +176,7 @@ enum SalarioCategoriaFasar {
     FechaVigenciaDesde,
     FechaVigenciaHasta,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }

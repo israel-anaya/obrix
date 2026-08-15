@@ -53,7 +53,11 @@ pub async fn delete_unidad_medida(
 ) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    UnidadMedidaService::eliminar(activo.portafolio.as_ref(), id)
+    UnidadMedidaService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

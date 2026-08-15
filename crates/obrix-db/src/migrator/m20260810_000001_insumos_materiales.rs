@@ -17,10 +17,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Proveedor::Rfc).text().not_null())
                     .col(ColumnDef::new(Proveedor::Contacto).text())
                     .col(ColumnDef::new(Proveedor::Calificacion).text())
+                    .col(
+                        ColumnDef::new(Proveedor::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(Proveedor::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Proveedor::UpdatedAt).text())
                     .col(ColumnDef::new(Proveedor::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(Proveedor::UpdatedAt).text())
                     .col(ColumnDef::new(Proveedor::UpdatedBy).text())
+                    .col(ColumnDef::new(Proveedor::DeletedAt).text())
+                    .col(ColumnDef::new(Proveedor::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Proveedor::Table, Proveedor::OrganizacionId)
@@ -35,6 +43,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Proveedor::Table, Proveedor::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Proveedor::Table, Proveedor::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -64,8 +77,8 @@ impl MigrationTrait for Migration {
                             .default(true),
                     )
                     .col(ColumnDef::new(Insumo::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Insumo::UpdatedAt).text())
                     .col(ColumnDef::new(Insumo::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(Insumo::UpdatedAt).text())
                     .col(ColumnDef::new(Insumo::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -160,8 +173,8 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(PrecioMaterial::FechaVigenciaHasta).text())
                     .col(ColumnDef::new(PrecioMaterial::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(PrecioMaterial::UpdatedAt).text())
                     .col(ColumnDef::new(PrecioMaterial::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(PrecioMaterial::UpdatedAt).text())
                     .col(ColumnDef::new(PrecioMaterial::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -247,10 +260,13 @@ enum Proveedor {
     Rfc,
     Contacto,
     Calificacion,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -266,8 +282,8 @@ enum Insumo {
     SubFamiliaId,
     Activo,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }
 
@@ -291,7 +307,7 @@ enum PrecioMaterial {
     FechaVigenciaDesde,
     FechaVigenciaHasta,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }

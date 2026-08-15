@@ -81,8 +81,8 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(CuadrillaDetalle::Costo).decimal().not_null())
                     .col(ColumnDef::new(CuadrillaDetalle::Importe).decimal().not_null())
                     .col(ColumnDef::new(CuadrillaDetalle::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(CuadrillaDetalle::UpdatedAt).text())
                     .col(ColumnDef::new(CuadrillaDetalle::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(CuadrillaDetalle::UpdatedAt).text())
                     .col(ColumnDef::new(CuadrillaDetalle::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -157,7 +157,7 @@ enum CuadrillaDetalle {
     Costo,
     Importe,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }

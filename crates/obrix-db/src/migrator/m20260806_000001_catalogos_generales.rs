@@ -32,8 +32,8 @@ impl MigrationTrait for Migration {
                             .default(true),
                     )
                     .col(ColumnDef::new(Usuario::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Usuario::UpdatedAt).text())
                     .col(ColumnDef::new(Usuario::CreatedBy).text())
+                    .col(ColumnDef::new(Usuario::UpdatedAt).text())
                     .col(ColumnDef::new(Usuario::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -63,10 +63,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Organizacion::RazonSocial).text().not_null())
                     .col(ColumnDef::new(Organizacion::Rfc).text().not_null())
                     .col(ColumnDef::new(Organizacion::Tipo).text().not_null())
+                    .col(
+                        ColumnDef::new(Organizacion::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(Organizacion::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Organizacion::UpdatedAt).text())
                     .col(ColumnDef::new(Organizacion::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(Organizacion::UpdatedAt).text())
                     .col(ColumnDef::new(Organizacion::UpdatedBy).text())
+                    .col(ColumnDef::new(Organizacion::DeletedAt).text())
+                    .col(ColumnDef::new(Organizacion::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Organizacion::Table, Organizacion::CreatedBy)
@@ -75,6 +83,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Organizacion::Table, Organizacion::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Organizacion::Table, Organizacion::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -108,8 +121,8 @@ impl MigrationTrait for Migration {
                             .default(true),
                     )
                     .col(ColumnDef::new(OrganizacionUsuario::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(OrganizacionUsuario::UpdatedAt).text())
                     .col(ColumnDef::new(OrganizacionUsuario::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(OrganizacionUsuario::UpdatedAt).text())
                     .col(ColumnDef::new(OrganizacionUsuario::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -158,10 +171,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Cliente::ContactoCorreo).text())
                     .col(ColumnDef::new(Cliente::ContactoTelefono).text())
                     .col(ColumnDef::new(Cliente::DomicilioFiscal).text())
+                    .col(
+                        ColumnDef::new(Cliente::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(Cliente::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Cliente::UpdatedAt).text())
                     .col(ColumnDef::new(Cliente::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(Cliente::UpdatedAt).text())
                     .col(ColumnDef::new(Cliente::UpdatedBy).text())
+                    .col(ColumnDef::new(Cliente::DeletedAt).text())
+                    .col(ColumnDef::new(Cliente::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Cliente::Table, Cliente::OrganizacionId)
@@ -176,6 +197,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Cliente::Table, Cliente::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Cliente::Table, Cliente::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -199,10 +225,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(UnidadMedida::ClaveSat).text())
                     .col(ColumnDef::new(UnidadMedida::Descripcion).text().not_null())
                     .col(ColumnDef::new(UnidadMedida::TipoMagnitud).text().not_null())
+                    .col(
+                        ColumnDef::new(UnidadMedida::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(UnidadMedida::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(UnidadMedida::UpdatedAt).text())
                     .col(ColumnDef::new(UnidadMedida::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(UnidadMedida::UpdatedAt).text())
                     .col(ColumnDef::new(UnidadMedida::UpdatedBy).text())
+                    .col(ColumnDef::new(UnidadMedida::DeletedAt).text())
+                    .col(ColumnDef::new(UnidadMedida::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(UnidadMedida::Table, UnidadMedida::CreatedBy)
@@ -211,6 +245,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(UnidadMedida::Table, UnidadMedida::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(UnidadMedida::Table, UnidadMedida::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -226,10 +265,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Region::Nombre).text().not_null())
                     .col(ColumnDef::new(Region::Estado).text().not_null())
                     .col(ColumnDef::new(Region::FactorAjuste).text())
+                    .col(
+                        ColumnDef::new(Region::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(Region::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Region::UpdatedAt).text())
                     .col(ColumnDef::new(Region::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(Region::UpdatedAt).text())
                     .col(ColumnDef::new(Region::UpdatedBy).text())
+                    .col(ColumnDef::new(Region::DeletedAt).text())
+                    .col(ColumnDef::new(Region::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Region::Table, Region::CreatedBy)
@@ -238,6 +285,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Region::Table, Region::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Region::Table, Region::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -257,10 +309,18 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(FamiliaInsumo::ParentId).text())
                     .col(ColumnDef::new(FamiliaInsumo::Nombre).text().not_null())
+                    .col(
+                        ColumnDef::new(FamiliaInsumo::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(FamiliaInsumo::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(FamiliaInsumo::UpdatedAt).text())
                     .col(ColumnDef::new(FamiliaInsumo::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(FamiliaInsumo::UpdatedAt).text())
                     .col(ColumnDef::new(FamiliaInsumo::UpdatedBy).text())
+                    .col(ColumnDef::new(FamiliaInsumo::DeletedAt).text())
+                    .col(ColumnDef::new(FamiliaInsumo::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(FamiliaInsumo::Table, FamiliaInsumo::ParentId)
@@ -275,6 +335,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(FamiliaInsumo::Table, FamiliaInsumo::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(FamiliaInsumo::Table, FamiliaInsumo::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -301,10 +366,18 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(2),
                     )
+                    .col(
+                        ColumnDef::new(Moneda::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(Moneda::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(Moneda::UpdatedAt).text())
                     .col(ColumnDef::new(Moneda::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(Moneda::UpdatedAt).text())
                     .col(ColumnDef::new(Moneda::UpdatedBy).text())
+                    .col(ColumnDef::new(Moneda::DeletedAt).text())
+                    .col(ColumnDef::new(Moneda::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Moneda::Table, Moneda::CreatedBy)
@@ -313,6 +386,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Moneda::Table, Moneda::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Moneda::Table, Moneda::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -436,10 +514,13 @@ enum Organizacion {
     RazonSocial,
     Rfc,
     Tipo,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -451,8 +532,8 @@ enum Usuario {
     Rol,
     Activo,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }
 
@@ -464,8 +545,8 @@ enum OrganizacionUsuario {
     UsuarioId,
     Activo,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }
 
@@ -481,10 +562,13 @@ enum Cliente {
     ContactoCorreo,
     ContactoTelefono,
     DomicilioFiscal,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -497,10 +581,13 @@ enum UnidadMedida {
     ClaveSat,
     Descripcion,
     TipoMagnitud,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -510,10 +597,13 @@ enum Region {
     Nombre,
     Estado,
     FactorAjuste,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -522,10 +612,13 @@ enum FamiliaInsumo {
     Id,
     ParentId,
     Nombre,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -536,10 +629,13 @@ enum Moneda {
     Nombre,
     Simbolo,
     Decimales,
+    Deleted,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]

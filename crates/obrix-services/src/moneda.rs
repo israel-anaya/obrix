@@ -1,6 +1,8 @@
 use obrix_db::entities::moneda::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, QueryOrder};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+};
 
 use crate::usuario::UsuarioService;
 use crate::{nuevo_id, DatosIniciales, ServiceError};
@@ -21,7 +23,11 @@ pub struct MonedaService;
 
 impl MonedaService {
     pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
-        Ok(Entity::find().order_by_asc(Column::Codigo).all(repo.conexion()).await?)
+        Ok(Entity::find()
+            .filter(Column::Deleted.eq(false))
+            .order_by_asc(Column::Codigo)
+            .all(repo.conexion())
+            .await?)
     }
 
     pub async fn crear(
@@ -35,10 +41,13 @@ impl MonedaService {
             nombre: Set(datos.nombre),
             simbolo: Set(datos.simbolo),
             decimales: Set(datos.decimales),
+            deleted: Set(false),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         };
         Ok(modelo.insert(repo.conexion()).await?)
     }
@@ -63,8 +72,21 @@ impl MonedaService {
         Ok(modelo.update(repo.conexion()).await?)
     }
 
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        Entity::delete_by_id(id).exec(repo.conexion()).await?;
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        let mut modelo: ActiveModel = Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("moneda {id}")))?
+            .into();
+        modelo.deleted = Set(true);
+        modelo.deleted_at = Set(Some(crate::ahora()));
+        modelo.deleted_by = Set(Some(eliminado_por));
+        modelo.update(repo.conexion()).await?;
         Ok(())
     }
 }

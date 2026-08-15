@@ -12,8 +12,8 @@ pub struct Model {
     /// Revoca el acceso a esta organización sin borrar la cuenta ni la membresía.
     pub activo: bool,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 

@@ -48,8 +48,8 @@ pub struct CategoriaFasarCompleto {
     /// (`region_id` nulo) — `None` si nunca se le ha registrado un salario.
     pub salario_vigente: Option<salario_categoria_fasar::Model>,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 
@@ -67,8 +67,8 @@ fn combinar(
         activo: insumo.activo,
         salario_vigente,
         created_at: insumo.created_at,
-        updated_at: insumo.updated_at,
         created_by: insumo.created_by,
+        updated_at: insumo.updated_at,
         updated_by: insumo.updated_by,
     }
 }
@@ -125,8 +125,8 @@ impl CategoriaFasarService {
             sub_familia_id: Set(datos.sub_familia_id),
             activo: Set(datos.activo),
             created_at: Set(ahora),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(&txn)
@@ -201,7 +201,10 @@ impl DatosIniciales for CategoriaFasarService {
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
         let organizacion = OrganizacionService::buscar_admin_obrix(repo).await?;
 
-        let unidades = unidad_medida::Entity::find().all(repo.conexion()).await?;
+        let unidades = unidad_medida::Entity::find()
+            .filter(unidad_medida::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
         // Igual que el import de materiales: mapa en memoria, no un LIKE.
         let unidad_id_por_texto: std::collections::HashMap<String, String> = unidades
             .iter()
@@ -212,7 +215,10 @@ impl DatosIniciales for CategoriaFasarService {
             })
             .collect();
 
-        let familias = familia_insumo::Entity::find().all(repo.conexion()).await?;
+        let familias = familia_insumo::Entity::find()
+            .filter(familia_insumo::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
         let raiz_id_por_nombre: std::collections::HashMap<String, String> = familias
             .iter()
             .filter(|f| f.parent_id.is_none())
@@ -313,8 +319,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(portafolio.conexion())
@@ -328,9 +334,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -343,9 +352,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -360,9 +372,12 @@ mod tests {
             descripcion: Set("Jornal".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -445,8 +460,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(portafolio.conexion())
@@ -460,9 +475,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -475,9 +493,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -494,9 +515,12 @@ mod tests {
             descripcion: Set("Metro".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Longitud),
             created_at: Set(now),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await

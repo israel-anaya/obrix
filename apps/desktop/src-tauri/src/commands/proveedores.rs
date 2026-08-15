@@ -51,7 +51,11 @@ pub async fn update_proveedor(
 pub async fn delete_proveedor(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    ProveedorService::eliminar(activo.portafolio.as_ref(), id)
+    ProveedorService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

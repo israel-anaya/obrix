@@ -20,15 +20,22 @@ export interface PortafolioReciente {
  */
 export interface CamposControl {
   created_at: string;
-  updated_at: string | null;
   created_by: string;
+  updated_at: string | null;
   updated_by: string | null;
+}
+
+/** Borrado lógico: no se muestra en grids; `eliminar` solo marca `deleted`. */
+export interface CamposBorradoLogico {
+  deleted: boolean;
+  deleted_at: string | null;
+  deleted_by: string | null;
 }
 
 export const TIPOS_ORGANIZACION = ["despacho", "constructora", "dependencia_publica"] as const;
 export type TipoOrganizacion = (typeof TIPOS_ORGANIZACION)[number];
 
-export interface Organizacion extends CamposControl {
+export interface Organizacion extends CamposControl, CamposBorradoLogico {
   id: string;
   razon_social: string;
   rfc: string;
@@ -81,7 +88,7 @@ export interface OrganizacionMembresia {
 export const TIPOS_CLIENTE = ["privado", "dependencia_publica"] as const;
 export type TipoCliente = (typeof TIPOS_CLIENTE)[number];
 
-export interface Cliente extends CamposControl {
+export interface Cliente extends CamposControl, CamposBorradoLogico {
   id: string;
   organizacion_id: string;
   razon_social: string;
@@ -106,7 +113,7 @@ export interface ClienteData {
 export const TIPOS_MAGNITUD = ["longitud", "area", "volumen", "masa", "pieza", "tiempo", "otro"] as const;
 export type TipoMagnitud = (typeof TIPOS_MAGNITUD)[number];
 
-export interface UnidadMedida extends CamposControl {
+export interface UnidadMedida extends CamposControl, CamposBorradoLogico {
   id: string;
   simbolo: string;
   simbolo_impresion: string;
@@ -125,7 +132,7 @@ export interface UnidadMedidaData {
   tipo_magnitud: TipoMagnitud;
 }
 
-export interface Region extends CamposControl {
+export interface Region extends CamposControl, CamposBorradoLogico {
   id: string;
   nombre: string;
   estado: string;
@@ -138,7 +145,7 @@ export interface RegionData {
   factor_ajuste: string | null;
 }
 
-export interface FamiliaInsumo extends CamposControl {
+export interface FamiliaInsumo extends CamposControl, CamposBorradoLogico {
   id: string;
   parent_id: string | null;
   nombre: string;
@@ -193,7 +200,7 @@ export interface PerfilInactividadEquipoData {
   activo: boolean;
 }
 
-export interface Proveedor extends CamposControl {
+export interface Proveedor extends CamposControl, CamposBorradoLogico {
   id: string;
   organizacion_id: string;
   razon_social: string;
@@ -243,8 +250,8 @@ export interface PrecioMaterial {
   /** `null` = sigue vigente. */
   fecha_vigencia_hasta: string | null;
   created_at: string;
-  updated_at: string | null;
   created_by: string;
+  updated_at: string | null;
   updated_by: string | null;
 }
 
@@ -387,8 +394,8 @@ export interface CuadrillaDetalle {
   costo: string;
   importe: string;
   created_at: string;
-  updated_at: string | null;
   created_by: string;
+  updated_at: string | null;
   updated_by: string | null;
 }
 
@@ -480,8 +487,8 @@ export interface EquipoCostoHorarioDetalle {
   costo: string;
   importe: string;
   created_at: string;
-  updated_at: string | null;
   created_by: string;
+  updated_at: string | null;
   updated_by: string | null;
 }
 
@@ -510,8 +517,8 @@ export interface SalarioCategoriaFasar {
   /** `null` = sigue vigente. */
   fecha_vigencia_hasta: string | null;
   created_at: string;
-  updated_at: string | null;
   created_by: string;
+  updated_at: string | null;
   updated_by: string | null;
 }
 
@@ -625,7 +632,7 @@ export interface FactorSalarioRealData {
   parametros_json: string;
 }
 
-export interface Moneda extends CamposControl {
+export interface Moneda extends CamposControl, CamposBorradoLogico {
   id: string;
   codigo: string;
   nombre: string;

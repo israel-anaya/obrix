@@ -24,8 +24,8 @@ pub struct Model {
     /// Valores de las variables de entrada que ese modelo declara.
     pub parametros_json: String,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 

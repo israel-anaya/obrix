@@ -80,8 +80,8 @@ impl PerfilInactividadEquipoService {
             reserva_operacion_porcentaje: Set(datos.reserva_operacion_porcentaje),
             activo: Set(datos.activo),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(repo.conexion())

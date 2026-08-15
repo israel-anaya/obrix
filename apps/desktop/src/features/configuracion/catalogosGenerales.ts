@@ -33,7 +33,9 @@ export interface CatalogoGeneralDescriptor<T extends { id: string }, Nuevo> {
   filaANuevo: (fila: Row) => Nuevo;
 }
 
-/** Columnas de auditoría comunes a (casi) toda entidad — visibles, nunca editables. */
+/** Columnas de auditoría comunes a (casi) toda entidad — visibles, nunca editables.
+ * `deleted` / `deleted_at` / `deleted_by` no se listan: el grid no las muestra
+ * y `eliminar` solo marca `deleted = true`. */
 const COLUMNAS_CONTROL: DataGridColumn[] = [
   { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
@@ -47,8 +49,8 @@ const COLUMNAS_CONTROL: DataGridColumn[] = [
  */
 function filaControl(m: {
   created_at: string;
-  updated_at: string | null;
   created_by: string | null;
+  updated_at: string | null;
   updated_by: string | null;
 }): Pick<Row, "created_at" | "created_by" | "updated_at" | "updated_by"> {
   return {

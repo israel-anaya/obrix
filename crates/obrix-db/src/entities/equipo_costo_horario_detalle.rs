@@ -25,8 +25,8 @@ pub struct Model {
     pub costo: Decimal,
     pub importe: Decimal,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 

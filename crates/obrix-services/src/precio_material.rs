@@ -121,8 +121,8 @@ impl PrecioMaterialService {
             fecha_vigencia_desde: Set(datos.fecha_vigencia_desde),
             fecha_vigencia_hasta: Set(None),
             created_at: Set(crate::ahora()),
-            updated_at: Set(None),
             created_by: Set(creado_por.to_string()),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(txn)
@@ -188,8 +188,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(portafolio.conexion())
@@ -203,9 +203,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -218,9 +221,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -235,9 +241,12 @@ mod tests {
             descripcion: Set("Metro cuadrado".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Area),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -351,8 +360,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(portafolio.conexion())
@@ -366,9 +375,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -381,9 +393,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -398,9 +413,12 @@ mod tests {
             descripcion: Set("Metro cúbico".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Volumen),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await

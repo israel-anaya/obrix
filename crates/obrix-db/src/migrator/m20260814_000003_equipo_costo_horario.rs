@@ -199,12 +199,12 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::UpdatedAt).text())
                     .col(
                         ColumnDef::new(EquipoCostoHorarioDetalle::CreatedBy)
                             .text()
                             .not_null(),
                     )
+                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::UpdatedAt).text())
                     .col(ColumnDef::new(EquipoCostoHorarioDetalle::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -305,7 +305,7 @@ enum EquipoCostoHorarioDetalle {
     Costo,
     Importe,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }

@@ -30,8 +30,8 @@ pub struct Model {
     pub reserva_operacion_porcentaje: Decimal,
     pub activo: bool,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 

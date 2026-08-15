@@ -100,12 +100,12 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(PerfilInactividadEquipo::UpdatedAt).text())
                     .col(
                         ColumnDef::new(PerfilInactividadEquipo::CreatedBy)
                             .text()
                             .not_null(),
                     )
+                    .col(ColumnDef::new(PerfilInactividadEquipo::UpdatedAt).text())
                     .col(ColumnDef::new(PerfilInactividadEquipo::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -167,7 +167,7 @@ enum PerfilInactividadEquipo {
     ReservaOperacionPorcentaje,
     Activo,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }

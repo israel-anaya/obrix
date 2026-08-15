@@ -53,7 +53,11 @@ pub async fn delete_familia_insumo(
 ) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    FamiliaInsumoService::eliminar(activo.portafolio.as_ref(), id)
+    FamiliaInsumoService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

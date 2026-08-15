@@ -40,8 +40,8 @@ pub struct CuadrillaCompleto {
     pub sub_total_herramienta: Decimal,
     pub costo_total: Decimal,
     pub created_at: String,
-    pub updated_at: Option<String>,
     pub created_by: String,
+    pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 
@@ -58,8 +58,8 @@ pub(crate) fn combinar(insumo: insumo::Model, cuadrilla: cuadrilla::Model) -> Cu
         sub_total_herramienta: cuadrilla.sub_total_herramienta,
         costo_total: cuadrilla.costo_total,
         created_at: insumo.created_at,
-        updated_at: insumo.updated_at,
         created_by: insumo.created_by,
+        updated_at: insumo.updated_at,
         updated_by: insumo.updated_by,
     }
 }
@@ -126,8 +126,8 @@ impl CuadrillaService {
             sub_familia_id: Set(datos.sub_familia_id),
             activo: Set(datos.activo),
             created_at: Set(ahora),
-            updated_at: Set(None),
             created_by: Set(creado_por),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(&txn)
@@ -210,8 +210,8 @@ mod tests {
             rol: Set(usuario::RolUsuario::Admin),
             activo: Set(true),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set(None),
+            updated_at: Set(None),
             updated_by: Set(None),
         }
         .insert(portafolio.conexion())
@@ -225,9 +225,12 @@ mod tests {
             simbolo: Set("$".into()),
             decimales: Set(2),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -240,9 +243,12 @@ mod tests {
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -257,9 +263,12 @@ mod tests {
             descripcion: Set("Cuadrilla".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
             created_at: Set(now.clone()),
-            updated_at: Set(None),
             created_by: Set("usr-1".into()),
+            updated_at: Set(None),
             updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await

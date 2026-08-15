@@ -35,8 +35,8 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(ColumnDef::new(FactorSalarioReal::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(FactorSalarioReal::UpdatedAt).text())
                     .col(ColumnDef::new(FactorSalarioReal::CreatedBy).text().not_null())
+                    .col(ColumnDef::new(FactorSalarioReal::UpdatedAt).text())
                     .col(ColumnDef::new(FactorSalarioReal::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
@@ -81,8 +81,8 @@ enum FactorSalarioReal {
     ModeloCalculoJson,
     ParametrosJson,
     CreatedAt,
-    UpdatedAt,
     CreatedBy,
+    UpdatedAt,
     UpdatedBy,
 }
 

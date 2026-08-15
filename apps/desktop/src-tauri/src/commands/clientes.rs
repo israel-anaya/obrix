@@ -51,7 +51,11 @@ pub async fn update_cliente(
 pub async fn delete_cliente(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    ClienteService::eliminar(activo.portafolio.as_ref(), id)
+    ClienteService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

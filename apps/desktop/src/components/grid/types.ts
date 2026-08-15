@@ -14,7 +14,7 @@ export interface DataGridColumn {
    * another field of the same row (e.g. subfamily based on the chosen family).
    */
   options?: readonly string[] | ((row: Row) => readonly string[]);
-  /** Audit columns (created_at/updated_at/created_by/updated_by) — visible but never editable. */
+  /** Audit columns (created_at/created_by/updated_at/updated_by) — visible but never editable. */
   readOnly?: boolean;
   /** Name of the row field carrying the node depth — when given, the cell is indented like a tree. */
   indentBy?: string;
