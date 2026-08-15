@@ -132,6 +132,21 @@ impl CuadrillaDetalleService {
         Ok(resultado)
     }
 
+    /// Fuerza un recálculo manual de la cuadrilla, sin que haya cambiado su
+    /// composición — trae de nueva cuenta el salario vigente de cada
+    /// integrante y recompone los tres subtotales cache. Útil cuando los
+    /// precios/salarios de los insumos referenciados se actualizaron después
+    /// de la última alta/edición/baja de un renglón.
+    pub async fn recalcular_costos(
+        repo: &dyn PortafolioRepository,
+        cuadrilla_insumo_id: String,
+    ) -> Result<CuadrillaCompleto, ServiceError> {
+        let txn = repo.conexion().begin().await?;
+        let resultado = Self::recalcular(&txn, &cuadrilla_insumo_id).await?;
+        txn.commit().await?;
+        Ok(resultado)
+    }
+
     /// Intercambia el `orden` de una fila con el de su vecina (dentro del
     /// mismo `tipo` — mano de obra y herramienta se ordenan por separado, ya
     /// que la ficha las muestra en tablas distintas). No hace nada si ya es

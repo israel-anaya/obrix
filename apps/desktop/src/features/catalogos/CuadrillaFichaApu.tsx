@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, HardHat, Plus, Users, Wrench, X } from "lucide-react";
+import { ArrowDown, ArrowUp, HardHat, Plus, RefreshCcw, Users, Wrench, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,7 @@ import {
   listHerramientas,
   listUnidadesMedida,
   moveCuadrillaDetalle,
+  recalculateCuadrilla,
   updateCuadrillaDetalle,
 } from "@/lib/tauri";
 import type {
@@ -31,6 +32,7 @@ import type {
   Herramienta,
   UnidadMedida,
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function fmt(valor: string): string {
   const numero = Number(valor);
@@ -69,6 +71,7 @@ export function CuadrillaFichaApu({
   const [agregandoIntegrante, setAgregandoIntegrante] = useState(false);
   const [agregandoHerramienta, setAgregandoHerramienta] = useState(false);
   const [pendingQuitar, setPendingQuitar] = useState<CuadrillaDetalle | null>(null);
+  const [recalculando, setRecalculando] = useState(false);
 
   useEffect(() => {
     listCategoriasFasar().then(setCategorias).catch(() => {});
@@ -101,6 +104,19 @@ export function CuadrillaFichaApu({
     setTotales(cuadrillaActualizada);
     onCambio();
     await cargarDetalles(cuadrilla.id);
+  };
+
+  const recalcular = async () => {
+    setRecalculando(true);
+    setError(null);
+    try {
+      const actualizada = await recalculateCuadrilla(cuadrilla.id);
+      await trasMutar(actualizada);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setRecalculando(false);
+    }
   };
 
   const simboloUnidad = useMemo(
@@ -224,10 +240,24 @@ export function CuadrillaFichaApu({
       <div className="rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
-          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Users size={11} />
-            Análisis de cuadrilla
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <Users size={11} />
+              Análisis de cuadrilla
+            </span>
+            <button
+              type="button"
+              title="Recalcular costos de la cuadrilla desde los insumos vigentes"
+              onClick={() => void recalcular()}
+              disabled={recalculando}
+              className={cn(
+                "rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground",
+                recalculando && "opacity-50",
+              )}
+            >
+              <RefreshCcw size={12} className={cn(recalculando && "animate-spin")} />
+            </button>
+          </div>
 
           <div className="mt-1 flex items-baseline gap-3">
             <span className="font-mono text-lg font-bold tracking-tight">{totales.clave}</span>

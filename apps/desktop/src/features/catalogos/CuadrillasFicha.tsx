@@ -245,7 +245,6 @@ export function CuadrillasFicha() {
             <Buscador value={busqueda} onChange={setBusqueda} />
             <BarraAcciones
               acciones={[
-                { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
                 { icono: Plus, titulo: "Nueva cuadrilla", onClick: iniciarCreacion },
                 {
                   icono: Pencil,
@@ -253,11 +252,15 @@ export function CuadrillasFicha() {
                   onClick: () => seleccionada && iniciarEdicion(seleccionada),
                   disabled: !seleccionada,
                 },
+              ]}
+              menu={[
+                { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
                 {
                   icono: Trash2,
                   titulo: "Eliminar cuadrilla seleccionada",
                   onClick: () => setConfirmandoEliminar(true),
                   disabled: !seleccionada,
+                  destructivo: true,
                 },
               ]}
             />

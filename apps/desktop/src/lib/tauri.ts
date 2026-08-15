@@ -294,6 +294,9 @@ export function deleteCuadrillaDetalle(id: string): Promise<Cuadrilla> {
 export function moveCuadrillaDetalle(id: string, direccion: DireccionMovimiento): Promise<Cuadrilla> {
   return invoke("move_cuadrilla_detalle", { id, direccion });
 }
+export function recalculateCuadrilla(cuadrillaInsumoId: string): Promise<Cuadrilla> {
+  return invoke("recalculate_cuadrilla", { cuadrillaInsumoId });
+}
 
 export function listEquiposCostoHorario(): Promise<EquipoCostoHorario[]> {
   return invoke("list_equipos_costo_horario");

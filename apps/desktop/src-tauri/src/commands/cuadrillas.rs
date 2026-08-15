@@ -118,6 +118,18 @@ pub async fn delete_cuadrilla_detalle(
 }
 
 #[tauri::command]
+pub async fn recalculate_cuadrilla(
+    state: tauri::State<'_, AppState>,
+    cuadrilla_insumo_id: String,
+) -> Result<CuadrillaCompleto, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaDetalleService::recalcular_costos(activo.portafolio.as_ref(), cuadrilla_insumo_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn move_cuadrilla_detalle(
     state: tauri::State<'_, AppState>,
     id: String,
