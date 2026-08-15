@@ -149,13 +149,48 @@ export interface FamiliaInsumoData {
   parent_id?: string | null;
 }
 
+/**
+ * Receta reutilizable (no cuelga de `insumo`, igual que
+ * `factor_salario_real`) para derivar el costo horario en espera y en
+ * reserva de un `equipo_costo_horario` — ver `perfil_inactividad_equipo` en
+ * el diccionario de datos. Cada porcentaje (0-100, como texto para no
+ * perder precisión al viajar por IPC) se aplica al rubro activo homónimo
+ * que ya cachea `equipo_costo_horario`.
+ */
 export interface PerfilInactividadEquipo extends CamposControl {
   id: string;
-  tipo: string;
-  rubro: string;
-  perfil: string;
-  /** Porcentaje, como texto para no perder precisión al viajar por IPC. */
-  valor: string;
+  organizacion_id: string;
+  nombre: string;
+  espera_depreciacion_porcentaje: string;
+  espera_inversion_porcentaje: string;
+  espera_seguro_porcentaje: string;
+  espera_mantenimiento_porcentaje: string;
+  espera_consumo_porcentaje: string;
+  espera_operacion_porcentaje: string;
+  reserva_depreciacion_porcentaje: string;
+  reserva_inversion_porcentaje: string;
+  reserva_seguro_porcentaje: string;
+  reserva_mantenimiento_porcentaje: string;
+  reserva_consumo_porcentaje: string;
+  reserva_operacion_porcentaje: string;
+  activo: boolean;
+}
+
+export interface PerfilInactividadEquipoData {
+  nombre: string;
+  espera_depreciacion_porcentaje: string;
+  espera_inversion_porcentaje: string;
+  espera_seguro_porcentaje: string;
+  espera_mantenimiento_porcentaje: string;
+  espera_consumo_porcentaje: string;
+  espera_operacion_porcentaje: string;
+  reserva_depreciacion_porcentaje: string;
+  reserva_inversion_porcentaje: string;
+  reserva_seguro_porcentaje: string;
+  reserva_mantenimiento_porcentaje: string;
+  reserva_consumo_porcentaje: string;
+  reserva_operacion_porcentaje: string;
+  activo: boolean;
 }
 
 export interface Proveedor extends CamposControl {

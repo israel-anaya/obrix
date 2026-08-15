@@ -189,9 +189,9 @@ fn main() {
             commands::familias_insumo::update_familia_insumo,
             commands::familias_insumo::delete_familia_insumo,
             commands::perfiles_inactividad_equipo::list_perfiles_inactividad_equipo,
+            commands::perfiles_inactividad_equipo::create_perfil_inactividad_equipo,
             commands::perfiles_inactividad_equipo::update_perfil_inactividad_equipo,
-            commands::perfiles_inactividad_equipo::create_perfil_inactividad_equipo_columna,
-            commands::perfiles_inactividad_equipo::delete_perfil_inactividad_equipo_columna,
+            commands::perfiles_inactividad_equipo::delete_perfil_inactividad_equipo,
             commands::monedas::list_monedas,
             commands::monedas::create_moneda,
             commands::monedas::update_moneda,
@@ -452,8 +452,8 @@ mod tests {
             .expect("listar perfiles de inactividad de equipo");
         assert_eq!(
             perfiles_inactividad.len(),
-            48,
-            "2 tipos x 8 rubros x 3 perfiles de data/initial/perfil_inactividad_equipo.csv, sin duplicar"
+            3,
+            "CFE, GCDMX y CMIC de data/initial/perfil_inactividad_equipo.csv, sin duplicar"
         );
 
         let factores = obrix_db::entities::factor_salario_real::Entity::find()

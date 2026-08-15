@@ -23,6 +23,7 @@ import type {
   MaterialData,
   OrganizacionData,
   PerfilInactividadEquipo,
+  PerfilInactividadEquipoData,
   PrecioLoteItem,
   PrecioMaterial,
   PrecioMaterialData,
@@ -183,14 +184,17 @@ export function deleteFamiliaInsumo(id: string): Promise<void> {
 export function listPerfilesInactividadEquipo(): Promise<PerfilInactividadEquipo[]> {
   return invoke("list_perfiles_inactividad_equipo");
 }
-export function updatePerfilInactividadEquipo(id: string, valor: string): Promise<PerfilInactividadEquipo> {
-  return invoke("update_perfil_inactividad_equipo", { id, valor });
+export function createPerfilInactividadEquipo(perfil: PerfilInactividadEquipoData): Promise<PerfilInactividadEquipo> {
+  return invoke("create_perfil_inactividad_equipo", { perfil });
 }
-export function createPerfilInactividadEquipoColumna(perfil: string): Promise<PerfilInactividadEquipo[]> {
-  return invoke("create_perfil_inactividad_equipo_columna", { perfil });
+export function updatePerfilInactividadEquipo(
+  id: string,
+  perfil: PerfilInactividadEquipoData,
+): Promise<PerfilInactividadEquipo> {
+  return invoke("update_perfil_inactividad_equipo", { id, perfil });
 }
-export function deletePerfilInactividadEquipoColumna(perfil: string): Promise<void> {
-  return invoke("delete_perfil_inactividad_equipo_columna", { perfil });
+export function deletePerfilInactividadEquipo(id: string): Promise<void> {
+  return invoke("delete_perfil_inactividad_equipo", { id });
 }
 
 export function listProveedores(): Promise<Proveedor[]> {
