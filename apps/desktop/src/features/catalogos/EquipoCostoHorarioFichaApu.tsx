@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowDown, ArrowUp, Fuel, Gauge, HardHat, Plus, Timer, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Fuel, Gauge, HardHat, Plus, RefreshCcw, Timer, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ import {
   listMateriales,
   listUnidadesMedida,
   moveEquipoCostoHorarioDetalle,
+  recalculateEquipoCostoHorario,
   updateEquipoCostoHorario,
   updateEquipoCostoHorarioDetalle,
 } from "@/lib/tauri";
@@ -142,6 +143,7 @@ export function EquipoCostoHorarioFichaApu({
   const [agregandoConsumo, setAgregandoConsumo] = useState(false);
   const [agregandoOperacion, setAgregandoOperacion] = useState(false);
   const [pendingQuitar, setPendingQuitar] = useState<EquipoCostoHorarioDetalle | null>(null);
+  const [recalculando, setRecalculando] = useState(false);
 
   const [camposCf, setCamposCf] = useState<CamposCf>(() => aCamposCf(equipo));
   const [guardandoCf, setGuardandoCf] = useState(false);
@@ -180,6 +182,19 @@ export function EquipoCostoHorarioFichaApu({
     setCamposCf(aCamposCf(equipoActualizado));
     onCambio();
     await cargarDetalles(equipo.id);
+  };
+
+  const recalcular = async () => {
+    setRecalculando(true);
+    setError(null);
+    try {
+      const actualizado = await recalculateEquipoCostoHorario(equipo.id);
+      await trasMutar(actualizado);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setRecalculando(false);
+    }
   };
 
   const simboloUnidad = useMemo(
@@ -340,12 +355,33 @@ export function EquipoCostoHorarioFichaApu({
   return (
     <div className="w-full">
       <div className="rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
+        {/* Mismo indicador de carga indeterminado que usa DataGrid, para
+            avisar tanto al cargar el detalle como al recalcular. */}
+        {(cargando || recalculando) && (
+          <div aria-hidden className="h-[3px] overflow-hidden rounded-t-lg bg-primary/25">
+            <div className="barra-progreso-indeterminada h-full w-1/3 rounded-full bg-primary" />
+          </div>
+        )}
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
-          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Gauge size={11} />
-            Análisis de costo horario
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <Gauge size={11} className="text-emerald-500" />
+              Análisis de costo horario
+            </span>
+            <button
+              type="button"
+              title="Recalcular costos desde los insumos vigentes"
+              onClick={() => void recalcular()}
+              disabled={recalculando}
+              className={cn(
+                "rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground",
+                recalculando && "opacity-50",
+              )}
+            >
+              <RefreshCcw size={12} className={cn(recalculando && "animate-spin")} />
+            </button>
+          </div>
 
           <div className="mt-1 flex items-baseline gap-3">
             <span className="font-mono text-lg font-bold tracking-tight">{totales.clave}</span>

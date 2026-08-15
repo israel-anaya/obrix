@@ -122,6 +122,18 @@ pub async fn delete_equipo_costo_horario_detalle(
 }
 
 #[tauri::command]
+pub async fn recalculate_equipo_costo_horario(
+    state: tauri::State<'_, AppState>,
+    equipo_costo_horario_insumo_id: String,
+) -> Result<EquipoCostoHorarioCompleto, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    EquipoCostoHorarioDetalleService::recalcular_costos(activo.portafolio.as_ref(), equipo_costo_horario_insumo_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn move_equipo_costo_horario_detalle(
     state: tauri::State<'_, AppState>,
     id: String,

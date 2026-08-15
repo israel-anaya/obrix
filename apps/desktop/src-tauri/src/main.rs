@@ -238,6 +238,7 @@ fn main() {
             commands::equipos_costo_horario::update_equipo_costo_horario_detalle,
             commands::equipos_costo_horario::delete_equipo_costo_horario_detalle,
             commands::equipos_costo_horario::move_equipo_costo_horario_detalle,
+            commands::equipos_costo_horario::recalculate_equipo_costo_horario,
             commands::archivo_json::escribir_archivo_texto,
             commands::archivo_json::leer_archivo_texto,
         ])

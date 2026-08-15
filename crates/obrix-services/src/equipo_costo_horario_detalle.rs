@@ -134,6 +134,22 @@ impl EquipoCostoHorarioDetalleService {
         Ok(resultado)
     }
 
+    /// Fuerza un recálculo manual, sin que haya cambiado la composición —
+    /// trae de nueva cuenta el precio vigente de cada material de consumo y
+    /// el salario/costo del operador de cada renglón de operación, y
+    /// recompone `subtotal_consumo`/`subtotal_operacion`/`cargo_variable_hora`/
+    /// `costo_horario_total`. `cf_cargo_fijo_hora` no cambia — es función
+    /// solo de los 9 valores de captura, no de precios externos.
+    pub async fn recalcular_costos(
+        repo: &dyn PortafolioRepository,
+        equipo_costo_horario_insumo_id: String,
+    ) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
+        let txn = repo.conexion().begin().await?;
+        let resultado = Self::recalcular(&txn, &equipo_costo_horario_insumo_id).await?;
+        txn.commit().await?;
+        Ok(resultado)
+    }
+
     /// Intercambia el `orden` de una fila con el de su vecina (dentro del
     /// mismo `tipo` — consumo y operación se ordenan por separado, ya que la
     /// ficha las muestra en tablas distintas). No hace nada si ya es la

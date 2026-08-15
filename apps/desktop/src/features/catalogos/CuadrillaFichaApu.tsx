@@ -238,11 +238,18 @@ export function CuadrillaFichaApu({
   return (
     <div className="w-full">
       <div className="rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
+        {/* Mismo indicador de carga indeterminado que usa DataGrid, para
+            avisar tanto al cargar el detalle como al recalcular. */}
+        {(cargando || recalculando) && (
+          <div aria-hidden className="h-[3px] overflow-hidden rounded-t-lg bg-primary/25">
+            <div className="barra-progreso-indeterminada h-full w-1/3 rounded-full bg-primary" />
+          </div>
+        )}
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              <Users size={11} />
+              <Users size={11} className="text-emerald-500" />
               Análisis de cuadrilla
             </span>
             <button

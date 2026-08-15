@@ -331,6 +331,9 @@ export function deleteEquipoCostoHorarioDetalle(id: string): Promise<EquipoCosto
 export function moveEquipoCostoHorarioDetalle(id: string, direccion: DireccionMovimiento): Promise<EquipoCostoHorario> {
   return invoke("move_equipo_costo_horario_detalle", { id, direccion });
 }
+export function recalculateEquipoCostoHorario(equipoCostoHorarioInsumoId: string): Promise<EquipoCostoHorario> {
+  return invoke("recalculate_equipo_costo_horario", { equipoCostoHorarioInsumoId });
+}
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {
   return invoke("escribir_archivo_texto", { path, contenido });
