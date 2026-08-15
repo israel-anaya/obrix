@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Gauge, HardHat, Package, Percent, Users } from "lucide-react";
+import { Boxes, ClipboardList, Gauge, HardHat, Package, PauseCircle, Percent, Truck, Users, Wrench } from "lucide-react";
 import type { DataGridConfig } from "@/components/grid/DataGrid";
 
 export interface NodoCatalogo {
@@ -45,17 +45,18 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
       },
     ],
   },
-  { id: "basicos-auxiliares", label: "Básicos y Auxiliares" },
+  { id: "basicos-auxiliares", label: "Básicos y Auxiliares", icon: Boxes },
   {
     id: "maquinaria-equipo",
     label: "Maquinaria y Equipo",
     hijos: [
-      { id: "herramienta", label: "Herramienta" },
+      { id: "perfiles-inactividad", label: "Inactividad de equipo", icon: PauseCircle },
+      { id: "herramienta", label: "Herramienta", icon: Wrench },
       { id: "costos-horarios", label: "Costos Horarios", icon: Gauge },
-      { id: "equipo-rentado", label: "Equipo rentado" },
+      { id: "equipo-rentado", label: "Equipo rentado", icon: Truck },
     ],
   },
-  { id: "conceptos", label: "Conceptos" },
+  { id: "conceptos", label: "Conceptos", icon: ClipboardList },
 ];
 
 /** Ítems fijos del grupo "Otros" — catálogos generales sin lugar propio en el árbol de costos directos. */

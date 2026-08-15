@@ -26,6 +26,8 @@ import {
 import type { EquipoCostoHorario, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
+
 function fmt(valor: string): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return valor;
@@ -97,6 +99,10 @@ export function EquipoCostoHorarioFicha() {
     return mapa;
   }, [familias]);
   const hijasNueva = nuevaFamiliaId ? (hijasPorPadreId[nuevaFamiliaId] ?? []) : [];
+  const familiaEquipoHerramientaId = useMemo(
+    () => raicesFamilia.find((f) => f.nombre === NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA)?.id ?? null,
+    [raicesFamilia],
+  );
 
   const { organizacionActivaId } = useOrganizacionActiva();
   useEffect(() => {
@@ -142,7 +148,9 @@ export function EquipoCostoHorarioFicha() {
     // horario — evita que quien da de alta tenga que buscarla cada vez.
     const unidadHora = unidades.find((u) => u.simbolo.toLowerCase() === "hr");
     setNuevaUnidadId(unidadHora?.id ?? unidades[0]?.id ?? "");
-    setNuevaFamiliaId(null);
+    // Un equipo de costo horario es, por naturaleza, equipo y herramienta —
+    // evita que quien da de alta tenga que elegirla cada vez.
+    setNuevaFamiliaId(familiaEquipoHerramientaId);
     setNuevaSubfamiliaId(null);
     setNuevaRegionId(null);
     setError(null);
@@ -261,7 +269,6 @@ export function EquipoCostoHorarioFicha() {
             <Buscador value={busqueda} onChange={setBusqueda} />
             <BarraAcciones
               acciones={[
-                { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
                 { icono: Plus, titulo: "Nuevo equipo", onClick: iniciarCreacion },
                 {
                   icono: Pencil,
@@ -269,11 +276,15 @@ export function EquipoCostoHorarioFicha() {
                   onClick: () => seleccionada && iniciarEdicion(seleccionada),
                   disabled: !seleccionada,
                 },
+              ]}
+              menu={[
+                { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
                 {
                   icono: Trash2,
                   titulo: "Eliminar equipo seleccionado",
                   onClick: () => setConfirmandoEliminar(true),
                   disabled: !seleccionada,
+                  destructivo: true,
                 },
               ]}
             />
@@ -291,11 +302,12 @@ export function EquipoCostoHorarioFicha() {
                   onChange={(e) => setNuevaClave(e.target.value)}
                   className="rounded border border-border bg-background px-2 py-1 text-xs"
                 />
-                <input
+                <textarea
                   placeholder="Descripción"
                   value={nuevaDescripcion}
                   onChange={(e) => setNuevaDescripcion(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
+                  rows={6}
+                  className="resize-none rounded border border-border bg-background px-2 py-1 text-xs"
                 />
                 <select
                   value={nuevaUnidadId}
@@ -404,7 +416,7 @@ export function EquipoCostoHorarioFicha() {
                     )}
                   >
                     <span className="font-mono text-[10px] text-muted-foreground">{e.clave}</span>
-                    <span className="w-full truncate text-xs font-medium">{e.descripcion}</span>
+                    <span className="line-clamp-6 w-full text-xs font-medium">{e.descripcion}</span>
                     <div className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div className="bg-blue-500" style={{ width: `${pctFijo}%` }} />
                       <div className="bg-amber-500" style={{ width: `${pctConsumo}%` }} />

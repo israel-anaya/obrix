@@ -37,6 +37,7 @@ import { HerramientaSeccion } from "@/features/catalogos/HerramientaSeccion";
 import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/MaterialesCatalogoSeccion";
 import { MatrizOficioRegionSeccion } from "@/features/catalogos/MatrizOficioRegionSeccion";
 import { MesaEquivalentesSeccion } from "@/features/catalogos/MesaEquivalentesSeccion";
+import { PerfilInactividadEquipoSeccion } from "@/features/catalogos/PerfilInactividadEquipoSeccion";
 import { PuenteBaseRealSeccion } from "@/features/catalogos/PuenteBaseRealSeccion";
 import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
@@ -136,9 +137,9 @@ export default function App() {
 
   const [tabs, setTabs] = useState<EditorTabInfo[]>([]);
   const [activeTabId, setActiveTabId] = useState("");
-  const [cuadrillasVista, setCuadrillasVista] = useState<CuadrillasVista>("ficha");
-  const [equipoCostoHorarioVista, setEquipoCostoHorarioVista] = useState<EquipoCostoHorarioVista>("ficha");
-  const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("estanteria");
+  const [cuadrillasVista, setCuadrillasVista] = useState<CuadrillasVista>("grid");
+  const [equipoCostoHorarioVista, setEquipoCostoHorarioVista] = useState<EquipoCostoHorarioVista>("grid");
+  const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("grid");
 
   const dataGridRef = useRef<DataGridHandle>(null);
   const [catalogoPuedeEliminar, setCatalogoPuedeEliminar] = useState(false);
@@ -457,6 +458,7 @@ export default function App() {
     }
     if (activeTab.id.startsWith(CATALOGO_PREFIX)) {
       const catalogoId = activeTab.id.slice(CATALOGO_PREFIX.length);
+      if (catalogoId === "perfiles-inactividad") return <PerfilInactividadEquipoSeccion />;
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
       if (catalogoId === "clientes") return <ClientesSeccion />;
       if (catalogoId === "materiales-item") {
@@ -501,6 +503,7 @@ export default function App() {
     ? activeTab.id.slice(CATALOGO_PREFIX.length)
     : undefined;
   const CATALOGOS_BESPOKE = [
+    "perfiles-inactividad",
     "proveedores",
     "clientes",
     "materiales-item",
@@ -536,18 +539,18 @@ export default function App() {
 
   const CUADRILLAS_TAB_ID = `${CATALOGO_PREFIX}cuadrillas-trabajo`;
   const CUADRILLAS_VISTAS: { id: CuadrillasVista; icon: LucideIcon; titulo: string }[] = [
-    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
   ];
   const MATERIALES_TAB_ID = `${CATALOGO_PREFIX}materiales-item`;
   const MATERIALES_VISTAS: { id: MaterialesVista; icon: LucideIcon; titulo: string }[] = [
-    { id: "estanteria", icon: LayoutGrid, titulo: "Modo Estantería" },
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+    { id: "estanteria", icon: LayoutGrid, titulo: "Modo Estantería" },
   ];
   const EQUIPO_COSTO_HORARIO_TAB_ID = `${CATALOGO_PREFIX}costos-horarios`;
   const EQUIPO_COSTO_HORARIO_VISTAS: { id: EquipoCostoHorarioVista; icon: LucideIcon; titulo: string }[] = [
-    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
   ];
   const renderTabExtra = (tab: EditorTabInfo) => {
     if (tab.id === CUADRILLAS_TAB_ID) return renderVistaSwitcher(CUADRILLAS_VISTAS, cuadrillasVista, setCuadrillasVista);

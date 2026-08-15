@@ -278,11 +278,12 @@ export function CuadrillasFicha() {
                   onChange={(e) => setNuevaClave(e.target.value)}
                   className="rounded border border-border bg-background px-2 py-1 text-xs"
                 />
-                <input
+                <textarea
                   placeholder="Descripción"
                   value={nuevaDescripcion}
                   onChange={(e) => setNuevaDescripcion(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
+                  rows={6}
+                  className="resize-none rounded border border-border bg-background px-2 py-1 text-xs"
                 />
                 <select
                   value={nuevaUnidadId}
@@ -377,7 +378,7 @@ export function CuadrillasFicha() {
                     )}
                   >
                     <span className="font-mono text-[10px] text-muted-foreground">{c.clave}</span>
-                    <span className="w-full truncate text-xs font-medium">{c.descripcion}</span>
+                    <span className="line-clamp-6 w-full text-xs font-medium">{c.descripcion}</span>
                     <div className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
                       <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />

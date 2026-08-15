@@ -439,6 +439,65 @@ Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta`
 
 Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
+### `perfil_inactividad_equipo`
+
+Receta reutilizable para derivar el costo horario **en espera** y **en
+reserva** a partir del análisis activo de un `equipo_costo_horario`. No es
+un insumo ni una extensión de `insumo`: igual que `factor_salario_real`,
+declara *cómo* se transforma un costo, no *qué* máquina es. Varios equipos
+pueden compartir el mismo perfil.
+
+Espera = la máquina está en el frente, asignada a la tarea, sin producir
+(ciclo, material, la otra máquina). Reserva = está en el patio de la obra,
+de respaldo, no asignada a ninguna tarea.
+
+No hay un porcentaje único sobre `equipo_costo_horario.costo_horario_total`:
+reserva suele conservar inversión y seguro y apagar diesel y operador. Cada
+porcentaje (0–100) se aplica al rubro activo que ya cachea
+`equipo_costo_horario` — los cuatro cargos fijos por separado más
+`subtotal_consumo` y `subtotal_operacion`.
+
+No aplica a `herramienta` (es un % sobre mano de obra) ni a
+`equipo_rentado` (la tarifa ya mete ociosidad; horas paradas = más horas de
+la misma tarifa). Si un equipo no elige perfil, no se cotiza espera ni
+reserva. `activo = false` lo saca del catálogo al asignar; no borra el
+vínculo de equipos que ya lo usan.
+
+Los valores de semilla son una receta de partida (frente / patio), no una
+norma: el despacho los edita. El reglamento pide justificar el costo
+inactivo; no fija estos porcentajes.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| nombre | text | ej. "CMIC frente / patio 2026" |
+| espera_depreciacion_porcentaje | decimal | 0–100 — sobre `cf_depreciacion_hora` |
+| espera_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
+| espera_seguro_porcentaje | decimal | sobre `cf_seguro_hora` |
+| espera_mantenimiento_porcentaje | decimal | sobre `cf_mantenimiento_hora` |
+| espera_consumo_porcentaje | decimal | sobre `subtotal_consumo` |
+| espera_operacion_porcentaje | decimal | sobre `subtotal_operacion` (operador) |
+| reserva_depreciacion_porcentaje | decimal | 0–100 — sobre `cf_depreciacion_hora` |
+| reserva_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
+| reserva_seguro_porcentaje | decimal | sobre `cf_seguro_hora` |
+| reserva_mantenimiento_porcentaje | decimal | sobre `cf_mantenimiento_hora` |
+| reserva_consumo_porcentaje | decimal | sobre `subtotal_consumo` |
+| reserva_operacion_porcentaje | decimal | sobre `subtotal_operacion` |
+| activo | bool | default true |
+| created_at / updated_at / created_by / updated_by | | |
+
+Semilla ilustrativa (editable):
+
+| Rubro | Espera | Reserva |
+|---|---|---|
+| Depreciación | 100 | 0 |
+| Inversión | 100 | 100 |
+| Seguro | 100 | 100 |
+| Mantenimiento | 50 | 0 |
+| Consumo | 0 | 0 |
+| Operación | 100 | 0 |
+
 ### `equipo_costo_horario`
 
 Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta`

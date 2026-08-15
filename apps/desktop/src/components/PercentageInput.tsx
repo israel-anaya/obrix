@@ -11,11 +11,22 @@ export function PercentageInput({
   onCommit,
   className,
   decimals = 2,
+  autoFocus = false,
 }: {
   value: string;
   onCommit: (value: string) => void;
   className?: string;
   decimals?: number;
+  autoFocus?: boolean;
 }) {
-  return <FormattedNumberInput value={value} onCommit={onCommit} className={className} suffix="%" decimals={decimals} />;
+  return (
+    <FormattedNumberInput
+      value={value}
+      onCommit={onCommit}
+      className={className}
+      suffix="%"
+      decimals={decimals}
+      autoFocus={autoFocus}
+    />
+  );
 }

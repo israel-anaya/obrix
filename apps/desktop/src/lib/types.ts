@@ -149,6 +149,15 @@ export interface FamiliaInsumoData {
   parent_id?: string | null;
 }
 
+export interface PerfilInactividadEquipo extends CamposControl {
+  id: string;
+  tipo: string;
+  rubro: string;
+  perfil: string;
+  /** Porcentaje, como texto para no perder precisión al viajar por IPC. */
+  valor: string;
+}
+
 export interface Proveedor extends CamposControl {
   id: string;
   organizacion_id: string;
@@ -210,6 +219,11 @@ export interface PrecioMaterialData {
   moneda: string;
   region_id: string | null;
   fecha_vigencia_desde: string;
+}
+
+/** Un precio a registrar en la actualización de costos de materiales en lote. */
+export interface PrecioLoteItem extends PrecioMaterialData {
+  insumo_id: string;
 }
 
 export interface MaterialData {

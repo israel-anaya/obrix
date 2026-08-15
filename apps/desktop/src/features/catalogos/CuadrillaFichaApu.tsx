@@ -266,13 +266,13 @@ export function CuadrillaFichaApu({
             </button>
           </div>
 
-          <div className="mt-1 flex items-baseline gap-3">
-            <span className="font-mono text-lg font-bold tracking-tight">{totales.clave}</span>
-            <span className="truncate text-sm text-foreground">{totales.descripcion}</span>
-            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-baseline justify-between gap-3">
+            <span className="font-mono text-base font-bold tracking-tight">{totales.clave}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">
               Unidad: <span className="font-medium text-foreground">{simboloUnidad}</span>
             </span>
           </div>
+          <p className="mt-0.5 text-xs text-foreground">{totales.descripcion}</p>
         </div>
 
         {error && <p className="px-4 py-1 text-xs text-destructive">{error}</p>}

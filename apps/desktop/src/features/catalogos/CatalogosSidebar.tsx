@@ -90,7 +90,9 @@ export function CatalogosSidebar({
   const [seleccionPorGrupo, setSeleccionPorGrupo] = useState<Record<string, string | null>>({
     "costos-indirectos": null,
   });
-  const [nodosExpandidos, setNodosExpandidos] = useState<Set<string>>(new Set());
+  const [nodosExpandidos, setNodosExpandidos] = useState<Set<string>>(
+    new Set(["mano-de-obra", "materiales", "maquinaria-equipo"]),
+  );
 
   const agregar = (grupo: GrupoDef) => {
     const items = itemsPorGrupo[grupo.id];

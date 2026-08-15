@@ -22,6 +22,8 @@ import type {
   Material,
   MaterialData,
   OrganizacionData,
+  PerfilInactividadEquipo,
+  PrecioLoteItem,
   PrecioMaterial,
   PrecioMaterialData,
   PortafolioReciente,
@@ -178,6 +180,19 @@ export function deleteFamiliaInsumo(id: string): Promise<void> {
   return invoke("delete_familia_insumo", { id });
 }
 
+export function listPerfilesInactividadEquipo(): Promise<PerfilInactividadEquipo[]> {
+  return invoke("list_perfiles_inactividad_equipo");
+}
+export function updatePerfilInactividadEquipo(id: string, valor: string): Promise<PerfilInactividadEquipo> {
+  return invoke("update_perfil_inactividad_equipo", { id, valor });
+}
+export function createPerfilInactividadEquipoColumna(perfil: string): Promise<PerfilInactividadEquipo[]> {
+  return invoke("create_perfil_inactividad_equipo_columna", { perfil });
+}
+export function deletePerfilInactividadEquipoColumna(perfil: string): Promise<void> {
+  return invoke("delete_perfil_inactividad_equipo_columna", { perfil });
+}
+
 export function listProveedores(): Promise<Proveedor[]> {
   return invoke("list_proveedores");
 }
@@ -211,6 +226,9 @@ export function listPreciosMaterial(insumoId: string): Promise<PrecioMaterial[]>
 }
 export function createPrecioMaterial(insumoId: string, precio: PrecioMaterialData): Promise<PrecioMaterial> {
   return invoke("create_precio_material", { insumoId, precio });
+}
+export function createPreciosMaterialLote(precios: PrecioLoteItem[]): Promise<PrecioMaterial[]> {
+  return invoke("create_precios_material_lote", { precios });
 }
 
 export function listFactoresSalarioReal(): Promise<FactorSalarioReal[]> {

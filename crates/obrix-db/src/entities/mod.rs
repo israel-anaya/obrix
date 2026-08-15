@@ -14,6 +14,7 @@ pub mod material;
 pub mod moneda;
 pub mod organizacion;
 pub mod organizacion_usuario;
+pub mod perfil_inactividad_equipo;
 pub mod precio_material;
 pub mod proveedor;
 pub mod region;

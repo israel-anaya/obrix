@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
+import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { Buscador } from "@/components/Buscador";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import {
+  ActualizarCostosMaterialesLoteDialog,
+  type EstadoActualizacionLoteMateriales,
+} from "@/features/catalogos/ActualizarCostosMaterialesLoteDialog";
 import { MaterialFormPanel } from "@/features/catalogos/MaterialFormPanel";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
+import { validarCsvCostoMaterial } from "@/lib/csvPrecioMaterial";
 import {
   createMaterial,
   deleteMaterial,
   importarMaterialesCsv,
+  leerArchivoTexto,
   listFamiliasInsumo,
   listMateriales,
   listProveedores,
@@ -53,13 +59,22 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
-
+  const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLoteMateriales | null>(null);
+  const [importandoLote, setImportandoLote] = useState(false);
+  const [mensajeLote, setMensajeLote] = useState<string | null>(null);
+  const [noEncontradosLote, setNoEncontradosLote] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!guardadoExitoso) return;
     const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
     return () => clearTimeout(espera);
   }, [guardadoExitoso]);
+
+  useEffect(() => {
+    if (!mensajeLote) return;
+    const espera = setTimeout(() => setMensajeLote(null), 3000);
+    return () => clearTimeout(espera);
+  }, [mensajeLote]);
 
   const recargarMateriales = () => {
     setCargando(true);
@@ -96,6 +111,24 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       setError(String(e));
     } finally {
       setImportando(false);
+      onProgreso?.(null);
+    }
+  };
+
+  const actualizarCostosLote = async () => {
+    const path = await open({ filters: FILTRO_CSV, multiple: false });
+    if (!path || Array.isArray(path)) return;
+    setImportandoLote(true);
+    setError(null);
+    setNoEncontradosLote(null);
+    onProgreso?.("Leyendo archivo de costos…");
+    try {
+      const contenido = await leerArchivoTexto(path);
+      setEstadoLote(validarCsvCostoMaterial(contenido, materiales));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setImportandoLote(false);
       onProgreso?.(null);
     }
   };
@@ -262,10 +295,10 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
           <p
             className={cn(
               "text-xs font-medium",
-              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
+              error ? "text-destructive" : guardadoExitoso || mensajeLote ? "text-emerald-600" : "invisible",
             )}
           >
-            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
+            {error ?? mensajeLote ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -285,6 +318,12 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                 titulo: importando ? "Importando…" : "Importar desde CSV",
                 onClick: () => void importarCsv(),
                 disabled: importando,
+              },
+              {
+                icono: FileSpreadsheet,
+                titulo: importandoLote ? "Leyendo archivo…" : "Actualizar costos en lote",
+                onClick: () => void actualizarCostosLote(),
+                disabled: importandoLote,
               },
               {
                 icono: DollarSign,
@@ -336,6 +375,30 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
           )}
         </div>
       )}
+      {noEncontradosLote && (
+        <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-medium">
+              {noEncontradosLote.length} material{noEncontradosLote.length === 1 ? "" : "es"} del archivo no{" "}
+              {noEncontradosLote.length === 1 ? "se encontró" : "se encontraron"} en el catálogo y no se actualizó
+              {noEncontradosLote.length === 1 ? "" : "n"}:
+            </p>
+            <button
+              type="button"
+              title="Cerrar"
+              onClick={() => setNoEncontradosLote(null)}
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X size={13} />
+            </button>
+          </div>
+          <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-auto pl-4 text-muted-foreground">
+            {noEncontradosLote.map((m, i) => (
+              <li key={i}>{m}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="min-h-0 flex-1">
         {/* El grupo vive siempre: si el grid pasa de hijo directo a panel (o
             al revés) React lo desmonta, el virtualizador vuelve a scroll 0 y
@@ -382,6 +445,16 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
           ) : null}
         </ResizablePanelGroup>
       </div>
+      <ActualizarCostosMaterialesLoteDialog
+        estado={estadoLote}
+        onCerrar={() => setEstadoLote(null)}
+        onAplicado={({ mensaje, noEncontrados }) => {
+          setMensajeLote(mensaje);
+          setNoEncontradosLote(noEncontrados.length > 0 ? noEncontrados : null);
+          void recargarMateriales();
+        }}
+        onProgreso={onProgreso}
+      />
     </div>
   );
 }

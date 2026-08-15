@@ -10,6 +10,7 @@ pub mod herramientas;
 pub mod materiales;
 pub mod monedas;
 pub mod organizaciones;
+pub mod perfiles_inactividad_equipo;
 pub mod portafolio;
 pub mod precios_material;
 pub mod proveedores;

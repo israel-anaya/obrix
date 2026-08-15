@@ -3084,6 +3084,7 @@ dependencies = [
  "obrix-db",
  "obrix-plugins",
  "obrix-services",
+ "rust_decimal",
  "sea-orm",
  "serde",
  "serde_json",

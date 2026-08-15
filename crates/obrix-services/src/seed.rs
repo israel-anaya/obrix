@@ -16,6 +16,7 @@ use crate::familia_insumo::FamiliaInsumoService;
 use crate::herramienta::HerramientaService;
 use crate::moneda::MonedaService;
 use crate::organizacion::OrganizacionService;
+use crate::perfil_inactividad_equipo::PerfilInactividadEquipoService;
 use crate::proveedor::ProveedorService;
 use crate::region::RegionService;
 use crate::unidad_medida::UnidadMedidaService;
@@ -31,6 +32,7 @@ pub async fn sembrar_catalogos_generales(
     UnidadMedidaService::sembrar(repo).await?;
     OrganizacionService::sembrar(repo).await?;
     FamiliaInsumoService::sembrar(repo).await?;
+    PerfilInactividadEquipoService::sembrar(repo).await?;
     ClienteService::sembrar(repo).await?;
     ProveedorService::sembrar(repo).await?;
     // Depende de `region` y `organizacion`, ya sembradas arriba.

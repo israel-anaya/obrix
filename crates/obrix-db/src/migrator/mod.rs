@@ -7,6 +7,7 @@ mod m20260814_000001_herramienta;
 mod m20260814_000002_cuadrilla;
 mod m20260814_000003_equipo_costo_horario;
 mod m20260815_000001_equipo_costo_horario_subtotales;
+mod m20260815_000002_perfil_inactividad_equipo;
 
 use sea_orm_migration::prelude::*;
 
@@ -25,6 +26,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260814_000002_cuadrilla::Migration),
             Box::new(m20260814_000003_equipo_costo_horario::Migration),
             Box::new(m20260815_000001_equipo_costo_horario_subtotales::Migration),
+            Box::new(m20260815_000002_perfil_inactividad_equipo::Migration),
         ]
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { DollarSign, Plus, X } from "lucide-react";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
 import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
@@ -208,11 +208,12 @@ export function SalarioCategoriaFasarPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border px-3 py-1.5">
+      <div className="border-b-2 border-foreground/20 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="truncate text-xs font-semibold text-muted-foreground">
-            Salario{categoriaClave ? ` — ${categoriaClave}` : ""}
-          </h3>
+          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <DollarSign size={11} className="text-emerald-500" />
+            Salario
+          </span>
           <button
             type="button"
             title="Cerrar"
@@ -222,6 +223,11 @@ export function SalarioCategoriaFasarPanel({
             <X size={14} />
           </button>
         </div>
+        {categoriaClave && (
+          <div className="mt-1">
+            <span className="font-mono text-base font-bold tracking-tight">{categoriaClave}</span>
+          </div>
+        )}
         {categoriaDescripcion && <p className="mt-0.5 text-xs text-foreground">{categoriaDescripcion}</p>}
       </div>
 

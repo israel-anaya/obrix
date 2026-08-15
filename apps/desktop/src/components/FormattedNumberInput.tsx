@@ -33,6 +33,7 @@ export function FormattedNumberInput({
   prefix = "",
   suffix = "",
   decimals = 2,
+  autoFocus = false,
 }: {
   value: string;
   onCommit: (value: string) => void;
@@ -40,6 +41,7 @@ export function FormattedNumberInput({
   prefix?: string;
   suffix?: string;
   decimals?: number;
+  autoFocus?: boolean;
 }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState(value);
@@ -52,6 +54,7 @@ export function FormattedNumberInput({
     <input
       type="text"
       inputMode="decimal"
+      autoFocus={autoFocus}
       value={editando ? borrador : `${prefix}${formatear(value, decimals)}${suffix}`}
       onFocus={() => {
         setBorrador(value);
