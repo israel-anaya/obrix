@@ -37,9 +37,9 @@ export interface CatalogoGeneralDescriptor<T extends { id: string }, Nuevo> {
  * `deleted` / `deleted_at` / `deleted_by` no se listan: el grid no las muestra
  * y `eliminar` solo marca `deleted = true`. */
 const COLUMNAS_CONTROL: DataGridColumn[] = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 

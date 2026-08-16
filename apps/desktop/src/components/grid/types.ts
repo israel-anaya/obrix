@@ -33,6 +33,8 @@ export interface DataGridColumn {
   date?: boolean;
   /** @deprecated No longer applies — per-column filtering was replaced by a global search (see `DataGrid`). */
   noFilter?: boolean;
+  /** Value a new row starts with (via `addRow`), instead of "" / 0 / false. */
+  default?: string | number | boolean;
 }
 
 export interface DataGridConfig {

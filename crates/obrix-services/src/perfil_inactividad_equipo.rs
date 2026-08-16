@@ -9,7 +9,7 @@
 use obrix_db::entities::perfil_inactividad_equipo::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
@@ -51,7 +51,6 @@ impl PerfilInactividadEquipoService {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
     }

@@ -64,6 +64,13 @@ pub fn hoy() -> String {
     chrono::Utc::now().date_naive().to_string()
 }
 
+/// Verbo para mensajes de `ServiceError::Validacion` en los `validar` de
+/// cada `Service` — distingue alta de edición por si una regla solo aplica a
+/// uno de los dos casos (ver p. ej. `organizacion::OrganizacionService::validar`).
+pub fn accion(actualizando: bool) -> &'static str {
+    if actualizando { "actualizar" } else { "crear" }
+}
+
 /// Borrado lógico del pivote `insumo` — las tablas de extensión (material,
 /// herramienta, cuadrilla, …) se quedan; `listar` las oculta con `deleted`.
 pub async fn marcar_insumo_eliminado(

@@ -4,7 +4,9 @@ import type { DataGridColumn, EditState, Row } from "./types";
 export function emptyRow(columns: DataGridColumn[]): Row {
   return {
     _id: crypto.randomUUID(),
-    ...Object.fromEntries(columns.map((c) => [c.field, c.boolean ? false : c.numeric ? 0 : ""])),
+    ...Object.fromEntries(
+      columns.map((c) => [c.field, c.default ?? (c.boolean ? false : c.numeric ? 0 : "")]),
+    ),
   };
 }
 

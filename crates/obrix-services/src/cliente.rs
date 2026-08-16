@@ -1,7 +1,7 @@
 use obrix_db::entities::cliente::{ActiveModel, Column, Entity, Model, TipoCliente};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
 };
 
 use crate::organizacion::OrganizacionService;
@@ -12,7 +12,10 @@ use crate::{nuevo_id, DatosIniciales, ServiceError};
 pub struct ClienteData {
     pub razon_social: String,
     pub rfc: String,
-    pub tipo: TipoCliente,
+    /// Recibido como texto (no `TipoCliente`) para poder devolver
+    /// `ServiceError::Validacion` en vez de que una fila con el selector sin
+    /// tocar (`tipo: ""`) truene al deserializar el comando.
+    pub tipo: String,
     pub contacto_nombre: Option<String>,
     pub contacto_correo: Option<String>,
     pub contacto_telefono: Option<String>,
@@ -22,6 +25,39 @@ pub struct ClienteData {
 pub struct ClienteService;
 
 impl ClienteService {
+    /// Validación de `ClienteData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &ClienteData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        if datos.razon_social.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un cliente sin razón social."
+            )));
+        }
+        if datos.rfc.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un cliente sin RFC."
+            )));
+        }
+        if datos.tipo.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un cliente sin tipo."
+            )));
+        }
+        Ok(())
+    }
+
+    fn tipo_desde_str(tipo: &str) -> Result<TipoCliente, ServiceError> {
+        match tipo.trim() {
+            "privado" => Ok(TipoCliente::Privado),
+            "gobierno" => Ok(TipoCliente::Gobierno),
+            otro => Err(ServiceError::Validacion(format!(
+                "Tipo de cliente inválido: \"{otro}\"."
+            ))),
+        }
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -29,7 +65,6 @@ impl ClienteService {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::RazonSocial)
             .all(repo.conexion())
             .await?)
     }
@@ -40,12 +75,14 @@ impl ClienteService {
         datos: ClienteData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, false)?;
+        let tipo = Self::tipo_desde_str(&datos.tipo)?;
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
             organizacion_id: Set(organizacion_id.to_string()),
             razon_social: Set(datos.razon_social),
             rfc: Set(datos.rfc),
-            tipo: Set(datos.tipo),
+            tipo: Set(tipo),
             contacto_nombre: Set(datos.contacto_nombre),
             contacto_correo: Set(datos.contacto_correo),
             contacto_telefono: Set(datos.contacto_telefono),
@@ -67,6 +104,8 @@ impl ClienteService {
         datos: ClienteData,
         actualizado_por: Option<String>,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, true)?;
+        let tipo = Self::tipo_desde_str(&datos.tipo)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .one(repo.conexion())
             .await?
@@ -74,7 +113,7 @@ impl ClienteService {
             .into();
         modelo.razon_social = Set(datos.razon_social);
         modelo.rfc = Set(datos.rfc);
-        modelo.tipo = Set(datos.tipo);
+        modelo.tipo = Set(tipo);
         modelo.contacto_nombre = Set(datos.contacto_nombre);
         modelo.contacto_correo = Set(datos.contacto_correo);
         modelo.contacto_telefono = Set(datos.contacto_telefono);
@@ -118,7 +157,7 @@ impl DatosIniciales for ClienteService {
             ClienteData {
                 razon_social: "ClienteData demo".to_string(),
                 rfc: "XAXX010101000".to_string(),
-                tipo: TipoCliente::Privado,
+                tipo: "privado".to_string(),
                 contacto_nombre: None,
                 contacto_correo: None,
                 contacto_telefono: None,
@@ -128,5 +167,54 @@ impl DatosIniciales for ClienteService {
         )
         .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datos(razon_social: &str, rfc: &str, tipo: &str) -> ClienteData {
+        ClienteData {
+            razon_social: razon_social.to_string(),
+            rfc: rfc.to_string(),
+            tipo: tipo.to_string(),
+            contacto_nombre: None,
+            contacto_correo: None,
+            contacto_telefono: None,
+            domicilio_fiscal: None,
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_razon_social_vacia_o_solo_espacios() {
+        assert!(ClienteService::validar(&datos("", "XAXX010101000", "privado"), false).is_err());
+        assert!(ClienteService::validar(&datos("   ", "XAXX010101000", "privado"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_rfc_vacio() {
+        assert!(ClienteService::validar(&datos("Cliente demo", "", "privado"), false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_tipo_vacio() {
+        assert!(ClienteService::validar(&datos("Cliente demo", "XAXX010101000", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(ClienteService::validar(&datos("Cliente demo", "XAXX010101000", "privado"), false).is_ok());
+    }
+
+    #[test]
+    fn tipo_desde_str_rechaza_valor_desconocido() {
+        assert!(ClienteService::tipo_desde_str("no_existe").is_err());
+    }
+
+    #[test]
+    fn tipo_desde_str_acepta_los_valores_validos() {
+        assert!(ClienteService::tipo_desde_str("privado").is_ok());
+        assert!(ClienteService::tipo_desde_str("gobierno").is_ok());
     }
 }

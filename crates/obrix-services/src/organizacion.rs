@@ -4,7 +4,7 @@ use obrix_db::entities::{
 };
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
 };
 
 use crate::organizacion_usuario::OrganizacionUsuarioService;
@@ -15,17 +15,58 @@ use crate::{nuevo_id, DatosIniciales, ServiceError};
 pub struct OrganizacionData {
     pub razon_social: String,
     pub rfc: String,
-    pub tipo: TipoOrganizacion,
+    /// Recibido como texto (no `TipoOrganizacion`) para poder devolver
+    /// `ServiceError::Validacion` en vez de que la fila nueva sin tocar del
+    /// grid (que llega con `tipo: ""`) truene al deserializar el comando.
+    pub tipo: String,
     pub moneda_default_id: String,
 }
 
 pub struct OrganizacionService;
 
 impl OrganizacionService {
+    /// Validación de `OrganizacionData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &OrganizacionData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        if datos.razon_social.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una organización sin razón social."
+            )));
+        }
+        if datos.rfc.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una organización sin RFC."
+            )));
+        }
+        if datos.tipo.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una organización sin tipo."
+            )));
+        }
+        if datos.moneda_default_id.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una organización sin moneda default."
+            )));
+        }
+        Ok(())
+    }
+
+    fn tipo_desde_str(tipo: &str) -> Result<TipoOrganizacion, ServiceError> {
+        match tipo.trim() {
+            "despacho" => Ok(TipoOrganizacion::Despacho),
+            "constructora" => Ok(TipoOrganizacion::Constructora),
+            "gobierno" => Ok(TipoOrganizacion::Gobierno),
+            otro => Err(ServiceError::Validacion(format!(
+                "Tipo de organización inválido: \"{otro}\"."
+            ))),
+        }
+    }
+
     pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::RazonSocial)
             .all(repo.conexion())
             .await?)
     }
@@ -48,7 +89,6 @@ impl OrganizacionService {
         Ok(Entity::find()
             .filter(Column::Id.is_in(ids))
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::RazonSocial)
             .all(repo.conexion())
             .await?)
     }
@@ -79,11 +119,13 @@ impl OrganizacionService {
         datos: OrganizacionData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, false)?;
+        let tipo = Self::tipo_desde_str(&datos.tipo)?;
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
             razon_social: Set(datos.razon_social),
             rfc: Set(datos.rfc),
-            tipo: Set(datos.tipo),
+            tipo: Set(tipo),
             moneda_default_id: Set(datos.moneda_default_id),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
@@ -102,6 +144,8 @@ impl OrganizacionService {
         datos: OrganizacionData,
         actualizado_por: Option<String>,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, true)?;
+        let tipo = Self::tipo_desde_str(&datos.tipo)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .one(repo.conexion())
             .await?
@@ -109,7 +153,7 @@ impl OrganizacionService {
             .into();
         modelo.razon_social = Set(datos.razon_social);
         modelo.rfc = Set(datos.rfc);
-        modelo.tipo = Set(datos.tipo);
+        modelo.tipo = Set(tipo);
         modelo.moneda_default_id = Set(datos.moneda_default_id);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(actualizado_por);
@@ -153,12 +197,64 @@ impl DatosIniciales for OrganizacionService {
             OrganizacionData {
                 razon_social: "Despacho demo".to_string(),
                 rfc: "XAXX010101000".to_string(),
-                tipo: TipoOrganizacion::Despacho,
+                tipo: "despacho".to_string(),
                 moneda_default_id: mxn.id,
             },
             admin.id,
         )
         .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datos(razon_social: &str, rfc: &str, tipo: &str, moneda_default_id: &str) -> OrganizacionData {
+        OrganizacionData {
+            razon_social: razon_social.to_string(),
+            rfc: rfc.to_string(),
+            tipo: tipo.to_string(),
+            moneda_default_id: moneda_default_id.to_string(),
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_razon_social_vacia_o_solo_espacios() {
+        assert!(OrganizacionService::validar(&datos("", "XAXX010101000", "despacho", "mxn"), false).is_err());
+        assert!(OrganizacionService::validar(&datos("   ", "XAXX010101000", "despacho", "mxn"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_rfc_vacio() {
+        assert!(OrganizacionService::validar(&datos("Despacho demo", "", "despacho", "mxn"), false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_tipo_vacio() {
+        assert!(OrganizacionService::validar(&datos("Despacho demo", "XAXX010101000", "", "mxn"), false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_moneda_default_id_vacio() {
+        assert!(OrganizacionService::validar(&datos("Despacho demo", "XAXX010101000", "despacho", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(OrganizacionService::validar(&datos("Despacho demo", "XAXX010101000", "despacho", "mxn"), false).is_ok());
+    }
+
+    #[test]
+    fn tipo_desde_str_rechaza_valor_desconocido() {
+        assert!(OrganizacionService::tipo_desde_str("no_existe").is_err());
+    }
+
+    #[test]
+    fn tipo_desde_str_acepta_los_tres_valores_validos() {
+        assert!(OrganizacionService::tipo_desde_str("despacho").is_ok());
+        assert!(OrganizacionService::tipo_desde_str("constructora").is_ok());
+        assert!(OrganizacionService::tipo_desde_str("gobierno").is_ok());
     }
 }

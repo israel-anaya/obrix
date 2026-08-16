@@ -165,7 +165,6 @@ impl SalarioCategoriaFasarService {
     ) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::InsumoId.eq(insumo_id))
-            .order_by_desc(Column::FechaVigenciaDesde)
             .all(repo.conexion())
             .await?)
     }

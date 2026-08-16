@@ -30,6 +30,7 @@ const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
+const NOMBRE_FAMILIA_MANO_OBRA = "Mano de obra";
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -156,6 +157,9 @@ export function CategoriaFasarSeccion() {
           header: "Familia",
           width: 200,
           options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          default: raicesFamilia.some((f) => f.nombre === NOMBRE_FAMILIA_MANO_OBRA)
+            ? NOMBRE_FAMILIA_MANO_OBRA
+            : SIN_FAMILIA,
         },
         {
           field: "subfamilia",

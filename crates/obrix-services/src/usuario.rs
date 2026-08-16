@@ -1,7 +1,7 @@
 use obrix_db::entities::usuario::{ActiveModel, Column, Entity, Model, RolUsuario};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
 };
 
 use crate::{nuevo_id, DatosIniciales, ServiceError};
@@ -26,7 +26,6 @@ impl UsuarioService {
     /// cuelga de una organización, así que se listan todos sin filtro.
     pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
-            .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
     }

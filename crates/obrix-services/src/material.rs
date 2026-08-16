@@ -9,7 +9,7 @@ use obrix_db::entities::{material, moneda, organizacion};
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
     TransactionTrait,
 };
 
@@ -105,7 +105,6 @@ impl MaterialService {
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::Material))
             .filter(insumo::Column::Deleted.eq(false))
-            .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
 

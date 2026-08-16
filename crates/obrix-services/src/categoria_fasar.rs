@@ -6,7 +6,7 @@ use obrix_db::entities::insumo::{self, TipoInsumo};
 use obrix_db::entities::{categoria_fasar, familia_insumo, salario_categoria_fasar, unidad_medida};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
     TransactionTrait,
 };
 
@@ -79,6 +79,69 @@ fn combinar(
 pub struct CategoriaFasarService;
 
 impl CategoriaFasarService {
+    /// Validación de `CategoriaFasarData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &CategoriaFasarData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        if datos.clave.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una categoría FASAR sin clave."
+            )));
+        }
+        if datos.descripcion.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una categoría FASAR sin descripción."
+            )));
+        }
+        if datos.unidad_id.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una categoría FASAR sin unidad."
+            )));
+        }
+        for (id, etiqueta) in [(&datos.familia_id, "familia_id"), (&datos.sub_familia_id, "sub_familia_id")] {
+            if let Some(id) = id {
+                if id.trim().is_empty() {
+                    return Err(ServiceError::Validacion(format!(
+                        "{etiqueta} no puede ser una cadena vacía; usa null si no aplica."
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Separado de `validar` porque necesita consultar la base.
+    async fn validar_unidad_existe(
+        repo: &dyn PortafolioRepository,
+        unidad_id: &str,
+    ) -> Result<(), ServiceError> {
+        unidad_medida::Entity::find_by_id(unidad_id)
+            .filter(unidad_medida::Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("unidad de medida {unidad_id}")))?;
+        Ok(())
+    }
+
+    /// `familia_id`/`sub_familia_id` son opcionales por diseño, pero si se
+    /// especifican deben referenciar una familia de insumo existente —
+    /// separado de `validar` porque necesita consultar la base.
+    async fn validar_familia_existe(
+        repo: &dyn PortafolioRepository,
+        familia_id: &Option<String>,
+    ) -> Result<(), ServiceError> {
+        let Some(familia_id) = familia_id else {
+            return Ok(());
+        };
+        familia_insumo::Entity::find_by_id(familia_id)
+            .filter(familia_insumo::Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("familia de insumo {familia_id}")))?;
+        Ok(())
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -87,7 +150,6 @@ impl CategoriaFasarService {
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::ManoObra))
             .filter(insumo::Column::Deleted.eq(false))
-            .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
 
@@ -114,6 +176,10 @@ impl CategoriaFasarService {
         datos: CategoriaFasarData,
         creado_por: String,
     ) -> Result<CategoriaFasarCompleto, ServiceError> {
+        Self::validar(&datos, false)?;
+        Self::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        Self::validar_familia_existe(repo, &datos.familia_id).await?;
+        Self::validar_familia_existe(repo, &datos.sub_familia_id).await?;
         let txn = repo.conexion().begin().await?;
         let id = nuevo_id();
         let ahora = crate::ahora();
@@ -152,6 +218,10 @@ impl CategoriaFasarService {
         datos: CategoriaFasarData,
         actualizado_por: Option<String>,
     ) -> Result<CategoriaFasarCompleto, ServiceError> {
+        Self::validar(&datos, true)?;
+        Self::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        Self::validar_familia_existe(repo, &datos.familia_id).await?;
+        Self::validar_familia_existe(repo, &datos.sub_familia_id).await?;
         let ahora = crate::ahora();
 
         let mut ins: insumo::ActiveModel = insumo::Entity::find_by_id(&id)
@@ -312,6 +382,180 @@ mod tests {
     use obrix_db::PortafolioSqliteRepository;
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
+
+    fn datos(clave: &str, descripcion: &str) -> CategoriaFasarData {
+        CategoriaFasarData {
+            clave: clave.to_string(),
+            descripcion: descripcion.to_string(),
+            unidad_id: "um-1".to_string(),
+            familia_id: None,
+            sub_familia_id: None,
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_clave_vacia_o_solo_espacios() {
+        assert!(CategoriaFasarService::validar(&datos("", "Oficial albañil"), false).is_err());
+        assert!(CategoriaFasarService::validar(&datos("   ", "Oficial albañil"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_descripcion_vacia() {
+        assert!(CategoriaFasarService::validar(&datos("CAT-1", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_unidad_id_vacio() {
+        let mut sin_unidad = datos("CAT-1", "Oficial albañil");
+        sin_unidad.unidad_id = String::new();
+        assert!(CategoriaFasarService::validar(&sin_unidad, false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(CategoriaFasarService::validar(&datos("CAT-1", "Oficial albañil"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_acepta_familia_id_y_sub_familia_id_nulos() {
+        assert!(CategoriaFasarService::validar(&datos("CAT-1", "Oficial albañil"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_rechaza_familia_id_vacio() {
+        let mut d = datos("CAT-1", "Oficial albañil");
+        d.familia_id = Some(String::new());
+        assert!(CategoriaFasarService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_sub_familia_id_vacio() {
+        let mut d = datos("CAT-1", "Oficial albañil");
+        d.sub_familia_id = Some(String::new());
+        assert!(CategoriaFasarService::validar(&d, false).is_err());
+    }
+
+    async fn portafolio_con_unidad() -> (PortafolioSqliteRepository, String) {
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-16T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("a@a.com".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        unidad_medida::ActiveModel {
+            id: Set("um-1".into()),
+            simbolo: Set("jor".into()),
+            simbolo_impresion: Set("jor".into()),
+            variantes: Set("".into()),
+            clave_sat: Set(None),
+            descripcion: Set("Jornal".into()),
+            tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
+            created_at: Set(now),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        (portafolio, "um-1".to_string())
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_acepta_unidad_existente() {
+        let (portafolio, unidad_id) = portafolio_con_unidad().await;
+        assert!(CategoriaFasarService::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_rechaza_unidad_inexistente() {
+        let (portafolio, _) = portafolio_con_unidad().await;
+        assert!(CategoriaFasarService::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+    }
+
+    async fn portafolio_con_familia() -> (PortafolioSqliteRepository, String) {
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-16T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("a@a.com".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        familia_insumo::ActiveModel {
+            id: Set("fam-1".into()),
+            parent_id: Set(None),
+            nombre: Set("Materiales eléctricos".into()),
+            deleted: Set(false),
+            created_at: Set(now),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        (portafolio, "fam-1".to_string())
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_acepta_nulo() {
+        let (portafolio, _) = portafolio_con_familia().await;
+        assert!(CategoriaFasarService::validar_familia_existe(&portafolio, &None).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_acepta_familia_existente() {
+        let (portafolio, familia_id) = portafolio_con_familia().await;
+        assert!(
+            CategoriaFasarService::validar_familia_existe(&portafolio, &Some(familia_id))
+                .await
+                .is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_rechaza_familia_inexistente() {
+        let (portafolio, _) = portafolio_con_familia().await;
+        assert!(
+            CategoriaFasarService::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
+    }
 
     #[tokio::test]
     async fn crear_listar_actualizar_eliminar_categoria_fasar() {

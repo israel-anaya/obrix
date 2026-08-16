@@ -8,7 +8,7 @@
 use obrix_db::entities::insumo::{self, TipoInsumo};
 use obrix_db::entities::{familia_insumo, herramienta, unidad_medida};
 use obrix_db::PortafolioRepository;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
 
 use crate::organizacion::OrganizacionService;
 use crate::unidad_medida::UnidadMedidaService;
@@ -82,7 +82,6 @@ impl HerramientaService {
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::EquipoHerramienta))
             .filter(insumo::Column::Deleted.eq(false))
-            .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
 

@@ -1,7 +1,7 @@
 use obrix_db::entities::familia_insumo::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
 };
 
 use crate::usuario::UsuarioService;
@@ -21,10 +21,22 @@ pub struct FamiliaInsumoData {
 pub struct FamiliaInsumoService;
 
 impl FamiliaInsumoService {
+    /// Validación de `FamiliaInsumoData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &FamiliaInsumoData, actualizando: bool) -> Result<(), ServiceError> {
+        if datos.nombre.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una familia de insumo sin nombre."
+            )));
+        }
+        Ok(())
+    }
+
     pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
     }
@@ -34,6 +46,7 @@ impl FamiliaInsumoService {
         datos: FamiliaInsumoData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, false)?;
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
             parent_id: Set(datos.parent_id),
@@ -55,6 +68,7 @@ impl FamiliaInsumoService {
         datos: FamiliaInsumoData,
         actualizado_por: Option<String>,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, true)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .one(repo.conexion())
             .await?
@@ -161,4 +175,24 @@ struct RegistroCsvFamilia {
     familia: String,
     #[serde(rename = "Subfamilia")]
     subfamilia: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datos(nombre: &str) -> FamiliaInsumoData {
+        FamiliaInsumoData { nombre: nombre.to_string(), parent_id: None }
+    }
+
+    #[test]
+    fn validar_rechaza_nombre_vacio_o_solo_espacios() {
+        assert!(FamiliaInsumoService::validar(&datos(""), false).is_err());
+        assert!(FamiliaInsumoService::validar(&datos("   "), true).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_nombre_no_vacio() {
+        assert!(FamiliaInsumoService::validar(&datos("Materiales eléctricos"), false).is_ok());
+    }
 }

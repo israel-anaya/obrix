@@ -1,7 +1,7 @@
 use obrix_db::entities::proveedor::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
 };
 
 use crate::organizacion::OrganizacionService;
@@ -25,6 +25,24 @@ pub struct ProveedorData {
 pub struct ProveedorService;
 
 impl ProveedorService {
+    /// Validación de `ProveedorData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &ProveedorData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        if datos.razon_social.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un proveedor sin razón social."
+            )));
+        }
+        if datos.rfc.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un proveedor sin RFC."
+            )));
+        }
+        Ok(())
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -32,7 +50,6 @@ impl ProveedorService {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::RazonSocial)
             .all(repo.conexion())
             .await?)
     }
@@ -43,6 +60,7 @@ impl ProveedorService {
         datos: ProveedorData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, false)?;
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
             organizacion_id: Set(organizacion_id.to_string()),
@@ -67,6 +85,7 @@ impl ProveedorService {
         datos: ProveedorData,
         actualizado_por: Option<String>,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, true)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .one(repo.conexion())
             .await?
@@ -149,5 +168,35 @@ impl DatosIniciales for ProveedorService {
             .await?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datos(razon_social: &str, rfc: &str) -> ProveedorData {
+        ProveedorData {
+            razon_social: razon_social.to_string(),
+            rfc: rfc.to_string(),
+            contacto: None,
+            calificacion: None,
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_razon_social_vacia_o_solo_espacios() {
+        assert!(ProveedorService::validar(&datos("", "XAXX010101000"), false).is_err());
+        assert!(ProveedorService::validar(&datos("   ", "XAXX010101000"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_rfc_vacio() {
+        assert!(ProveedorService::validar(&datos("Proveedor demo", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(ProveedorService::validar(&datos("Proveedor demo", "XAXX010101000"), false).is_ok());
     }
 }

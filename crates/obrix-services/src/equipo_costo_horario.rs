@@ -13,7 +13,7 @@ use obrix_db::entities::equipo_costo_horario;
 use obrix_db::entities::insumo::{self, TipoInsumo};
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
 
 use crate::{nuevo_id, ServiceError};
 
@@ -177,7 +177,6 @@ impl EquipoCostoHorarioService {
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::EquipoHerramienta))
             .filter(insumo::Column::Deleted.eq(false))
-            .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
 

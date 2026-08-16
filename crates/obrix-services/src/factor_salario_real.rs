@@ -1,7 +1,7 @@
 use obrix_db::entities::factor_salario_real::{ActiveModel, Column, Entity, Model};
 use obrix_db::entities::region;
 use obrix_db::PortafolioRepository;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
@@ -59,9 +59,35 @@ impl FactorSalarioRealService {
     /// aplica a uno de los dos casos.
     fn validar(datos: &FactorSalarioRealData, actualizando: bool) -> Result<(), ServiceError> {
         if datos.nombre.trim().is_empty() {
-            let accion = if actualizando { "actualizar" } else { "crear" };
+            let accion = crate::accion(actualizando);
             return Err(ServiceError::Validacion(format!("No se puede {accion} un FSR sin nombre.")));
         }
+        if let Some(region_id) = &datos.region_id {
+            if region_id.trim().is_empty() {
+                return Err(ServiceError::Validacion(
+                    "region_id no puede ser una cadena vacía; usa null para un FSR nacional."
+                        .to_string(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// `region_id` es opcional por diseño (`None` = FSR nacional), pero si se
+    /// especifica debe referenciar una región existente — separado de
+    /// `validar` porque necesita consultar la base.
+    async fn validar_region_existe(
+        repo: &dyn PortafolioRepository,
+        region_id: &Option<String>,
+    ) -> Result<(), ServiceError> {
+        let Some(region_id) = region_id else {
+            return Ok(());
+        };
+        region::Entity::find_by_id(region_id)
+            .filter(region::Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("región {region_id}")))?;
         Ok(())
     }
 
@@ -69,7 +95,6 @@ impl FactorSalarioRealService {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
     }
@@ -91,6 +116,7 @@ impl FactorSalarioRealService {
         creado_por: String,
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, false)?;
+        Self::validar_region_existe(repo, &datos.region_id).await?;
         let modelo_calculo_json = if datos.modelo_calculo_json.trim().is_empty() {
             MODELO_ESTANDAR_VARIABLES_JSON.to_string()
         } else {
@@ -126,6 +152,7 @@ impl FactorSalarioRealService {
         actualizado_por: String,
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, true)?;
+        Self::validar_region_existe(repo, &datos.region_id).await?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
@@ -260,5 +287,86 @@ mod tests {
     #[test]
     fn validar_acepta_nombre_no_vacio() {
         assert!(FactorSalarioRealService::validar(&datos_con_nombre("FSR — Norte"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_rechaza_region_id_vacio() {
+        let mut datos = datos_con_nombre("FSR — Norte");
+        datos.region_id = Some(String::new());
+        assert!(FactorSalarioRealService::validar(&datos, false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_region_id_nulo() {
+        let datos = datos_con_nombre("FSR — Nacional");
+        assert!(FactorSalarioRealService::validar(&datos, false).is_ok());
+    }
+
+    async fn portafolio_con_region() -> (obrix_db::PortafolioSqliteRepository, String) {
+        use obrix_db::entities::{region, usuario};
+        use obrix_db::PortafolioSqliteRepository;
+        use sea_orm::ActiveModelTrait;
+        use std::path::Path;
+
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("admin@obrix.local".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(crate::ahora()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .expect("crear usuario");
+        let region = region::ActiveModel {
+            id: Set("reg-1".into()),
+            nombre: Set("Occidente".into()),
+            estado: Set("Jalisco".into()),
+            factor_ajuste: Set(None),
+            deleted: Set(false),
+            created_at: Set(crate::ahora()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .expect("crear región");
+        (portafolio, region.id)
+    }
+
+    #[tokio::test]
+    async fn validar_region_existe_acepta_nulo() {
+        let (portafolio, _) = portafolio_con_region().await;
+        assert!(FactorSalarioRealService::validar_region_existe(&portafolio, &None).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_region_existe_acepta_region_existente() {
+        let (portafolio, region_id) = portafolio_con_region().await;
+        assert!(
+            FactorSalarioRealService::validar_region_existe(&portafolio, &Some(region_id))
+                .await
+                .is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn validar_region_existe_rechaza_region_inexistente() {
+        let (portafolio, _) = portafolio_con_region().await;
+        assert!(
+            FactorSalarioRealService::validar_region_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
     }
 }

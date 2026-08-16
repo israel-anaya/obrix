@@ -1,7 +1,7 @@
 use obrix_db::entities::region::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
 };
 
 use crate::usuario::UsuarioService;
@@ -21,10 +21,27 @@ pub struct RegionData {
 pub struct RegionService;
 
 impl RegionService {
+    /// Validación de `RegionData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &RegionData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        if datos.nombre.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una región sin nombre."
+            )));
+        }
+        if datos.estado.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una región sin estado."
+            )));
+        }
+        Ok(())
+    }
+
     pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::Deleted.eq(false))
-            .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
     }
@@ -34,6 +51,7 @@ impl RegionService {
         datos: RegionData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, false)?;
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
             nombre: Set(datos.nombre),
@@ -56,6 +74,7 @@ impl RegionService {
         datos: RegionData,
         actualizado_por: Option<String>,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, true)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .one(repo.conexion())
             .await?
@@ -128,4 +147,33 @@ struct RegistroCsvRegion {
     nombre: String,
     #[serde(rename = "Estado")]
     estado: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datos(nombre: &str, estado: &str) -> RegionData {
+        RegionData {
+            nombre: nombre.to_string(),
+            estado: estado.to_string(),
+            factor_ajuste: None,
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_nombre_vacio_o_solo_espacios() {
+        assert!(RegionService::validar(&datos("", "Jalisco"), false).is_err());
+        assert!(RegionService::validar(&datos("   ", "Jalisco"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_estado_vacio() {
+        assert!(RegionService::validar(&datos("Occidente", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(RegionService::validar(&datos("Occidente", "Jalisco"), false).is_ok());
+    }
 }
