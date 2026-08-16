@@ -95,6 +95,34 @@ async fn moneda_default_organizacion(
 pub struct MaterialService;
 
 impl MaterialService {
+    /// Validación de `MaterialData` común a `crear`/`actualizar` —
+    /// `actualizando` distingue alta de edición por si una regla futura solo
+    /// aplica a uno de los dos casos.
+    fn validar(datos: &MaterialData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        if datos.clave.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un material sin clave."
+            )));
+        }
+        if datos.descripcion.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un material sin descripción."
+            )));
+        }
+        if datos.unidad_id.trim().is_empty() {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un material sin unidad."
+            )));
+        }
+        crate::validar_opcionales_no_vacios(&[
+            (&datos.familia_id, "familia_id"),
+            (&datos.sub_familia_id, "sub_familia_id"),
+            (&datos.proveedor_id, "proveedor_id"),
+        ])?;
+        Ok(())
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -135,6 +163,11 @@ impl MaterialService {
         datos: MaterialData,
         creado_por: String,
     ) -> Result<MaterialCompleto, ServiceError> {
+        Self::validar(&datos, false)?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
+        crate::validar_proveedor_existe(repo, &datos.proveedor_id).await?;
         let txn = repo.conexion().begin().await?;
         let id = nuevo_id();
         let ahora = crate::ahora();
@@ -178,6 +211,11 @@ impl MaterialService {
         datos: MaterialData,
         actualizado_por: Option<String>,
     ) -> Result<MaterialCompleto, ServiceError> {
+        Self::validar(&datos, true)?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
+        crate::validar_proveedor_existe(repo, &datos.proveedor_id).await?;
         let txn = repo.conexion().begin().await?;
         let ahora = crate::ahora();
 
@@ -457,6 +495,269 @@ mod tests {
     use obrix_db::PortafolioSqliteRepository;
     use std::path::Path;
 
+    fn datos(clave: &str, descripcion: &str) -> MaterialData {
+        MaterialData {
+            clave: clave.to_string(),
+            descripcion: descripcion.to_string(),
+            unidad_id: "um-1".to_string(),
+            familia_id: None,
+            sub_familia_id: None,
+            proveedor_id: None,
+            merma_porcentaje: None,
+            marca: None,
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_clave_vacia_o_solo_espacios() {
+        assert!(MaterialService::validar(&datos("", "Cemento gris"), false).is_err());
+        assert!(MaterialService::validar(&datos("   ", "Cemento gris"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_descripcion_vacia() {
+        assert!(MaterialService::validar(&datos("MAT-1", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(MaterialService::validar(&datos("MAT-1", "Cemento gris"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_rechaza_unidad_id_vacio() {
+        let mut d = datos("MAT-1", "Cemento gris");
+        d.unidad_id = String::new();
+        assert!(MaterialService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_familia_id_vacio() {
+        let mut d = datos("MAT-1", "Cemento gris");
+        d.familia_id = Some(String::new());
+        assert!(MaterialService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_sub_familia_id_vacio() {
+        let mut d = datos("MAT-1", "Cemento gris");
+        d.sub_familia_id = Some(String::new());
+        assert!(MaterialService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_proveedor_id_vacio() {
+        let mut d = datos("MAT-1", "Cemento gris");
+        d.proveedor_id = Some(String::new());
+        assert!(MaterialService::validar(&d, false).is_err());
+    }
+
+    async fn portafolio_con_unidad_y_familia() -> (PortafolioSqliteRepository, String, String) {
+        use obrix_db::entities::{familia_insumo, unidad_medida, usuario};
+        use sea_orm::ActiveModelTrait;
+
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-16T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("a@a.com".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        unidad_medida::ActiveModel {
+            id: Set("um-1".into()),
+            simbolo: Set("m2".into()),
+            simbolo_impresion: Set("m2".into()),
+            variantes: Set("".into()),
+            clave_sat: Set(None),
+            descripcion: Set("Metro cuadrado".into()),
+            tipo_magnitud: Set(unidad_medida::TipoMagnitud::Area),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        familia_insumo::ActiveModel {
+            id: Set("fam-1".into()),
+            parent_id: Set(None),
+            nombre: Set("Cementos".into()),
+            insumos_asociados: Set(None),
+            deleted: Set(false),
+            created_at: Set(now),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        (portafolio, "um-1".to_string(), "fam-1".to_string())
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_acepta_unidad_existente() {
+        let (portafolio, unidad_id, _) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_rechaza_unidad_inexistente() {
+        let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_acepta_nulo() {
+        let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_familia_existe(&portafolio, &None).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_acepta_familia_existente() {
+        let (portafolio, _, familia_id) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_familia_existe(&portafolio, &Some(familia_id)).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_rechaza_familia_inexistente() {
+        let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
+        assert!(
+            crate::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
+    }
+
+    async fn portafolio_con_proveedor() -> (PortafolioSqliteRepository, String) {
+        use obrix_db::entities::{moneda, organizacion, proveedor, usuario};
+        use sea_orm::ActiveModelTrait;
+
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-16T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("a@a.com".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        moneda::ActiveModel {
+            id: Set("mon-1".into()),
+            codigo: Set("MXN".into()),
+            nombre: Set("Peso mexicano".into()),
+            simbolo: Set("$".into()),
+            decimales: Set(2),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        organizacion::ActiveModel {
+            id: Set("org-1".into()),
+            razon_social: Set("Org".into()),
+            rfc: Set("XAXX010101000".into()),
+            tipo: Set(organizacion::TipoOrganizacion::Despacho),
+            moneda_default_id: Set("mon-1".into()),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        proveedor::ActiveModel {
+            id: Set("prov-1".into()),
+            organizacion_id: Set("org-1".into()),
+            razon_social: Set("Proveedor demo".into()),
+            rfc: Set("XAXX010101000".into()),
+            contacto: Set(None),
+            calificacion: Set(None),
+            deleted: Set(false),
+            created_at: Set(now),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        (portafolio, "prov-1".to_string())
+    }
+
+    #[tokio::test]
+    async fn validar_proveedor_existe_acepta_nulo() {
+        let (portafolio, _) = portafolio_con_proveedor().await;
+        assert!(crate::validar_proveedor_existe(&portafolio, &None).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_proveedor_existe_acepta_proveedor_existente() {
+        let (portafolio, proveedor_id) = portafolio_con_proveedor().await;
+        assert!(
+            crate::validar_proveedor_existe(&portafolio, &Some(proveedor_id))
+                .await
+                .is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn validar_proveedor_existe_rechaza_proveedor_inexistente() {
+        let (portafolio, _) = portafolio_con_proveedor().await;
+        assert!(
+            crate::validar_proveedor_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
+    }
+
     #[tokio::test]
     async fn crear_listar_actualizar_eliminar_material() {
         use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
@@ -694,6 +995,7 @@ mod tests {
             id: Set("fam-1".into()),
             parent_id: Set(None),
             nombre: Set("Cementos".into()),
+            insumos_asociados: Set(None),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -710,6 +1012,7 @@ mod tests {
             id: Set("fam-2".into()),
             parent_id: Set(Some("fam-1".into())),
             nombre: Set("Cemento gris".into()),
+            insumos_asociados: Set(None),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),

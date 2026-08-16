@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { CuadrillaFichaApu } from "@/features/catalogos/CuadrillaFichaApu";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { formatearFecha } from "@/lib/fecha";
+import { ordenarPor } from "@/lib/ordenar";
 import {
   createCuadrilla,
   deleteCuadrilla,
@@ -378,7 +379,7 @@ export function CuadrillasFicha() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {unidades.map((u) => (
+                  {ordenarPor(unidades, (u) => u.simbolo).map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.simbolo}
                     </SelectItem>
@@ -399,7 +400,7 @@ export function CuadrillasFicha() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
-                  {raicesFamilia.map((f) => (
+                  {ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       {f.nombre}
                     </SelectItem>
@@ -418,7 +419,7 @@ export function CuadrillasFicha() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
-                  {hijasNueva.map((h) => (
+                  {ordenarPor(hijasNueva, (h) => h.nombre).map((h) => (
                     <SelectItem key={h.id} value={h.id}>
                       {h.nombre}
                     </SelectItem>

@@ -61,6 +61,7 @@ function PanelGrid({
 
 const COLUMNAS_FAMILIA = [
   { field: "nombre", header: "Nombre", width: 240 },
+  { field: "insumos_asociados", header: "Insumos asociados", width: 320 },
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
   { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
@@ -74,6 +75,7 @@ function familiaAFila(f: FamiliaInsumo, nombresPorUsuarioId: Record<string, stri
   return {
     _id: f.id,
     nombre: f.nombre,
+    insumos_asociados: f.insumos_asociados ?? "",
     created_at: f.created_at,
     created_by: nombresPorUsuarioId[f.created_by] ?? f.created_by,
     updated_at: f.updated_at ?? "",
@@ -155,8 +157,18 @@ export function FamiliasInsumoSeccion() {
                 onSearchChange={setBusquedaFamilia}
                 onSelectionChange={setPuedeEliminarFamilia}
                 onRowSelected={(fila) => setFamiliaSeleccionadaId(fila?._id ?? null)}
-                onAddRow={(fila) => createFamiliaInsumo({ nombre: String(fila.nombre) }).then(recargar)}
-                onEditRow={(fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(recargar)}
+                onAddRow={(fila) =>
+                  createFamiliaInsumo({
+                    nombre: String(fila.nombre),
+                    insumos_asociados: String(fila.insumos_asociados) || null,
+                  }).then(recargar)
+                }
+                onEditRow={(fila) =>
+                  updateFamiliaInsumo(fila._id, {
+                    nombre: String(fila.nombre),
+                    insumos_asociados: String(fila.insumos_asociados) || null,
+                  }).then(recargar)
+                }
                 onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
                 onSaveError={(mensaje) => setError(mensaje)}
               />
@@ -187,9 +199,15 @@ export function FamiliasInsumoSeccion() {
                     createFamiliaInsumo({
                       nombre: String(fila.nombre),
                       parent_id: familiaSeleccionadaId,
+                      insumos_asociados: String(fila.insumos_asociados) || null,
                     }).then(recargar)
                   }
-                  onEditRow={(fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(recargar)}
+                  onEditRow={(fila) =>
+                    updateFamiliaInsumo(fila._id, {
+                      nombre: String(fila.nombre),
+                      insumos_asociados: String(fila.insumos_asociados) || null,
+                    }).then(recargar)
+                  }
                   onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
                   onSaveError={(mensaje) => setError(mensaje)}
                 />

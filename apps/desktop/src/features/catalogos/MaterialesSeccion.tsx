@@ -25,6 +25,7 @@ import {
   listUsuarios,
   updateMaterial,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, ResultadoImportacion, UnidadMedida } from "@/lib/types";
 
@@ -173,13 +174,13 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       columns: [
         { field: "clave", header: "Clave", width: 110 },
         { field: "descripcion", header: "Descripción", width: 320 },
-        { field: "unidad", header: "Unidad", width: 110, options: unidades.map((u) => u.simbolo) },
+        { field: "unidad", header: "Unidad", width: 110, options: ordenarPor(unidades, (u) => u.simbolo).map((u) => u.simbolo) },
         { field: "costo_actual", header: "Costo actual", width: 130, readOnly: true, numeric: true },
         {
           field: "familia",
           header: "Familia",
           width: 200,
-          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          options: [SIN_FAMILIA, ...ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => f.nombre)],
         },
         {
           field: "subfamilia",
@@ -188,14 +189,14 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
           options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
-            return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
+            return [SIN_SUBFAMILIA, ...ordenarPor(hijas, (h) => h.nombre).map((h) => h.nombre)];
           },
         },
         {
           field: "proveedor",
           header: "Proveedor",
           width: 220,
-          options: [SIN_PROVEEDOR, ...proveedores.map((p) => p.razon_social)],
+          options: [SIN_PROVEEDOR, ...ordenarPor(proveedores, (p) => p.razon_social).map((p) => p.razon_social)],
         },
         { field: "marca", header: "Marca", width: 160 },
         { field: "merma_porcentaje", header: "Merma", numeric: true, suffix: "%", width: 110 },

@@ -18,6 +18,7 @@ import {
   updateOrganizacionUsuario,
   updateUsuario,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import { ROLES_USUARIO, type Organizacion, type OrganizacionMembresia, type RolUsuario } from "@/lib/types";
 
 const USUARIO_API = {
@@ -113,7 +114,7 @@ export function UsuariosSeccion() {
           field: "organizacion",
           header: "Organización",
           width: 260,
-          options: organizaciones.map((o) => o.razon_social),
+          options: ordenarPor(organizaciones, (o) => o.razon_social).map((o) => o.razon_social),
         },
         { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,

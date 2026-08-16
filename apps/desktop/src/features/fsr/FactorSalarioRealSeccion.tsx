@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, listUsuarios, updateFactorSalarioReal } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioRealData, Region } from "@/lib/types";
 
 const NACIONAL = "Nacional (sin región)";
@@ -72,7 +73,7 @@ export function FactorSalarioRealSeccion({
           field: "region",
           header: "Región",
           width: 180,
-          options: [NACIONAL, ...regiones.map((r) => r.nombre)],
+          options: [NACIONAL, ...ordenarPor(regiones, (r) => r.nombre).map((r) => r.nombre)],
         },
         ...COLUMNAS_CONTROL,
       ],

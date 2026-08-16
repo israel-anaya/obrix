@@ -15,11 +15,14 @@ import {
   listUsuarios,
   updateCuadrilla,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
 import type { Cuadrilla, CuadrillaData, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
+const NOMBRE_FAMILIA_MANO_OBRA = "Mano de obra";
+const SIMBOLO_UNIDAD_JORNAL = "jor";
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -114,12 +117,21 @@ export function CuadrillasGridVista() {
       columns: [
         { field: "clave", header: "Clave", width: 110 },
         { field: "descripcion", header: "Descripción", width: 280 },
-        { field: "unidad", header: "Unidad", width: 100, options: unidades.map((u) => u.simbolo) },
+        {
+          field: "unidad",
+          header: "Unidad",
+          width: 100,
+          options: ordenarPor(unidades, (u) => u.simbolo).map((u) => u.simbolo),
+          default: unidades.some((u) => u.simbolo === SIMBOLO_UNIDAD_JORNAL) ? SIMBOLO_UNIDAD_JORNAL : "",
+        },
         {
           field: "familia",
           header: "Familia",
           width: 180,
-          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          options: [SIN_FAMILIA, ...ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => f.nombre)],
+          default: raicesFamilia.some((f) => f.nombre === NOMBRE_FAMILIA_MANO_OBRA)
+            ? NOMBRE_FAMILIA_MANO_OBRA
+            : SIN_FAMILIA,
         },
         {
           field: "subfamilia",
@@ -128,7 +140,7 @@ export function CuadrillasGridVista() {
           options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
-            return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
+            return [SIN_SUBFAMILIA, ...ordenarPor(hijas, (h) => h.nombre).map((h) => h.nombre)];
           },
         },
         { field: "sub_total_mano_obra", header: "Mano de obra", width: 130, readOnly: true },

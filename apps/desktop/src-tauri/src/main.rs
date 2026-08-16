@@ -402,7 +402,7 @@ mod tests {
             .all(portafolio.conexion())
             .await
             .expect("listar familias");
-        assert_eq!(familias.len(), 232, "21 familias padre + 211 hijas de data/initial/familia_insumo.csv, sin duplicar");
+        assert_eq!(familias.len(), 237, "21 familias padre + 216 hijas de data/initial/familia_insumo.csv, sin duplicar");
         let hija = familias
             .iter()
             .find(|f| f.nombre == "Concreto premezclado")
@@ -415,6 +415,14 @@ mod tests {
             hija.parent_id.as_deref(),
             Some(padre.id.as_str()),
             "la hija debe apuntar al padre"
+        );
+        assert!(
+            hija.insumos_asociados.as_deref().is_some_and(|s| !s.is_empty()),
+            "la hija debe traer insumos_asociados de data/initial/familia_insumo.csv"
+        );
+        assert!(
+            padre.insumos_asociados.is_none(),
+            "la familia padre no tiene insumos_asociados propios"
         );
         for nombre in ["Instalaciones de gas", "Jardinería", "Muebles, cocinas y accesorios"] {
             let raiz = familias

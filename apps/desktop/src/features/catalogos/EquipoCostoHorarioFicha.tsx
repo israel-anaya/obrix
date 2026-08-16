@@ -25,6 +25,7 @@ import {
   listUnidadesMedida,
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type { EquipoCostoHorario, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -317,7 +318,7 @@ export function EquipoCostoHorarioFicha() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {unidades.map((u) => (
+                    {ordenarPor(unidades, (u) => u.simbolo).map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.simbolo}
                       </SelectItem>
@@ -336,7 +337,7 @@ export function EquipoCostoHorarioFicha() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
-                    {raicesFamilia.map((f) => (
+                    {ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.nombre}
                       </SelectItem>
@@ -358,7 +359,7 @@ export function EquipoCostoHorarioFicha() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
-                    {hijasNueva.map((h) => (
+                    {ordenarPor(hijasNueva, (h) => h.nombre).map((h) => (
                       <SelectItem key={h.id} value={h.id}>
                         {h.nombre}
                       </SelectItem>
@@ -374,7 +375,7 @@ export function EquipoCostoHorarioFicha() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NACIONAL_VALOR}>— Nacional —</SelectItem>
-                    {regiones.map((r) => (
+                    {ordenarPor(regiones, (r) => r.nombre).map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {r.nombre}
                       </SelectItem>

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createPrecioMaterial, listMonedas, listPreciosMaterial, listRegiones, listUsuarios } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type { Moneda, PrecioMaterial, Region } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -231,7 +232,7 @@ export function PreciosMaterialPanel({
                 </SelectTrigger>
                 <SelectContent>
                   {monedas.length === 0 && <SelectItem value={MONEDA_FALLBACK}>{MONEDA_FALLBACK}</SelectItem>}
-                  {monedas.map((m) => (
+                  {ordenarPor(monedas, (m) => m.codigo).map((m) => (
                     <SelectItem key={m.id} value={m.codigo}>
                       {m.codigo} — {m.nombre}
                     </SelectItem>
@@ -292,7 +293,7 @@ export function PreciosMaterialPanel({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
-                      {regiones.map((r) => (
+                      {ordenarPor(regiones, (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           {r.nombre}
                         </SelectItem>

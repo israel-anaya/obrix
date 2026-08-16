@@ -5,6 +5,7 @@ import { PercentageInput } from "@/components/PercentageInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { formatearFecha } from "@/lib/fecha";
+import { ordenarPor } from "@/lib/ordenar";
 import { createMaterial, updateMaterial } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -162,7 +163,7 @@ export function MaterialFormPanel({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {unidades.map((u) => (
+                  {ordenarPor(unidades, (u) => u.simbolo).map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.simbolo} — {u.descripcion}
                     </SelectItem>
@@ -182,7 +183,7 @@ export function MaterialFormPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
-                  {raicesFamilia.map((f) => (
+                  {ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       {f.nombre}
                     </SelectItem>
@@ -201,7 +202,7 @@ export function MaterialFormPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
-                  {hijas.map((h) => (
+                  {ordenarPor(hijas, (h) => h.nombre).map((h) => (
                     <SelectItem key={h.id} value={h.id}>
                       {h.nombre}
                     </SelectItem>
@@ -219,7 +220,7 @@ export function MaterialFormPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SIN_PROVEEDOR_VALOR}>— Sin proveedor —</SelectItem>
-                  {proveedores.map((p) => (
+                  {ordenarPor(proveedores, (p) => p.razon_social).map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.razon_social}
                     </SelectItem>

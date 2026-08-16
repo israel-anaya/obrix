@@ -13,6 +13,7 @@ import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategori
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { validarCsvSalarioNominal } from "@/lib/csvSalarioNominal";
+import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
 import {
   createCategoriaFasar,
@@ -31,6 +32,7 @@ const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 const NOMBRE_FAMILIA_MANO_OBRA = "Mano de obra";
+const SIMBOLO_UNIDAD_JORNAL = "jor";
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -148,7 +150,13 @@ export function CategoriaFasarSeccion() {
       columns: [
         { field: "clave", header: "Clave", width: 110 },
         { field: "descripcion", header: "Descripción", width: 320 },
-        { field: "unidad", header: "Unidad", width: 110, options: unidades.map((u) => u.simbolo) },
+        {
+          field: "unidad",
+          header: "Unidad",
+          width: 110,
+          options: ordenarPor(unidades, (u) => u.simbolo).map((u) => u.simbolo),
+          default: unidades.some((u) => u.simbolo === SIMBOLO_UNIDAD_JORNAL) ? SIMBOLO_UNIDAD_JORNAL : "",
+        },
         { field: "salario_base_diario", header: "Salario base diario", width: 150, readOnly: true, numeric: true },
         { field: "factor_salario_real", header: "FSR", width: 110, readOnly: true, numeric: true },
         { field: "salario_real_diario", header: "Salario real vigente", width: 160, readOnly: true, numeric: true },
@@ -156,7 +164,7 @@ export function CategoriaFasarSeccion() {
           field: "familia",
           header: "Familia",
           width: 200,
-          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          options: [SIN_FAMILIA, ...ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => f.nombre)],
           default: raicesFamilia.some((f) => f.nombre === NOMBRE_FAMILIA_MANO_OBRA)
             ? NOMBRE_FAMILIA_MANO_OBRA
             : SIN_FAMILIA,
@@ -168,7 +176,7 @@ export function CategoriaFasarSeccion() {
           options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
-            return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
+            return [SIN_SUBFAMILIA, ...ordenarPor(hijas, (h) => h.nombre).map((h) => h.nombre)];
           },
         },
         ...COLUMNAS_CONTROL,

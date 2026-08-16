@@ -73,24 +73,6 @@ impl FactorSalarioRealService {
         Ok(())
     }
 
-    /// `region_id` es opcional por diseño (`None` = FSR nacional), pero si se
-    /// especifica debe referenciar una región existente — separado de
-    /// `validar` porque necesita consultar la base.
-    async fn validar_region_existe(
-        repo: &dyn PortafolioRepository,
-        region_id: &Option<String>,
-    ) -> Result<(), ServiceError> {
-        let Some(region_id) = region_id else {
-            return Ok(());
-        };
-        region::Entity::find_by_id(region_id)
-            .filter(region::Column::Deleted.eq(false))
-            .one(repo.conexion())
-            .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("región {region_id}")))?;
-        Ok(())
-    }
-
     pub async fn listar(repo: &dyn PortafolioRepository, organizacion_id: &str) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
@@ -116,7 +98,7 @@ impl FactorSalarioRealService {
         creado_por: String,
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, false)?;
-        Self::validar_region_existe(repo, &datos.region_id).await?;
+        crate::validar_region_existe(repo, &datos.region_id).await?;
         let modelo_calculo_json = if datos.modelo_calculo_json.trim().is_empty() {
             MODELO_ESTANDAR_VARIABLES_JSON.to_string()
         } else {
@@ -152,7 +134,7 @@ impl FactorSalarioRealService {
         actualizado_por: String,
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, true)?;
-        Self::validar_region_existe(repo, &datos.region_id).await?;
+        crate::validar_region_existe(repo, &datos.region_id).await?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
@@ -347,14 +329,14 @@ mod tests {
     #[tokio::test]
     async fn validar_region_existe_acepta_nulo() {
         let (portafolio, _) = portafolio_con_region().await;
-        assert!(FactorSalarioRealService::validar_region_existe(&portafolio, &None).await.is_ok());
+        assert!(crate::validar_region_existe(&portafolio, &None).await.is_ok());
     }
 
     #[tokio::test]
     async fn validar_region_existe_acepta_region_existente() {
         let (portafolio, region_id) = portafolio_con_region().await;
         assert!(
-            FactorSalarioRealService::validar_region_existe(&portafolio, &Some(region_id))
+            crate::validar_region_existe(&portafolio, &Some(region_id))
                 .await
                 .is_ok()
         );
@@ -364,7 +346,7 @@ mod tests {
     async fn validar_region_existe_rechaza_region_inexistente() {
         let (portafolio, _) = portafolio_con_region().await;
         assert!(
-            FactorSalarioRealService::validar_region_existe(&portafolio, &Some("no-existe".to_string()))
+            crate::validar_region_existe(&portafolio, &Some("no-existe".to_string()))
                 .await
                 .is_err()
         );

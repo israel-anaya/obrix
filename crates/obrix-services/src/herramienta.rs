@@ -74,6 +74,32 @@ fn combinar(insumo: insumo::Model, herramienta: herramienta::Model) -> Herramien
 pub struct HerramientaService;
 
 impl HerramientaService {
+    fn validar(datos: &HerramientaData, actualizando: bool) -> Result<(), ServiceError> {
+        if datos.clave.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una herramienta sin clave."
+            )));
+        }
+        if datos.descripcion.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una herramienta sin descripción."
+            )));
+        }
+        if datos.unidad_id.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una herramienta sin unidad de medida."
+            )));
+        }
+        crate::validar_opcionales_no_vacios(&[
+            (&datos.familia_id, "familia_id"),
+            (&datos.sub_familia_id, "sub_familia_id"),
+        ])?;
+        Ok(())
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -103,6 +129,10 @@ impl HerramientaService {
         datos: HerramientaData,
         creado_por: String,
     ) -> Result<HerramientaCompleto, ServiceError> {
+        Self::validar(&datos, false)?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
         let txn = repo.conexion().begin().await?;
         let id = nuevo_id();
         let ahora = crate::ahora();
@@ -144,6 +174,10 @@ impl HerramientaService {
         datos: HerramientaData,
         actualizado_por: Option<String>,
     ) -> Result<HerramientaCompleto, ServiceError> {
+        Self::validar(&datos, true)?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
         let txn = repo.conexion().begin().await?;
         let ahora = crate::ahora();
 
@@ -470,6 +504,146 @@ mod tests {
             .await
             .expect("listar tras borrar");
         assert!(listado_tras_borrar.iter().all(|h| h.id != creado.id));
+    }
+
+    fn datos(clave: &str, descripcion: &str) -> HerramientaData {
+        HerramientaData {
+            clave: clave.to_string(),
+            descripcion: descripcion.to_string(),
+            unidad_id: "um-1".into(),
+            familia_id: None,
+            sub_familia_id: None,
+            porcentaje_mano_obra: Some(3),
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_clave_vacia_o_solo_espacios() {
+        assert!(HerramientaService::validar(&datos("", "Rotomartillo"), false).is_err());
+        assert!(HerramientaService::validar(&datos("   ", "Rotomartillo"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_descripcion_vacia() {
+        assert!(HerramientaService::validar(&datos("HER-1", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(HerramientaService::validar(&datos("HER-1", "Rotomartillo"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_rechaza_unidad_id_vacio() {
+        let mut d = datos("HER-1", "Rotomartillo");
+        d.unidad_id = String::new();
+        assert!(HerramientaService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_familia_id_vacio() {
+        let mut d = datos("HER-1", "Rotomartillo");
+        d.familia_id = Some(String::new());
+        assert!(HerramientaService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_sub_familia_id_vacio() {
+        let mut d = datos("HER-1", "Rotomartillo");
+        d.sub_familia_id = Some(String::new());
+        assert!(HerramientaService::validar(&d, false).is_err());
+    }
+
+    async fn portafolio_con_unidad_y_familia() -> (PortafolioSqliteRepository, String, String) {
+        use obrix_db::entities::{familia_insumo, usuario};
+        use sea_orm::ActiveModelTrait;
+
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-16T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("a@a.com".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        unidad_medida::ActiveModel {
+            id: Set("um-1".into()),
+            simbolo: Set("pza".into()),
+            simbolo_impresion: Set("pza".into()),
+            variantes: Set("".into()),
+            clave_sat: Set(None),
+            descripcion: Set("Pieza".into()),
+            tipo_magnitud: Set(unidad_medida::TipoMagnitud::Otro),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        familia_insumo::ActiveModel {
+            id: Set("fam-1".into()),
+            parent_id: Set(None),
+            nombre: Set("Herramienta de mano".into()),
+            insumos_asociados: Set(None),
+            deleted: Set(false),
+            created_at: Set(now),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        (portafolio, "um-1".to_string(), "fam-1".to_string())
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_acepta_unidad_existente() {
+        let (portafolio, unidad_id, _) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_rechaza_unidad_inexistente() {
+        let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_acepta_familia_existente() {
+        let (portafolio, _, familia_id) = portafolio_con_unidad_y_familia().await;
+        assert!(crate::validar_familia_existe(&portafolio, &Some(familia_id)).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_rechaza_familia_inexistente() {
+        let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
+        assert!(
+            crate::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
     }
 
     /// El CSV trae "Herramienta de mano" (3%) y "Equipo de seguridad" (2%) —

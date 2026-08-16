@@ -99,46 +99,10 @@ impl CategoriaFasarService {
                 "No se puede {accion} una categoría FASAR sin unidad."
             )));
         }
-        for (id, etiqueta) in [(&datos.familia_id, "familia_id"), (&datos.sub_familia_id, "sub_familia_id")] {
-            if let Some(id) = id {
-                if id.trim().is_empty() {
-                    return Err(ServiceError::Validacion(format!(
-                        "{etiqueta} no puede ser una cadena vacía; usa null si no aplica."
-                    )));
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Separado de `validar` porque necesita consultar la base.
-    async fn validar_unidad_existe(
-        repo: &dyn PortafolioRepository,
-        unidad_id: &str,
-    ) -> Result<(), ServiceError> {
-        unidad_medida::Entity::find_by_id(unidad_id)
-            .filter(unidad_medida::Column::Deleted.eq(false))
-            .one(repo.conexion())
-            .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("unidad de medida {unidad_id}")))?;
-        Ok(())
-    }
-
-    /// `familia_id`/`sub_familia_id` son opcionales por diseño, pero si se
-    /// especifican deben referenciar una familia de insumo existente —
-    /// separado de `validar` porque necesita consultar la base.
-    async fn validar_familia_existe(
-        repo: &dyn PortafolioRepository,
-        familia_id: &Option<String>,
-    ) -> Result<(), ServiceError> {
-        let Some(familia_id) = familia_id else {
-            return Ok(());
-        };
-        familia_insumo::Entity::find_by_id(familia_id)
-            .filter(familia_insumo::Column::Deleted.eq(false))
-            .one(repo.conexion())
-            .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("familia de insumo {familia_id}")))?;
+        crate::validar_opcionales_no_vacios(&[
+            (&datos.familia_id, "familia_id"),
+            (&datos.sub_familia_id, "sub_familia_id"),
+        ])?;
         Ok(())
     }
 
@@ -177,9 +141,9 @@ impl CategoriaFasarService {
         creado_por: String,
     ) -> Result<CategoriaFasarCompleto, ServiceError> {
         Self::validar(&datos, false)?;
-        Self::validar_unidad_existe(repo, &datos.unidad_id).await?;
-        Self::validar_familia_existe(repo, &datos.familia_id).await?;
-        Self::validar_familia_existe(repo, &datos.sub_familia_id).await?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
         let txn = repo.conexion().begin().await?;
         let id = nuevo_id();
         let ahora = crate::ahora();
@@ -219,9 +183,9 @@ impl CategoriaFasarService {
         actualizado_por: Option<String>,
     ) -> Result<CategoriaFasarCompleto, ServiceError> {
         Self::validar(&datos, true)?;
-        Self::validar_unidad_existe(repo, &datos.unidad_id).await?;
-        Self::validar_familia_existe(repo, &datos.familia_id).await?;
-        Self::validar_familia_existe(repo, &datos.sub_familia_id).await?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
         let ahora = crate::ahora();
 
         let mut ins: insumo::ActiveModel = insumo::Entity::find_by_id(&id)
@@ -482,13 +446,13 @@ mod tests {
     #[tokio::test]
     async fn validar_unidad_existe_acepta_unidad_existente() {
         let (portafolio, unidad_id) = portafolio_con_unidad().await;
-        assert!(CategoriaFasarService::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_rechaza_unidad_inexistente() {
         let (portafolio, _) = portafolio_con_unidad().await;
-        assert!(CategoriaFasarService::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
     }
 
     async fn portafolio_con_familia() -> (PortafolioSqliteRepository, String) {
@@ -516,6 +480,7 @@ mod tests {
             id: Set("fam-1".into()),
             parent_id: Set(None),
             nombre: Set("Materiales eléctricos".into()),
+            insumos_asociados: Set(None),
             deleted: Set(false),
             created_at: Set(now),
             created_by: Set("usr-1".into()),
@@ -534,14 +499,14 @@ mod tests {
     #[tokio::test]
     async fn validar_familia_existe_acepta_nulo() {
         let (portafolio, _) = portafolio_con_familia().await;
-        assert!(CategoriaFasarService::validar_familia_existe(&portafolio, &None).await.is_ok());
+        assert!(crate::validar_familia_existe(&portafolio, &None).await.is_ok());
     }
 
     #[tokio::test]
     async fn validar_familia_existe_acepta_familia_existente() {
         let (portafolio, familia_id) = portafolio_con_familia().await;
         assert!(
-            CategoriaFasarService::validar_familia_existe(&portafolio, &Some(familia_id))
+            crate::validar_familia_existe(&portafolio, &Some(familia_id))
                 .await
                 .is_ok()
         );
@@ -551,7 +516,7 @@ mod tests {
     async fn validar_familia_existe_rechaza_familia_inexistente() {
         let (portafolio, _) = portafolio_con_familia().await;
         assert!(
-            CategoriaFasarService::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
+            crate::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
                 .await
                 .is_err()
         );

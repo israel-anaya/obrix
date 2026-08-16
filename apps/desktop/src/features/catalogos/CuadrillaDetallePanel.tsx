@@ -38,6 +38,7 @@ import {
   updateCuadrillaCostoDetalle,
   updateCuadrillaDetalle,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type {
   CategoriaFasar,
   Cuadrilla,
@@ -668,7 +669,7 @@ export function CuadrillaDetallePanel({
               <SelectValue placeholder="— Región —" />
             </SelectTrigger>
             <SelectContent>
-              {regionesSinValuacion.map((r) => (
+              {ordenarPor(regionesSinValuacion, (r) => r.nombre).map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.nombre}
                 </SelectItem>

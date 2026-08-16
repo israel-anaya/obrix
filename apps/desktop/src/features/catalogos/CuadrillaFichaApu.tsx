@@ -32,6 +32,7 @@ import {
   recalculateCuadrillaCosto,
   updateCuadrillaCostoDetalle,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type {
   CategoriaFasar,
   Cuadrilla,
@@ -396,7 +397,7 @@ export function CuadrillaFichaApu({
               )
             ) : (
               <ComboboxFiltrable
-                opciones={regionesSinValuacion.map((r) => ({ id: r.id, etiqueta: r.nombre }))}
+                opciones={ordenarPor(regionesSinValuacion, (r) => r.nombre).map((r) => ({ id: r.id, etiqueta: r.nombre }))}
                 placeholder="Buscar región…"
                 onElegir={(id) => void crearValuacionRegional(id)}
                 onCancelar={() => setCreandoRegion(false)}

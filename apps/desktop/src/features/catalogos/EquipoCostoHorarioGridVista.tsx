@@ -15,11 +15,14 @@ import {
   listUsuarios,
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type { EquipoCostoHorario, EquipoCostoHorarioData, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 const SIN_REGION = "— Nacional —";
+const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
+const SIMBOLO_UNIDAD_HORA = "hr";
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -103,12 +106,21 @@ export function EquipoCostoHorarioGridVista() {
       columns: [
         { field: "clave", header: "Clave", width: 110 },
         { field: "descripcion", header: "Descripción", width: 240 },
-        { field: "unidad", header: "Unidad", width: 90, options: unidades.map((u) => u.simbolo) },
+        {
+          field: "unidad",
+          header: "Unidad",
+          width: 90,
+          options: ordenarPor(unidades, (u) => u.simbolo).map((u) => u.simbolo),
+          default: unidades.some((u) => u.simbolo === SIMBOLO_UNIDAD_HORA) ? SIMBOLO_UNIDAD_HORA : "",
+        },
         {
           field: "familia",
           header: "Familia",
           width: 160,
-          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          options: [SIN_FAMILIA, ...ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => f.nombre)],
+          default: raicesFamilia.some((f) => f.nombre === NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA)
+            ? NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA
+            : SIN_FAMILIA,
         },
         {
           field: "subfamilia",
@@ -117,10 +129,15 @@ export function EquipoCostoHorarioGridVista() {
           options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
-            return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
+            return [SIN_SUBFAMILIA, ...ordenarPor(hijas, (h) => h.nombre).map((h) => h.nombre)];
           },
         },
-        { field: "region", header: "Región", width: 140, options: [SIN_REGION, ...regiones.map((r) => r.nombre)] },
+        {
+          field: "region",
+          header: "Región",
+          width: 140,
+          options: [SIN_REGION, ...ordenarPor(regiones, (r) => r.nombre).map((r) => r.nombre)],
+        },
         { field: "cf_costo_maquina", header: "Costo máquina", width: 130, numeric: true },
         { field: "cf_valor_llantas", header: "Valor llantas", width: 120, numeric: true },
         { field: "cf_valor_piezas_especiales", header: "Valor piezas esp.", width: 130, numeric: true },

@@ -16,6 +16,8 @@ pub struct FamiliaInsumoData {
     pub nombre: String,
     #[serde(default)]
     pub parent_id: Option<String>,
+    #[serde(default)]
+    pub insumos_asociados: Option<String>,
 }
 
 pub struct FamiliaInsumoService;
@@ -51,6 +53,7 @@ impl FamiliaInsumoService {
             id: Set(nuevo_id()),
             parent_id: Set(datos.parent_id),
             nombre: Set(datos.nombre),
+            insumos_asociados: Set(datos.insumos_asociados),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
@@ -75,6 +78,7 @@ impl FamiliaInsumoService {
             .ok_or_else(|| ServiceError::NoEncontrado(format!("familia de insumo {id}")))?
             .into();
         modelo.nombre = Set(datos.nombre);
+        modelo.insumos_asociados = Set(datos.insumos_asociados);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(actualizado_por);
         Ok(modelo.update(repo.conexion()).await?)
@@ -102,12 +106,14 @@ impl FamiliaInsumoService {
         repo: &dyn PortafolioRepository,
         parent_id: &str,
         nombre: &str,
+        insumos_asociados: Option<String>,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
             parent_id: Set(Some(parent_id.to_string())),
             nombre: Set(nombre.to_string()),
+            insumos_asociados: Set(insumos_asociados),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
@@ -156,6 +162,7 @@ impl DatosIniciales for FamiliaInsumoService {
                     FamiliaInsumoData {
                         nombre: familia.clone(),
                         parent_id: None,
+                        insumos_asociados: None,
                     },
                     admin.id.clone(),
                 )
@@ -163,7 +170,15 @@ impl DatosIniciales for FamiliaInsumoService {
                 padre_id_por_nombre.insert(familia, padre.id.clone());
                 padre.id
             };
-            Self::crear_hija(repo, &padre_id, &subfamilia, admin.id.clone()).await?;
+            let insumos_asociados = registro.insumos_asociados.trim().to_string();
+            Self::crear_hija(
+                repo,
+                &padre_id,
+                &subfamilia,
+                (!insumos_asociados.is_empty()).then_some(insumos_asociados),
+                admin.id.clone(),
+            )
+            .await?;
         }
         Ok(())
     }
@@ -175,6 +190,8 @@ struct RegistroCsvFamilia {
     familia: String,
     #[serde(rename = "Subfamilia")]
     subfamilia: String,
+    #[serde(rename = "Insumos_asociados")]
+    insumos_asociados: String,
 }
 
 #[cfg(test)]
@@ -182,7 +199,7 @@ mod tests {
     use super::*;
 
     fn datos(nombre: &str) -> FamiliaInsumoData {
-        FamiliaInsumoData { nombre: nombre.to_string(), parent_id: None }
+        FamiliaInsumoData { nombre: nombre.to_string(), parent_id: None, insumos_asociados: None }
     }
 
     #[test]

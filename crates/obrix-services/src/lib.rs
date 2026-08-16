@@ -71,6 +71,124 @@ pub fn accion(actualizando: bool) -> &'static str {
     if actualizando { "actualizar" } else { "crear" }
 }
 
+/// Verifica que una entidad referenciada por id exista (y, si aplica, no
+/// esté borrada) antes de guardarla en otro registro — pásale la consulta ya
+/// armada (p. ej. `Entity::find_by_id(id).filter(Column::Deleted.eq(false)).one(repo.conexion())`)
+/// y una etiqueta para el mensaje de `NoEncontrado`. Usado por los
+/// `validar_*_existe` de cada `Service` — para un id opcional, antepón un
+/// `let Some(id) = id else { return Ok(()) };` antes de llamarlo (ver p. ej.
+/// `material::MaterialService::validar_familia_existe`).
+pub async fn validar_existe<M>(
+    resultado: impl std::future::Future<Output = Result<Option<M>, sea_orm::DbErr>>,
+    etiqueta: impl std::fmt::Display,
+) -> Result<(), ServiceError> {
+    resultado.await?.ok_or_else(|| ServiceError::NoEncontrado(etiqueta.to_string()))?;
+    Ok(())
+}
+
+/// Rechaza los ids opcionales (`familia_id`, `sub_familia_id`,
+/// `proveedor_id`, …) que vengan como cadena vacía en vez de `None` — usado
+/// dentro del `validar` de cada `Service` para los campos "opcionales pero
+/// deben existir si se especifican" (la existencia en sí se valida aparte,
+/// contra la base, en un `validar_*_existe` async — ver p. ej.
+/// `cuadrilla::CuadrillaService::validar_familia_existe`).
+pub fn validar_opcionales_no_vacios(campos: &[(&Option<String>, &str)]) -> Result<(), ServiceError> {
+    for (id, etiqueta) in campos {
+        if let Some(id) = id {
+            if id.trim().is_empty() {
+                return Err(ServiceError::Validacion(format!(
+                    "{etiqueta} no puede ser una cadena vacía; usa null si no aplica."
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// `unidad_id` es requerido en varias entidades (`categoria_fasar`,
+/// `cuadrilla`, `material`) y en las tres debe referenciar una unidad de
+/// medida existente — centralizado aquí porque la lógica era idéntica en los
+/// tres `Service`. Separado de cada `validar` porque necesita consultar la base.
+pub async fn validar_unidad_existe(
+    repo: &dyn obrix_db::PortafolioRepository,
+    unidad_id: &str,
+) -> Result<(), ServiceError> {
+    use obrix_db::entities::unidad_medida;
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+    validar_existe(
+        unidad_medida::Entity::find_by_id(unidad_id)
+            .filter(unidad_medida::Column::Deleted.eq(false))
+            .one(repo.conexion()),
+        format!("unidad de medida {unidad_id}"),
+    )
+    .await
+}
+
+/// `familia_id`/`sub_familia_id` son opcionales por diseño en varias
+/// entidades (`categoria_fasar`, `cuadrilla`, `material`), pero si se
+/// especifican deben referenciar una familia de insumo existente —
+/// centralizado aquí porque la lógica era idéntica en los tres `Service`.
+pub async fn validar_familia_existe(
+    repo: &dyn obrix_db::PortafolioRepository,
+    familia_id: &Option<String>,
+) -> Result<(), ServiceError> {
+    let Some(familia_id) = familia_id else {
+        return Ok(());
+    };
+    use obrix_db::entities::familia_insumo;
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+    validar_existe(
+        familia_insumo::Entity::find_by_id(familia_id)
+            .filter(familia_insumo::Column::Deleted.eq(false))
+            .one(repo.conexion()),
+        format!("familia de insumo {familia_id}"),
+    )
+    .await
+}
+
+/// `proveedor_id` es opcional por diseño (hoy solo en `material`), pero si
+/// se especifica debe referenciar un proveedor existente — sigue el mismo
+/// patrón que `validar_familia_existe`/`validar_unidad_existe`.
+pub async fn validar_proveedor_existe(
+    repo: &dyn obrix_db::PortafolioRepository,
+    proveedor_id: &Option<String>,
+) -> Result<(), ServiceError> {
+    let Some(proveedor_id) = proveedor_id else {
+        return Ok(());
+    };
+    use obrix_db::entities::proveedor;
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+    validar_existe(
+        proveedor::Entity::find_by_id(proveedor_id)
+            .filter(proveedor::Column::Deleted.eq(false))
+            .one(repo.conexion()),
+        format!("proveedor {proveedor_id}"),
+    )
+    .await
+}
+
+/// `region_id` es opcional por diseño (`None` = ámbito nacional, usado hoy
+/// en `factor_salario_real`), pero si se especifica debe referenciar una
+/// región existente — sigue el mismo patrón que
+/// `validar_familia_existe`/`validar_unidad_existe`.
+pub async fn validar_region_existe(
+    repo: &dyn obrix_db::PortafolioRepository,
+    region_id: &Option<String>,
+) -> Result<(), ServiceError> {
+    let Some(region_id) = region_id else {
+        return Ok(());
+    };
+    use obrix_db::entities::region;
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+    validar_existe(
+        region::Entity::find_by_id(region_id)
+            .filter(region::Column::Deleted.eq(false))
+            .one(repo.conexion()),
+        format!("región {region_id}"),
+    )
+    .await
+}
+
 /// Borrado lógico del pivote `insumo` — las tablas de extensión (material,
 /// herramienta, cuadrilla, …) se quedan; `listar` las oculta con `deleted`.
 pub async fn marcar_insumo_eliminado(

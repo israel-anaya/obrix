@@ -4,6 +4,7 @@ import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -298,7 +299,7 @@ export function SalarioCategoriaFasarPanel({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
-                      {regiones.map((r) => (
+                      {ordenarPor(regiones, (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           {r.nombre}
                         </SelectItem>
@@ -313,7 +314,7 @@ export function SalarioCategoriaFasarPanel({
                       <SelectValue placeholder="— Elige un FSR —" />
                     </SelectTrigger>
                     <SelectContent>
-                      {factoresDeRegion.map((f) => (
+                      {ordenarPor(factoresDeRegion, (f) => f.nombre).map((f) => (
                         <SelectItem key={f.id} value={f.id}>
                           {f.nombre} ({f.region_id ? (nombrePorRegionId[f.region_id] ?? f.region_id) : NACIONAL})
                         </SelectItem>

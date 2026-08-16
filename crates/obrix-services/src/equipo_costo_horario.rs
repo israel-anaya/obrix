@@ -169,6 +169,33 @@ pub(crate) fn combinar(insumo: insumo::Model, equipo: equipo_costo_horario::Mode
 pub struct EquipoCostoHorarioService;
 
 impl EquipoCostoHorarioService {
+    fn validar(datos: &EquipoCostoHorarioData, actualizando: bool) -> Result<(), ServiceError> {
+        if datos.clave.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un equipo de costo horario sin clave."
+            )));
+        }
+        if datos.descripcion.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un equipo de costo horario sin descripción."
+            )));
+        }
+        if datos.unidad_id.trim().is_empty() {
+            let accion = crate::accion(actualizando);
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un equipo de costo horario sin unidad de medida."
+            )));
+        }
+        crate::validar_opcionales_no_vacios(&[
+            (&datos.familia_id, "familia_id"),
+            (&datos.sub_familia_id, "sub_familia_id"),
+            (&datos.region_id, "region_id"),
+        ])?;
+        Ok(())
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -218,6 +245,11 @@ impl EquipoCostoHorarioService {
         datos: EquipoCostoHorarioData,
         creado_por: String,
     ) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
+        Self::validar(&datos, false)?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
+        crate::validar_region_existe(repo, &datos.region_id).await?;
         let cargos = calcular_cargos_fijos(&datos)?;
         let txn = repo.conexion().begin().await?;
         let id = nuevo_id();
@@ -288,6 +320,11 @@ impl EquipoCostoHorarioService {
         datos: EquipoCostoHorarioData,
         actualizado_por: Option<String>,
     ) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
+        Self::validar(&datos, true)?;
+        crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
+        crate::validar_familia_existe(repo, &datos.familia_id).await?;
+        crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
+        crate::validar_region_existe(repo, &datos.region_id).await?;
         let cargos = calcular_cargos_fijos(&datos)?;
         let ahora = crate::ahora();
 
@@ -352,6 +389,189 @@ mod tests {
     use super::*;
     use obrix_db::PortafolioSqliteRepository;
     use std::path::Path;
+
+    fn datos_validar(clave: &str, descripcion: &str) -> EquipoCostoHorarioData {
+        EquipoCostoHorarioData {
+            clave: clave.to_string(),
+            descripcion: descripcion.to_string(),
+            unidad_id: "um-1".to_string(),
+            familia_id: None,
+            sub_familia_id: None,
+            region_id: None,
+            cf_costo_maquina: "1000000".parse().unwrap(),
+            cf_valor_llantas: "0".parse().unwrap(),
+            cf_valor_piezas_especiales: "0".parse().unwrap(),
+            cf_valor_rescate_porcentaje: "10".parse().unwrap(),
+            cf_vida_economica_anios: "5".parse().unwrap(),
+            cf_horas_uso_anual: "2000".parse().unwrap(),
+            cf_tasa_interes_anual_porcentaje: "12".parse().unwrap(),
+            cf_tasa_seguros_anual_porcentaje: "4".parse().unwrap(),
+            cf_mantenimiento_porcentaje: "60".parse().unwrap(),
+        }
+    }
+
+    #[test]
+    fn validar_rechaza_clave_vacia_o_solo_espacios() {
+        assert!(EquipoCostoHorarioService::validar(&datos_validar("", "Excavadora"), false).is_err());
+        assert!(EquipoCostoHorarioService::validar(&datos_validar("   ", "Excavadora"), true).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_descripcion_vacia() {
+        assert!(EquipoCostoHorarioService::validar(&datos_validar("ECH-1", ""), false).is_err());
+    }
+
+    #[test]
+    fn validar_acepta_datos_completos() {
+        assert!(EquipoCostoHorarioService::validar(&datos_validar("ECH-1", "Excavadora"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_rechaza_unidad_id_vacio() {
+        let mut d = datos_validar("ECH-1", "Excavadora");
+        d.unidad_id = String::new();
+        assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_familia_id_vacio() {
+        let mut d = datos_validar("ECH-1", "Excavadora");
+        d.familia_id = Some(String::new());
+        assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_sub_familia_id_vacio() {
+        let mut d = datos_validar("ECH-1", "Excavadora");
+        d.sub_familia_id = Some(String::new());
+        assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
+    }
+
+    #[test]
+    fn validar_rechaza_region_id_vacio() {
+        let mut d = datos_validar("ECH-1", "Excavadora");
+        d.region_id = Some(String::new());
+        assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
+    }
+
+    async fn portafolio_con_unidad_familia_y_region() -> (PortafolioSqliteRepository, String, String, String) {
+        use obrix_db::entities::{familia_insumo, region, unidad_medida, usuario};
+        use sea_orm::ActiveModelTrait;
+
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        let now = "2026-08-16T00:00:00Z".to_string();
+
+        usuario::ActiveModel {
+            id: Set("usr-1".into()),
+            nombre: Set("Admin".into()),
+            correo: Set("a@a.com".into()),
+            rol: Set(usuario::RolUsuario::Admin),
+            activo: Set(true),
+            created_at: Set(now.clone()),
+            created_by: Set(None),
+            updated_at: Set(None),
+            updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        unidad_medida::ActiveModel {
+            id: Set("um-1".into()),
+            simbolo: Set("hr".into()),
+            simbolo_impresion: Set("hr".into()),
+            variantes: Set("".into()),
+            clave_sat: Set(None),
+            descripcion: Set("Hora".into()),
+            tipo_magnitud: Set(unidad_medida::TipoMagnitud::Tiempo),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        familia_insumo::ActiveModel {
+            id: Set("fam-1".into()),
+            parent_id: Set(None),
+            nombre: Set("Equipo pesado".into()),
+            insumos_asociados: Set(None),
+            deleted: Set(false),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        region::ActiveModel {
+            id: Set("reg-1".into()),
+            nombre: Set("Centro".into()),
+            estado: Set("CDMX".into()),
+            factor_ajuste: Set(None),
+            deleted: Set(false),
+            created_at: Set(now),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        (portafolio, "um-1".to_string(), "fam-1".to_string(), "reg-1".to_string())
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_acepta_unidad_existente() {
+        let (portafolio, unidad_id, _, _) = portafolio_con_unidad_familia_y_region().await;
+        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_unidad_existe_rechaza_unidad_inexistente() {
+        let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
+        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn validar_familia_existe_rechaza_familia_inexistente() {
+        let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
+        assert!(
+            crate::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn validar_region_existe_acepta_region_existente() {
+        let (portafolio, _, _, region_id) = portafolio_con_unidad_familia_y_region().await;
+        assert!(crate::validar_region_existe(&portafolio, &Some(region_id)).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validar_region_existe_rechaza_region_inexistente() {
+        let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
+        assert!(
+            crate::validar_region_existe(&portafolio, &Some("no-existe".to_string()))
+                .await
+                .is_err()
+        );
+    }
 
     #[tokio::test]
     async fn crear_listar_actualizar_eliminar_equipo_costo_horario() {

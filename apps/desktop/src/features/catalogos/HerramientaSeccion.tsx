@@ -13,11 +13,14 @@ import {
   listUsuarios,
   updateHerramienta,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
 import type { FamiliaInsumo, Herramienta, HerramientaData, UnidadMedida } from "@/lib/types";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
+const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
+const SIMBOLO_UNIDAD_PORCENTAJE_MO = "%mo";
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -106,13 +109,22 @@ export function HerramientaSeccion() {
       columns: [
         { field: "clave", header: "Clave", width: 110 },
         { field: "descripcion", header: "Descripción", width: 320 },
-        { field: "unidad", header: "Unidad", width: 110, options: unidades.map((u) => u.simbolo) },
+        {
+          field: "unidad",
+          header: "Unidad",
+          width: 110,
+          options: ordenarPor(unidades, (u) => u.simbolo).map((u) => u.simbolo),
+          default: unidades.some((u) => u.simbolo === SIMBOLO_UNIDAD_PORCENTAJE_MO) ? SIMBOLO_UNIDAD_PORCENTAJE_MO : "",
+        },
         { field: "porcentaje_mano_obra", header: "% Mano de obra", numeric: true, suffix: "%", width: 140 },
         {
           field: "familia",
           header: "Familia",
           width: 200,
-          options: [SIN_FAMILIA, ...raicesFamilia.map((f) => f.nombre)],
+          options: [SIN_FAMILIA, ...ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => f.nombre)],
+          default: raicesFamilia.some((f) => f.nombre === NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA)
+            ? NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA
+            : SIN_FAMILIA,
         },
         {
           field: "subfamilia",
@@ -121,7 +133,7 @@ export function HerramientaSeccion() {
           options: (fila) => {
             const familiaId = raizIdPorNombre[String(fila.familia)];
             const hijas = familiaId ? (hijasPorPadreId[familiaId] ?? []) : [];
-            return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
+            return [SIN_SUBFAMILIA, ...ordenarPor(hijas, (h) => h.nombre).map((h) => h.nombre)];
           },
         },
         ...COLUMNAS_CONTROL,

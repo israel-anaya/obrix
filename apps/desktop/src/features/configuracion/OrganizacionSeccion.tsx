@@ -14,6 +14,7 @@ import {
   listUsuarios,
   updateOrganizacion,
 } from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
 import type { Moneda } from "@/lib/types";
 import { TIPOS_ORGANIZACION, type TipoOrganizacion } from "@/lib/types";
 
@@ -88,7 +89,7 @@ export function OrganizacionSeccion() {
           field: "moneda_default",
           header: "Moneda default",
           width: 160,
-          options: monedas.map((m) => m.codigo),
+          options: ordenarPor(monedas, (m) => m.codigo).map((m) => m.codigo),
         },
         ...COLUMNAS_CONTROL,
       ],
