@@ -1,5 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calculator, Plus, RefreshCcw, Sigma, Trash2 } from "lucide-react";
+import { Calculator, Copy, Plus, RefreshCcw, Sigma, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -11,6 +31,8 @@ import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioRealData, Region } from "@/lib/types";
 
 const NACIONAL = "Nacional (sin región)";
+/** Valor del Select para un FSR sin región — Radix no admite cadena vacía. */
+const REGION_NACIONAL = "__nacional__";
 
 const FACTOR_SALARIO_REAL_API = {
   list: listFactoresSalarioReal,
@@ -48,6 +70,11 @@ export function FactorSalarioRealSeccion({
 
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+  const [eligiendoRegion, setEligiendoRegion] = useState(false);
+  const [confirmandoDuplicar, setConfirmandoDuplicar] = useState(false);
+  const [regionDestinoId, setRegionDestinoId] = useState("");
+  const [duplicando, setDuplicando] = useState(false);
+  const yendoAConfirmacion = useRef(false);
   const recargarRegiones = () => listRegiones().then(setRegiones).catch(() => {});
   useEffect(() => {
     recargarRegiones();
@@ -105,6 +132,45 @@ export function FactorSalarioRealSeccion({
 
   const filaSeleccionada = items.find((f) => f.id === seleccionadoId);
 
+  const nombreRegionDestino =
+    regionDestinoId === REGION_NACIONAL ? NACIONAL : (nombrePorRegionId[regionDestinoId] ?? "");
+
+  const abrirDuplicar = () => {
+    if (!filaSeleccionada) return;
+    setRegionDestinoId("");
+    setEligiendoRegion(true);
+  };
+
+  const pasarAConfirmacion = () => {
+    if (!regionDestinoId) return;
+    yendoAConfirmacion.current = true;
+    setEligiendoRegion(false);
+    setTimeout(() => {
+      setConfirmandoDuplicar(true);
+      yendoAConfirmacion.current = false;
+    }, 0);
+  };
+
+  const confirmarDuplicar = async () => {
+    if (!filaSeleccionada || !regionDestinoId) return;
+    setDuplicando(true);
+    try {
+      await crear({
+        nombre: filaSeleccionada.nombre,
+        region_id: regionDestinoId === REGION_NACIONAL ? null : regionDestinoId,
+        modelo_calculo_json: filaSeleccionada.modelo_calculo_json,
+        parametros_json: filaSeleccionada.parametros_json,
+      });
+      toast({ description: `Se duplicó «${filaSeleccionada.nombre}» en ${nombreRegionDestino}.` });
+      setConfirmandoDuplicar(false);
+      setRegionDestinoId("");
+    } catch {
+      // El error ya se muestra vía `error` de useCatalogoGeneral.
+    } finally {
+      setDuplicando(false);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
@@ -113,6 +179,12 @@ export function FactorSalarioRealSeccion({
           <BarraAcciones
             acciones={[
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icono: Copy,
+                titulo: "Duplicar FSR",
+                onClick: abrirDuplicar,
+                disabled: !filaSeleccionada,
+              },
               {
                 icono: Calculator,
                 titulo: "Calcular FSR",
@@ -158,6 +230,76 @@ export function FactorSalarioRealSeccion({
           onCancelEdit={limpiarError}
         />
       </div>
+
+      <Dialog
+        open={eligiendoRegion}
+        onOpenChange={(open) => {
+          setEligiendoRegion(open);
+          if (!open && !yendoAConfirmacion.current) setRegionDestinoId("");
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Duplicar FSR</DialogTitle>
+            <DialogDescription>
+              Elige la región destino para duplicar «{filaSeleccionada?.nombre ?? ""}».
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={regionDestinoId || undefined} onValueChange={setRegionDestinoId}>
+            <SelectTrigger autoFocus size="sm" className="w-full text-xs">
+              <SelectValue placeholder="— Región —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={REGION_NACIONAL}>{NACIONAL}</SelectItem>
+              {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEligiendoRegion(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={pasarAConfirmacion} disabled={!regionDestinoId}>
+              Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirmandoDuplicar}
+        onOpenChange={(open) => {
+          if (!open && duplicando) return;
+          setConfirmandoDuplicar(open);
+          if (!open) setRegionDestinoId("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Duplicar este FSR?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se duplicará el FSR «{filaSeleccionada?.nombre ?? ""}» en la región «{nombreRegionDestino}».
+              Se copiarán el modelo de cálculo y los parámetros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicando} />
+            <AlertDialogAction
+              className={buttonVariants({ variant: "default" })}
+              disabled={duplicando}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmarDuplicar();
+              }}
+            >
+              Duplicar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

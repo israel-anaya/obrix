@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileSpreadsheet, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { DollarSign, FileSpreadsheet, FileText, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -9,6 +9,7 @@ import {
   ActualizarSalariosLoteDialog,
   type EstadoActualizacionLote,
 } from "@/features/catalogos/ActualizarSalariosLoteDialog";
+import { CategoriaFasarFormPanel } from "@/features/catalogos/CategoriaFasarFormPanel";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -46,7 +47,7 @@ const COLUMNAS_CONTROL = [
  * Salario" en el panel izquierdo. Grid de `categoria_fasar` (extensión de
  * `insumo`) + panel lateral con las vigencias de `salario_categoria_fasar`
  * de la categoría seleccionada, mismo patrón maestro/detalle que
- * `MaterialesSeccion`/`PreciosMaterialPanel`.
+ * `MaterialesSeccion`/`PreciosMaterialPanel`/`MaterialFormPanel`.
  */
 export function CategoriaFasarSeccion() {
   const gridRef = useRef<DataGridHandle>(null);
@@ -61,6 +62,7 @@ export function CategoriaFasarSeccion() {
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const [panelSalarioAbierto, setPanelSalarioAbierto] = useState(false);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -229,7 +231,7 @@ export function CategoriaFasarSeccion() {
       initialRows={filas}
       loading={cargando}
       selectionMode="single"
-      highlightSelection={panelSalarioAbierto || panelHistorialAbierto}
+      highlightSelection={panelSalarioAbierto || panelFichaAbierto || panelHistorialAbierto}
       initialSelectedId={categoriaSeleccionadaId}
       search={busqueda}
       onSearchChange={setBusqueda}
@@ -258,8 +260,21 @@ export function CategoriaFasarSeccion() {
               {
                 icono: DollarSign,
                 titulo: panelSalarioAbierto ? "Ocultar salario" : "Ver salario",
-                onClick: () => setPanelSalarioAbierto((v) => !v),
+                onClick: () =>
+                  setPanelSalarioAbierto((v) => {
+                    if (!v) setPanelFichaAbierto(false);
+                    return !v;
+                  }),
                 disabled: !panelSalarioAbierto && categorias.length === 0,
+              },
+              {
+                icono: FileText,
+                titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () =>
+                  setPanelFichaAbierto((v) => {
+                    if (!v) setPanelSalarioAbierto(false);
+                    return !v;
+                  }),
               },
               {
                 icono: History,
@@ -282,8 +297,8 @@ export function CategoriaFasarSeccion() {
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        {/* Los grupos viven siempre para no desmontar el grid al abrir salario
-            o historial (si no, el virtualizador vuelve a scroll 0). */}
+        {/* Los grupos viven siempre para no desmontar el grid al abrir salario,
+            ficha o historial (si no, el virtualizador vuelve a scroll 0). */}
         <ResizablePanelGroup orientation="vertical" className="h-full">
           <ResizablePanel
             id="fasar-principal"
@@ -294,28 +309,39 @@ export function CategoriaFasarSeccion() {
             <ResizablePanelGroup orientation="horizontal" className="h-full">
               <ResizablePanel
                 id="fasar-grid"
-                defaultSize="47"
-                minSize="35"
+                defaultSize="65"
+                minSize="40"
                 className="flex min-h-0 min-w-0 flex-col overflow-hidden"
               >
                 {grid}
               </ResizablePanel>
-              {panelSalarioAbierto ? (
+              {panelSalarioAbierto || panelFichaAbierto ? (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel
-                    id="fasar-salario"
+                    id="fasar-detalle"
                     defaultSize="35"
                     minSize="22"
                     className="flex min-h-0 min-w-0 flex-col overflow-hidden"
                   >
-                    <SalarioCategoriaFasarPanel
-                      categoriaId={categoriaSeleccionadaId}
-                      categoriaClave={categoriaSeleccionada?.clave}
-                      categoriaDescripcion={categoriaSeleccionada?.descripcion}
-                      onCerrar={() => setPanelSalarioAbierto(false)}
-                      onSalarioRegistrado={recargarCategorias}
-                    />
+                    {panelSalarioAbierto ? (
+                      <SalarioCategoriaFasarPanel
+                        categoriaId={categoriaSeleccionadaId}
+                        categoriaClave={categoriaSeleccionada?.clave}
+                        categoriaDescripcion={categoriaSeleccionada?.descripcion}
+                        onCerrar={() => setPanelSalarioAbierto(false)}
+                        onSalarioRegistrado={recargarCategorias}
+                      />
+                    ) : (
+                      <CategoriaFasarFormPanel
+                        categoria={categoriaSeleccionada}
+                        unidades={unidades}
+                        familias={familias}
+                        nombresPorUsuarioId={nombresPorUsuarioId}
+                        onCerrar={() => setPanelFichaAbierto(false)}
+                        onGuardado={recargarCategorias}
+                      />
+                    )}
                   </ResizablePanel>
                 </>
               ) : null}

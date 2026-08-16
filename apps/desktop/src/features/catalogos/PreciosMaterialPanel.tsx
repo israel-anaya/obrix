@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Plus, X } from "lucide-react";
+import { CurrencyInput } from "@/components/CurrencyInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -177,6 +178,7 @@ export function PreciosMaterialPanel({
   // lo que se configura (el form de "Nuevo precio") — un material puede
   // haber tenido precios registrados en más de una moneda a lo largo del tiempo.
   const preciosMoneda = useMemo(() => precios.filter((p) => p.moneda === monedaSeleccionada), [precios, monedaSeleccionada]);
+  const moneda = monedas.find((m) => m.codigo === monedaSeleccionada);
 
   // Puede haber un vigente por región a la vez (más el nacional, sin región,
   // que es el default cuando un proyecto no tiene uno propio) — no es un
@@ -262,14 +264,13 @@ export function PreciosMaterialPanel({
                 <div className="flex gap-2">
                   <label className="flex-1 text-[11px] text-muted-foreground">
                     Precio ({monedaSeleccionada})
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
+                    <CurrencyInput
                       autoFocus
                       value={precioNuevo}
-                      onChange={(e) => setPrecioNuevo(e.target.value)}
-                      className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                      onCommit={setPrecioNuevo}
+                      prefix={moneda?.simbolo ?? "$"}
+                      decimals={moneda?.decimales ?? 2}
+                      className="mt-0.5 w-full"
                     />
                   </label>
                   <label className="flex-1 text-[11px] text-muted-foreground">

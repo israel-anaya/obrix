@@ -6,49 +6,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { formatearFecha } from "@/lib/fecha";
 import { ordenarPor } from "@/lib/ordenar";
-import { updateMaterial } from "@/lib/tauri";
-import type { FamiliaInsumo, Material, MaterialData, Proveedor, UnidadMedida } from "@/lib/types";
+import { updateHerramienta } from "@/lib/tauri";
+import type { FamiliaInsumo, Herramienta, HerramientaData, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // Radix no permite un `SelectItem` con value="" — estos "sin X" son null en
 // el backend y necesitan un valor propio para poder ofrecerse como opción.
 const SIN_FAMILIA_VALOR = "__sin_familia__";
 const SIN_SUBFAMILIA_VALOR = "__sin_subfamilia__";
-const SIN_PROVEEDOR_VALOR = "__sin_proveedor__";
 
-function aMaterialData(m: Material): MaterialData {
+function aHerramientaData(h: Herramienta): HerramientaData {
   return {
-    clave: m.clave,
-    descripcion: m.descripcion,
-    unidad_id: m.unidad_id,
-    familia_id: m.familia_id,
-    sub_familia_id: m.sub_familia_id,
-    proveedor_id: m.proveedor_id,
-    merma_porcentaje: m.merma_porcentaje,
-    marca: m.marca,
+    clave: h.clave,
+    descripcion: h.descripcion,
+    unidad_id: h.unidad_id,
+    familia_id: h.familia_id,
+    sub_familia_id: h.sub_familia_id,
+    porcentaje_mano_obra: h.porcentaje_mano_obra ?? 0,
   };
 }
 
 /**
- * Vista en forma del material seleccionado — los mismos campos que las
+ * Vista en forma de la herramienta seleccionada — los mismos campos que las
  * columnas, pero en un formulario más legible para revisar/editar un
- * registro a la vez. En `MaterialesSeccion` y en la Estantería se
- * sincroniza con la fila/tarjeta. El alta de Estantería vive en un
- * `Sheet` aparte (mismo patrón que `CuadrillasFicha`). "Guardar" hace
- * `updateMaterial` y avisa al padre vía `onGuardado`.
+ * registro a la vez. En `HerramientaSeccion` se sincroniza con la fila.
+ * "Guardar" hace `updateHerramienta` y avisa al padre vía `onGuardado`.
  */
-export function MaterialFormPanel({
-  material,
+export function HerramientaFormPanel({
+  herramienta,
   unidades,
-  proveedores,
   familias,
   nombresPorUsuarioId,
   onCerrar,
   onGuardado,
 }: {
-  material: Material | null;
+  herramienta: Herramienta | null;
   unidades: UnidadMedida[];
-  proveedores: Proveedor[];
   familias: FamiliaInsumo[];
   nombresPorUsuarioId: Record<string, string>;
   onCerrar: () => void;
@@ -63,17 +56,17 @@ export function MaterialFormPanel({
     return mapa;
   }, [familias]);
 
-  const [datos, setDatos] = useState<MaterialData | null>(null);
+  const [datos, setDatos] = useState<HerramientaData | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Se resincroniza cada vez que cambia el material seleccionado o se
-  // recarga tras guardar — descarta cualquier edición sin confirmar de
-  // la fila anterior.
+  // Se resincroniza cada vez que cambia la herramienta seleccionada o se
+  // recarga tras guardar — descarta cualquier edición sin confirmar de la
+  // fila anterior.
   useEffect(() => {
     setError(null);
-    setDatos(material ? aMaterialData(material) : null);
-  }, [material]);
+    setDatos(herramienta ? aHerramientaData(herramienta) : null);
+  }, [herramienta]);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -82,17 +75,17 @@ export function MaterialFormPanel({
   const hijas = datos?.familia_id ? (hijasPorPadreId[datos.familia_id] ?? []) : [];
 
   const puedeGuardar = useMemo(() => {
-    if (!datos || !material) return false;
+    if (!datos || !herramienta) return false;
     if (!datos.clave.trim() || !datos.descripcion.trim() || !datos.unidad_id) return false;
-    return JSON.stringify(datos) !== JSON.stringify(aMaterialData(material));
-  }, [material, datos]);
+    return JSON.stringify(datos) !== JSON.stringify(aHerramientaData(herramienta));
+  }, [herramienta, datos]);
 
   const guardar = async () => {
-    if (!datos || !material || !puedeGuardar) return;
+    if (!datos || !herramienta || !puedeGuardar) return;
     setGuardando(true);
     setError(null);
     try {
-      await updateMaterial(material.id, datos);
+      await updateHerramienta(herramienta.id, datos);
       onGuardado?.();
     } catch (e) {
       setError(String(e));
@@ -106,7 +99,7 @@ export function MaterialFormPanel({
       <div className="border-b border-border px-3 py-1.5">
         <div className="flex items-center justify-between gap-2">
           <h3 className="truncate text-xs font-semibold text-muted-foreground">
-            Ficha{material ? ` — ${material.clave}` : ""}
+            Ficha{herramienta ? ` — ${herramienta.clave}` : ""}
           </h3>
           <button
             type="button"
@@ -120,7 +113,7 @@ export function MaterialFormPanel({
       </div>
 
       {!datos ? (
-        <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un material para ver su ficha.</p>
+        <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona una herramienta para ver su ficha.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
           <div className="flex flex-col gap-3">
@@ -192,59 +185,31 @@ export function MaterialFormPanel({
                 </SelectContent>
               </Select>
             </Campo>
-            <Campo label="Proveedor">
-              <Select
-                value={datos.proveedor_id ?? SIN_PROVEEDOR_VALOR}
-                onValueChange={(v) => setDatos({ ...datos, proveedor_id: v === SIN_PROVEEDOR_VALOR ? null : v })}
-              >
-                <SelectTrigger className={CAMPO_INPUT_CLASE}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_PROVEEDOR_VALOR}>— Sin proveedor —</SelectItem>
-                  {ordenarPor(proveedores, (p) => p.razon_social).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.razon_social}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Campo>
-            <Campo label="Marca">
-              <input
-                value={datos.marca ?? ""}
-                onChange={(e) => setDatos({ ...datos, marca: e.target.value || null })}
-                className={CAMPO_INPUT_CLASE}
-              />
-            </Campo>
-            <Campo label="Merma (%)">
+            <Campo label="% Mano de obra">
               <PercentageInput
-                value={String(datos.merma_porcentaje ?? 0)}
-                onCommit={(v) => setDatos({ ...datos, merma_porcentaje: Number(v) || 0 })}
+                value={String(datos.porcentaje_mano_obra ?? 0)}
+                onCommit={(v) => setDatos({ ...datos, porcentaje_mano_obra: Number(v) || 0 })}
                 className={CAMPO_INPUT_CLASE}
               />
             </Campo>
 
-            <div className="rounded-md border border-border bg-muted/30 p-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Costo actual</span>
-                <span className="font-medium">{material?.precio_vigente ? `$${material.precio_vigente}` : "$0"}</span>
+            {herramienta && (
+              <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                <span>Creado</span>
+                <span className="text-right">{formatearFecha(herramienta.created_at)}</span>
+                <span>Creado por</span>
+                <span className="truncate text-right">
+                  {nombresPorUsuarioId[herramienta.created_by] ?? herramienta.created_by}
+                </span>
+                <span>Actualizado</span>
+                <span className="text-right">{herramienta.updated_at ? formatearFecha(herramienta.updated_at) : "—"}</span>
+                <span>Actualizado por</span>
+                <span className="truncate text-right">
+                  {herramienta.updated_by
+                    ? (nombresPorUsuarioId[herramienta.updated_by] ?? herramienta.updated_by)
+                    : "—"}
+                </span>
               </div>
-            </div>
-
-            {material && (
-            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
-              <span>Creado</span>
-              <span className="text-right">{formatearFecha(material.created_at)}</span>
-              <span>Creado por</span>
-              <span className="truncate text-right">{nombresPorUsuarioId[material.created_by] ?? material.created_by}</span>
-              <span>Actualizado</span>
-              <span className="text-right">{material.updated_at ? formatearFecha(material.updated_at) : "—"}</span>
-              <span>Actualizado por</span>
-              <span className="truncate text-right">
-                {material.updated_by ? (nombresPorUsuarioId[material.updated_by] ?? material.updated_by) : "—"}
-              </span>
-            </div>
             )}
           </div>
         </div>
@@ -254,7 +219,7 @@ export function MaterialFormPanel({
         <div className="flex justify-end gap-2 border-t border-border px-3 py-2">
           <button
             type="button"
-            onClick={() => setDatos(material ? aMaterialData(material) : datos)}
+            onClick={() => setDatos(herramienta ? aHerramientaData(herramienta) : datos)}
             disabled={!puedeGuardar || guardando}
             className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
           >

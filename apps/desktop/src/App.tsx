@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FileText, FolderKanban, LayoutGrid, type LucideIcon, Package, Plus, Table2, Trash2, Users } from "lucide-react";
+import { BookOpen, FileText, FolderKanban, Grid3x3, LayoutGrid, type LucideIcon, Package, Plus, Table2, Trash2, Users } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { BarraAcciones } from "@/components/BarraAcciones";
@@ -28,7 +28,6 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
 import { activeGridClipboard } from "@/components/grid/gridClipboard";
 import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
-import { CategoriaFasarSeccion } from "@/features/catalogos/CategoriaFasarSeccion";
 import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
 import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/CuadrillasSeccion";
@@ -42,6 +41,7 @@ import { PerfilInactividadEquipoSeccion } from "@/features/catalogos/PerfilInact
 import { PuenteBaseRealSeccion } from "@/features/catalogos/PuenteBaseRealSeccion";
 import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
+import { TabuladoresSalarioSeccion, type TabuladoresSalarioVista } from "@/features/catalogos/TabuladoresSalarioSeccion";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
 import { ArbolDemo } from "@/features/demo/ArbolDemo";
 import { HojaCalculoPage } from "@/features/hoja-calculo/HojaCalculoPage";
@@ -140,6 +140,7 @@ export default function App() {
   const [cuadrillasVista, setCuadrillasVista] = useState<CuadrillasVista>("grid");
   const [equipoCostoHorarioVista, setEquipoCostoHorarioVista] = useState<EquipoCostoHorarioVista>("grid");
   const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("grid");
+  const [tabuladoresSalarioVista, setTabuladoresSalarioVista] = useState<TabuladoresSalarioVista>("grid");
 
   const dataGridRef = useRef<DataGridHandle>(null);
   const [catalogoPuedeEliminar, setCatalogoPuedeEliminar] = useState(false);
@@ -462,7 +463,7 @@ export default function App() {
       if (catalogoId === "factores-salario-real") {
         return <FactorSalarioRealSeccion onCalcular={openFsrCalculoTab} onEditarModelo={openModeloCalculoTab} />;
       }
-      if (catalogoId === "tabuladores-salario") return <CategoriaFasarSeccion />;
+      if (catalogoId === "tabuladores-salario") return <TabuladoresSalarioSeccion vista={tabuladoresSalarioVista} />;
       if (catalogoId === "tabuladores-escalafon") return <EscalafonSalarioSeccion />;
       if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
@@ -545,11 +546,19 @@ export default function App() {
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
     { id: "ficha", icon: FileText, titulo: "Modo ficha" },
   ];
+  const TABULADORES_SALARIO_TAB_ID = `${CATALOGO_PREFIX}tabuladores-salario`;
+  const TABULADORES_SALARIO_VISTAS: { id: TabuladoresSalarioVista; icon: LucideIcon; titulo: string }[] = [
+    { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+    { id: "matriz", icon: Grid3x3, titulo: "Modo Matriz × región" },
+  ];
   const renderTabExtra = (tab: EditorTabInfo) => {
     if (tab.id === CUADRILLAS_TAB_ID) return renderVistaSwitcher(CUADRILLAS_VISTAS, cuadrillasVista, setCuadrillasVista);
     if (tab.id === MATERIALES_TAB_ID) return renderVistaSwitcher(MATERIALES_VISTAS, materialesVista, setMaterialesVista);
     if (tab.id === EQUIPO_COSTO_HORARIO_TAB_ID) {
       return renderVistaSwitcher(EQUIPO_COSTO_HORARIO_VISTAS, equipoCostoHorarioVista, setEquipoCostoHorarioVista);
+    }
+    if (tab.id === TABULADORES_SALARIO_TAB_ID) {
+      return renderVistaSwitcher(TABULADORES_SALARIO_VISTAS, tabuladoresSalarioVista, setTabuladoresSalarioVista);
     }
     return null;
   };

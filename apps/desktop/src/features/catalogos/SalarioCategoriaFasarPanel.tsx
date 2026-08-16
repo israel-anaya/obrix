@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Plus, X } from "lucide-react";
+import { CurrencyInput } from "@/components/CurrencyInput";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -268,14 +269,11 @@ export function SalarioCategoriaFasarPanel({
                 <div className="flex gap-2">
                   <label className="flex-1 text-[11px] text-muted-foreground">
                     Salario base diario
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
+                    <CurrencyInput
                       autoFocus
                       value={salarioNuevo}
-                      onChange={(e) => setSalarioNuevo(e.target.value)}
-                      className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                      onCommit={setSalarioNuevo}
+                      className="mt-0.5 w-full"
                     />
                   </label>
                   <label className="flex-1 text-[11px] text-muted-foreground">

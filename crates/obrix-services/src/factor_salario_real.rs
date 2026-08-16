@@ -73,6 +73,33 @@ impl FactorSalarioRealService {
         Ok(())
     }
 
+    /// Un `region_id` (incluyendo `None` = nacional) solo puede tener un FSR
+    /// activo por organización — `excluir_id` deja pasar al propio renglón
+    /// al actualizar sin tocar su región.
+    async fn validar_region_unica(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+        region_id: &Option<String>,
+        excluir_id: Option<&str>,
+    ) -> Result<(), ServiceError> {
+        let mut query = Entity::find()
+            .filter(Column::OrganizacionId.eq(organizacion_id))
+            .filter(Column::Deleted.eq(false));
+        query = match region_id {
+            Some(id) => query.filter(Column::RegionId.eq(id.clone())),
+            None => query.filter(Column::RegionId.is_null()),
+        };
+        if let Some(id) = excluir_id {
+            query = query.filter(Column::Id.ne(id));
+        }
+        if query.one(repo.conexion()).await?.is_some() {
+            return Err(ServiceError::Validacion(
+                "ya existe un FSR para esa región.".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
     pub async fn listar(repo: &dyn PortafolioRepository, organizacion_id: &str) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
@@ -99,6 +126,7 @@ impl FactorSalarioRealService {
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, false)?;
         crate::validar_region_existe(repo, &datos.region_id).await?;
+        Self::validar_region_unica(repo, &organizacion_id, &datos.region_id, None).await?;
         let modelo_calculo_json = if datos.modelo_calculo_json.trim().is_empty() {
             MODELO_ESTANDAR_VARIABLES_JSON.to_string()
         } else {
@@ -135,12 +163,13 @@ impl FactorSalarioRealService {
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, true)?;
         crate::validar_region_existe(repo, &datos.region_id).await?;
-        let mut modelo: ActiveModel = Entity::find_by_id(&id)
+        let existente = Entity::find_by_id(&id)
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("FSR {id}")))?
-            .into();
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("FSR {id}")))?;
+        Self::validar_region_unica(repo, &existente.organizacion_id, &datos.region_id, Some(&id)).await?;
+        let mut modelo: ActiveModel = existente.into();
         modelo.nombre = Set(datos.nombre);
         modelo.region_id = Set(datos.region_id);
         modelo.modelo_calculo_json = Set(datos.modelo_calculo_json);
@@ -350,5 +379,153 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    fn datos(nombre: &str, region_id: Option<String>) -> FactorSalarioRealData {
+        FactorSalarioRealData {
+            nombre: nombre.to_string(),
+            region_id,
+            modelo_calculo_json: String::new(),
+            parametros_json: String::new(),
+        }
+    }
+
+    /// `crear`/`actualizar` sí exigen la FK `organizacion_id` — a diferencia
+    /// de `portafolio_con_region`, aquí se siembra también la organización.
+    async fn portafolio_con_organizacion_y_region() -> (obrix_db::PortafolioSqliteRepository, String) {
+        use obrix_db::entities::{moneda, organizacion};
+
+        let (portafolio, region_id) = portafolio_con_region().await;
+        let now = crate::ahora();
+        moneda::ActiveModel {
+            id: Set("mon-1".into()),
+            codigo: Set("MXN".into()),
+            nombre: Set("Peso mexicano".into()),
+            simbolo: Set("$".into()),
+            decimales: Set(2),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .expect("crear moneda");
+        organizacion::ActiveModel {
+            id: Set("org-1".into()),
+            razon_social: Set("Org".into()),
+            rfc: Set("XAXX010101000".into()),
+            tipo: Set(organizacion::TipoOrganizacion::Despacho),
+            moneda_default_id: Set("mon-1".into()),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .expect("crear organización");
+        (portafolio, region_id)
+    }
+
+    #[tokio::test]
+    async fn crear_rechaza_region_duplicada() {
+        let (portafolio, region_id) = portafolio_con_organizacion_y_region().await;
+        FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Occidente", Some(region_id.clone())),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear el primer FSR de la región");
+
+        let error = FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Occidente (dup)", Some(region_id)),
+            "usr-1".into(),
+        )
+        .await
+        .expect_err("no debe permitir un segundo FSR para la misma región");
+        assert!(matches!(error, ServiceError::Validacion(_)));
+    }
+
+    #[tokio::test]
+    async fn crear_rechaza_nacional_duplicado() {
+        let (portafolio, _) = portafolio_con_organizacion_y_region().await;
+        FactorSalarioRealService::crear(&portafolio, "org-1".into(), datos("FSR — Nacional", None), "usr-1".into())
+            .await
+            .expect("crear el primer FSR nacional");
+
+        let error = FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Nacional (dup)", None),
+            "usr-1".into(),
+        )
+        .await
+        .expect_err("no debe permitir un segundo FSR nacional");
+        assert!(matches!(error, ServiceError::Validacion(_)));
+    }
+
+    #[tokio::test]
+    async fn actualizar_permite_conservar_su_propia_region() {
+        let (portafolio, region_id) = portafolio_con_organizacion_y_region().await;
+        let creado = FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Occidente", Some(region_id.clone())),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear FSR");
+
+        let actualizado = FactorSalarioRealService::actualizar(
+            &portafolio,
+            creado.id.clone(),
+            datos("FSR — Occidente, renombrado", Some(region_id)),
+            "usr-1".into(),
+        )
+        .await
+        .expect("actualizar sin cambiar de región no debe chocar consigo mismo");
+        assert_eq!(actualizado.nombre, "FSR — Occidente, renombrado");
+    }
+
+    #[tokio::test]
+    async fn actualizar_rechaza_region_ya_usada_por_otro_fsr() {
+        let (portafolio, region_id) = portafolio_con_organizacion_y_region().await;
+        FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Occidente", Some(region_id.clone())),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear FSR de la región");
+        let nacional = FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Nacional", None),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear FSR nacional");
+
+        let error = FactorSalarioRealService::actualizar(
+            &portafolio,
+            nacional.id,
+            datos("FSR — Nacional a Occidente", Some(region_id)),
+            "usr-1".into(),
+        )
+        .await
+        .expect_err("no debe permitir tomar la región de otro FSR ya existente");
+        assert!(matches!(error, ServiceError::Validacion(_)));
     }
 }

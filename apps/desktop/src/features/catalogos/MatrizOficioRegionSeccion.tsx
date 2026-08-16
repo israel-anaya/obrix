@@ -54,7 +54,8 @@ function tonoCelda(valor: number, min: number, max: number): string | undefined 
  * Tabulador publicado a lo ancho: oficios en filas, Nacional + regiones en
  * columnas. Cada celda es el salario real vigente de esa zona. Clic en un
  * hueco abre el alta ya apuntando a esa región; clic en una celda llena
- * solo selecciona el oficio. No sustituye al grid.
+ * solo selecciona el oficio. Es el "Modo Matriz × región" de Tabuladores
+ * de Salario (ver `TabuladoresSalarioSeccion`); no sustituye al grid.
  */
 export function MatrizOficioRegionSeccion() {
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
@@ -195,7 +196,7 @@ export function MatrizOficioRegionSeccion() {
 
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup orientation="horizontal" className="h-full">
-          <ResizablePanel id="matriz-gremios" defaultSize="16" minSize="12" className="flex min-h-0 flex-col">
+          <ResizablePanel id="matriz-gremios" defaultSize="10" minSize="7" className="flex min-h-0 flex-col">
             <div className="border-b border-border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Gremios
             </div>
@@ -232,7 +233,7 @@ export function MatrizOficioRegionSeccion() {
 
           <ResizablePanel
             id="matriz-tablero"
-            defaultSize="54"
+            defaultSize="60"
             minSize="32"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden"
           >
@@ -249,18 +250,19 @@ export function MatrizOficioRegionSeccion() {
                     Solo se muestra Nacional. Agrega regiones en Configuración para zonificar el tabulador.
                   </p>
                 )}
-                <table className="w-max min-w-full border-collapse text-xs">
+                <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 top-0 z-30 min-w-52 border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <th className="sticky left-0 top-0 z-30 w-44 min-w-44 border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Oficio
                       </th>
                       {columnas.map((col) => (
                         <th
                           key={col.id || "nac"}
-                          className="sticky top-0 z-20 min-w-28 border-b border-border bg-background px-2 py-1.5 text-right text-[11px] font-semibold text-muted-foreground"
+                          className="sticky top-0 z-20 w-14 max-w-14 border-b border-border bg-background px-1 py-1.5 text-center text-[11px] font-semibold leading-tight text-muted-foreground"
+                          title={col.nombre}
                         >
-                          {col.nombre}
+                          <span className="line-clamp-2 break-words">{col.nombre}</span>
                         </th>
                       ))}
                     </tr>
@@ -270,8 +272,8 @@ export function MatrizOficioRegionSeccion() {
                       <tr key={c.id}>
                         <th
                           className={cn(
-                            "sticky left-0 z-10 border-b border-r border-border bg-background px-2 py-1 text-left font-normal",
-                            seleccionadaId === c.id && "bg-primary/10",
+                            "sticky left-0 z-10 w-44 min-w-44 border-b border-r border-border px-2 py-1 text-left font-normal",
+                            seleccionadaId === c.id ? "bg-muted" : "bg-background",
                           )}
                         >
                           <div className="truncate text-[12px]" title={c.descripcion}>
@@ -287,7 +289,7 @@ export function MatrizOficioRegionSeccion() {
                           const n = parseMonto(s?.salario_real_diario);
                           const vacia = !s;
                           return (
-                            <td key={col.id || "nac"} className="border-b border-border p-0">
+                            <td key={col.id || "nac"} className="w-14 max-w-14 overflow-hidden border-b border-border p-0">
                               <button
                                 type="button"
                                 onClick={() => clicCelda(c.id, col.id, vacia)}
@@ -297,13 +299,13 @@ export function MatrizOficioRegionSeccion() {
                                     : `Registrar ${col.nombre}`
                                 }
                                 className={cn(
-                                  "flex h-full min-h-9 w-full items-center justify-end px-2 py-1.5 text-right hover:ring-1 hover:ring-inset hover:ring-primary/40",
+                                  "flex h-full min-h-9 w-full items-center justify-end px-1 py-1.5 text-right hover:ring-1 hover:ring-inset hover:ring-primary/40",
                                   vacia && "text-muted-foreground",
                                   seleccionadaId === c.id && vacia && "bg-primary/5",
                                 )}
                                 style={vacia ? undefined : { background: tonoCelda(n, minMonto, maxMonto) }}
                               >
-                                <span className={cn("num", vacia && "border-b border-dashed border-muted-foreground/40")}>
+                                <span className={cn("num truncate", vacia && "border-b border-dashed border-muted-foreground/40")}>
                                   {formatearCorto(s?.salario_real_diario)}
                                 </span>
                               </button>

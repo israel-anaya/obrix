@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ClienteFormPanel } from "@/features/catalogos/ClienteFormPanel";
 import type { CatalogoGeneralDescriptor } from "@/features/configuracion/catalogosGenerales";
 import { CatalogoGeneralSeccion } from "@/features/configuracion/CatalogoGeneralSeccion";
 import * as api from "@/lib/tauri";
@@ -41,6 +42,7 @@ const CLIENTES: CatalogoGeneralDescriptor<Cliente, ClienteData> = {
     contacto_nombre: m.contacto_nombre ?? "",
     contacto_correo: m.contacto_correo ?? "",
     contacto_telefono: m.contacto_telefono ?? "",
+    domicilio_fiscal: m.domicilio_fiscal ?? "",
     created_at: m.created_at,
     created_by: m.created_by,
     updated_at: m.updated_at ?? "",
@@ -64,7 +66,7 @@ const CLIENTES: CatalogoGeneralDescriptor<Cliente, ClienteData> = {
     contacto_nombre: String(f.contacto_nombre) || null,
     contacto_correo: String(f.contacto_correo) || null,
     contacto_telefono: String(f.contacto_telefono) || null,
-    domicilio_fiscal: null,
+    domicilio_fiscal: String(f.domicilio_fiscal) || null,
   }),
 };
 
@@ -72,5 +74,17 @@ export function ClientesSeccion() {
   // `CatalogoGeneralDescriptor` no cambia entre renders — se calcula una sola
   // vez para que `CatalogoGeneralSeccion` no recargue el catálogo de más.
   const descriptor = useMemo(() => CLIENTES, []);
-  return <CatalogoGeneralSeccion descriptor={descriptor} />;
+  return (
+    <CatalogoGeneralSeccion
+      descriptor={descriptor}
+      ficha={({ item, nombresPorUsuarioId, onCerrar, onGuardado }) => (
+        <ClienteFormPanel
+          cliente={item}
+          nombresPorUsuarioId={nombresPorUsuarioId}
+          onCerrar={onCerrar}
+          onGuardado={onGuardado}
+        />
+      )}
+    />
+  );
 }

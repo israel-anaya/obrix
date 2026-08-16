@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { HerramientaFormPanel } from "@/features/catalogos/HerramientaFormPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createHerramienta,
@@ -32,10 +34,9 @@ const COLUMNAS_CONTROL = [
 /**
  * Vista de "Herramienta" (Maquinaria y Equipo → Herramienta) — grid de
  * `herramienta` (extensión de `insumo` cuando `tipo = equipo_herramienta`),
- * mismo patrón maestro que `MaterialesSeccion`/`CategoriaFasarSeccion` pero
- * sin panel lateral: la herramienta no tiene precio propio, solo un
- * porcentaje por default sobre el costo de mano de obra, editable en la
- * misma fila.
+ * mismo patrón maestro/detalle que `MaterialesSeccion`/`MaterialFormPanel`.
+ * La herramienta no tiene precio propio: solo un porcentaje por default
+ * sobre el costo de mano de obra, editable en la fila o en la ficha.
  */
 export function HerramientaSeccion() {
   const gridRef = useRef<DataGridHandle>(null);
@@ -45,6 +46,8 @@ export function HerramientaSeccion() {
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
+  const [herramientaSeleccionadaId, setHerramientaSeleccionadaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
@@ -179,6 +182,27 @@ export function HerramientaSeccion() {
     };
   };
 
+  const herramientaSeleccionada = herramientas.find((h) => h.id === herramientaSeleccionadaId) ?? null;
+
+  const grid = (
+    <DataGrid
+      ref={gridRef}
+      config={config}
+      initialRows={filas}
+      loading={cargando}
+      selectionMode="single"
+      highlightSelection={panelFichaAbierto}
+      initialSelectedId={herramientaSeleccionadaId}
+      search={busqueda}
+      onSearchChange={setBusqueda}
+      onSelectionChange={setPuedeEliminar}
+      onRowSelected={(fila) => setHerramientaSeleccionadaId(fila?._id ?? null)}
+      onAddRow={(fila) => createHerramienta(filaAHerramientaData(fila)).then(recargarHerramientas)}
+      onEditRow={(fila) => updateHerramienta(fila._id, filaAHerramientaData(fila)).then(recargarHerramientas)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteHerramienta(id))).then(recargarHerramientas)}
+    />
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
@@ -188,7 +212,14 @@ export function HerramientaSeccion() {
         <div className="flex items-center gap-2">
           <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            acciones={[
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icono: FileText,
+                titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
+              },
+            ]}
             menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               {
@@ -203,19 +234,39 @@ export function HerramientaSeccion() {
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <DataGrid
-          ref={gridRef}
-          config={config}
-          initialRows={filas}
-          loading={cargando}
-          selectionMode="single"
-          search={busqueda}
-          onSearchChange={setBusqueda}
-          onSelectionChange={setPuedeEliminar}
-          onAddRow={(fila) => createHerramienta(filaAHerramientaData(fila)).then(recargarHerramientas)}
-          onEditRow={(fila) => updateHerramienta(fila._id, filaAHerramientaData(fila)).then(recargarHerramientas)}
-          onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteHerramienta(id))).then(recargarHerramientas)}
-        />
+        {/* El grupo vive siempre: si el grid pasa de hijo directo a panel (o
+            al revés) React lo desmonta, el virtualizador vuelve a scroll 0 y
+            el renglón seleccionado deja de verse. */}
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="herramienta-grid"
+            defaultSize="65"
+            minSize="40"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            {grid}
+          </ResizablePanel>
+          {panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="herramienta-detalle"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <HerramientaFormPanel
+                  herramienta={herramientaSeleccionada}
+                  unidades={unidades}
+                  familias={familias}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={recargarHerramientas}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </div>
     </div>
   );

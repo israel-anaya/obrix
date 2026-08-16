@@ -11,14 +11,23 @@ export function CurrencyInput({
   className,
   prefix = "$",
   decimals = 2,
+  autoFocus = false,
 }: {
   value: string;
   onCommit: (value: string) => void;
   className?: string;
   prefix?: string;
   decimals?: number;
+  autoFocus?: boolean;
 }) {
   return (
-    <FormattedNumberInput value={value} onCommit={onCommit} className={className} prefix={prefix} decimals={decimals} />
+    <FormattedNumberInput
+      value={value}
+      onCommit={onCommit}
+      className={className}
+      prefix={prefix}
+      decimals={decimals}
+      autoFocus={autoFocus}
+    />
   );
 }

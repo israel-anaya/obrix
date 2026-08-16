@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ProveedorFormPanel } from "@/features/catalogos/ProveedorFormPanel";
 import type { CatalogoGeneralDescriptor } from "@/features/configuracion/catalogosGenerales";
 import { CatalogoGeneralSeccion } from "@/features/configuracion/CatalogoGeneralSeccion";
 import * as api from "@/lib/tauri";
@@ -54,5 +55,17 @@ export function ProveedoresSeccion() {
   // `CatalogoGeneralDescriptor` no cambia entre renders — se calcula una sola
   // vez para que `CatalogoGeneralSeccion` no recargue el catálogo de más.
   const descriptor = useMemo(() => PROVEEDORES, []);
-  return <CatalogoGeneralSeccion descriptor={descriptor} />;
+  return (
+    <CatalogoGeneralSeccion
+      descriptor={descriptor}
+      ficha={({ item, nombresPorUsuarioId, onCerrar, onGuardado }) => (
+        <ProveedorFormPanel
+          proveedor={item}
+          nombresPorUsuarioId={nombresPorUsuarioId}
+          onCerrar={onCerrar}
+          onGuardado={onGuardado}
+        />
+      )}
+    />
+  );
 }
