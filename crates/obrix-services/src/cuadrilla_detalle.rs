@@ -523,7 +523,6 @@ mod tests {
                 unidad_id: "um-jor".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -567,7 +566,6 @@ mod tests {
                 familia_id: None,
                 sub_familia_id: None,
                 porcentaje_mano_obra: Some(3),
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -583,7 +581,6 @@ mod tests {
                 unidad_id: "um-cuad".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -691,7 +688,6 @@ mod tests {
                 familia_id: None,
                 sub_familia_id: None,
                 porcentaje_mano_obra: Some(3),
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -707,7 +703,6 @@ mod tests {
                 unidad_id: "um-cuad".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -786,7 +781,6 @@ mod tests {
                 unidad_id: "um-cuad".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -802,7 +796,6 @@ mod tests {
                 unidad_id: "um-cuad".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -846,7 +839,6 @@ mod tests {
                 unidad_id: "um-cuad".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -862,7 +854,6 @@ mod tests {
                 unidad_id: "um-jor".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -901,7 +892,6 @@ mod tests {
                 unidad_id: "um-jor".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -917,7 +907,6 @@ mod tests {
                 unidad_id: "um-cuad".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )

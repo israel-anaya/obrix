@@ -34,7 +34,7 @@ const PALETA = [
   { h: 145, s: 48 },
 ];
 
-type FiltroRapido = "todos" | "sin-precio" | "merma-alta" | "inactivos";
+type FiltroRapido = "todos" | "sin-precio" | "merma-alta";
 type EscalaRadio = "log" | "lin";
 
 interface Sector {
@@ -190,7 +190,6 @@ export function RadarMaterialesSeccion() {
       if (!coincideBusqueda(m, q)) return false;
       if (filtro === "sin-precio" && parsePrecio(m.precio_vigente) > 0) return false;
       if (filtro === "merma-alta" && (m.merma_porcentaje ?? 0) < MERMA_ALTA) return false;
-      if (filtro === "inactivos" && m.activo) return false;
       // `null` = todo el catálogo; `""` = materiales sin familia/subfamilia.
       if (familiaId !== null && (m.familia_id ?? "") !== familiaId) return false;
       if (subFamiliaId !== null && (m.sub_familia_id ?? "") !== subFamiliaId) return false;
@@ -305,7 +304,6 @@ export function RadarMaterialesSeccion() {
       familias: new Set(materiales.map((m) => m.familia_id).filter(Boolean)).size,
       sinPrecio: n - conPrecio.length,
       mermaAlta: materiales.filter((m) => (m.merma_porcentaje ?? 0) >= MERMA_ALTA).length,
-      inactivos: materiales.filter((m) => !m.activo).length,
       promedio: conPrecio.length ? suma / conPrecio.length : 0,
     };
   }, [materiales]);
@@ -420,9 +418,6 @@ export function RadarMaterialesSeccion() {
         </FiltroPill>
         <FiltroPill activo={filtro === "merma-alta"} onClick={() => setFiltro(filtro === "merma-alta" ? "todos" : "merma-alta")}>
           {kpis.mermaAlta} merma ≥{MERMA_ALTA}%
-        </FiltroPill>
-        <FiltroPill activo={filtro === "inactivos"} onClick={() => setFiltro(filtro === "inactivos" ? "todos" : "inactivos")}>
-          {kpis.inactivos} inactivos
         </FiltroPill>
         <span className="ml-auto flex items-center gap-2 text-[11px] text-muted-foreground">
           <span>Promedio {formatearDinero(kpis.promedio)}</span>
@@ -622,7 +617,7 @@ export function RadarMaterialesSeccion() {
                     cx={p.x}
                     cy={p.y}
                     r={activo ? p.r + 1.4 : p.r}
-                    fill={p.precio > 0 ? colorDe(p.colorIndex, p.material.activo ? 0.9 : 0.35) : "transparent"}
+                    fill={p.precio > 0 ? colorDe(p.colorIndex, 0.9) : "transparent"}
                     stroke={activo ? "hsl(var(--primary))" : colorDe(p.colorIndex, 1)}
                     strokeWidth={activo ? 2 : p.precio > 0 ? 0.6 : 1.2}
                     strokeDasharray={p.precio > 0 ? undefined : "2 2"}
@@ -720,8 +715,6 @@ export function RadarMaterialesSeccion() {
                 </dd>
                 <dt className="text-muted-foreground">Marca</dt>
                 <dd className="truncate text-right">{ficha.marca ?? "—"}</dd>
-                <dt className="text-muted-foreground">Estado</dt>
-                <dd className="text-right">{ficha.activo ? "Activo" : "Inactivo"}</dd>
               </dl>
               <div className="mt-3">
                 <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">

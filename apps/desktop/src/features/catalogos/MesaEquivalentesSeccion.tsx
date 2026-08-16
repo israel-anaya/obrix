@@ -45,7 +45,6 @@ const FILAS = [
   { id: "proveedor", etiqueta: "Proveedor" },
   { id: "familia", etiqueta: "Familia" },
   { id: "subfamilia", etiqueta: "Subfamilia" },
-  { id: "activo", etiqueta: "Estado" },
 ] as const;
 
 type FilaId = (typeof FILAS)[number]["id"];
@@ -236,8 +235,6 @@ export function MesaEquivalentesSeccion() {
         return m.familia_id ? (nombrePorFamiliaId[m.familia_id] ?? m.familia_id) : "—";
       case "subfamilia":
         return m.sub_familia_id ? (nombrePorFamiliaId[m.sub_familia_id] ?? m.sub_familia_id) : "—";
-      case "activo":
-        return m.activo ? "Activo" : "Inactivo";
     }
   };
 
@@ -261,7 +258,6 @@ export function MesaEquivalentesSeccion() {
       if (v === maxMerma && maxMerma !== minMerma) return "peor";
     }
     if (fila === "unidad" && unidadesDistintas) return "alerta";
-    if (fila === "activo" && !m.activo) return "alerta";
     return null;
   };
 
@@ -425,7 +421,6 @@ export function MesaEquivalentesSeccion() {
                       className={cn(
                         "flex items-start gap-1.5 border-b border-border/70 py-1.5 pl-1.5 pr-2",
                         ya && "bg-muted/40",
-                        !m.activo && "opacity-55",
                       )}
                     >
                       <button

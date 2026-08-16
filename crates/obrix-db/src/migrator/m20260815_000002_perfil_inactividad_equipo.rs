@@ -10,8 +10,8 @@ impl MigrationTrait for Migration {
         // `factor_salario_real`): porcentaje de cada rubro de costo horario
         // que aplica cuando un equipo está inactivo ("en espera" o "en
         // reserva") — ver diccionario de datos. Varios equipos pueden
-        // compartir el mismo perfil; `activo = false` lo saca del catálogo
-        // sin borrar el vínculo de equipos que ya lo usan.
+        // compartir el mismo perfil; el borrado es lógico (`deleted`) y no
+        // rompe el vínculo de equipos que ya lo usan.
         manager
             .create_table(
                 Table::create()
@@ -90,10 +90,10 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(PerfilInactividadEquipo::Activo)
+                        ColumnDef::new(PerfilInactividadEquipo::Deleted)
                             .boolean()
                             .not_null()
-                            .default(true),
+                            .default(false),
                     )
                     .col(
                         ColumnDef::new(PerfilInactividadEquipo::CreatedAt)
@@ -107,6 +107,8 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(PerfilInactividadEquipo::UpdatedAt).text())
                     .col(ColumnDef::new(PerfilInactividadEquipo::UpdatedBy).text())
+                    .col(ColumnDef::new(PerfilInactividadEquipo::DeletedAt).text())
+                    .col(ColumnDef::new(PerfilInactividadEquipo::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::OrganizacionId)
@@ -121,6 +123,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -165,9 +172,11 @@ enum PerfilInactividadEquipo {
     ReservaMantenimientoPorcentaje,
     ReservaConsumoPorcentaje,
     ReservaOperacionPorcentaje,
-    Activo,
+    Deleted,
     CreatedAt,
     CreatedBy,
     UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }

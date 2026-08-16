@@ -181,14 +181,12 @@ export function CuadrillasFicha() {
     setError(null);
     try {
       if (editandoId) {
-        const actual = cuadrillas.find((c) => c.id === editandoId);
         const actualizada = await updateCuadrilla(editandoId, {
           clave: nuevaClave.trim(),
           descripcion: nuevaDescripcion.trim(),
           unidad_id: nuevaUnidadId,
           familia_id: nuevaFamiliaId,
           sub_familia_id: nuevaSubfamiliaId,
-          activo: actual?.activo ?? true,
         });
         await recargarCuadrillas();
         setSeleccionadaId(actualizada.id);
@@ -199,7 +197,6 @@ export function CuadrillasFicha() {
           unidad_id: nuevaUnidadId,
           familia_id: nuevaFamiliaId,
           sub_familia_id: nuevaSubfamiliaId,
-          activo: true,
         });
         await recargarCuadrillas();
         setSeleccionadaId(creada.id);
@@ -374,7 +371,6 @@ export function CuadrillasFicha() {
                     className={cn(
                       "flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left hover:bg-muted/50",
                       seleccionadaId === c.id && "bg-muted",
-                      !c.activo && "opacity-60",
                     )}
                   >
                     <span className="font-mono text-[10px] text-muted-foreground">{c.clave}</span>

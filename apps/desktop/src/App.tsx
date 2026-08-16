@@ -43,7 +43,6 @@ import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSecc
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
 import { ArbolDemo } from "@/features/demo/ArbolDemo";
-import { MaestroDetalleDemo } from "@/features/demo/MaestroDetalleDemo";
 import { HojaCalculoPage } from "@/features/hoja-calculo/HojaCalculoPage";
 import { CalcularFsrPage } from "@/features/fsr/CalcularFsrPage";
 import { FactorSalarioRealSeccion } from "@/features/fsr/FactorSalarioRealSeccion";
@@ -370,10 +369,6 @@ export default function App() {
     openTab({ id: "arbol-demo", title: "Árbol (demo)", closable: true });
   };
 
-  const openMaestroDetalleDemoTab = () => {
-    openTab({ id: "maestro-detalle-demo", title: "Maestro/detalle (demo)", closable: true });
-  };
-
   const openHojaCalculoTab = () => {
     openTab({ id: "hoja-calculo", title: "Hoja de cálculo", closable: true });
   };
@@ -427,9 +422,6 @@ export default function App() {
     }
     if (activeTab.id === "arbol-demo") {
       return <ArbolDemo />;
-    }
-    if (activeTab.id === "maestro-detalle-demo") {
-      return <MaestroDetalleDemo />;
     }
     if (activeTab.id === "hoja-calculo") {
       return <HojaCalculoPage theme={theme} />;
@@ -591,7 +583,6 @@ export default function App() {
         { label: "Nuevo proyecto", onClick: agregarProyecto, disabled: !portafolioAbierto },
         "separator",
         { label: "Árbol", onClick: openArbolDemoTab, disabled: !portafolioAbierto },
-        { label: "Maestro/detalle", onClick: openMaestroDetalleDemoTab, disabled: !portafolioAbierto },
         { label: "Hoja de cálculo", onClick: openHojaCalculoTab, disabled: !portafolioAbierto },
         "separator",
         { label: "Salir", onClick: () => getCurrentWindow().close() },

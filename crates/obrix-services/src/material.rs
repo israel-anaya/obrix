@@ -29,7 +29,6 @@ pub struct MaterialData {
     pub proveedor_id: Option<String>,
     pub merma_porcentaje: Option<i32>,
     pub marca: Option<String>,
-    pub activo: bool,
 }
 
 /// `insumo` + `material` combinados en una sola fila — así es como lo ve el
@@ -45,7 +44,6 @@ pub struct MaterialCompleto {
     pub proveedor_id: Option<String>,
     pub merma_porcentaje: Option<i32>,
     pub marca: Option<String>,
-    pub activo: bool,
     /// Precio nacional vigente (`precio_material`, `region_id` nulo) — `None`
     /// si nunca se le ha registrado un precio.
     pub precio_vigente: Option<Decimal>,
@@ -66,7 +64,6 @@ fn combinar(insumo: insumo::Model, material: material::Model, precio_vigente: Op
         proveedor_id: material.proveedor_id,
         merma_porcentaje: material.merma_porcentaje,
         marca: material.marca,
-        activo: insumo.activo,
         precio_vigente,
         created_at: insumo.created_at,
         created_by: insumo.created_by,
@@ -107,6 +104,7 @@ impl MaterialService {
         let insumos = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::Material))
+            .filter(insumo::Column::Deleted.eq(false))
             .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
@@ -151,11 +149,13 @@ impl MaterialService {
             unidad_id: Set(datos.unidad_id),
             familia_id: Set(datos.familia_id),
             sub_familia_id: Set(datos.sub_familia_id),
-            activo: Set(datos.activo),
+            deleted: Set(false),
             created_at: Set(ahora),
             created_by: Set(creado_por),
             updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(&txn)
         .await?;
@@ -192,7 +192,6 @@ impl MaterialService {
         ins.unidad_id = Set(datos.unidad_id);
         ins.familia_id = Set(datos.familia_id);
         ins.sub_familia_id = Set(datos.sub_familia_id);
-        ins.activo = Set(datos.activo);
         ins.updated_at = Set(Some(ahora));
         ins.updated_by = Set(actualizado_por);
         let ins = ins.update(&txn).await?;
@@ -217,10 +216,13 @@ impl MaterialService {
         Ok(combinar(ins, mat, precio))
     }
 
-    /// Borra el `insumo` — `material` se elimina en cascada (FK `ON DELETE CASCADE`).
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        insumo::Entity::delete_by_id(id).exec(repo.conexion()).await?;
-        Ok(())
+    /// Borrado lógico del `insumo` — la fila de `material` se queda.
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        crate::marcar_insumo_eliminado(repo, &id, "material", eliminado_por).await
     }
 
     /// Importa materiales desde un CSV con columnas
@@ -378,7 +380,6 @@ impl MaterialService {
                     proveedor_id: None,
                     merma_porcentaje: None,
                     marca: None,
-                    activo: true,
                 },
                 creado_por.clone(),
             )
@@ -550,7 +551,6 @@ mod tests {
                 proveedor_id: None,
                 merma_porcentaje: Some(3),
                 marca: Some("Cemex".into()),
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -576,7 +576,6 @@ mod tests {
                 sub_familia_id: None,
                 merma_porcentaje: Some(5),
                 marca: Some("Cemex".into()),
-                activo: true,
             },
             Some("usr-1".into()),
         )
@@ -584,24 +583,31 @@ mod tests {
         .expect("actualizar material");
         assert_eq!(actualizado.descripcion, "Cemento gris tipo I");
 
-        MaterialService::eliminar(&portafolio, creado.id.clone())
+        MaterialService::eliminar(&portafolio, creado.id.clone(), "usr-1".into())
             .await
             .expect("eliminar material");
 
         let insumo_restante = obrix_db::entities::insumo::Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await
-            .unwrap();
-        assert!(insumo_restante.is_none(), "el insumo debe quedar borrado");
+            .unwrap()
+            .expect("el insumo debe seguir existiendo");
+        assert!(insumo_restante.deleted);
+        assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
 
         let material_restante = obrix_db::entities::material::Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await
             .unwrap();
         assert!(
-            material_restante.is_none(),
-            "el material debe borrarse en cascada junto con el insumo"
+            material_restante.is_some(),
+            "la extensión material no se borra; el listado la oculta con deleted"
         );
+
+        let listado_tras_borrar = MaterialService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar tras borrar");
+        assert!(listado_tras_borrar.iter().all(|m| m.id != creado.id));
     }
 
     #[tokio::test]

@@ -267,7 +267,7 @@ export function MatrizOficioRegionSeccion() {
                   </thead>
                   <tbody>
                     {filas.map((c) => (
-                      <tr key={c.id} className={cn(!c.activo && "opacity-55")}>
+                      <tr key={c.id}>
                         <th
                           className={cn(
                             "sticky left-0 z-10 border-b border-r border-border bg-background px-2 py-1 text-left font-normal",

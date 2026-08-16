@@ -308,7 +308,7 @@ impl EquipoCostoHorarioDetalleService {
 
         for d in detalles.iter().filter(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Consumo) {
             let precio = precio_material::Entity::find()
-                .filter(precio_material::Column::InsumoId.eq(&d.detalle_insumo_id))
+                .filter(precio_material::Column::MaterialId.eq(&d.detalle_insumo_id))
                 .filter(precio_material::Column::RegionId.is_null())
                 .filter(precio_material::Column::Moneda.eq(&moneda_default.codigo))
                 .filter(precio_material::Column::FechaVigenciaHasta.is_null())
@@ -526,7 +526,6 @@ mod tests {
                 unidad_id: "um-hr".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
                 region_id: None,
                 cf_costo_maquina: Decimal::from_str("1000000").unwrap(),
                 cf_valor_llantas: Decimal::ZERO,
@@ -562,7 +561,6 @@ mod tests {
                 proveedor_id: None,
                 merma_porcentaje: None,
                 marca: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -611,7 +609,6 @@ mod tests {
                 unidad_id: "um-jor".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )

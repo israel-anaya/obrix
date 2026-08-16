@@ -34,10 +34,18 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
+                    .col(
+                        ColumnDef::new(FactorSalarioReal::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .col(ColumnDef::new(FactorSalarioReal::CreatedAt).text().not_null())
                     .col(ColumnDef::new(FactorSalarioReal::CreatedBy).text().not_null())
                     .col(ColumnDef::new(FactorSalarioReal::UpdatedAt).text())
                     .col(ColumnDef::new(FactorSalarioReal::UpdatedBy).text())
+                    .col(ColumnDef::new(FactorSalarioReal::DeletedAt).text())
+                    .col(ColumnDef::new(FactorSalarioReal::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(FactorSalarioReal::Table, FactorSalarioReal::OrganizacionId)
@@ -57,6 +65,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(FactorSalarioReal::Table, FactorSalarioReal::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(FactorSalarioReal::Table, FactorSalarioReal::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -80,10 +93,13 @@ enum FactorSalarioReal {
     RegionId,
     ModeloCalculoJson,
     ParametrosJson,
+    Deleted,
     CreatedAt,
     CreatedBy,
     UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]

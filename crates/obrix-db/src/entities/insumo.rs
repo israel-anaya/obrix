@@ -12,11 +12,13 @@ pub struct Model {
     pub unidad_id: String,
     pub familia_id: Option<String>,
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
+    pub deleted: bool,
     pub created_at: String,
     pub created_by: String,
     pub updated_at: Option<String>,
     pub updated_by: Option<String>,
+    pub deleted_at: Option<String>,
+    pub deleted_by: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

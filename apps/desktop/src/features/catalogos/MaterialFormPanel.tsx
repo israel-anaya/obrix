@@ -16,7 +16,6 @@ function aMaterialData(m: Material): MaterialData {
     proveedor_id: m.proveedor_id,
     merma_porcentaje: m.merma_porcentaje,
     marca: m.marca,
-    activo: m.activo,
   };
 }
 
@@ -219,14 +218,6 @@ export function MaterialFormPanel({
                 className={CAMPO_INPUT_CLASE}
               />
             </Campo>
-            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={datos.activo}
-                onChange={(e) => setDatos({ ...datos, activo: e.target.checked })}
-              />
-              Activo
-            </label>
 
             <div className="rounded-md border border-border bg-muted/30 p-2 text-xs">
               <div className="flex items-center justify-between">

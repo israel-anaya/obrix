@@ -32,7 +32,7 @@ export interface CamposBorradoLogico {
   deleted_by: string | null;
 }
 
-export const TIPOS_ORGANIZACION = ["despacho", "constructora", "dependencia_publica"] as const;
+export const TIPOS_ORGANIZACION = ["despacho", "constructora", "gobierno"] as const;
 export type TipoOrganizacion = (typeof TIPOS_ORGANIZACION)[number];
 
 export interface Organizacion extends CamposControl, CamposBorradoLogico {
@@ -85,7 +85,7 @@ export interface OrganizacionMembresia {
   updated_by: string | null;
 }
 
-export const TIPOS_CLIENTE = ["privado", "dependencia_publica"] as const;
+export const TIPOS_CLIENTE = ["privado", "gobierno"] as const;
 export type TipoCliente = (typeof TIPOS_CLIENTE)[number];
 
 export interface Cliente extends CamposControl, CamposBorradoLogico {
@@ -164,7 +164,7 @@ export interface FamiliaInsumoData {
  * perder precisión al viajar por IPC) se aplica al rubro activo homónimo
  * que ya cachea `equipo_costo_horario`.
  */
-export interface PerfilInactividadEquipo extends CamposControl {
+export interface PerfilInactividadEquipo extends CamposControl, CamposBorradoLogico {
   id: string;
   organizacion_id: string;
   nombre: string;
@@ -180,7 +180,6 @@ export interface PerfilInactividadEquipo extends CamposControl {
   reserva_mantenimiento_porcentaje: string;
   reserva_consumo_porcentaje: string;
   reserva_operacion_porcentaje: string;
-  activo: boolean;
 }
 
 export interface PerfilInactividadEquipoData {
@@ -197,7 +196,6 @@ export interface PerfilInactividadEquipoData {
   reserva_mantenimiento_porcentaje: string;
   reserva_consumo_porcentaje: string;
   reserva_operacion_porcentaje: string;
-  activo: boolean;
 }
 
 export interface Proveedor extends CamposControl, CamposBorradoLogico {
@@ -228,7 +226,6 @@ export interface Material extends CamposControl {
   /** 0 a 100. */
   merma_porcentaje: number | null;
   marca: string | null;
-  activo: boolean;
   /** Precio nacional vigente (`precio_material`) — serializado como texto para no perder precisión. `null` si nunca se registró un precio. */
   precio_vigente: string | null;
 }
@@ -241,7 +238,7 @@ export interface ResultadoImportacion {
 
 export interface PrecioMaterial {
   id: string;
-  insumo_id: string;
+  material_id: string;
   region_id: string | null;
   /** Serializado como texto para no perder precisión. */
   precio: string;
@@ -265,7 +262,7 @@ export interface PrecioMaterialData {
 
 /** Un precio a registrar en la actualización de costos de materiales en lote. */
 export interface PrecioLoteItem extends PrecioMaterialData {
-  insumo_id: string;
+  material_id: string;
 }
 
 export interface MaterialData {
@@ -279,7 +276,6 @@ export interface MaterialData {
   /** 0 a 100. */
   merma_porcentaje: number | null;
   marca: string | null;
-  activo: boolean;
 }
 
 /**
@@ -289,7 +285,7 @@ export interface MaterialData {
  * (`region_id` nulo) de `salario_categoria_fasar` — `null` si nunca se le
  * registró un salario.
  */
-export interface CategoriaFasar extends CamposControl {
+export interface CategoriaFasar extends CamposControl, CamposBorradoLogico {
   id: string;
   clave: string;
   descripcion: string;
@@ -297,7 +293,6 @@ export interface CategoriaFasar extends CamposControl {
   familia_id: string | null;
   /** Debe ser hija (`parent_id`) de `familia_id`. */
   sub_familia_id: string | null;
-  activo: boolean;
   salario_vigente: SalarioCategoriaFasar | null;
 }
 
@@ -307,7 +302,6 @@ export interface CategoriaFasarData {
   unidad_id: string;
   familia_id: string | null;
   sub_familia_id: string | null;
-  activo: boolean;
 }
 
 /**
@@ -317,7 +311,7 @@ export interface CategoriaFasarData {
  * en el diccionario de datos. Sin precio propio: dentro de una cuadrilla su
  * costo se resuelve como `porcentaje_mano_obra` × `sub_total_mano_obra`.
  */
-export interface Herramienta extends CamposControl {
+export interface Herramienta extends CamposControl, CamposBorradoLogico {
   id: string;
   clave: string;
   descripcion: string;
@@ -327,7 +321,6 @@ export interface Herramienta extends CamposControl {
   sub_familia_id: string | null;
   /** 0 a 100. */
   porcentaje_mano_obra: number | null;
-  activo: boolean;
 }
 
 export interface HerramientaData {
@@ -338,7 +331,6 @@ export interface HerramientaData {
   sub_familia_id: string | null;
   /** 0 a 100. */
   porcentaje_mano_obra: number | null;
-  activo: boolean;
 }
 
 /**
@@ -357,7 +349,6 @@ export interface Cuadrilla extends CamposControl {
   familia_id: string | null;
   /** Debe ser hija (`parent_id`) de `familia_id`. */
   sub_familia_id: string | null;
-  activo: boolean;
   /** Serializados como texto para no perder precisión. */
   sub_total_mano_obra: string;
   sub_total_herramienta: string;
@@ -370,7 +361,6 @@ export interface CuadrillaData {
   unidad_id: string;
   familia_id: string | null;
   sub_familia_id: string | null;
-  activo: boolean;
 }
 
 /**
@@ -424,7 +414,6 @@ export interface EquipoCostoHorario extends CamposControl {
   familia_id: string | null;
   /** Debe ser hija (`parent_id`) de `familia_id`. */
   sub_familia_id: string | null;
-  activo: boolean;
   /** `null` = nacional — solo descriptivo, no participa en ningún cálculo. */
   region_id: string | null;
   cf_costo_maquina: string;
@@ -456,7 +445,6 @@ export interface EquipoCostoHorarioData {
   unidad_id: string;
   familia_id: string | null;
   sub_familia_id: string | null;
-  activo: boolean;
   region_id: string | null;
   cf_costo_maquina: string;
   cf_valor_llantas: string;
@@ -614,7 +602,7 @@ export interface ModeloCalculo {
  * trae los valores de las variables de entrada que ese modelo declara (QUÉ se
  * captura), como `Record<string, number | boolean | ValorRango>` serializado.
  */
-export interface FactorSalarioReal extends CamposControl {
+export interface FactorSalarioReal extends CamposControl, CamposBorradoLogico {
   id: string;
   organizacion_id: string;
   nombre: string;

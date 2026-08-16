@@ -52,5 +52,5 @@ impl ActiveModelBehavior for ActiveModel {}
 pub enum TipoOrganizacion {
     Despacho,
     Constructora,
-    DependenciaPublica,
+    Gobierno,
 }

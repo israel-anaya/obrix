@@ -22,7 +22,6 @@ pub struct CuadrillaData {
     /// Debe ser hija (`parent_id`) de `familia_id` — no se valida aquí, el
     /// frontend ya restringe las opciones mostradas a los hijos de la familia elegida.
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
 }
 
 /// `insumo` + `cuadrilla` combinados en una sola fila — así es como lo ve el
@@ -35,7 +34,6 @@ pub struct CuadrillaCompleto {
     pub unidad_id: String,
     pub familia_id: Option<String>,
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
     pub sub_total_mano_obra: Decimal,
     pub sub_total_herramienta: Decimal,
     pub costo_total: Decimal,
@@ -53,7 +51,6 @@ pub(crate) fn combinar(insumo: insumo::Model, cuadrilla: cuadrilla::Model) -> Cu
         unidad_id: insumo.unidad_id,
         familia_id: insumo.familia_id,
         sub_familia_id: insumo.sub_familia_id,
-        activo: insumo.activo,
         sub_total_mano_obra: cuadrilla.sub_total_mano_obra,
         sub_total_herramienta: cuadrilla.sub_total_herramienta,
         costo_total: cuadrilla.costo_total,
@@ -74,6 +71,7 @@ impl CuadrillaService {
         let insumos = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::ManoObra))
+            .filter(insumo::Column::Deleted.eq(false))
             .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
@@ -95,6 +93,7 @@ impl CuadrillaService {
         id: &str,
     ) -> Result<CuadrillaCompleto, ServiceError> {
         let ins = insumo::Entity::find_by_id(id)
+            .filter(insumo::Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla {id}")))?;
@@ -124,11 +123,13 @@ impl CuadrillaService {
             unidad_id: Set(datos.unidad_id),
             familia_id: Set(datos.familia_id),
             sub_familia_id: Set(datos.sub_familia_id),
-            activo: Set(datos.activo),
+            deleted: Set(false),
             created_at: Set(ahora),
             created_by: Set(creado_por),
             updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(&txn)
         .await?;
@@ -146,8 +147,8 @@ impl CuadrillaService {
         Ok(combinar(ins, cua))
     }
 
-    /// Solo actualiza los datos de catálogo (clave/descripción/unidad/familia/
-    /// activo) — los subtotales no son editables, los administra
+    /// Solo actualiza los datos de catálogo (clave/descripción/unidad/familia)
+    /// — los subtotales no son editables, los administra
     /// `CuadrillaDetalleService` a partir de la composición.
     pub async fn actualizar(
         repo: &dyn PortafolioRepository,
@@ -167,7 +168,6 @@ impl CuadrillaService {
         ins.unidad_id = Set(datos.unidad_id);
         ins.familia_id = Set(datos.familia_id);
         ins.sub_familia_id = Set(datos.sub_familia_id);
-        ins.activo = Set(datos.activo);
         ins.updated_at = Set(Some(ahora));
         ins.updated_by = Set(actualizado_por);
         let ins = ins.update(repo.conexion()).await?;
@@ -179,11 +179,13 @@ impl CuadrillaService {
         Ok(combinar(ins, cua))
     }
 
-    /// Borra el `insumo` — `cuadrilla` y su `cuadrilla_detalle` se eliminan
-    /// en cascada (FK `ON DELETE CASCADE`).
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        insumo::Entity::delete_by_id(id).exec(repo.conexion()).await?;
-        Ok(())
+    /// Borrado lógico del `insumo` — `cuadrilla` y su `cuadrilla_detalle` se quedan.
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        crate::marcar_insumo_eliminado(repo, &id, "cuadrilla", eliminado_por).await
     }
 }
 
@@ -283,7 +285,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -307,7 +308,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             Some("usr-1".into()),
         )
@@ -315,23 +315,30 @@ mod tests {
         .expect("actualizar cuadrilla");
         assert_eq!(actualizada.descripcion, "Cuadrilla de albañilería tipo A (2 ayudantes)");
 
-        CuadrillaService::eliminar(&portafolio, creada.id.clone())
+        CuadrillaService::eliminar(&portafolio, creada.id.clone(), "usr-1".into())
             .await
             .expect("eliminar cuadrilla");
 
         let insumo_restante = obrix_db::entities::insumo::Entity::find_by_id(&creada.id)
             .one(portafolio.conexion())
             .await
-            .unwrap();
-        assert!(insumo_restante.is_none(), "el insumo debe quedar borrado");
+            .unwrap()
+            .expect("el insumo debe seguir existiendo");
+        assert!(insumo_restante.deleted);
+        assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
 
         let cuadrilla_restante = obrix_db::entities::cuadrilla::Entity::find_by_id(&creada.id)
             .one(portafolio.conexion())
             .await
             .unwrap();
         assert!(
-            cuadrilla_restante.is_none(),
-            "la cuadrilla debe borrarse en cascada junto con el insumo"
+            cuadrilla_restante.is_some(),
+            "la extensión cuadrilla no se borra; el listado la oculta con deleted"
         );
+
+        let listado_tras_borrar = CuadrillaService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar tras borrar");
+        assert!(listado_tras_borrar.iter().all(|c| c.id != creada.id));
     }
 }

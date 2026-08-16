@@ -60,7 +60,11 @@ pub async fn update_factor_salario_real(
 pub async fn delete_factor_salario_real(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    FactorSalarioRealService::eliminar(activo.portafolio.as_ref(), id)
+    FactorSalarioRealService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

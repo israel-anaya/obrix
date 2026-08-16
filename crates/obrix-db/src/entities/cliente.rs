@@ -45,5 +45,5 @@ impl ActiveModelBehavior for ActiveModel {}
 #[serde(rename_all = "snake_case")]
 pub enum TipoCliente {
     Privado,
-    DependenciaPublica,
+    Gobierno,
 }

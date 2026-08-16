@@ -10,7 +10,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     /// FK → `material.insumo_id`.
-    pub insumo_id: String,
+    pub material_id: String,
     pub region_id: Option<String>,
     pub precio: Decimal,
     pub moneda: String,
@@ -26,7 +26,7 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::material::Entity",
-        from = "Column::InsumoId",
+        from = "Column::MaterialId",
         to = "super::material::Column::InsumoId"
     )]
     Material,

@@ -71,15 +71,17 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Insumo::FamiliaId).text())
                     .col(ColumnDef::new(Insumo::SubFamiliaId).text())
                     .col(
-                        ColumnDef::new(Insumo::Activo)
+                        ColumnDef::new(Insumo::Deleted)
                             .boolean()
                             .not_null()
-                            .default(true),
+                            .default(false),
                     )
                     .col(ColumnDef::new(Insumo::CreatedAt).text().not_null())
                     .col(ColumnDef::new(Insumo::CreatedBy).text().not_null())
                     .col(ColumnDef::new(Insumo::UpdatedAt).text())
                     .col(ColumnDef::new(Insumo::UpdatedBy).text())
+                    .col(ColumnDef::new(Insumo::DeletedAt).text())
+                    .col(ColumnDef::new(Insumo::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Insumo::Table, Insumo::OrganizacionId)
@@ -109,6 +111,11 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Insumo::Table, Insumo::UpdatedBy)
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Insumo::Table, Insumo::DeletedBy)
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -157,7 +164,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(PrecioMaterial::InsumoId).text().not_null())
+                    .col(ColumnDef::new(PrecioMaterial::MaterialId).text().not_null())
                     .col(ColumnDef::new(PrecioMaterial::RegionId).text())
                     .col(ColumnDef::new(PrecioMaterial::Precio).decimal().not_null())
                     .col(
@@ -178,7 +185,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(PrecioMaterial::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(PrecioMaterial::Table, PrecioMaterial::InsumoId)
+                            .from(PrecioMaterial::Table, PrecioMaterial::MaterialId)
                             .to(Material::Table, Material::InsumoId)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
@@ -280,11 +287,13 @@ enum Insumo {
     UnidadId,
     FamiliaId,
     SubFamiliaId,
-    Activo,
+    Deleted,
     CreatedAt,
     CreatedBy,
     UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }
 
 #[derive(DeriveIden)]
@@ -300,7 +309,7 @@ enum Material {
 enum PrecioMaterial {
     Table,
     Id,
-    InsumoId,
+    MaterialId,
     RegionId,
     Precio,
     Moneda,

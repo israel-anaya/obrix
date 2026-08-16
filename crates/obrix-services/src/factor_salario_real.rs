@@ -68,6 +68,7 @@ impl FactorSalarioRealService {
     pub async fn listar(repo: &dyn PortafolioRepository, organizacion_id: &str) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
+            .filter(Column::Deleted.eq(false))
             .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
@@ -75,6 +76,7 @@ impl FactorSalarioRealService {
 
     pub async fn obtener(repo: &dyn PortafolioRepository, id: String) -> Result<Model, ServiceError> {
         Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("FSR {id}")))
@@ -106,10 +108,13 @@ impl FactorSalarioRealService {
             region_id: Set(datos.region_id),
             modelo_calculo_json: Set(modelo_calculo_json),
             parametros_json: Set(parametros_json),
+            deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
             updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         };
         Ok(modelo.insert(repo.conexion()).await?)
     }
@@ -122,6 +127,7 @@ impl FactorSalarioRealService {
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, true)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("FSR {id}")))?
@@ -135,8 +141,21 @@ impl FactorSalarioRealService {
         Ok(modelo.update(repo.conexion()).await?)
     }
 
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        Entity::delete_by_id(id).exec(repo.conexion()).await?;
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        let mut modelo: ActiveModel = Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("FSR {id}")))?
+            .into();
+        modelo.deleted = Set(true);
+        modelo.deleted_at = Set(Some(crate::ahora()));
+        modelo.deleted_by = Set(Some(eliminado_por));
+        modelo.update(repo.conexion()).await?;
         Ok(())
     }
 }

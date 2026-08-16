@@ -7,8 +7,8 @@ use sea_orm::entity::prelude::*;
 /// porcentaje (0-100) se aplica al rubro activo que ya cachea
 /// `equipo_costo_horario` — los cuatro cargos fijos por separado más
 /// `subtotal_consumo` y `subtotal_operacion`. Varios equipos pueden
-/// compartir el mismo perfil; `activo = false` lo saca del catálogo sin
-/// borrar el vínculo de equipos que ya lo usan.
+/// compartir el mismo perfil; el borrado es lógico (`deleted`) y no rompe
+/// el vínculo de equipos que ya lo usan.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "perfil_inactividad_equipo")]
 pub struct Model {
@@ -28,11 +28,13 @@ pub struct Model {
     pub reserva_mantenimiento_porcentaje: Decimal,
     pub reserva_consumo_porcentaje: Decimal,
     pub reserva_operacion_porcentaje: Decimal,
-    pub activo: bool,
+    pub deleted: bool,
     pub created_at: String,
     pub created_by: String,
     pub updated_at: Option<String>,
     pub updated_by: Option<String>,
+    pub deleted_at: Option<String>,
+    pub deleted_by: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -22,10 +22,10 @@ pub struct PrecioMaterialData {
 }
 
 /// Un precio a registrar en lote — mismos campos que `PrecioMaterialData`
-/// más el `insumo_id` del material.
+/// más el `material_id`.
 #[derive(serde::Deserialize)]
 pub struct PrecioLoteItem {
-    pub insumo_id: String,
+    pub material_id: String,
     pub precio: Decimal,
     pub moneda: String,
     pub region_id: Option<String>,
@@ -35,7 +35,7 @@ pub struct PrecioLoteItem {
 impl From<PrecioLoteItem> for (String, PrecioMaterialData) {
     fn from(item: PrecioLoteItem) -> Self {
         (
-            item.insumo_id,
+            item.material_id,
             PrecioMaterialData {
                 precio: item.precio,
                 moneda: item.moneda,
@@ -50,19 +50,19 @@ pub struct PrecioMaterialService;
 
 impl PrecioMaterialService {
     /// Registra un precio nuevo y, si había uno abierto para la misma llave
-    /// `insumo_id`+`region_id`+`moneda`, lo cierra en la misma transacción
+    /// `material_id`+`region_id`+`moneda`, lo cierra en la misma transacción
     /// fijando su `fecha_vigencia_hasta` a la fecha del precio nuevo — nunca
     /// deben quedar dos filas abiertas para la misma combinación. Distintas
     /// monedas son vigencias independientes: un precio nuevo en USD no debe
     /// cerrar uno abierto en MXN para la misma región.
     pub async fn crear(
         repo: &dyn PortafolioRepository,
-        insumo_id: &str,
+        material_id: &str,
         datos: PrecioMaterialData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
         let txn = repo.conexion().begin().await?;
-        let modelo = Self::registrar_en_txn(&txn, insumo_id, datos, &creado_por).await?;
+        let modelo = Self::registrar_en_txn(&txn, material_id, datos, &creado_por).await?;
         txn.commit().await?;
         Ok(modelo)
     }
@@ -82,8 +82,8 @@ impl PrecioMaterialService {
         let txn = repo.conexion().begin().await?;
         let mut creados = Vec::with_capacity(items.len());
         for item in items {
-            let (insumo_id, datos) = item.into();
-            let modelo = Self::registrar_en_txn(&txn, &insumo_id, datos, &creado_por).await?;
+            let (material_id, datos) = item.into();
+            let modelo = Self::registrar_en_txn(&txn, &material_id, datos, &creado_por).await?;
             creados.push(modelo);
         }
         txn.commit().await?;
@@ -92,12 +92,12 @@ impl PrecioMaterialService {
 
     async fn registrar_en_txn(
         txn: &DatabaseTransaction,
-        insumo_id: &str,
+        material_id: &str,
         datos: PrecioMaterialData,
         creado_por: &str,
     ) -> Result<Model, ServiceError> {
         let mut buscar_anterior = Entity::find()
-            .filter(Column::InsumoId.eq(insumo_id))
+            .filter(Column::MaterialId.eq(material_id))
             .filter(Column::Moneda.eq(datos.moneda.clone()))
             .filter(Column::FechaVigenciaHasta.is_null());
         buscar_anterior = match &datos.region_id {
@@ -114,7 +114,7 @@ impl PrecioMaterialService {
 
         Ok(ActiveModel {
             id: Set(nuevo_id()),
-            insumo_id: Set(insumo_id.to_string()),
+            material_id: Set(material_id.to_string()),
             region_id: Set(datos.region_id),
             precio: Set(datos.precio),
             moneda: Set(datos.moneda),
@@ -137,11 +137,11 @@ impl PrecioMaterialService {
     /// nivel de base de datos), toma la de vigencia más reciente.
     pub async fn vigente_nacional(
         repo: &dyn PortafolioRepository,
-        insumo_id: &str,
+        material_id: &str,
         moneda: &str,
     ) -> Result<Option<Model>, ServiceError> {
         Ok(Entity::find()
-            .filter(Column::InsumoId.eq(insumo_id))
+            .filter(Column::MaterialId.eq(material_id))
             .filter(Column::RegionId.is_null())
             .filter(Column::Moneda.eq(moneda))
             .filter(Column::FechaVigenciaHasta.is_null())
@@ -154,10 +154,10 @@ impl PrecioMaterialService {
     /// frontend decide cuál de estas filas mostrar como "vigente".
     pub async fn listar_por_material(
         repo: &dyn PortafolioRepository,
-        insumo_id: &str,
+        material_id: &str,
     ) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
-            .filter(Column::InsumoId.eq(insumo_id))
+            .filter(Column::MaterialId.eq(material_id))
             .order_by_desc(Column::FechaVigenciaDesde)
             .all(repo.conexion())
             .await?)
@@ -264,7 +264,6 @@ mod tests {
                 proveedor_id: None,
                 merma_porcentaje: None,
                 marca: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -436,7 +435,6 @@ mod tests {
                 proveedor_id: None,
                 merma_porcentaje: None,
                 marca: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -455,7 +453,6 @@ mod tests {
                 proveedor_id: None,
                 merma_porcentaje: None,
                 marca: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -480,14 +477,14 @@ mod tests {
             &portafolio,
             vec![
                 PrecioLoteItem {
-                    insumo_id: cemento.id.clone(),
+                    material_id: cemento.id.clone(),
                     precio: Decimal::from_str("135.50").unwrap(),
                     moneda: "MXN".into(),
                     region_id: None,
                     fecha_vigencia_desde: "2026-08-15".into(),
                 },
                 PrecioLoteItem {
-                    insumo_id: arena.id.clone(),
+                    material_id: arena.id.clone(),
                     precio: Decimal::from_str("48.20").unwrap(),
                     moneda: "MXN".into(),
                     region_id: None,

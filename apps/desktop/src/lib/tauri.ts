@@ -225,11 +225,11 @@ export function deleteMaterial(id: string): Promise<void> {
 export function importarMaterialesCsv(path: string): Promise<ResultadoImportacion> {
   return invoke("importar_materiales_csv", { path });
 }
-export function listPreciosMaterial(insumoId: string): Promise<PrecioMaterial[]> {
-  return invoke("list_precios_material", { insumoId });
+export function listPreciosMaterial(materialId: string): Promise<PrecioMaterial[]> {
+  return invoke("list_precios_material", { materialId });
 }
-export function createPrecioMaterial(insumoId: string, precio: PrecioMaterialData): Promise<PrecioMaterial> {
-  return invoke("create_precio_material", { insumoId, precio });
+export function createPrecioMaterial(materialId: string, precio: PrecioMaterialData): Promise<PrecioMaterial> {
+  return invoke("create_precio_material", { materialId, precio });
 }
 export function createPreciosMaterialLote(precios: PrecioLoteItem[]): Promise<PrecioMaterial[]> {
   return invoke("create_precios_material_lote", { precios });

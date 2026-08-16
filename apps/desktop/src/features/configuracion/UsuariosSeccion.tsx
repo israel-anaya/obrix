@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { VistaMaestroDetalle } from "@/features/catalogos/VistaMaestroDetalle";
-import type { DataGridConfig, Row } from "@/components/grid/DataGrid";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -42,12 +45,13 @@ const MAESTRO_GRID: DataGridConfig = {
 };
 
 /**
- * Maestro/detalle de usuarios en Ajustes — el maestro es el catálogo de
- * usuarios (igual al descriptor genérico que reemplaza) y el detalle es la
- * tabla `organizacion_usuario` (membresía) del usuario seleccionado: alta,
- * baja y activo/inactivo de sus organizaciones.
+ * Usuarios en Ajustes: arriba el catálogo, abajo las membresías
+ * (`organizacion_usuario`) del usuario seleccionado — alta, baja y
+ * activo/inactivo de sus organizaciones.
  */
 export function UsuariosSeccion() {
+  const usuarioGridRef = useRef<DataGridHandle>(null);
+  const membresiaGridRef = useRef<DataGridHandle>(null);
   const { items, error, cargando, crear, actualizar, eliminar, reload } = useCatalogoGeneral(USUARIO_API);
   // Igual que en `OrganizacionSeccion` — el sidebar (switcher, default de
   // moneda, etc.) lee la lista de organizaciones de `OrganizacionContext`,
@@ -55,9 +59,37 @@ export function UsuariosSeccion() {
   const { reload: recargarOrganizacionContext } = useOrganizacionActiva();
 
   const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([]);
+  const [usuarioSeleccionadoId, setUsuarioSeleccionadoId] = useState<string | null>(null);
+  const [membresias, setMembresias] = useState<OrganizacionMembresia[]>([]);
+  const [cargandoMembresias, setCargandoMembresias] = useState(false);
+  const [errorMembresias, setErrorMembresias] = useState<string | null>(null);
+  const [puedeEliminarUsuario, setPuedeEliminarUsuario] = useState(false);
+  const [puedeEliminarMembresia, setPuedeEliminarMembresia] = useState(false);
+  const [busquedaUsuario, setBusquedaUsuario] = useState("");
+  const [busquedaMembresia, setBusquedaMembresia] = useState("");
+
   useEffect(() => {
     listOrganizaciones().then(setOrganizaciones).catch(() => {});
   }, []);
+
+  const recargarMembresias = () => {
+    if (!usuarioSeleccionadoId) {
+      setMembresias([]);
+      setErrorMembresias(null);
+      return Promise.resolve();
+    }
+    setCargandoMembresias(true);
+    setErrorMembresias(null);
+    return listOrganizacionesDeUsuario(usuarioSeleccionadoId)
+      .then(setMembresias)
+      .catch((e) => setErrorMembresias(String(e)))
+      .finally(() => setCargandoMembresias(false));
+  };
+
+  useEffect(() => {
+    recargarMembresias();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioSeleccionadoId]);
 
   const idPorRazonSocial = useMemo(
     () => Object.fromEntries(organizaciones.map((o) => [o.razon_social, o.id])),
@@ -83,7 +115,7 @@ export function UsuariosSeccion() {
 
   const nombrePorUsuarioId = useMemo(() => Object.fromEntries(items.map((u) => [u.id, u.nombre])), [items]);
 
-  const maestroFilas: Row[] = useMemo(
+  const filasUsuario: Row[] = useMemo(
     () =>
       items.map((u) => ({
         _id: u.id,
@@ -99,6 +131,20 @@ export function UsuariosSeccion() {
     [items, nombrePorUsuarioId],
   );
 
+  const filasMembresia: Row[] = useMemo(
+    () =>
+      membresias.map((m) => ({
+        _id: m.membresia_id,
+        organizacion: m.razon_social,
+        activo: m.activo,
+        created_at: m.created_at,
+        created_by: nombrePorUsuarioId[m.created_by] ?? m.created_by,
+        updated_at: m.updated_at ?? "",
+        updated_by: (m.updated_by && nombrePorUsuarioId[m.updated_by]) ?? m.updated_by ?? "",
+      })),
+    [membresias, nombrePorUsuarioId],
+  );
+
   const filaAUsuarioData = (fila: Row) => ({
     nombre: String(fila.nombre),
     correo: String(fila.correo),
@@ -108,48 +154,119 @@ export function UsuariosSeccion() {
     activo: Boolean(fila.activo),
   });
 
-  const aFilaDetalle = (m: OrganizacionMembresia): Row => ({
-    _id: m.membresia_id,
-    organizacion: m.razon_social,
-    activo: m.activo,
-    created_at: m.created_at,
-    created_by: nombrePorUsuarioId[m.created_by] ?? m.created_by,
-    updated_at: m.updated_at ?? "",
-    updated_by: (m.updated_by && nombrePorUsuarioId[m.updated_by]) ?? m.updated_by ?? "",
-  });
-
   return (
     <div className="flex h-full flex-col">
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
-        <VistaMaestroDetalle
-          maestroGrid={MAESTRO_GRID}
-          maestroFilas={maestroFilas}
-          maestroCargando={cargando}
-          onRecargarMaestro={reload}
-          onAgregarMaestro={(fila) => crear(filaAUsuarioData(fila))}
-          onEditarMaestro={(fila) => actualizar(fila._id, filaAUsuarioData(fila))}
-          onEliminarMaestro={eliminar}
-          detalle={{
-            grid: detalleGrid,
-            cargar: listOrganizacionesDeUsuario,
-            aFila: aFilaDetalle,
-            crear: (usuarioId, fila) =>
-              createOrganizacionUsuario(usuarioId, idPorRazonSocial[String(fila.organizacion)] ?? "").then(() =>
-                recargarOrganizacionContext(),
-              ),
-            editar: (usuarioId, fila) =>
-              updateOrganizacionUsuario(
-                fila._id,
-                usuarioId,
-                idPorRazonSocial[String(fila.organizacion)] ?? "",
-                Boolean(fila.activo),
-              ).then(() => recargarOrganizacionContext()),
-            eliminar: (_usuarioId, ids) =>
-              Promise.all(ids.map(deleteOrganizacionUsuario)).then(() => recargarOrganizacionContext()),
-          }}
-          placeholderDetalle="Selecciona un usuario para ver sus organizaciones."
-        />
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
+                <h2 className="text-sm font-semibold">Usuarios</h2>
+                <div className="flex items-center gap-2">
+                  <Buscador value={busquedaUsuario} onChange={setBusquedaUsuario} />
+                  <BarraAcciones
+                    acciones={[
+                      { icono: RefreshCcw, titulo: "Recargar", onClick: () => reload() },
+                      { icono: Plus, titulo: "Agregar", onClick: () => usuarioGridRef.current?.addRow() },
+                      {
+                        icono: Trash2,
+                        titulo: "Eliminar seleccionado",
+                        onClick: () => usuarioGridRef.current?.deleteSelectedRows(),
+                        disabled: !puedeEliminarUsuario,
+                      },
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+                <DataGrid
+                  ref={usuarioGridRef}
+                  config={MAESTRO_GRID}
+                  initialRows={filasUsuario}
+                  loading={cargando}
+                  selectionMode="single"
+                  search={busquedaUsuario}
+                  onSearchChange={setBusquedaUsuario}
+                  onSelectionChange={setPuedeEliminarUsuario}
+                  onRowSelected={(fila) => setUsuarioSeleccionadoId(fila?._id ?? null)}
+                  onAddRow={(fila) => crear(filaAUsuarioData(fila))}
+                  onEditRow={(fila) => actualizar(fila._id, filaAUsuarioData(fila))}
+                  onDeleteRows={eliminar}
+                />
+              </div>
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            {usuarioSeleccionadoId ? (
+              <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
+                  <h2 className="text-sm font-semibold">Organizaciones</h2>
+                  <div className="flex items-center gap-2">
+                    <Buscador value={busquedaMembresia} onChange={setBusquedaMembresia} />
+                    <BarraAcciones
+                      acciones={[
+                        { icono: RefreshCcw, titulo: "Recargar", onClick: recargarMembresias },
+                        { icono: Plus, titulo: "Agregar", onClick: () => membresiaGridRef.current?.addRow() },
+                        {
+                          icono: Trash2,
+                          titulo: "Eliminar seleccionado",
+                          onClick: () => membresiaGridRef.current?.deleteSelectedRows(),
+                          disabled: !puedeEliminarMembresia,
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+                {errorMembresias && <p className="shrink-0 px-3 py-1 text-xs text-destructive">{errorMembresias}</p>}
+                <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+                  <DataGrid
+                    ref={membresiaGridRef}
+                    config={detalleGrid}
+                    initialRows={filasMembresia}
+                    loading={cargandoMembresias}
+                    selectionMode="single"
+                    search={busquedaMembresia}
+                    onSearchChange={setBusquedaMembresia}
+                    onSelectionChange={setPuedeEliminarMembresia}
+                    onAddRow={(fila) =>
+                      createOrganizacionUsuario(
+                        usuarioSeleccionadoId,
+                        idPorRazonSocial[String(fila.organizacion)] ?? "",
+                      )
+                        .then(() => recargarOrganizacionContext())
+                        .then(recargarMembresias)
+                    }
+                    onEditRow={(fila) =>
+                      updateOrganizacionUsuario(
+                        fila._id,
+                        usuarioSeleccionadoId,
+                        idPorRazonSocial[String(fila.organizacion)] ?? "",
+                        Boolean(fila.activo),
+                      )
+                        .then(() => recargarOrganizacionContext())
+                        .then(recargarMembresias)
+                    }
+                    onDeleteRows={(ids) =>
+                      Promise.all(ids.map(deleteOrganizacionUsuario))
+                        .then(() => recargarOrganizacionContext())
+                        .then(recargarMembresias)
+                    }
+                    onSaveError={(mensaje) => setErrorMembresias(mensaje)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col p-4">
+                <h2 className="text-sm font-semibold">Organizaciones</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Selecciona un usuario para ver sus organizaciones.
+                </p>
+              </div>
+            )}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

@@ -1,9 +1,61 @@
-import { useEffect, useMemo, useState } from "react";
-import type { DataGridConfig, Row } from "@/components/grid/DataGrid";
-import type { DetalleConfig } from "@/features/catalogos/VistaMaestroDetalle";
-import { VistaMaestroDetalle } from "@/features/catalogos/VistaMaestroDetalle";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { BarraAcciones } from "@/components/BarraAcciones";
+import { Buscador } from "@/components/Buscador";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo, listUsuarios, updateFamiliaInsumo } from "@/lib/tauri";
 import type { FamiliaInsumo } from "@/lib/types";
+
+/**
+ * El `ResizablePanel` no siempre establece altura para `flex-1` directo: sin
+ * este wrapper `h-full min-h-0` el grid se mide por el contenido, el panel lo
+ * recorta y la barra de scroll queda a media tabla — tapa la primera columna
+ * y solo se ve a partir de la segunda.
+ */
+function PanelGrid({
+  titulo,
+  busqueda,
+  onBusquedaChange,
+  onRecargar,
+  onAgregar,
+  onEliminar,
+  puedeEliminar,
+  children,
+}: {
+  titulo: string;
+  busqueda: string;
+  onBusquedaChange: (busqueda: string) => void;
+  onRecargar: () => void;
+  onAgregar: () => void;
+  onEliminar: () => void;
+  puedeEliminar: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
+        <h2 className="text-sm font-semibold">{titulo}</h2>
+        <div className="flex items-center gap-2">
+          <Buscador value={busqueda} onChange={onBusquedaChange} />
+          <BarraAcciones
+            acciones={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: onRecargar },
+              { icono: Plus, titulo: "Agregar", onClick: onAgregar },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: onEliminar,
+                disabled: !puedeEliminar,
+              },
+            ]}
+          />
+        </div>
+      </div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
+    </div>
+  );
+}
 
 const COLUMNAS_FAMILIA = [
   { field: "nombre", header: "Nombre", width: 240 },
@@ -28,15 +80,29 @@ function familiaAFila(f: FamiliaInsumo, nombresPorUsuarioId: Record<string, stri
 }
 
 export function FamiliasInsumoSeccion() {
-  const [raices, setRaices] = useState<FamiliaInsumo[]>([]);
+  const familiaGridRef = useRef<DataGridHandle>(null);
+  const subfamiliaGridRef = useRef<DataGridHandle>(null);
+  const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [version, setVersion] = useState(0);
-  const recargar = () => setVersion((v) => v + 1);
-
+  const [familiaSeleccionadaId, setFamiliaSeleccionadaId] = useState<string | null>(null);
+  const [puedeEliminarFamilia, setPuedeEliminarFamilia] = useState(false);
+  const [puedeEliminarSubfamilia, setPuedeEliminarSubfamilia] = useState(false);
+  const [busquedaFamilia, setBusquedaFamilia] = useState("");
+  const [busquedaSubfamilia, setBusquedaSubfamilia] = useState("");
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+
+  const recargar = () => {
+    setCargando(true);
+    setError(null);
+    return listFamiliasInsumo()
+      .then(setFamilias)
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
+  };
+
   useEffect(() => {
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
@@ -44,41 +110,95 @@ export function FamiliasInsumoSeccion() {
   }, []);
 
   useEffect(() => {
-    setCargando(true);
-    listFamiliasInsumo()
-      .then((todas) => setRaices(todas.filter((f) => f.parent_id === null)))
-      .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
-  }, [version]);
+    recargar();
+  }, []);
 
-  const detalle = useMemo<DetalleConfig<FamiliaInsumo>>(
-    () => ({
-      grid: GRID_SUBFAMILIA,
-      cargar: (maestroId) => listFamiliasInsumo().then((todas) => todas.filter((f) => f.parent_id === maestroId)),
-      aFila: (f) => familiaAFila(f, nombresPorUsuarioId),
-      crear: (maestroId, fila) =>
-        createFamiliaInsumo({ nombre: String(fila.nombre), parent_id: maestroId }).then(() => {}),
-      editar: (_maestroId, fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(() => {}),
-      eliminar: (_maestroId, ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(() => {}),
-    }),
-    [nombresPorUsuarioId],
+  const filasFamilia = useMemo(
+    () => familias.filter((f) => f.parent_id === null).map((f) => familiaAFila(f, nombresPorUsuarioId)),
+    [familias, nombresPorUsuarioId],
+  );
+  const filasSubfamilia = useMemo(
+    () =>
+      familiaSeleccionadaId
+        ? familias.filter((f) => f.parent_id === familiaSeleccionadaId).map((f) => familiaAFila(f, nombresPorUsuarioId))
+        : [],
+    [familias, familiaSeleccionadaId, nombresPorUsuarioId],
   );
 
   return (
     <div className="flex h-full flex-col">
       {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
-        <VistaMaestroDetalle
-          maestroGrid={GRID_FAMILIA}
-          maestroFilas={raices.map((f) => familiaAFila(f, nombresPorUsuarioId))}
-          maestroCargando={cargando}
-          onRecargarMaestro={recargar}
-          onAgregarMaestro={(fila) => createFamiliaInsumo({ nombre: String(fila.nombre) }).then(recargar)}
-          onEditarMaestro={(fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(recargar)}
-          onEliminarMaestro={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
-          detalle={detalle}
-          placeholderDetalle="Selecciona una familia para ver sus hijos directos."
-        />
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            <PanelGrid
+              titulo="Familias de insumo"
+              busqueda={busquedaFamilia}
+              onBusquedaChange={setBusquedaFamilia}
+              onRecargar={recargar}
+              onAgregar={() => familiaGridRef.current?.addRow()}
+              onEliminar={() => familiaGridRef.current?.deleteSelectedRows()}
+              puedeEliminar={puedeEliminarFamilia}
+            >
+              <DataGrid
+                ref={familiaGridRef}
+                config={GRID_FAMILIA}
+                initialRows={filasFamilia}
+                loading={cargando}
+                selectionMode="single"
+                search={busquedaFamilia}
+                onSearchChange={setBusquedaFamilia}
+                onSelectionChange={setPuedeEliminarFamilia}
+                onRowSelected={(fila) => setFamiliaSeleccionadaId(fila?._id ?? null)}
+                onAddRow={(fila) => createFamiliaInsumo({ nombre: String(fila.nombre) }).then(recargar)}
+                onEditRow={(fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(recargar)}
+                onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
+                onSaveError={(mensaje) => setError(mensaje)}
+              />
+            </PanelGrid>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            {familiaSeleccionadaId ? (
+              <PanelGrid
+                titulo="Sub familias"
+                busqueda={busquedaSubfamilia}
+                onBusquedaChange={setBusquedaSubfamilia}
+                onRecargar={recargar}
+                onAgregar={() => subfamiliaGridRef.current?.addRow()}
+                onEliminar={() => subfamiliaGridRef.current?.deleteSelectedRows()}
+                puedeEliminar={puedeEliminarSubfamilia}
+              >
+                <DataGrid
+                  ref={subfamiliaGridRef}
+                  config={GRID_SUBFAMILIA}
+                  initialRows={filasSubfamilia}
+                  loading={cargando}
+                  selectionMode="single"
+                  search={busquedaSubfamilia}
+                  onSearchChange={setBusquedaSubfamilia}
+                  onSelectionChange={setPuedeEliminarSubfamilia}
+                  onAddRow={(fila) =>
+                    createFamiliaInsumo({
+                      nombre: String(fila.nombre),
+                      parent_id: familiaSeleccionadaId,
+                    }).then(recargar)
+                  }
+                  onEditRow={(fila) => updateFamiliaInsumo(fila._id, { nombre: String(fila.nombre) }).then(recargar)}
+                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
+                  onSaveError={(mensaje) => setError(mensaje)}
+                />
+              </PanelGrid>
+            ) : (
+              <div className="flex h-full flex-col p-4">
+                <h2 className="text-sm font-semibold">Sub familias</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Selecciona una familia para ver sus hijos directos.
+                </p>
+              </div>
+            )}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

@@ -209,7 +209,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
         },
         { field: "marca", header: "Marca", width: 160 },
         { field: "merma_porcentaje", header: "Merma", numeric: true, suffix: "%", width: 110 },
-        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
@@ -229,7 +228,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
         marca: m.marca ?? "",
         costo_actual: m.precio_vigente ? `$${m.precio_vigente}` : "$0",
         merma_porcentaje: m.merma_porcentaje ?? 0,
-        activo: m.activo,
         created_at: m.created_at,
         created_by: nombresPorUsuarioId[m.created_by] ?? m.created_by,
         updated_at: m.updated_at ?? "",
@@ -256,7 +254,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       // 0 a 100, redondeado — la celda es de texto libre y puede traer decimales o basura.
       merma_porcentaje: Math.min(100, Math.max(0, Math.round(Number(fila.merma_porcentaje)) || 0)),
       marca: String(fila.marca) || null,
-      activo: Boolean(fila.activo),
     };
   };
 

@@ -2,9 +2,9 @@
 //! `factor_salario_real`): porcentaje de cada rubro de costo horario que
 //! aplica cuando un equipo está inactivo ("en espera" o "en reserva") — ver
 //! `perfil_inactividad_equipo` en el diccionario de datos. El despacho edita
-//! los porcentajes libremente y puede agregar/desactivar perfiles completos;
-//! el sembrado inicial es solo una receta de partida (frente/patio), no una
-//! norma.
+//! los porcentajes libremente y puede agregar o eliminar perfiles completos
+//! (borrado lógico); el sembrado inicial es solo una receta de partida
+//! (frente/patio), no una norma.
 
 use obrix_db::entities::perfil_inactividad_equipo::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
@@ -39,7 +39,6 @@ pub struct PerfilInactividadEquipoData {
     pub reserva_mantenimiento_porcentaje: Decimal,
     pub reserva_consumo_porcentaje: Decimal,
     pub reserva_operacion_porcentaje: Decimal,
-    pub activo: bool,
 }
 
 pub struct PerfilInactividadEquipoService;
@@ -51,6 +50,7 @@ impl PerfilInactividadEquipoService {
     ) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
+            .filter(Column::Deleted.eq(false))
             .order_by_asc(Column::Nombre)
             .all(repo.conexion())
             .await?)
@@ -78,11 +78,13 @@ impl PerfilInactividadEquipoService {
             reserva_mantenimiento_porcentaje: Set(datos.reserva_mantenimiento_porcentaje),
             reserva_consumo_porcentaje: Set(datos.reserva_consumo_porcentaje),
             reserva_operacion_porcentaje: Set(datos.reserva_operacion_porcentaje),
-            activo: Set(datos.activo),
+            deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
             updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(repo.conexion())
         .await?)
@@ -95,6 +97,7 @@ impl PerfilInactividadEquipoService {
         actualizado_por: String,
     ) -> Result<Model, ServiceError> {
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("perfil de inactividad de equipo {id}")))?
@@ -112,14 +115,26 @@ impl PerfilInactividadEquipoService {
         modelo.reserva_mantenimiento_porcentaje = Set(datos.reserva_mantenimiento_porcentaje);
         modelo.reserva_consumo_porcentaje = Set(datos.reserva_consumo_porcentaje);
         modelo.reserva_operacion_porcentaje = Set(datos.reserva_operacion_porcentaje);
-        modelo.activo = Set(datos.activo);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(Some(actualizado_por));
         Ok(modelo.update(repo.conexion()).await?)
     }
 
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        Entity::delete_by_id(id).exec(repo.conexion()).await?;
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        let mut modelo: ActiveModel = Entity::find_by_id(&id)
+            .filter(Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("perfil de inactividad de equipo {id}")))?
+            .into();
+        modelo.deleted = Set(true);
+        modelo.deleted_at = Set(Some(crate::ahora()));
+        modelo.deleted_by = Set(Some(eliminado_por));
+        modelo.update(repo.conexion()).await?;
         Ok(())
     }
 }
@@ -158,7 +173,6 @@ impl DatosIniciales for PerfilInactividadEquipoService {
                     reserva_mantenimiento_porcentaje: registro.reserva_mantenimiento,
                     reserva_consumo_porcentaje: registro.reserva_consumo,
                     reserva_operacion_porcentaje: registro.reserva_operacion,
-                    activo: true,
                 },
                 admin.id.clone(),
             )
@@ -226,7 +240,6 @@ mod tests {
             reserva_mantenimiento_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_consumo_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_operacion_porcentaje: Decimal::from_str("0").unwrap(),
-            activo: true,
         }
     }
 
@@ -307,12 +320,20 @@ mod tests {
         assert_eq!(actualizado.espera_mantenimiento_porcentaje, Decimal::from_str("80").unwrap());
         assert_eq!(actualizado.updated_by.as_deref(), Some(admin.id.as_str()));
 
-        PerfilInactividadEquipoService::eliminar(&portafolio, creado.id.clone())
+        PerfilInactividadEquipoService::eliminar(&portafolio, creado.id.clone(), admin.id.clone())
             .await
             .expect("eliminar perfil");
         let listado = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar");
         assert_eq!(listado.len(), 3);
+        let restante = Entity::find_by_id(&creado.id)
+            .one(portafolio.conexion())
+            .await
+            .expect("buscar perfil eliminado")
+            .expect("el perfil sigue en la tabla");
+        assert!(restante.deleted);
+        assert_eq!(restante.deleted_by.as_deref(), Some(admin.id.as_str()));
+        assert!(restante.deleted_at.is_some());
     }
 }

@@ -135,7 +135,6 @@ export function CuadrillasGridVista() {
         { field: "sub_total_mano_obra", header: "Mano de obra", width: 130, readOnly: true },
         { field: "sub_total_herramienta", header: "Herramienta", width: 130, readOnly: true },
         { field: "costo_total", header: "Costo total", width: 130, readOnly: true },
-        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
@@ -154,7 +153,6 @@ export function CuadrillasGridVista() {
         sub_total_mano_obra: `$${c.sub_total_mano_obra}`,
         sub_total_herramienta: `$${c.sub_total_herramienta}`,
         costo_total: `$${c.costo_total}`,
-        activo: c.activo,
         created_at: c.created_at,
         created_by: nombresPorUsuarioId[c.created_by] ?? c.created_by,
         updated_at: c.updated_at ?? "",
@@ -175,7 +173,6 @@ export function CuadrillasGridVista() {
       unidad_id: unidadIdPorSimbolo[String(fila.unidad)] ?? String(fila.unidad),
       familia_id: familiaId,
       sub_familia_id: subFamiliaId,
-      activo: Boolean(fila.activo),
     };
   };
 

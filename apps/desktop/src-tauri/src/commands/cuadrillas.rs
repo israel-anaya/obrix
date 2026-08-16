@@ -52,7 +52,11 @@ pub async fn update_cuadrilla(
 pub async fn delete_cuadrilla(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CuadrillaService::eliminar(activo.portafolio.as_ref(), id)
+    CuadrillaService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

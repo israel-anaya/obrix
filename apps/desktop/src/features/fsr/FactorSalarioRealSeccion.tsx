@@ -5,7 +5,7 @@ import { Buscador } from "@/components/Buscador";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
-import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, updateFactorSalarioReal } from "@/lib/tauri";
+import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, listUsuarios, updateFactorSalarioReal } from "@/lib/tauri";
 import type { FactorSalarioRealData, Region } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -19,8 +19,10 @@ const FACTOR_SALARIO_REAL_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 160, readOnly: true, date: true },
-  { field: "updated_at", header: "Actualizado", width: 160, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
 export function FactorSalarioRealSeccion({
@@ -47,9 +49,13 @@ export function FactorSalarioRealSeccion({
   }, [guardadoExitoso]);
 
   const [regiones, setRegiones] = useState<Region[]>([]);
+  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const recargarRegiones = () => listRegiones().then(setRegiones).catch(() => {});
   useEffect(() => {
     recargarRegiones();
+    listUsuarios().then((usuarios) => {
+      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
+    });
   }, []);
 
   const recargarTodo = () => {
@@ -84,9 +90,11 @@ export function FactorSalarioRealSeccion({
         nombre: f.nombre,
         region: f.region_id ? (nombrePorRegionId[f.region_id] ?? "") : NACIONAL,
         created_at: f.created_at,
+        created_by: nombresPorUsuarioId[f.created_by] ?? f.created_by,
         updated_at: f.updated_at ?? "",
+        updated_by: (f.updated_by && nombresPorUsuarioId[f.updated_by]) ?? f.updated_by ?? "",
       })),
-    [items, nombrePorRegionId],
+    [items, nombrePorRegionId, nombresPorUsuarioId],
   );
 
   const filaAFactorData = (fila: Row, previo?: { modelo_calculo_json: string; parametros_json: string }): FactorSalarioRealData => ({

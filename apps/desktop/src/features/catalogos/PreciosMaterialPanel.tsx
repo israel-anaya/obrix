@@ -97,9 +97,9 @@ export function PreciosMaterialPanel({
     else if (monedas[0]) setMonedaSeleccionada(monedas[0].codigo);
   }, [monedas, monedaDefaultOrgId]);
 
-  // Igual que en VistaMaestroDetalle: se espera un momento a que la
-  // selección se quede quieta antes de cargar, para que navegar con
-  // flechas por el grid no dispare una consulta por cada fila de paso.
+  // Se espera un momento a que la selección se quede quieta antes de
+  // cargar, para que navegar con flechas por el grid no dispare una
+  // consulta por cada fila de paso.
   useEffect(() => {
     setFormAbierto(false);
     if (!materialId) {

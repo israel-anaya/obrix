@@ -3,7 +3,7 @@ import type { Material } from "@/lib/types";
 export interface FilaCostoMaterial {
   descripcion: string;
   costo: number;
-  insumoId: string;
+  materialId: string;
 }
 
 export interface ResultadoCsvCostoMaterial {
@@ -142,7 +142,7 @@ export function validarCsvCostoMaterial(contenido: string, materiales: Material[
       continue;
     }
 
-    filas.push({ descripcion: registrado.descripcion, costo, insumoId: registrado.id });
+    filas.push({ descripcion: registrado.descripcion, costo, materialId: registrado.id });
   }
 
   return { filas, materialesNoRegistrados, errores };

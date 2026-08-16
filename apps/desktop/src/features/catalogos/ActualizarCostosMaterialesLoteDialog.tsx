@@ -83,7 +83,7 @@ export function ActualizarCostosMaterialesLoteDialog({
     }
 
     const items: PrecioLoteItem[] = estado.filas.map((fila) => ({
-      insumo_id: fila.insumoId,
+      material_id: fila.materialId,
       precio: String(fila.costo),
       moneda,
       region_id: regionId || null,

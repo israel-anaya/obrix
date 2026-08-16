@@ -127,7 +127,6 @@ export function HerramientaSeccion() {
             return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
           },
         },
-        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
@@ -144,7 +143,6 @@ export function HerramientaSeccion() {
         porcentaje_mano_obra: h.porcentaje_mano_obra ?? 0,
         familia: (h.familia_id && nombrePorFamiliaId[h.familia_id]) || SIN_FAMILIA,
         subfamilia: (h.sub_familia_id && nombrePorFamiliaId[h.sub_familia_id]) || SIN_SUBFAMILIA,
-        activo: h.activo,
         created_at: h.created_at,
         created_by: nombresPorUsuarioId[h.created_by] ?? h.created_by,
         updated_at: h.updated_at ?? "",
@@ -169,7 +167,6 @@ export function HerramientaSeccion() {
       sub_familia_id: subFamiliaId,
       // 0 a 100, redondeado — la celda es de texto libre y puede traer decimales o basura.
       porcentaje_mano_obra: Math.min(100, Math.max(0, Math.round(Number(fila.porcentaje_mano_obra)) || 0)),
-      activo: Boolean(fila.activo),
     };
   };
 

@@ -23,10 +23,13 @@ pub struct Model {
     pub modelo_calculo_json: String,
     /// Valores de las variables de entrada que ese modelo declara.
     pub parametros_json: String,
+    pub deleted: bool,
     pub created_at: String,
     pub created_by: String,
     pub updated_at: Option<String>,
     pub updated_by: Option<String>,
+    pub deleted_at: Option<String>,
+    pub deleted_by: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

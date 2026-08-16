@@ -42,7 +42,7 @@ function fmt(valor: string): string {
  * por debajo.
  *
  * A diferencia de `CuadrillasFicha`, este formulario solo cubre los datos de
- * "identidad" del equipo (clave/descripción/unidad/familia/región/activo) —
+ * "identidad" del equipo (clave/descripción/unidad/familia/región) —
  * los 9 valores de captura de cargos fijos viven en la ficha de detalle, no
  * aquí, para que se vea el desglose calculado mientras se ajustan.
  */
@@ -192,7 +192,6 @@ export function EquipoCostoHorarioFicha() {
           unidad_id: nuevaUnidadId,
           familia_id: nuevaFamiliaId,
           sub_familia_id: nuevaSubfamiliaId,
-          activo: actual.activo,
           region_id: nuevaRegionId,
           cf_costo_maquina: actual.cf_costo_maquina,
           cf_valor_llantas: actual.cf_valor_llantas,
@@ -213,7 +212,6 @@ export function EquipoCostoHorarioFicha() {
           unidad_id: nuevaUnidadId,
           familia_id: nuevaFamiliaId,
           sub_familia_id: nuevaSubfamiliaId,
-          activo: true,
           region_id: nuevaRegionId,
           cf_costo_maquina: "0",
           cf_valor_llantas: "0",
@@ -412,7 +410,6 @@ export function EquipoCostoHorarioFicha() {
                     className={cn(
                       "flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left hover:bg-muted/50",
                       seleccionadaId === e.id && "bg-muted",
-                      !e.activo && "opacity-60",
                     )}
                   >
                     <span className="font-mono text-[10px] text-muted-foreground">{e.clave}</span>

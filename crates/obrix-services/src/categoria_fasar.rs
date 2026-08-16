@@ -30,7 +30,6 @@ pub struct CategoriaFasarData {
     /// Debe ser hija (`parent_id`) de `familia_id` — no se valida aquí, el
     /// frontend ya restringe las opciones mostradas a los hijos de la familia elegida.
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
 }
 
 /// `insumo` + `categoria_fasar` combinados en una sola fila — así es como lo
@@ -43,14 +42,16 @@ pub struct CategoriaFasarCompleto {
     pub unidad_id: String,
     pub familia_id: Option<String>,
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
     /// Vigencia nacional vigente de `salario_categoria_fasar`
     /// (`region_id` nulo) — `None` si nunca se le ha registrado un salario.
     pub salario_vigente: Option<salario_categoria_fasar::Model>,
+    pub deleted: bool,
     pub created_at: String,
     pub created_by: String,
     pub updated_at: Option<String>,
     pub updated_by: Option<String>,
+    pub deleted_at: Option<String>,
+    pub deleted_by: Option<String>,
 }
 
 fn combinar(
@@ -64,12 +65,14 @@ fn combinar(
         unidad_id: insumo.unidad_id,
         familia_id: insumo.familia_id,
         sub_familia_id: insumo.sub_familia_id,
-        activo: insumo.activo,
         salario_vigente,
+        deleted: insumo.deleted,
         created_at: insumo.created_at,
         created_by: insumo.created_by,
         updated_at: insumo.updated_at,
         updated_by: insumo.updated_by,
+        deleted_at: insumo.deleted_at,
+        deleted_by: insumo.deleted_by,
     }
 }
 
@@ -83,6 +86,7 @@ impl CategoriaFasarService {
         let insumos = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::ManoObra))
+            .filter(insumo::Column::Deleted.eq(false))
             .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
@@ -123,11 +127,13 @@ impl CategoriaFasarService {
             unidad_id: Set(datos.unidad_id),
             familia_id: Set(datos.familia_id),
             sub_familia_id: Set(datos.sub_familia_id),
-            activo: Set(datos.activo),
+            deleted: Set(false),
             created_at: Set(ahora),
             created_by: Set(creado_por),
             updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(&txn)
         .await?;
@@ -149,6 +155,7 @@ impl CategoriaFasarService {
         let ahora = crate::ahora();
 
         let mut ins: insumo::ActiveModel = insumo::Entity::find_by_id(&id)
+            .filter(insumo::Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("categoría FASAR {id}")))?
@@ -158,7 +165,6 @@ impl CategoriaFasarService {
         ins.unidad_id = Set(datos.unidad_id);
         ins.familia_id = Set(datos.familia_id);
         ins.sub_familia_id = Set(datos.sub_familia_id);
-        ins.activo = Set(datos.activo);
         ins.updated_at = Set(Some(ahora));
         ins.updated_by = Set(actualizado_por);
         let ins = ins.update(repo.conexion()).await?;
@@ -167,11 +173,14 @@ impl CategoriaFasarService {
         Ok(combinar(ins, salario_vigente))
     }
 
-    /// Borra el `insumo` — `categoria_fasar` y su historial de
-    /// `salario_categoria_fasar` se eliminan en cascada (FK `ON DELETE CASCADE`).
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        insumo::Entity::delete_by_id(id).exec(repo.conexion()).await?;
-        Ok(())
+    /// Borrado lógico del `insumo` — `categoria_fasar` y su historial de
+    /// `salario_categoria_fasar` se quedan.
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        crate::marcar_insumo_eliminado(repo, &id, "categoría FASAR", eliminado_por).await
     }
 }
 
@@ -287,7 +296,6 @@ impl DatosIniciales for CategoriaFasarService {
                     unidad_id,
                     familia_id: Some(familia_id),
                     sub_familia_id: Some(sub_familia_id),
-                    activo: true,
                 },
                 admin.id.clone(),
             )
@@ -392,7 +400,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -416,7 +423,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             Some("usr-1".into()),
         )
@@ -424,24 +430,31 @@ mod tests {
         .expect("actualizar categoria_fasar");
         assert_eq!(actualizado.descripcion, "Oficial albañil, primera");
 
-        CategoriaFasarService::eliminar(&portafolio, creado.id.clone())
+        CategoriaFasarService::eliminar(&portafolio, creado.id.clone(), "usr-1".into())
             .await
             .expect("eliminar categoria_fasar");
 
         let insumo_restante = obrix_db::entities::insumo::Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await
-            .unwrap();
-        assert!(insumo_restante.is_none(), "el insumo debe quedar borrado");
+            .unwrap()
+            .expect("el insumo debe seguir existiendo");
+        assert!(insumo_restante.deleted);
+        assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
 
         let categoria_restante = obrix_db::entities::categoria_fasar::Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await
             .unwrap();
         assert!(
-            categoria_restante.is_none(),
-            "categoria_fasar debe borrarse en cascada junto con el insumo"
+            categoria_restante.is_some(),
+            "la extensión categoria_fasar no se borra; el listado la oculta con deleted"
         );
+
+        let listado_tras_borrar = CategoriaFasarService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar tras borrar");
+        assert!(listado_tras_borrar.iter().all(|c| c.id != creado.id));
     }
 
     /// El CSV pide `jor` en cada fila — si esa unidad no está sembrada, el

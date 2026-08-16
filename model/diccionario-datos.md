@@ -37,7 +37,7 @@ Auditoría append-only. No se actualiza ni se borra.
 | id | uuid | PK |
 | razon_social | text | |
 | rfc | text | RFC de la persona moral u física titular del despacho/constructora |
-| tipo | enum | `despacho`, `constructora`, `dependencia_publica` |
+| tipo | enum | `despacho`, `constructora`, `gobierno` |
 | moneda_default_id | uuid | FK → moneda, requerido — moneda con la que arranca la UI al capturar precios (ej. `precio_material`); siempre sembrada con MXN al crear la organización |
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
@@ -209,10 +209,44 @@ Catálogo maestro a nivel organización — se reutiliza entre proyectos.
 | familia_id | uuid | FK → familia_insumo, nullable |
 | sub_familia_id | uuid | FK → familia_insumo, nullable — debe ser hijo (`parent_id`) de `familia_id` |
 | tags | json | nullable — lista de pares llave/valor libres, definidos por el usuario (ej. `{"norma": "NMX-C-155", "obra_tipo": "hidraulica"}`), sin esquema fijo — no participa en ningún cálculo, solo filtrado/búsqueda en catálogo |
-| deleted | bool | Indica si el elemento a sido eliminado
+| deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Extensiones de `insumo`
 
@@ -235,10 +269,7 @@ insumo:
 
 ### `material`
 
-Extensión 1:1 de `insumo` cuando `insumo.tipo = material`. Sin columnas de
-auditoría propias — comparte el ciclo de vida de su `insumo` (mismo
-`insumo_id`), cuyo `created_at`/`created_by`/`updated_at`/`updated_by` ya
-cubren la fila completa.
+Extensión 1:1 de `insumo` cuando `insumo.tipo = material`.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -262,7 +293,7 @@ descendente:
 1. `(material, region_id = región del proyecto)` — precio regional específico.
 2. `(material, region_id = NULL)` — nacional por defecto, fallback final.
 
-`moneda` es parte de esa misma llave de vigencia: `(insumo_id, region_id,
+`moneda` es parte de esa misma llave de vigencia: `(material_id, region_id,
 moneda)`. Un material puede tener, al mismo tiempo, un precio vigente en MXN
 y otro en USD para la misma región — son vigencias independientes, y
 registrar uno nuevo solo cierra el anterior que comparta exactamente su
@@ -305,6 +336,42 @@ precio, para trazabilidad/filtrado.
 | notas | text | nullable |
 | created_at / created_by / updated_at / updated_by | | |
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### `factor_salario_real`
 
 Factor de Salario Real (FSR): integra al salario base diario las
@@ -341,7 +408,9 @@ https://www.youtube.com/watch?v=YFUh-bf7nHQ
 | region_id | uuid | FK → region, nullable — `null` = nacional (sin región específica) |
 | modelo_calculo_json | json | `VariableCalculo[]` — CÓMO se calcula (variables y fórmulas) |
 | parametros_json | json | valores concretos de los parámetros `numero`/`booleano` que declara `modelo_calculo_json` — QUÉ se captura. Nunca incluye parámetros `rango`, ver nota arriba |
-| created_at / created_by / updated_at / updated_by | | |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ### `categoria_fasar`
 
@@ -357,7 +426,6 @@ vigencia, región) vive en `salario_categoria_fasar` — mismo patrón que
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
 
-Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
 ### `salario_categoria_fasar`
 
@@ -400,6 +468,59 @@ NULL`) debe reforzarse con un índice único parcial o a nivel de aplicación.
 | fecha_vigencia_hasta | date | nullable — null = vigente |
 | created_at / created_by / updated_at / updated_by | | `updated_at`/`updated_by` reflejan cuándo se cerró `fecha_vigencia_hasta` al registrar la siguiente vigencia |
 
+
+### `condicion_trabajo`
+
+Catálogo reutilizable de turnos y condiciones que recargan el salario o
+reducen el rendimiento de la mano de obra (nocturno, altura, espacio
+confinado, tiempo extra, clima). **No es un insumo ni una extensión de
+`insumo`**: igual que `factor_salario_real`, declara *cómo* se ajusta un
+costo, no *qué* trabajador es. No es un campo suelto en
+`salario_categoria_fasar` ni en `cuadrilla`: varias categorías o cuadrillas
+pueden compartir la misma receta.
+
+`metodo_aplicacion` dice cómo entra `valor` al salario. `afecta_rendimiento`
+es independiente: un recargo (p. ej. nocturno) puede además bajar
+productividad. Si `metodo_aplicacion = factor_rendimiento`, no hay recargo
+salarial (`valor` no aplica) y `afecta_rendimiento` debe ser verdadero.
+
+El FSR no cambia: se aplica al salario ya recargado, no se recalcula. El
+rendimiento base no vive aquí — es el de la matriz que consume la cuadrilla
+(`concepto_componente.rendimiento`, `basico_auxiliar_componente.cantidad`).
+Esta tabla solo aporta el multiplicador cuando `afecta_rendimiento`.
+
+Orden al aplicar una o más condiciones vigentes sobre una
+`categoria_fasar` en una valuación:
+
+1. `salario_categoria_fasar.salario_base_diario`
+2. + recargos con `metodo_aplicacion` `porcentaje_salario` o `monto_fijo`
+   → salario ajustado
+3. × `salario_categoria_fasar.factor_salario_real` (el factor del catálogo
+   FSR, intacto)
+   → costo real por jornada
+4. × `cuadrilla_costo_detalle.cantidad` de esa categoría
+   → costo de cuadrilla por jornada
+5. ÷ rendimiento base × Π `factor_rendimiento` de las condiciones con
+   `afecta_rendimiento`
+   → costo de mano de obra por unidad
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| nombre | text | ej. "Nocturno", "Altura >30m", "Espacio confinado", "Tiempo extra" |
+| tipo | enum | `turno`, `riesgo`, `acceso`, `clima` |
+| metodo_aplicacion | enum | `porcentaje_salario`, `monto_fijo`, `factor_rendimiento` — cómo entra `valor` al salario; `factor_rendimiento` = sin recargo salarial |
+| valor | decimal | si `porcentaje_salario`: 0–100 sobre `salario_base_diario` (`25` = 25%, no `0.25`); si `monto_fijo`: importe por jornada en la moneda de la organización; si `factor_rendimiento`: no aplica |
+| afecta_rendimiento | bool | ¿reduce el rendimiento de la cuadrilla? independiente de `metodo_aplicacion`, salvo cuando éste es `factor_rendimiento` (entonces debe ser verdadero) |
+| factor_rendimiento | decimal | nullable — multiplicador sobre el rendimiento base (`0.85` = 15% menos productividad), no un porcentaje en base 100; requerido si `afecta_rendimiento` |
+| base_legal | text | nullable — referencia normativa (ej. LFT art. 74), para auditoría |
+| fecha_vigencia_desde | date | |
+| fecha_vigencia_hasta | date | nullable — null = vigente |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+
 ### `cuadrilla`
 
 Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.
@@ -424,7 +545,6 @@ tabla.
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
 
-Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
 ### `cuadrilla_detalle`
 
@@ -441,7 +561,9 @@ región y cuelgan de `cuadrilla_costo_detalle`.
 | detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `categoria_fasar`) o `equipo_herramienta` (con extensión `herramienta`) |
 | tipo | enum | `categoria_fasar`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla_costo.sub_total_mano_obra` de `cuadrilla_costo.sub_total_herramienta` sin join |
 | orden | int | orden de visualización dentro de la cuadrilla |
-| created_at / created_by / updated_at / updated_by | | |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 Restricción: única `(cuadrilla_insumo_id, detalle_insumo_id)`.
 
@@ -502,7 +624,9 @@ aplicación.
 | sub_total_mano_obra | decimal | cache = Σ cuadrilla_costo_detalle.importe donde el `cuadrilla_detalle.tipo` = categoria_fasar, de **esta** valuación |
 | sub_total_herramienta | decimal | cache = Σ cuadrilla_costo_detalle.importe donde el `cuadrilla_detalle.tipo` = equipo_herramienta, de **esta** valuación |
 | costo_total | decimal | cache = sub_total_mano_obra + sub_total_herramienta |
-| created_at / created_by / updated_at / updated_by | | |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 ### `cuadrilla_costo_detalle`
 
@@ -524,9 +648,47 @@ los deriva el recálculo del `cuadrilla_costo` padre.
 | cantidad | decimal | **capturable** — jornales/integrantes si el detalle es `categoria_fasar`; porcentaje 0–100 (no fracción 0–1) si es `equipo_herramienta`. Al dar de alta una herramienta en la receta, el default es `herramienta.porcentaje_mano_obra` |
 | costo | decimal | cache: si tipo = categoria_fasar, `salario_categoria_fasar.salario_real_diario` vigente de la región de `cuadrilla_costo`; si tipo = equipo_herramienta, `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación |
 | importe | decimal | cache = cantidad × costo |
-| created_at / created_by / updated_at / updated_by | | |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 Restricción: única `(cuadrilla_costo_id, cuadrilla_detalle_id)`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### `herramienta`
 
@@ -537,7 +699,6 @@ Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta`
 | insumo_id | uuid | PK, FK → insumo |
 | porcentaje_mano_obra | int | porcentaje por default — se copia a `cuadrilla_costo_detalle.cantidad` al integrar la herramienta en una cuadrilla; a partir de ahí la cantidad es de la valuación (puede diferir por región) |
 
-Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
 ### `perfil_inactividad_equipo`
 
@@ -565,8 +726,8 @@ llevan `naturaleza`.
 No aplica a `herramienta` (es un % sobre mano de obra) ni a
 `equipo_rentado` (la tarifa ya mete ociosidad; horas paradas = más horas de
 la misma tarifa). Si un equipo no elige perfil, no se cotiza espera ni
-reserva. `activo = false` lo saca del catálogo al asignar; no borra el
-vínculo de equipos que ya lo usan.
+reserva. El borrado es lógico (`deleted`): lo saca del catálogo al asignar;
+no borra el vínculo de equipos que ya lo usan.
 
 Los valores de semilla son una receta de partida (frente / patio), no una
 norma: el despacho los edita. El reglamento pide justificar el costo
@@ -593,8 +754,9 @@ inactivo; no fija estos porcentajes.
 | reserva_lubricante_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = lubricante` |
 | reserva_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
 | reserva_operacion_porcentaje | decimal | sobre `subtotal_operacion` |
-| activo | bool | default true |
-| created_at / created_by / updated_at / updated_by | | |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
 
 Semilla ilustrativa (editable):
 
@@ -678,6 +840,18 @@ valores extra en el enum todavía.
 | costo | decimal | precio/costo vigente del insumo referenciado — si es `cuadrilla`, `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |
 | importe | decimal | cache = cantidad × costo |
 | created_at / created_by / updated_at / updated_by | | |
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### `equipo_rentado`

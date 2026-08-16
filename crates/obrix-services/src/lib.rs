@@ -61,3 +61,26 @@ pub fn ahora() -> String {
 pub fn hoy() -> String {
     chrono::Utc::now().date_naive().to_string()
 }
+
+/// Borrado lógico del pivote `insumo` — las tablas de extensión (material,
+/// herramienta, cuadrilla, …) se quedan; `listar` las oculta con `deleted`.
+pub async fn marcar_insumo_eliminado(
+    repo: &dyn obrix_db::PortafolioRepository,
+    id: &str,
+    etiqueta: &str,
+    eliminado_por: String,
+) -> Result<(), ServiceError> {
+    use obrix_db::entities::insumo::{ActiveModel, Column, Entity};
+    use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
+    let mut modelo: ActiveModel = Entity::find_by_id(id)
+        .filter(Column::Deleted.eq(false))
+        .one(repo.conexion())
+        .await?
+        .ok_or_else(|| ServiceError::NoEncontrado(format!("{etiqueta} {id}")))?
+        .into();
+    modelo.deleted = Set(true);
+    modelo.deleted_at = Set(Some(ahora()));
+    modelo.deleted_by = Set(Some(eliminado_por));
+    modelo.update(repo.conexion()).await?;
+    Ok(())
+}

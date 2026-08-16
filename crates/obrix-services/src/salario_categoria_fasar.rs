@@ -276,7 +276,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -417,7 +416,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )
@@ -433,7 +431,6 @@ mod tests {
                 unidad_id: "um-1".into(),
                 familia_id: None,
                 sub_familia_id: None,
-                activo: true,
             },
             "usr-1".into(),
         )

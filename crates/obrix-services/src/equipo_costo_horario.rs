@@ -26,7 +26,6 @@ pub struct EquipoCostoHorarioData {
     /// Debe ser hija (`parent_id`) de `familia_id` — no se valida aquí, el
     /// frontend ya restringe las opciones mostradas a los hijos de la familia elegida.
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
     /// `null` = nacional — solo descriptivo, no participa en ningún cálculo.
     pub region_id: Option<String>,
     pub cf_costo_maquina: Decimal,
@@ -102,7 +101,6 @@ pub struct EquipoCostoHorarioCompleto {
     pub unidad_id: String,
     pub familia_id: Option<String>,
     pub sub_familia_id: Option<String>,
-    pub activo: bool,
     pub region_id: Option<String>,
     pub cf_costo_maquina: Decimal,
     pub cf_valor_llantas: Decimal,
@@ -139,7 +137,6 @@ pub(crate) fn combinar(insumo: insumo::Model, equipo: equipo_costo_horario::Mode
         unidad_id: insumo.unidad_id,
         familia_id: insumo.familia_id,
         sub_familia_id: insumo.sub_familia_id,
-        activo: insumo.activo,
         region_id: equipo.region_id,
         cf_costo_maquina: equipo.cf_costo_maquina,
         cf_valor_llantas: equipo.cf_valor_llantas,
@@ -179,6 +176,7 @@ impl EquipoCostoHorarioService {
         let insumos = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Tipo.eq(TipoInsumo::EquipoHerramienta))
+            .filter(insumo::Column::Deleted.eq(false))
             .order_by_asc(insumo::Column::Clave)
             .all(repo.conexion())
             .await?;
@@ -204,6 +202,7 @@ impl EquipoCostoHorarioService {
         id: &str,
     ) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
         let ins = insumo::Entity::find_by_id(id)
+            .filter(insumo::Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {id}")))?;
@@ -234,11 +233,13 @@ impl EquipoCostoHorarioService {
             unidad_id: Set(datos.unidad_id),
             familia_id: Set(datos.familia_id),
             sub_familia_id: Set(datos.sub_familia_id),
-            activo: Set(datos.activo),
+            deleted: Set(false),
             created_at: Set(ahora),
             created_by: Set(creado_por),
             updated_at: Set(None),
             updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(&txn)
         .await?;
@@ -276,7 +277,7 @@ impl EquipoCostoHorarioService {
     }
 
     /// Actualiza tanto los datos de catálogo (clave/descripción/unidad/
-    /// familia/región/activo) como los 9 valores de captura de cargos fijos
+    /// familia/región) como los 9 valores de captura de cargos fijos
     /// — recalcula los 8 de cache a partir de ellos. `cargo_variable_hora`
     /// no se toca aquí (lo administra `EquipoCostoHorarioDetalleService` a
     /// partir de la composición); `costo_horario_total` se recompone con el
@@ -301,7 +302,6 @@ impl EquipoCostoHorarioService {
         ins.unidad_id = Set(datos.unidad_id);
         ins.familia_id = Set(datos.familia_id);
         ins.sub_familia_id = Set(datos.sub_familia_id);
-        ins.activo = Set(datos.activo);
         ins.updated_at = Set(Some(ahora));
         ins.updated_by = Set(actualizado_por);
         let ins = ins.update(repo.conexion()).await?;
@@ -337,11 +337,14 @@ impl EquipoCostoHorarioService {
         Ok(combinar(ins, equipo))
     }
 
-    /// Borra el `insumo` — `equipo_costo_horario` y su
-    /// `equipo_costo_horario_detalle` se eliminan en cascada (FK `ON DELETE CASCADE`).
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<(), ServiceError> {
-        insumo::Entity::delete_by_id(id).exec(repo.conexion()).await?;
-        Ok(())
+    /// Borrado lógico del `insumo` — `equipo_costo_horario` y su
+    /// `equipo_costo_horario_detalle` se quedan.
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+        eliminado_por: String,
+    ) -> Result<(), ServiceError> {
+        crate::marcar_insumo_eliminado(repo, &id, "equipo_costo_horario", eliminado_por).await
     }
 }
 
@@ -438,7 +441,6 @@ mod tests {
             unidad_id: "um-1".into(),
             familia_id: None,
             sub_familia_id: None,
-            activo: true,
             region_id: None,
             cf_costo_maquina: "1000000".parse().unwrap(),
             cf_valor_llantas: "0".parse().unwrap(),
@@ -479,23 +481,30 @@ mod tests {
         .expect("actualizar equipo_costo_horario");
         assert_eq!(actualizado.descripcion, "Excavadora CAT 320 (revisada)");
 
-        EquipoCostoHorarioService::eliminar(&portafolio, creado.id.clone())
+        EquipoCostoHorarioService::eliminar(&portafolio, creado.id.clone(), "usr-1".into())
             .await
             .expect("eliminar equipo_costo_horario");
 
         let insumo_restante = obrix_db::entities::insumo::Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await
-            .unwrap();
-        assert!(insumo_restante.is_none(), "el insumo debe quedar borrado");
+            .unwrap()
+            .expect("el insumo debe seguir existiendo");
+        assert!(insumo_restante.deleted);
+        assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
 
         let equipo_restante = obrix_db::entities::equipo_costo_horario::Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await
             .unwrap();
         assert!(
-            equipo_restante.is_none(),
-            "el equipo_costo_horario debe borrarse en cascada junto con el insumo"
+            equipo_restante.is_some(),
+            "la extensión equipo_costo_horario no se borra; el listado la oculta con deleted"
         );
+
+        let listado_tras_borrar = EquipoCostoHorarioService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar tras borrar");
+        assert!(listado_tras_borrar.iter().all(|e| e.id != creado.id));
     }
 }

@@ -56,7 +56,11 @@ pub async fn update_equipo_costo_horario(
 pub async fn delete_equipo_costo_horario(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    EquipoCostoHorarioService::eliminar(activo.portafolio.as_ref(), id)
+    EquipoCostoHorarioService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }

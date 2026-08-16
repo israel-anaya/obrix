@@ -338,7 +338,6 @@ export function EquipoCostoHorarioFichaApu({
         unidad_id: totales.unidad_id,
         familia_id: totales.familia_id,
         sub_familia_id: totales.sub_familia_id,
-        activo: totales.activo,
         region_id: totales.region_id,
         ...camposCf,
       });

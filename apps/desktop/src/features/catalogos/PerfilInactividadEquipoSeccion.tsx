@@ -38,7 +38,6 @@ const CONFIG: DataGridConfig = {
     { field: "reserva_mantenimiento_porcentaje", header: "Reserva · Mantenimiento %", width: 160, numeric: true, suffix: "%" },
     { field: "reserva_consumo_porcentaje", header: "Reserva · Consumo %", width: 150, numeric: true, suffix: "%" },
     { field: "reserva_operacion_porcentaje", header: "Reserva · Operación %", width: 150, numeric: true, suffix: "%" },
-    { field: "activo", header: "Activo", width: 90, boolean: true },
     ...COLUMNAS_CONTROL,
   ],
 };
@@ -181,7 +180,6 @@ export function PerfilInactividadEquipoSeccion() {
     reserva_mantenimiento_porcentaje: p.reserva_mantenimiento_porcentaje,
     reserva_consumo_porcentaje: p.reserva_consumo_porcentaje,
     reserva_operacion_porcentaje: p.reserva_operacion_porcentaje,
-    activo: p.activo,
     created_at: p.created_at,
     created_by: p.created_by,
     updated_at: p.updated_at ?? "",
@@ -202,7 +200,6 @@ export function PerfilInactividadEquipoSeccion() {
     reserva_mantenimiento_porcentaje: String(fila.reserva_mantenimiento_porcentaje ?? "0"),
     reserva_consumo_porcentaje: String(fila.reserva_consumo_porcentaje ?? "0"),
     reserva_operacion_porcentaje: String(fila.reserva_operacion_porcentaje ?? "0"),
-    activo: Boolean(fila.activo),
   });
 
   return (

@@ -170,7 +170,6 @@ export function CategoriaFasarSeccion() {
             return [SIN_SUBFAMILIA, ...hijas.map((h) => h.nombre)];
           },
         },
-        { field: "activo", header: "Activo", width: 90, boolean: true },
         ...COLUMNAS_CONTROL,
       ],
     }),
@@ -189,7 +188,6 @@ export function CategoriaFasarSeccion() {
         salario_real_diario: c.salario_vigente ? `$${c.salario_vigente.salario_real_diario}` : "$0",
         familia: (c.familia_id && nombrePorFamiliaId[c.familia_id]) || SIN_FAMILIA,
         subfamilia: (c.sub_familia_id && nombrePorFamiliaId[c.sub_familia_id]) || SIN_SUBFAMILIA,
-        activo: c.activo,
         created_at: c.created_at,
         created_by: nombresPorUsuarioId[c.created_by] ?? c.created_by,
         updated_at: c.updated_at ?? "",
@@ -210,7 +208,6 @@ export function CategoriaFasarSeccion() {
       unidad_id: unidadIdPorSimbolo[String(fila.unidad)] ?? String(fila.unidad),
       familia_id: familiaId,
       sub_familia_id: subFamiliaId,
-      activo: Boolean(fila.activo),
     };
   };
 

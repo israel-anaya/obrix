@@ -184,7 +184,6 @@ export function EstanteriaMaterialesSeccion() {
       proveedor_id: null,
       merma_porcentaje: 0,
       marca: null,
-      activo: true,
     });
     setSeleccionadoId(null);
     setPanel("ficha");
@@ -374,7 +373,6 @@ export function EstanteriaMaterialesSeccion() {
                         className={cn(
                           "flex flex-col rounded-md border border-border bg-card p-2.5 text-left hover:border-foreground/25 hover:bg-muted/40",
                           seleccionado && "border-primary ring-1 ring-primary",
-                          !m.activo && "opacity-55",
                           sinPrecio && !seleccionado && "border-dashed",
                         )}
                       >
