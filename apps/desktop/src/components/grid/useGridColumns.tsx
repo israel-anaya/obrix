@@ -76,6 +76,9 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
           size: c.width,
           minSize: 48,
           enableGlobalFilter: true,
+          // Dragging a column that auto-fills would fight the flex layout —
+          // its width is not the user's to set by hand.
+          enableResizing: !c.grow,
           // The first click always sorts ascending, numeric columns included —
           // the library would start those the other way round.
           sortDescFirst: false,
@@ -118,9 +121,12 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
       const width = `var(${widthVar(id)})`;
       const left = pinnedLeft.get(id);
       const isNumeric = columnByField.get(id)?.numeric;
+      const grows = columnByField.get(id)?.grow;
       styles.set(id, {
-        flex: `0 0 ${width}`,
-        width: width,
+        // A `grow` column keeps its configured width only as a floor — it
+        // stretches into whatever space the fixed-width columns leave.
+        flex: grows ? `1 1 ${width}` : `0 0 ${width}`,
+        width: grows ? "auto" : width,
         ...(left !== undefined ? { left: left } : { scrollMarginLeft: pinnedWidth }),
       });
       classes.set(

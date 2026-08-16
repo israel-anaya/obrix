@@ -13,6 +13,7 @@ import { EditorEmptyState } from "@/components/EditorEmptyState";
 import { StartScreen } from "@/components/StartScreen";
 import { StatusBar } from "@/components/StatusBar";
 import { Toolbar, type ToolbarItem } from "@/components/Toolbar";
+import { Toaster } from "@/components/ui/toaster";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -704,6 +705,7 @@ export default function App() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Toaster />
       </WindowFrame>
     </OrganizacionContext.Provider>
   );

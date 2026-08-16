@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/SearchInput";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { activeGridClipboard, setActiveGridClipboard, type GridClipboard } from "./gridClipboard";
 import {
@@ -295,7 +296,7 @@ export const VerticalGrid = forwardRef<
     highlightSelection?: boolean;
     /** `_id` que se vuelve a seleccionar al (re)montar en modo "single". */
     initialSelectedId?: string | null;
-    /** Búsqueda controlada por el padre (para llevarla a su propia barra, ver `Buscador`); si se omite, el grid pinta la suya. Filtra registros, es decir columnas. */
+    /** Búsqueda controlada por el padre (para llevarla a su propia barra, ver `SearchInput`); si se omite, el grid pinta la suya. Filtra registros, es decir columnas. */
     search?: string;
     onSearchChange?: (search: string) => void;
     /** Los registros vienen en camino: en lugar de "Sin registros." pinta la forma de la tabla. */
@@ -975,7 +976,9 @@ export const VerticalGrid = forwardRef<
       onRowSelected?.(null);
     } catch (e) {
       setPendingDelete(null);
-      onSaveError?.(e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      if (onSaveError) onSaveError(message);
+      else toast({ description: message, variant: "destructive" });
     }
   };
 
@@ -1062,22 +1065,13 @@ export const VerticalGrid = forwardRef<
     <GridUiContext.Provider value={uiStore}>
       <div className="flex h-full flex-col">
         {!isSearchControlled && (
-          <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-            <Search size={13} className="shrink-0 text-muted-foreground" />
-            <Input
+          <div className="border-b border-border px-2 py-1.5">
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar…"
-              className="h-6 border-none px-0 py-0 text-xs shadow-none focus-visible:ring-0"
+              onChange={setSearch}
+              className="rounded-none border-none px-0"
+              inputClassName="w-full"
             />
-          </div>
-        )}
-        {saveError && (
-          <div
-            className="shrink-0 truncate border-b border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive"
-            title={saveError}
-          >
-            {saveError}
           </div>
         )}
         {/* Una recarga sobre registros que ya están en pantalla: se quedan, y

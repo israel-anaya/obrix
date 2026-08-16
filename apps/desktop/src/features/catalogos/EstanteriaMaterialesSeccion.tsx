@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, DollarSign, FileText, Plus, RefreshCcw } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { MaterialFormPanel } from "@/features/catalogos/MaterialFormPanel";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
@@ -210,10 +210,9 @@ export function EstanteriaMaterialesSeccion() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargar },
               { icono: Plus, titulo: "Agregar", onClick: agregar },
               {
                 icono: FileText,
@@ -238,6 +237,7 @@ export function EstanteriaMaterialesSeccion() {
                 disabled: !!alta || (!seleccionadoId && panel !== "precios"),
               },
             ]}
+            menu={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]}
           />
         </div>
       </div>

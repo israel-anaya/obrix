@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, RefreshCcw } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -178,10 +178,9 @@ export function MatrizOficioRegionSeccion() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargar },
               {
                 icono: DollarSign,
                 titulo: panelAbierto ? "Ocultar salario" : "Ver salario",
@@ -189,6 +188,7 @@ export function MatrizOficioRegionSeccion() {
                 disabled: !seleccionadaId && !panelAbierto,
               },
             ]}
+            menu={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]}
           />
         </div>
       </div>

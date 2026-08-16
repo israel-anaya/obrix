@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createEquipoCostoHorario,
@@ -15,16 +16,15 @@ import {
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
 import type { EquipoCostoHorario, EquipoCostoHorarioData, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 const SIN_REGION = "— Nacional —";
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -47,17 +47,14 @@ export function EquipoCostoHorarioGridVista() {
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    if (!guardadoExitoso) return;
-    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
-    return () => clearTimeout(espera);
-  }, [guardadoExitoso]);
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargarEquipos = () => {
     setCargando(true);
@@ -218,28 +215,19 @@ export function EquipoCostoHorarioGridVista() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-3">
-          <p
-            className={cn(
-              "text-xs font-medium",
-              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
-            )}
-          >
-            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
-          </p>
-        </div>
+      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[
+            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
                 onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
+                destructivo: true,
               },
             ]}
           />
@@ -258,12 +246,6 @@ export function EquipoCostoHorarioGridVista() {
           onAddRow={(fila) => createEquipoCostoHorario(filaAEquipoCostoHorarioData(fila)).then(recargarEquipos)}
           onEditRow={(fila) => updateEquipoCostoHorario(fila._id, filaAEquipoCostoHorarioData(fila)).then(recargarEquipos)}
           onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteEquipoCostoHorario(id))).then(recargarEquipos)}
-          onSaveError={(mensaje) => setError(mensaje)}
-          onSaveSuccess={() => setGuardadoExitoso(true)}
-          onCancelEdit={() => {
-            setError(null);
-            setGuardadoExitoso(false);
-          }}
         />
       </div>
     </div>

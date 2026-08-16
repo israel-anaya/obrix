@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { toast } from "@/hooks/use-toast";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -27,9 +28,9 @@ const USUARIO_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -71,6 +72,14 @@ export function UsuariosSeccion() {
   useEffect(() => {
     listOrganizaciones().then(setOrganizaciones).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
+
+  useEffect(() => {
+    if (errorMembresias) toast({ description: errorMembresias, variant: "destructive" });
+  }, [errorMembresias]);
 
   const recargarMembresias = () => {
     if (!usuarioSeleccionadoId) {
@@ -156,7 +165,6 @@ export function UsuariosSeccion() {
 
   return (
     <div className="flex h-full flex-col">
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup orientation="vertical" className="h-full">
           <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
@@ -164,16 +172,17 @@ export function UsuariosSeccion() {
               <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
                 <h2 className="text-sm font-semibold">Usuarios</h2>
                 <div className="flex items-center gap-2">
-                  <Buscador value={busquedaUsuario} onChange={setBusquedaUsuario} />
+                  <SearchInput value={busquedaUsuario} onChange={setBusquedaUsuario} />
                   <BarraAcciones
-                    acciones={[
+                    acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => usuarioGridRef.current?.addRow() }]}
+                    menu={[
                       { icono: RefreshCcw, titulo: "Recargar", onClick: () => reload() },
-                      { icono: Plus, titulo: "Agregar", onClick: () => usuarioGridRef.current?.addRow() },
                       {
                         icono: Trash2,
                         titulo: "Eliminar seleccionado",
                         onClick: () => usuarioGridRef.current?.deleteSelectedRows(),
                         disabled: !puedeEliminarUsuario,
+                        destructivo: true,
                       },
                     ]}
                   />
@@ -204,22 +213,22 @@ export function UsuariosSeccion() {
                 <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
                   <h2 className="text-sm font-semibold">Organizaciones</h2>
                   <div className="flex items-center gap-2">
-                    <Buscador value={busquedaMembresia} onChange={setBusquedaMembresia} />
+                    <SearchInput value={busquedaMembresia} onChange={setBusquedaMembresia} />
                     <BarraAcciones
-                      acciones={[
+                      acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => membresiaGridRef.current?.addRow() }]}
+                      menu={[
                         { icono: RefreshCcw, titulo: "Recargar", onClick: recargarMembresias },
-                        { icono: Plus, titulo: "Agregar", onClick: () => membresiaGridRef.current?.addRow() },
                         {
                           icono: Trash2,
                           titulo: "Eliminar seleccionado",
                           onClick: () => membresiaGridRef.current?.deleteSelectedRows(),
                           disabled: !puedeEliminarMembresia,
+                          destructivo: true,
                         },
                       ]}
                     />
                   </div>
                 </div>
-                {errorMembresias && <p className="shrink-0 px-3 py-1 text-xs text-destructive">{errorMembresias}</p>}
                 <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
                   <DataGrid
                     ref={membresiaGridRef}

@@ -5,9 +5,13 @@ import type {
   CategoriaFasarData,
   Cliente,
   Cuadrilla,
+  CuadrillaCosto,
+  CuadrillaCostoDetalle,
+  CuadrillaCostoDetalleData,
   CuadrillaData,
   CuadrillaDetalle,
   CuadrillaDetalleData,
+  CuadrillaDetalleEditarData,
   DireccionMovimiento,
   EquipoCostoHorario,
   EquipoCostoHorarioData,
@@ -307,7 +311,7 @@ export function listCuadrillaDetalles(cuadrillaInsumoId: string): Promise<Cuadri
 export function createCuadrillaDetalle(cuadrillaInsumoId: string, detalle: CuadrillaDetalleData): Promise<Cuadrilla> {
   return invoke("create_cuadrilla_detalle", { cuadrillaInsumoId, detalle });
 }
-export function updateCuadrillaDetalle(id: string, detalle: CuadrillaDetalleData): Promise<Cuadrilla> {
+export function updateCuadrillaDetalle(id: string, detalle: CuadrillaDetalleEditarData): Promise<Cuadrilla> {
   return invoke("update_cuadrilla_detalle", { id, detalle });
 }
 export function deleteCuadrillaDetalle(id: string): Promise<Cuadrilla> {
@@ -316,8 +320,23 @@ export function deleteCuadrillaDetalle(id: string): Promise<Cuadrilla> {
 export function moveCuadrillaDetalle(id: string, direccion: DireccionMovimiento): Promise<Cuadrilla> {
   return invoke("move_cuadrilla_detalle", { id, direccion });
 }
-export function recalculateCuadrilla(cuadrillaInsumoId: string): Promise<Cuadrilla> {
-  return invoke("recalculate_cuadrilla", { cuadrillaInsumoId });
+export function listCuadrillaCostos(cuadrillaId: string): Promise<CuadrillaCosto[]> {
+  return invoke("list_cuadrilla_costos", { cuadrillaId });
+}
+export function createCuadrillaCostoRegional(cuadrillaId: string, regionId: string): Promise<CuadrillaCosto> {
+  return invoke("create_cuadrilla_costo_regional", { cuadrillaId, regionId });
+}
+export function deleteCuadrillaCosto(id: string): Promise<void> {
+  return invoke("delete_cuadrilla_costo", { id });
+}
+export function recalculateCuadrillaCosto(cuadrillaCostoId: string): Promise<CuadrillaCosto> {
+  return invoke("recalculate_cuadrilla_costo", { cuadrillaCostoId });
+}
+export function listCuadrillaCostoDetalles(cuadrillaCostoId: string): Promise<CuadrillaCostoDetalle[]> {
+  return invoke("list_cuadrilla_costo_detalles", { cuadrillaCostoId });
+}
+export function updateCuadrillaCostoDetalle(id: string, detalle: CuadrillaCostoDetalleData): Promise<CuadrillaCosto> {
+  return invoke("update_cuadrilla_costo_detalle", { id, detalle });
 }
 
 export function listEquiposCostoHorario(): Promise<EquipoCostoHorario[]> {

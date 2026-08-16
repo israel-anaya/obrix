@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Plus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createPrecioMaterial, listMonedas, listPreciosMaterial, listRegiones, listUsuarios } from "@/lib/tauri";
 import type { Moneda, PrecioMaterial, Region } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
+// Radix no permite un `SelectItem` con value="" — el region_id nacional (null
+// en el backend) necesita un valor propio para poder ofrecerse como opción.
+const NACIONAL_VALOR = "__nacional__";
 
 function formatearPrecio(p: PrecioMaterial): string {
   return `$${p.precio} ${p.moneda}`;
@@ -62,6 +67,10 @@ export function PreciosMaterialPanel({
   const [fechaNueva, setFechaNueva] = useState(hoy());
   const [regionNueva, setRegionNueva] = useState(""); // "" = nacional (sin región), el default
   const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const cargarPrecios = (id: string) => {
     setCargando(true);
@@ -213,23 +222,22 @@ export function PreciosMaterialPanel({
         <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un material para ver sus precios.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
-
           <section className="border-b border-border p-3">
             <label className="mb-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
               Moneda
-              <select
-                value={monedaSeleccionada}
-                onChange={(e) => setMonedaSeleccionada(e.target.value)}
-                className="rounded border border-border bg-background px-1.5 py-1 text-xs text-foreground"
-              >
-                {monedas.length === 0 && <option value={MONEDA_FALLBACK}>{MONEDA_FALLBACK}</option>}
-                {monedas.map((m) => (
-                  <option key={m.id} value={m.codigo}>
-                    {m.codigo} — {m.nombre}
-                  </option>
-                ))}
-              </select>
+              <Select value={monedaSeleccionada} onValueChange={setMonedaSeleccionada}>
+                <SelectTrigger className="rounded border border-border bg-background px-1.5 py-1 text-xs text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monedas.length === 0 && <SelectItem value={MONEDA_FALLBACK}>{MONEDA_FALLBACK}</SelectItem>}
+                  {monedas.map((m) => (
+                    <SelectItem key={m.id} value={m.codigo}>
+                      {m.codigo} — {m.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -275,18 +283,22 @@ export function PreciosMaterialPanel({
                 </div>
                 <label className="text-[11px] text-muted-foreground">
                   Región
-                  <select
-                    value={regionNueva}
-                    onChange={(e) => setRegionNueva(e.target.value)}
-                    className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                  <Select
+                    value={regionNueva || NACIONAL_VALOR}
+                    onValueChange={(v) => setRegionNueva(v === NACIONAL_VALOR ? "" : v)}
                   >
-                    <option value="">{NACIONAL} (default)</option>
-                    {regiones.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.nombre}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
+                      {regiones.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 <div className="flex justify-end gap-2">
                   <button

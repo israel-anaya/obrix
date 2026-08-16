@@ -81,6 +81,10 @@ export function displayValue(row: Row, column: DataGridColumn): string {
   const value = row[column.field];
   if (column.boolean) return value ? "Sí" : "No";
   if (column.date) return formatearFecha(value as string);
-  if (column.suffix) return value === "" || value == null ? "" : `${value}${column.suffix}`;
-  return value == null ? "" : String(value);
+  const formatted =
+    column.numeric && column.decimals != null && typeof value === "number"
+      ? value.toFixed(column.decimals)
+      : value;
+  if (column.suffix) return formatted === "" || formatted == null ? "" : `${formatted}${column.suffix}`;
+  return formatted == null ? "" : String(formatted);
 }

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { VerticalGrid, type VerticalGridGroup } from "@/components/grid/VerticalGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createPerfilInactividadEquipo,
@@ -13,12 +14,11 @@ import {
   updatePerfilInactividadEquipo,
 } from "@/lib/tauri";
 import type { PerfilInactividadEquipo, PerfilInactividadEquipoData } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -139,16 +139,13 @@ export function PerfilInactividadEquipoSeccion() {
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const [puedeEliminarVertical, setPuedeEliminarVertical] = useState(false);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [busquedaVertical, setBusquedaVertical] = useState("");
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    if (!guardadoExitoso) return;
-    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
-    return () => clearTimeout(espera);
-  }, [guardadoExitoso]);
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargar = () => {
     setCargando(true);
@@ -207,26 +204,19 @@ export function PerfilInactividadEquipoSeccion() {
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold">Perfiles de inactividad de equipo</h2>
-          <p
-            className={cn(
-              "text-xs font-medium",
-              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
-            )}
-          >
-            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
-          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[
+            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargar },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
                 onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
+                destructivo: true,
               },
             ]}
           />
@@ -278,12 +268,6 @@ export function PerfilInactividadEquipoSeccion() {
               onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
               onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
               onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
-              onSaveError={(mensaje) => setError(mensaje)}
-              onSaveSuccess={() => setGuardadoExitoso(true)}
-              onCancelEdit={() => {
-                setError(null);
-                setGuardadoExitoso(false);
-              }}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -291,15 +275,16 @@ export function PerfilInactividadEquipoSeccion() {
             <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
               <h3 className="text-sm font-semibold">Perfiles acostados</h3>
               <div className="flex items-center gap-2">
-                <Buscador value={busquedaVertical} onChange={setBusquedaVertical} />
+                <SearchInput value={busquedaVertical} onChange={setBusquedaVertical} />
                 <BarraAcciones
-                  acciones={[
-                    { icono: Plus, titulo: "Agregar", onClick: () => verticalRef.current?.addRow() },
+                  acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => verticalRef.current?.addRow() }]}
+                  menu={[
                     {
                       icono: Trash2,
                       titulo: "Eliminar seleccionado",
                       onClick: () => verticalRef.current?.deleteSelectedRows(),
                       disabled: !puedeEliminarVertical,
+                      destructivo: true,
                     },
                   ]}
                 />
@@ -324,12 +309,6 @@ export function PerfilInactividadEquipoSeccion() {
                 onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
                 onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
                 onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
-                onSaveError={(mensaje) => setError(mensaje)}
-                onSaveSuccess={() => setGuardadoExitoso(true)}
-                onCancelEdit={() => {
-                  setError(null);
-                  setGuardadoExitoso(false);
-                }}
               />
             </div>
           </ResizablePanel>

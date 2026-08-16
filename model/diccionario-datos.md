@@ -521,6 +521,8 @@ Orden al aplicar una o más condiciones vigentes sobre una
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
 
+
+
 ### `cuadrilla`
 
 Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.

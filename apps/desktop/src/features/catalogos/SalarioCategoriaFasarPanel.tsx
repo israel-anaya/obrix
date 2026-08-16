@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Plus, X } from "lucide-react";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
 import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
+// Radix no permite un `SelectItem` con value="" — el region_id nacional (null
+// en el backend) necesita un valor propio para poder ofrecerse como opción.
+const NACIONAL_VALOR = "__nacional__";
 
 function hoy(): string {
   return new Date().toISOString().slice(0, 10);
@@ -61,6 +66,10 @@ export function SalarioCategoriaFasarPanel({
   const [regionNueva, setRegionNueva] = useState(""); // "" = nacional (sin región), el default
   const [factorNuevoId, setFactorNuevoId] = useState("");
   const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const cargarSalarios = (id: string) => {
     setCargando(true);
@@ -235,8 +244,6 @@ export function SalarioCategoriaFasarPanel({
         <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona una categoría para ver sus salarios.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
-
           <section className="border-b border-border p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -282,33 +289,37 @@ export function SalarioCategoriaFasarPanel({
                 </div>
                 <label className="text-[11px] text-muted-foreground">
                   Región
-                  <select
-                    value={regionNueva}
-                    onChange={(e) => setRegionNueva(e.target.value)}
-                    className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
+                  <Select
+                    value={regionNueva || NACIONAL_VALOR}
+                    onValueChange={(v) => setRegionNueva(v === NACIONAL_VALOR ? "" : v)}
                   >
-                    <option value="">{NACIONAL} (default)</option>
-                    {regiones.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.nombre}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
+                      {regiones.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 <label className="text-[11px] text-muted-foreground">
                   Factor de Salario Real
-                  <select
-                    value={factorNuevoId}
-                    onChange={(e) => setFactorNuevoId(e.target.value)}
-                    className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs"
-                  >
-                    <option value="">— Elige un FSR —</option>
-                    {factoresDeRegion.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.nombre} ({f.region_id ? (nombrePorRegionId[f.region_id] ?? f.region_id) : NACIONAL})
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={factorNuevoId} onValueChange={setFactorNuevoId}>
+                    <SelectTrigger className="mt-0.5 w-full rounded border border-border bg-background px-1.5 py-1 text-xs">
+                      <SelectValue placeholder="— Elige un FSR —" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {factoresDeRegion.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.nombre} ({f.region_id ? (nombrePorRegionId[f.region_id] ?? f.region_id) : NACIONAL})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {factoresDeRegion.length === 0 && (
                     <p className="mt-0.5 text-[11px] text-destructive">
                       No hay un FSR para {regionNueva ? (nombrePorRegionId[regionNueva] ?? regionNueva) : NACIONAL}.

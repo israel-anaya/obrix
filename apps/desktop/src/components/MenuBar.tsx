@@ -76,7 +76,18 @@ export function MenuBar({
         <PanelLeft size={15} />
       </button>
 
-      <div data-tauri-drag-region className="h-full flex-1" />
+      <div
+        className="h-full flex-1"
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          if (e.detail === 2) {
+            void win.toggleMaximize();
+            return;
+          }
+          e.preventDefault();
+          void win.startDragging();
+        }}
+      />
 
       <button
         title="Configuración general"

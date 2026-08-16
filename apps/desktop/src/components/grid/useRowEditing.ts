@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "@/hooks/use-toast";
 import type { SelectionStore, Store } from "./gridStore";
 import { emptyRow, fieldsFromMessage, firstEditableField, mergeRows } from "./gridValues";
 import type { DataGridColumn, DataGridPersistProps, EditState, OpenCell, Row } from "./types";
@@ -128,7 +129,8 @@ export function useRowEditing({
       setSaveError(message);
       const flagged = fieldsFromMessage(message, columns, sanitizedRow);
       setErrorFields(new Set(flagged.length > 0 ? flagged : [firstEditableField(columns)].filter(Boolean) as string[]));
-      onSaveError?.(message);
+      if (onSaveError) onSaveError(message);
+      else toast({ description: message, variant: "destructive" });
       return;
     }
     savingRef.current = false;
@@ -137,7 +139,8 @@ export function useRowEditing({
     setErrorFields(new Set());
     editingRef.current = null;
     setEditing(null);
-    onSaveSuccess?.();
+    if (onSaveSuccess) onSaveSuccess();
+    else toast({ description: "Guardado exitosamente", variant: "success" });
   };
 
   const cancelEdit = () => {

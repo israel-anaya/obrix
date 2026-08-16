@@ -1,8 +1,14 @@
+use obrix_db::entities::cuadrilla_costo::Model as CuadrillaCostoModel;
+use obrix_db::entities::cuadrilla_costo_detalle::Model as CuadrillaCostoDetalleModel;
 use obrix_db::entities::cuadrilla_detalle::Model as CuadrillaDetalleModel;
 
 use crate::AppState;
 use obrix_services::cuadrilla::{CuadrillaCompleto, CuadrillaData, CuadrillaService};
-use obrix_services::cuadrilla_detalle::{CuadrillaDetalleData, CuadrillaDetalleService, DireccionMovimiento};
+use obrix_services::cuadrilla_costo::CuadrillaCostoService;
+use obrix_services::cuadrilla_costo_detalle::{CuadrillaCostoDetalleData, CuadrillaCostoDetalleService};
+use obrix_services::cuadrilla_detalle::{
+    CuadrillaDetalleData, CuadrillaDetalleEditarData, CuadrillaDetalleService, DireccionMovimiento,
+};
 
 #[tauri::command]
 pub async fn list_cuadrillas(state: tauri::State<'_, AppState>) -> Result<Vec<CuadrillaCompleto>, String> {
@@ -95,7 +101,7 @@ pub async fn create_cuadrilla_detalle(
 pub async fn update_cuadrilla_detalle(
     state: tauri::State<'_, AppState>,
     id: String,
-    detalle: CuadrillaDetalleData,
+    detalle: CuadrillaDetalleEditarData,
 ) -> Result<CuadrillaCompleto, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
@@ -116,19 +122,7 @@ pub async fn delete_cuadrilla_detalle(
 ) -> Result<CuadrillaCompleto, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CuadrillaDetalleService::eliminar(activo.portafolio.as_ref(), id)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn recalculate_cuadrilla(
-    state: tauri::State<'_, AppState>,
-    cuadrilla_insumo_id: String,
-) -> Result<CuadrillaCompleto, String> {
-    let guard = state.requerir().await?;
-    let activo = guard.as_ref().unwrap();
-    CuadrillaDetalleService::recalcular_costos(activo.portafolio.as_ref(), cuadrilla_insumo_id)
+    CuadrillaDetalleService::eliminar(activo.portafolio.as_ref(), id, activo.usuario_id_activo.clone())
         .await
         .map_err(|e| e.to_string())
 }
@@ -144,4 +138,85 @@ pub async fn move_cuadrilla_detalle(
     CuadrillaDetalleService::mover(activo.portafolio.as_ref(), id, direccion)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_cuadrilla_costos(
+    state: tauri::State<'_, AppState>,
+    cuadrilla_id: String,
+) -> Result<Vec<CuadrillaCostoModel>, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaCostoService::listar_por_cuadrilla(activo.portafolio.as_ref(), &cuadrilla_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn create_cuadrilla_costo_regional(
+    state: tauri::State<'_, AppState>,
+    cuadrilla_id: String,
+    region_id: String,
+) -> Result<CuadrillaCostoModel, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaCostoService::crear_regional(
+        activo.portafolio.as_ref(),
+        &cuadrilla_id,
+        region_id,
+        activo.usuario_id_activo.clone(),
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_cuadrilla_costo(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaCostoService::eliminar_regional(activo.portafolio.as_ref(), id, activo.usuario_id_activo.clone())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn recalculate_cuadrilla_costo(
+    state: tauri::State<'_, AppState>,
+    cuadrilla_costo_id: String,
+) -> Result<CuadrillaCostoModel, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaCostoService::recalcular_costos(activo.portafolio.as_ref(), cuadrilla_costo_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_cuadrilla_costo_detalles(
+    state: tauri::State<'_, AppState>,
+    cuadrilla_costo_id: String,
+) -> Result<Vec<CuadrillaCostoDetalleModel>, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaCostoDetalleService::listar_por_costo(activo.portafolio.as_ref(), &cuadrilla_costo_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_cuadrilla_costo_detalle(
+    state: tauri::State<'_, AppState>,
+    id: String,
+    detalle: CuadrillaCostoDetalleData,
+) -> Result<CuadrillaCostoModel, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CuadrillaCostoDetalleService::actualizar(
+        activo.portafolio.as_ref(),
+        id,
+        detalle,
+        Some(activo.usuario_id_activo.clone()),
+    )
+    .await
+    .map_err(|e| e.to_string())
 }

@@ -11,7 +11,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import { EquipoCostoHorarioFichaApu } from "@/features/catalogos/EquipoCostoHorarioFichaApu";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -27,6 +29,11 @@ import type { EquipoCostoHorario, FamiliaInsumo, Region, UnidadMedida } from "@/
 import { cn } from "@/lib/utils";
 
 const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
+// Radix no permite un `SelectItem` con value="" — estos "sin X" son null en
+// el backend y necesitan un valor propio para poder ofrecerse como opción.
+const SIN_FAMILIA_VALOR = "__sin_familia__";
+const SIN_SUBFAMILIA_VALOR = "__sin_subfamilia__";
+const NACIONAL_VALOR = "__nacional__";
 
 function fmt(valor: string): string {
   const numero = Number(valor);
@@ -69,6 +76,10 @@ export function EquipoCostoHorarioFicha() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargarEquipos = () => {
     setCargando(true);
@@ -255,16 +266,10 @@ export function EquipoCostoHorarioFicha() {
 
   return (
     <div className="flex h-full flex-col">
-      {error && (
-        <div className="border-b border-border px-3 py-1.5">
-          <p className="text-xs font-medium text-destructive">{error}</p>
-        </div>
-      )}
-
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex w-72 shrink-0 flex-col border-r border-border">
           <div className="flex items-center justify-between gap-2 border-b border-border p-2">
-            <Buscador value={busqueda} onChange={setBusqueda} />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
             <BarraAcciones
               acciones={[
                 { icono: Plus, titulo: "Nuevo equipo", onClick: iniciarCreacion },
@@ -307,60 +312,75 @@ export function EquipoCostoHorarioFicha() {
                   rows={6}
                   className="resize-none rounded border border-border bg-background px-2 py-1 text-xs"
                 />
-                <select
-                  value={nuevaUnidadId}
-                  onChange={(e) => setNuevaUnidadId(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
-                >
-                  {unidades.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.simbolo}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={nuevaFamiliaId ?? ""}
-                  onChange={(e) => {
-                    setNuevaFamiliaId(e.target.value || null);
+                <Select value={nuevaUnidadId} onValueChange={setNuevaUnidadId}>
+                  <SelectTrigger className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unidades.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.simbolo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={nuevaFamiliaId ?? SIN_FAMILIA_VALOR}
+                  onValueChange={(v) => {
+                    setNuevaFamiliaId(v === SIN_FAMILIA_VALOR ? null : v);
                     setNuevaSubfamiliaId(null);
                   }}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
                 >
-                  <option value="">— Sin familia —</option>
-                  {raicesFamilia.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.nombre}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={nuevaSubfamiliaId ?? ""}
-                  onChange={(e) => setNuevaSubfamiliaId(e.target.value || null)}
+                  <SelectTrigger className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
+                    {raicesFamilia.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={nuevaSubfamiliaId ?? SIN_SUBFAMILIA_VALOR}
+                  onValueChange={(v) => setNuevaSubfamiliaId(v === SIN_SUBFAMILIA_VALOR ? null : v)}
                   disabled={hijasNueva.length === 0}
-                  className={cn(
-                    "rounded border border-border bg-background px-2 py-1 text-xs",
-                    hijasNueva.length === 0 && "opacity-50",
-                  )}
                 >
-                  <option value="">— Sin sub familia —</option>
-                  {hijasNueva.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.nombre}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={nuevaRegionId ?? ""}
-                  onChange={(e) => setNuevaRegionId(e.target.value || null)}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
+                  <SelectTrigger
+                    className={cn(
+                      "w-full rounded border border-border bg-background px-2 py-1 text-xs",
+                      hijasNueva.length === 0 && "opacity-50",
+                    )}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
+                    {hijasNueva.map((h) => (
+                      <SelectItem key={h.id} value={h.id}>
+                        {h.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={nuevaRegionId ?? NACIONAL_VALOR}
+                  onValueChange={(v) => setNuevaRegionId(v === NACIONAL_VALOR ? null : v)}
                 >
-                  <option value="">— Nacional —</option>
-                  {regiones.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.nombre}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NACIONAL_VALOR}>— Nacional —</SelectItem>
+                    {regiones.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"

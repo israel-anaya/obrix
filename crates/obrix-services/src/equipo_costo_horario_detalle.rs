@@ -20,6 +20,7 @@ use sea_orm::{
     TransactionTrait,
 };
 
+use crate::cuadrilla_costo::CuadrillaCostoService;
 use crate::equipo_costo_horario::{combinar as combinar_equipo, EquipoCostoHorarioCompleto};
 use crate::{nuevo_id, ServiceError};
 
@@ -336,8 +337,10 @@ impl EquipoCostoHorarioDetalleService {
                 .await?
             {
                 salario.salario_real_diario
-            } else if let Some(cua) = cuadrilla::Entity::find_by_id(&d.detalle_insumo_id).one(txn).await? {
-                cua.costo_total
+            } else if let Some(costo_total) =
+                CuadrillaCostoService::resolver_costo_total(txn, &d.detalle_insumo_id, None).await?
+            {
+                costo_total
             } else {
                 return Err(ServiceError::Validacion(format!(
                     "\"{}\" no tiene un salario nacional vigente ni es una cuadrilla con costo calculado",

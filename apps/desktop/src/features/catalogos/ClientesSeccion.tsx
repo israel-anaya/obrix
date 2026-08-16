@@ -6,9 +6,9 @@ import type { Cliente, ClienteData, TipoCliente } from "@/lib/types";
 import { TIPOS_CLIENTE } from "@/lib/types";
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 

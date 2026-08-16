@@ -337,9 +337,11 @@ export interface HerramientaData {
  * Extensión de `insumo` cuando `tipo = mano_obra` y se trata de un **equipo
  * de trabajo compuesto** (varios integrantes/herramientas), a diferencia de
  * `categoria_fasar` que es un trabajador atómico — ver `cuadrilla` en el
- * diccionario de datos. Los tres subtotales son cache: los recalcula el
- * backend a partir de `cuadrilla_detalle` cada vez que su composición
- * cambia, nunca se editan directamente.
+ * diccionario de datos. Tabla delgada, sin cache propio: `costo_nacional` es
+ * solo un reflejo de conveniencia de la valuación nacional (`region_id`
+ * nulo) de `cuadrilla_costo` — siempre debe existir, toda cuadrilla nace con
+ * ella. El resto de las valuaciones (regionales) se listan aparte con
+ * `listCuadrillaCostos`.
  */
 export interface Cuadrilla extends CamposControl {
   id: string;
@@ -349,10 +351,7 @@ export interface Cuadrilla extends CamposControl {
   familia_id: string | null;
   /** Debe ser hija (`parent_id`) de `familia_id`. */
   sub_familia_id: string | null;
-  /** Serializados como texto para no perder precisión. */
-  sub_total_mano_obra: string;
-  sub_total_herramienta: string;
-  costo_total: string;
+  costo_nacional: CuadrillaCosto | null;
 }
 
 export interface CuadrillaData {
@@ -366,8 +365,9 @@ export interface CuadrillaData {
 /**
  * Un renglón de la composición plana de una `cuadrilla` — un integrante
  * (`tipo: "categoria_fasar"`) o una herramienta (`tipo:
- * "equipo_herramienta"`), nunca otra cuadrilla. `costo`/`importe` los
- * calcula el backend, no son editables directamente.
+ * "equipo_herramienta"`), nunca otra cuadrilla. Compartido entre regiones:
+ * `cantidad`/`costo`/`importe` no viven aquí, varían por región y cuelgan de
+ * `CuadrillaCostoDetalle` (uno por cada valuación de la cuadrilla).
  */
 export interface CuadrillaDetalle {
   id: string;
@@ -375,11 +375,54 @@ export interface CuadrillaDetalle {
   detalle_insumo_id: string;
   tipo: "categoria_fasar" | "equipo_herramienta";
   orden: number;
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export interface CuadrillaDetalleData {
+  detalle_insumo_id: string;
   /**
-   * Si `tipo = "categoria_fasar"`: número de integrantes. Si `tipo =
-   * "equipo_herramienta"`: porcentaje 0-100 (mismo convenio que
-   * `herramienta.porcentaje_mano_obra`), no una fracción 0-1.
+   * Cantidad inicial capturada en la valuación nacional al dar de alta el
+   * renglón — las demás valuaciones existentes de la cuadrilla nacen con
+   * `cantidad = 0` para este renglón. Si `detalle_insumo_id` resuelve a
+   * `categoria_fasar`: número de integrantes. Si resuelve a `herramienta`:
+   * porcentaje 0-100, no una fracción.
    */
+  cantidad_nacional: string;
+}
+
+/** Solo permite cambiar a qué insumo apunta el renglón de receta. */
+export interface CuadrillaDetalleEditarData {
+  detalle_insumo_id: string;
+}
+
+/**
+ * Valuación por región de una `cuadrilla` — reemplaza los tres caches que
+ * antes vivían en la extensión 1:1 (ver diccionario de datos).
+ * `region_id = null` es la valuación nacional, que toda cuadrilla tiene
+ * desde que se crea; una fila regional es opcional.
+ */
+export interface CuadrillaCosto extends CamposControl {
+  id: string;
+  cuadrilla_id: string;
+  region_id: string | null;
+  /** Serializados como texto para no perder precisión. */
+  sub_total_mano_obra: string;
+  sub_total_herramienta: string;
+  costo_total: string;
+}
+
+/**
+ * El renglón numérico de un `CuadrillaDetalle` **dentro de una valuación**
+ * concreta — `cantidad` es el único campo capturable, `costo`/`importe` los
+ * calcula el backend al recalcular la valuación.
+ */
+export interface CuadrillaCostoDetalle {
+  id: string;
+  cuadrilla_costo_id: string;
+  cuadrilla_detalle_id: string;
   cantidad: string;
   costo: string;
   importe: string;
@@ -389,8 +432,7 @@ export interface CuadrillaDetalle {
   updated_by: string | null;
 }
 
-export interface CuadrillaDetalleData {
-  detalle_insumo_id: string;
+export interface CuadrillaCostoDetalleData {
   cantidad: string;
 }
 

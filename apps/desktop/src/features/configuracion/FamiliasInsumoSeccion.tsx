@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { toast } from "@/hooks/use-toast";
 import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo, listUsuarios, updateFamiliaInsumo } from "@/lib/tauri";
 import type { FamiliaInsumo } from "@/lib/types";
 
@@ -37,16 +38,17 @@ function PanelGrid({
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
         <h2 className="text-sm font-semibold">{titulo}</h2>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={onBusquedaChange} />
+          <SearchInput value={busqueda} onChange={onBusquedaChange} />
           <BarraAcciones
-            acciones={[
+            acciones={[{ icono: Plus, titulo: "Agregar", onClick: onAgregar }]}
+            menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: onRecargar },
-              { icono: Plus, titulo: "Agregar", onClick: onAgregar },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
                 onClick: onEliminar,
                 disabled: !puedeEliminar,
+                destructivo: true,
               },
             ]}
           />
@@ -59,9 +61,9 @@ function PanelGrid({
 
 const COLUMNAS_FAMILIA = [
   { field: "nombre", header: "Nombre", width: 240 },
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -93,6 +95,10 @@ export function FamiliasInsumoSeccion() {
   const [busquedaFamilia, setBusquedaFamilia] = useState("");
   const [busquedaSubfamilia, setBusquedaSubfamilia] = useState("");
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargar = () => {
     setCargando(true);
@@ -127,7 +133,6 @@ export function FamiliasInsumoSeccion() {
 
   return (
     <div className="flex h-full flex-col">
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup orientation="vertical" className="h-full">
           <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">

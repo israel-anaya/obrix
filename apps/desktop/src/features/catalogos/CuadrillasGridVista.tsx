@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2, Users } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { CuadrillaDetallePanel } from "@/features/catalogos/CuadrillaDetallePanel";
@@ -15,16 +15,16 @@ import {
   listUsuarios,
   updateCuadrilla,
 } from "@/lib/tauri";
+import { toast } from "@/hooks/use-toast";
 import type { Cuadrilla, CuadrillaData, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -34,8 +34,10 @@ const COLUMNAS_CONTROL = [
  * panel lateral con la composición (integrantes y herramienta) de la
  * cuadrilla seleccionada, mismo patrón maestro/detalle que
  * `CategoriaFasarSeccion`/`SalarioCategoriaFasarPanel`. Los tres subtotales
- * que se ven en el grid son cache: los recalcula el backend a partir de la
- * composición, no son editables aquí. Alternativa a `CuadrillasFicha`
+ * que se ven en el grid son los de la valuación **nacional**
+ * (`cuadrilla.costo_nacional`) — cache que recalcula el backend a partir de
+ * la composición, no son editables aquí; las valuaciones regionales se ven
+ * en el panel lateral. Alternativa a `CuadrillasFicha`
  * (ver `CuadrillasSeccion`, que alterna entre las dos).
  */
 export function CuadrillasGridVista() {
@@ -48,17 +50,14 @@ export function CuadrillasGridVista() {
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const [panelComposicionAbierto, setPanelComposicionAbierto] = useState(false);
   const [cuadrillaSeleccionadaId, setCuadrillaSeleccionadaId] = useState<string | null>(null);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    if (!guardadoExitoso) return;
-    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
-    return () => clearTimeout(espera);
-  }, [guardadoExitoso]);
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargarCuadrillas = () => {
     setCargando(true);
@@ -150,9 +149,9 @@ export function CuadrillasGridVista() {
         unidad: simboloPorUnidadId[c.unidad_id] ?? c.unidad_id,
         familia: (c.familia_id && nombrePorFamiliaId[c.familia_id]) || SIN_FAMILIA,
         subfamilia: (c.sub_familia_id && nombrePorFamiliaId[c.sub_familia_id]) || SIN_SUBFAMILIA,
-        sub_total_mano_obra: `$${c.sub_total_mano_obra}`,
-        sub_total_herramienta: `$${c.sub_total_herramienta}`,
-        costo_total: `$${c.costo_total}`,
+        sub_total_mano_obra: `$${c.costo_nacional?.sub_total_mano_obra ?? "0"}`,
+        sub_total_herramienta: `$${c.costo_nacional?.sub_total_herramienta ?? "0"}`,
+        costo_total: `$${c.costo_nacional?.costo_total ?? "0"}`,
         created_at: c.created_at,
         created_by: nombresPorUsuarioId[c.created_by] ?? c.created_by,
         updated_at: c.updated_at ?? "",
@@ -194,45 +193,32 @@ export function CuadrillasGridVista() {
       onAddRow={(fila) => createCuadrilla(filaACuadrillaData(fila)).then(recargarCuadrillas)}
       onEditRow={(fila) => updateCuadrilla(fila._id, filaACuadrillaData(fila)).then(recargarCuadrillas)}
       onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCuadrilla(id))).then(recargarCuadrillas)}
-      onSaveError={(mensaje) => setError(mensaje)}
-      onSaveSuccess={() => setGuardadoExitoso(true)}
-      onCancelEdit={() => {
-        setError(null);
-        setGuardadoExitoso(false);
-      }}
     />
   );
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-3">
-          <p
-            className={cn(
-              "text-xs font-medium",
-              error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
-            )}
-          >
-            {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
-          </p>
-        </div>
+      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icono: Trash2,
-                titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-              },
               {
                 icono: Users,
                 titulo: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
                 onClick: () => setPanelComposicionAbierto((v) => !v),
                 disabled: !panelComposicionAbierto && cuadrillas.length === 0,
+              },
+            ]}
+            menu={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.deleteSelectedRows(),
+                disabled: !puedeEliminar,
+                destructivo: true,
               },
             ]}
           />
@@ -242,11 +228,11 @@ export function CuadrillasGridVista() {
         {/* El grupo vive siempre: si el grid pasa de hijo directo a panel (o
             al revés) React lo desmonta, el virtualizador vuelve a scroll 0 y
             el renglón seleccionado deja de verse. */}
-        <ResizablePanelGroup orientation="horizontal" className="h-full">
+        <ResizablePanelGroup orientation="vertical" className="h-full">
           <ResizablePanel
             id="cuadrillas-grid"
-            defaultSize="60"
-            minSize="35"
+            defaultSize="25"
+            minSize="15"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden"
           >
             {grid}
@@ -256,8 +242,8 @@ export function CuadrillasGridVista() {
               <ResizableHandle withHandle />
               <ResizablePanel
                 id="cuadrillas-composicion"
-                defaultSize="40"
-                minSize="28"
+                defaultSize="75"
+                minSize="40"
                 className="flex min-h-0 min-w-0 flex-col overflow-hidden"
               >
                 <CuadrillaDetallePanel

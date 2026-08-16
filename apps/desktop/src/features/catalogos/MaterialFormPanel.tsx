@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { CAMPO_INPUT_CLASE, Campo } from "@/components/Campo";
+import { PercentageInput } from "@/components/PercentageInput";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import { formatearFecha } from "@/lib/fecha";
 import { createMaterial, updateMaterial } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+// Radix no permite un `SelectItem` con value="" — estos "sin X" son null en
+// el backend y necesitan un valor propio para poder ofrecerse como opción.
+const SIN_FAMILIA_VALOR = "__sin_familia__";
+const SIN_SUBFAMILIA_VALOR = "__sin_subfamilia__";
+const SIN_PROVEEDOR_VALOR = "__sin_proveedor__";
 
 function aMaterialData(m: Material): MaterialData {
   return {
@@ -76,6 +85,10 @@ export function MaterialFormPanel({
     setDatos(material ? aMaterialData(material) : null);
   }, [material, nuevo]);
 
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
+
   const hijas = datos?.familia_id ? (hijasPorPadreId[datos.familia_id] ?? []) : [];
 
   const puedeGuardar = useMemo(() => {
@@ -127,8 +140,6 @@ export function MaterialFormPanel({
         <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un material para ver su ficha.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
-          {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
-
           <div className="flex flex-col gap-3">
             <Campo label="Clave">
               <input
@@ -146,60 +157,75 @@ export function MaterialFormPanel({
               />
             </Campo>
             <Campo label="Unidad">
-              <select
-                value={datos.unidad_id}
-                onChange={(e) => setDatos({ ...datos, unidad_id: e.target.value })}
-                className={CAMPO_INPUT_CLASE}
-              >
-                {unidades.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.simbolo} — {u.descripcion}
-                  </option>
-                ))}
-              </select>
+              <Select value={datos.unidad_id} onValueChange={(v) => setDatos({ ...datos, unidad_id: v })}>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {unidades.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.simbolo} — {u.descripcion}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Familia">
-              <select
-                value={datos.familia_id ?? ""}
-                onChange={(e) => setDatos({ ...datos, familia_id: e.target.value || null, sub_familia_id: null })}
-                className={CAMPO_INPUT_CLASE}
+              <Select
+                value={datos.familia_id ?? SIN_FAMILIA_VALOR}
+                onValueChange={(v) =>
+                  setDatos({ ...datos, familia_id: v === SIN_FAMILIA_VALOR ? null : v, sub_familia_id: null })
+                }
               >
-                <option value="">— Sin familia —</option>
-                {raicesFamilia.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nombre}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
+                  {raicesFamilia.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Sub familia">
-              <select
-                value={datos.sub_familia_id ?? ""}
-                onChange={(e) => setDatos({ ...datos, sub_familia_id: e.target.value || null })}
+              <Select
+                value={datos.sub_familia_id ?? SIN_SUBFAMILIA_VALOR}
+                onValueChange={(v) => setDatos({ ...datos, sub_familia_id: v === SIN_SUBFAMILIA_VALOR ? null : v })}
                 disabled={hijas.length === 0}
-                className={cn(CAMPO_INPUT_CLASE, hijas.length === 0 && "opacity-50")}
               >
-                <option value="">— Sin sub familia —</option>
-                {hijas.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.nombre}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={cn(CAMPO_INPUT_CLASE, hijas.length === 0 && "opacity-50")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
+                  {hijas.map((h) => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {h.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Proveedor">
-              <select
-                value={datos.proveedor_id ?? ""}
-                onChange={(e) => setDatos({ ...datos, proveedor_id: e.target.value || null })}
-                className={CAMPO_INPUT_CLASE}
+              <Select
+                value={datos.proveedor_id ?? SIN_PROVEEDOR_VALOR}
+                onValueChange={(v) => setDatos({ ...datos, proveedor_id: v === SIN_PROVEEDOR_VALOR ? null : v })}
               >
-                <option value="">— Sin proveedor —</option>
-                {proveedores.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.razon_social}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_PROVEEDOR_VALOR}>— Sin proveedor —</SelectItem>
+                  {proveedores.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.razon_social}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Marca">
               <input
@@ -209,12 +235,9 @@ export function MaterialFormPanel({
               />
             </Campo>
             <Campo label="Merma (%)">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={datos.merma_porcentaje ?? 0}
-                onChange={(e) => setDatos({ ...datos, merma_porcentaje: Number(e.target.value) || 0 })}
+              <PercentageInput
+                value={String(datos.merma_porcentaje ?? 0)}
+                onCommit={(v) => setDatos({ ...datos, merma_porcentaje: Number(v) || 0 })}
                 className={CAMPO_INPUT_CLASE}
               />
             </Campo>
@@ -224,28 +247,6 @@ export function MaterialFormPanel({
                 <span className="text-muted-foreground">Costo actual</span>
                 <span className="font-medium">{material?.precio_vigente ? `$${material.precio_vigente}` : "$0"}</span>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-border pt-3">
-              <button
-                type="button"
-                onClick={() => setDatos(nuevo ?? (material ? aMaterialData(material) : datos))}
-                disabled={!puedeGuardar || guardando || creando}
-                className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
-              >
-                Descartar
-              </button>
-              <button
-                type="button"
-                onClick={() => void guardar()}
-                disabled={!puedeGuardar || guardando}
-                className={cn(
-                  "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
-                  (!puedeGuardar || guardando) && "opacity-50",
-                )}
-              >
-                {guardando ? "Guardando…" : creando ? "Crear" : "Guardar"}
-              </button>
             </div>
 
             {!creando && material && (
@@ -263,6 +264,30 @@ export function MaterialFormPanel({
             </div>
             )}
           </div>
+        </div>
+      )}
+
+      {datos && (
+        <div className="flex justify-end gap-2 border-t border-border px-3 py-2">
+          <button
+            type="button"
+            onClick={() => setDatos(nuevo ?? (material ? aMaterialData(material) : datos))}
+            disabled={!puedeGuardar || guardando || creando}
+            className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
+          >
+            Descartar
+          </button>
+          <button
+            type="button"
+            onClick={() => void guardar()}
+            disabled={!puedeGuardar || guardando}
+            className={cn(
+              "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
+              (!puedeGuardar || guardando) && "opacity-50",
+            )}
+          >
+            {guardando ? "Guardando…" : creando ? "Crear" : "Guardar"}
+          </button>
         </div>
       )}
     </div>

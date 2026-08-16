@@ -140,6 +140,66 @@ fn preferir_x11_para_restaurar_ventana() {
     }
 }
 
+/// Tras restaurar tamaño/posición (ventana creada con `visible: false`),
+/// WebKitGTK deja a menudo la región de input desfasada: se ve la UI pero
+/// no llega ningún clic. `set_focus` cubre el click-to-activate de X11;
+/// el resize de ±1 px fuerza a GTK a volver a `size_allocate` la webview.
+/// También se reaplica al desmaximizar, que es el otro camino que rompe
+/// la superficie. Ver tauri#11856 y tauri#10746.
+#[cfg(target_os = "linux")]
+fn reparar_clics_tras_restaurar_ventana(app: &tauri::App) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use tauri::{Manager, PhysicalSize, WindowEvent};
+
+    let Some(win) = app.get_webview_window("main") else {
+        return;
+    };
+
+    fn nudge(win: &tauri::WebviewWindow) {
+        let _ = win.set_focus();
+        let _ = win.set_resizable(false);
+        let _ = win.set_resizable(true);
+        if win.is_maximized().unwrap_or(false) {
+            return;
+        }
+        let Ok(original) = win.inner_size() else {
+            return;
+        };
+        if original.width <= 1 || original.height <= 1 {
+            return;
+        }
+        let _ = win.set_size(PhysicalSize::new(
+            original.width.saturating_add(1),
+            original.height,
+        ));
+        let win = win.clone();
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            let _ = win.set_size(original);
+        });
+    }
+
+    let win_inicio = win.clone();
+    tauri::async_runtime::spawn(async move {
+        // La webview aún no ha hecho realize cuando el plugin hace show().
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        nudge(&win_inicio);
+    });
+
+    let maximizada = Arc::new(AtomicBool::new(win.is_maximized().unwrap_or(false)));
+    let win_evento = win.clone();
+    win.on_window_event(move |event| {
+        if let WindowEvent::Resized(_) = event {
+            let ahora = win_evento.is_maximized().unwrap_or(false);
+            let antes = maximizada.swap(ahora, Ordering::Relaxed);
+            if antes && !ahora {
+                nudge(&win_evento);
+            }
+        }
+    });
+}
+
 fn main() {
     #[cfg(target_os = "linux")]
     preferir_x11_para_restaurar_ventana();
@@ -148,6 +208,11 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .setup(|app| {
+            #[cfg(target_os = "linux")]
+            reparar_clics_tras_restaurar_ventana(app);
+            Ok(())
+        })
         .manage(AppState::nuevo())
         .invoke_handler(tauri::generate_handler![
             commands::auth::obtener_sesion,
@@ -233,7 +298,12 @@ fn main() {
             commands::cuadrillas::update_cuadrilla_detalle,
             commands::cuadrillas::delete_cuadrilla_detalle,
             commands::cuadrillas::move_cuadrilla_detalle,
-            commands::cuadrillas::recalculate_cuadrilla,
+            commands::cuadrillas::list_cuadrilla_costos,
+            commands::cuadrillas::create_cuadrilla_costo_regional,
+            commands::cuadrillas::delete_cuadrilla_costo,
+            commands::cuadrillas::recalculate_cuadrilla_costo,
+            commands::cuadrillas::list_cuadrilla_costo_detalles,
+            commands::cuadrillas::update_cuadrilla_costo_detalle,
             commands::equipos_costo_horario::list_equipos_costo_horario,
             commands::equipos_costo_horario::create_equipo_costo_horario,
             commands::equipos_costo_horario::update_equipo_costo_horario,

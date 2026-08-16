@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FilaCostoMaterial } from "@/lib/csvPrecioMaterial";
 import { createPreciosMaterialLote, listMonedas, listRegiones } from "@/lib/tauri";
 import type { Moneda, PrecioLoteItem, Region } from "@/lib/types";
@@ -16,6 +17,9 @@ import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
 const MONEDA_FALLBACK = "MXN";
+// Radix no permite un `SelectItem` con value="" — el region_id nacional (null
+// en el backend) necesita un valor propio para poder ofrecerse como opción.
+const NACIONAL_VALOR = "__nacional__";
 
 function hoy(): string {
   return new Date().toISOString().slice(0, 10);
@@ -153,28 +157,34 @@ export function ActualizarCostosMaterialesLoteDialog({
         {!nada && (
           <div className="flex flex-col gap-2">
             <Campo label="Moneda">
-              <select value={moneda} onChange={(e) => setMoneda(e.target.value)} className={CAMPO_INPUT_CLASE}>
-                {monedas.length === 0 && <option value={MONEDA_FALLBACK}>{MONEDA_FALLBACK}</option>}
-                {monedas.map((m) => (
-                  <option key={m.id} value={m.codigo}>
-                    {m.codigo} — {m.nombre}
-                  </option>
-                ))}
-              </select>
+              <Select value={moneda} onValueChange={setMoneda}>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monedas.length === 0 && <SelectItem value={MONEDA_FALLBACK}>{MONEDA_FALLBACK}</SelectItem>}
+                  {monedas.map((m) => (
+                    <SelectItem key={m.id} value={m.codigo}>
+                      {m.codigo} — {m.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Región">
-              <select
-                value={regionId}
-                onChange={(e) => setRegionId(e.target.value)}
-                className={CAMPO_INPUT_CLASE}
-              >
-                <option value="">{NACIONAL} (default)</option>
-                {regiones.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.nombre}
-                  </option>
-                ))}
-              </select>
+              <Select value={regionId || NACIONAL_VALOR} onValueChange={(v) => setRegionId(v === NACIONAL_VALOR ? "" : v)}>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
+                  {regiones.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Vigente desde">
               <input

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronRight, RefreshCcw } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listFamiliasInsumo, listMateriales, listProveedores, listUnidadesMedida } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, Proveedor, UnidadMedida } from "@/lib/types";
@@ -401,8 +401,8 @@ export function RadarMaterialesSeccion() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
-          <BarraAcciones acciones={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
+          <BarraAcciones acciones={[]} menu={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]} />
         </div>
       </div>
 

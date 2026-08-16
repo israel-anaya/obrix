@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { toast } from "@/hooks/use-toast";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -24,9 +25,9 @@ const ORGANIZACION_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -44,6 +45,10 @@ export function OrganizacionSeccion() {
   // resto de la app lee organizaciones de `OrganizacionContext`, que no se
   // entera de estos cambios por su cuenta (ver `App.recargarOrganizaciones`).
   const { reload: recargarOrganizacionContext } = useOrganizacionActiva();
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const [monedas, setMonedas] = useState<Moneda[]>([]);
   const recargarMonedas = () => listMonedas().then(setMonedas).catch(() => {});
@@ -124,22 +129,22 @@ export function OrganizacionSeccion() {
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <h2 className="text-sm font-semibold">Organización</h2>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[
+            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
-              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
                 onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !puedeEliminar,
+                destructivo: true,
               },
             ]}
           />
         </div>
       </div>
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
         <DataGrid
           ref={gridRef}

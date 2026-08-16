@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { DollarSign, FileSpreadsheet, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import {
@@ -13,7 +13,7 @@ import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategori
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { validarCsvSalarioNominal } from "@/lib/csvSalarioNominal";
-import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 import {
   createCategoriaFasar,
   deleteCategoriaFasar,
@@ -32,9 +32,9 @@ const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -60,16 +60,13 @@ export function CategoriaFasarSeccion() {
   const [panelSalarioAbierto, setPanelSalarioAbierto] = useState(false);
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
-  const [estadoGuardado, setEstadoGuardado] = useState<{ tipo: "error" | "exito"; mensaje: string } | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLote | null>(null);
   const [importandoLote, setImportandoLote] = useState(false);
 
   useEffect(() => {
-    if (estadoGuardado?.tipo !== "exito") return;
-    const espera = setTimeout(() => setEstadoGuardado(null), 3000);
-    return () => clearTimeout(espera);
-  }, [estadoGuardado]);
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargarCategorias = () => {
     setCargando(true);
@@ -229,39 +226,17 @@ export function CategoriaFasarSeccion() {
       onAddRow={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
       onEditRow={(fila) => updateCategoriaFasar(fila._id, filaACategoriaData(fila)).then(recargarCategorias)}
       onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCategoriaFasar(id))).then(recargarCategorias)}
-      onSaveError={(mensaje) => setEstadoGuardado({ tipo: "error", mensaje })}
-      onSaveSuccess={() => setEstadoGuardado({ tipo: "exito", mensaje: "Guardado exitosamente" })}
-      onCancelEdit={() => setEstadoGuardado(null)}
     />
   );
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <p
-          className={cn(
-            "text-xs font-medium",
-            estadoGuardado?.tipo === "error"
-              ? "text-destructive"
-              : estadoGuardado?.tipo === "exito"
-                ? "text-emerald-600"
-                : "invisible",
-          )}
-        >
-          {estadoGuardado?.mensaje ?? "—"}
-        </p>
+      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icono: Trash2,
-                titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-              },
               {
                 icono: FileSpreadsheet,
                 titulo: importandoLote ? "Leyendo CSV…" : "Actualizar salarios en lote",
@@ -281,10 +256,19 @@ export function CategoriaFasarSeccion() {
                 disabled: !panelHistorialAbierto && categorias.length === 0,
               },
             ]}
+            menu={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.deleteSelectedRows(),
+                disabled: !puedeEliminar,
+                destructivo: true,
+              },
+            ]}
           />
         </div>
       </div>
-      {error && <p className="px-3 py-1 text-xs text-destructive">{error}</p>}
       <div className="min-h-0 flex-1">
         {/* Los grupos viven siempre para no desmontar el grid al abrir salario
             o historial (si no, el virtualizador vuelve a scroll 0). */}
@@ -344,7 +328,7 @@ export function CategoriaFasarSeccion() {
         estado={estadoLote}
         onCerrar={() => setEstadoLote(null)}
         onAplicado={(mensaje) => {
-          setEstadoGuardado({ tipo: "exito", mensaje });
+          toast({ description: mensaje, variant: "success" });
           void recargarCategorias();
         }}
       />

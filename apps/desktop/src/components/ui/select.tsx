@@ -57,28 +57,44 @@ function SelectTrigger({
   )
 }
 
+/** Alto de un `SelectItem` (`py-1` + `text-sm`, ver ese componente) — la base para traducir `maxItems` a un `max-height` en px. */
+const ALTO_ITEM_PX = 28;
+
 function SelectContent({
   className,
   children,
   position = "item-aligned",
   align = "center",
+  /** Cuántos elementos se ven antes de que la lista scrollee — el resto queda accesible con scroll, no se pierde. Si en pantalla cabe menos, manda el espacio disponible. */
+  maxItems = 10,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & { maxItems?: number }) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         data-slot="select-content"
         data-align-trigger={position === "item-aligned"}
-        className={cn("relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", position ==="popper"&&"data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1", className )}
+        className={cn("relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-white text-neutral-900 shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", position ==="popper"&&"data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1", className )}
         position={position}
         align={align}
         {...props}
       >
         <SelectScrollUpButton />
+        {/* El máximo de `maxItems` va aquí, no en `Content` de arriba: en modo
+            `item-aligned` (el default) Radix recalcula y pisa el `maxHeight`
+            de `Content` con su propio algoritmo de posicionamiento (alinear el
+            elemento elegido bajo el trigger), así que cualquier tope puesto
+            ahí se pierde. El `Viewport` es una capa que Radix no toca, por
+            eso el scroll interno queda seguro acá. El fallback en el `var()`
+            evita que `min()` completo se invalide si la variable de Radix
+            no está definida en este modo de posicionamiento. */}
         <SelectPrimitive.Viewport
           data-position={position}
+          style={{
+            maxHeight: `min(var(--radix-select-content-available-height, 9999px), ${maxItems * ALTO_ITEM_PX}px)`,
+          }}
           className={cn(
-            "data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",
+            "overflow-y-auto data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",
             position === "popper" && ""
           )}
         >
@@ -148,7 +164,7 @@ function SelectScrollUpButton({
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
       className={cn(
-        "z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        "z-10 flex cursor-default items-center justify-center bg-white py-1 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -167,7 +183,7 @@ function SelectScrollDownButton({
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
       className={cn(
-        "z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        "z-10 flex cursor-default items-center justify-center bg-white py-1 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

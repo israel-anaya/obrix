@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { CAMPO_INPUT_CLASE } from "@/components/Campo";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PruebaModeloCalculo } from "@/features/fsr/PruebaModeloCalculo";
 import { validarModelo, type ValoresEntrada } from "@/lib/modeloCalculo";
 import { escribirArchivoTexto, getFactorSalarioReal, leerArchivoTexto, updateFactorSalarioReal } from "@/lib/tauri";
@@ -73,14 +74,15 @@ function CampoVariable({
     return (
       <div className="grid grid-cols-[4fr_1fr] items-center gap-3">
         <span className="text-[11px] text-muted-foreground">{variable.etiqueta}</span>
-        <select
-          value={String(Boolean(valor))}
-          onChange={(e) => onCambiar(e.target.value === "true")}
-          className={cn(CAMPO_INPUT_CLASE, "mt-0")}
-        >
-          <option value="true">Sí</option>
-          <option value="false">No</option>
-        </select>
+        <Select value={String(Boolean(valor))} onValueChange={(v) => onCambiar(v === "true")}>
+          <SelectTrigger className={cn(CAMPO_INPUT_CLASE, "mt-0")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="true">Sí</SelectItem>
+            <SelectItem value="false">No</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     );
   }

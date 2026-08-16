@@ -2,11 +2,14 @@
 //! este servicio administra ambas tablas juntas como si fueran una sola
 //! entidad "Cuadrilla", igual que `material`/`categoria_fasar`/`herramienta`
 //! hacen con `insumo`. Su composición (integrantes y herramienta) vive en
-//! `cuadrilla_detalle`, administrada por `CuadrillaDetalleService` — los tres
-//! subtotales que se ven aquí son solo cache de esa composición.
+//! `cuadrilla_detalle`, administrada por `CuadrillaDetalleService`; su
+//! valuación por región vive en `cuadrilla_costo`/`cuadrilla_costo_detalle`,
+//! administrada por `CuadrillaCostoService`/`CuadrillaCostoDetalleService` —
+//! `costo_nacional` aquí es solo un reflejo de conveniencia de la valuación
+//! nacional, igual que `CategoriaFasar.salario_vigente`.
 
-use obrix_db::entities::cuadrilla;
 use obrix_db::entities::insumo::{self, TipoInsumo};
+use obrix_db::entities::{cuadrilla, cuadrilla_costo};
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, TransactionTrait};
@@ -25,7 +28,7 @@ pub struct CuadrillaData {
 }
 
 /// `insumo` + `cuadrilla` combinados en una sola fila — así es como lo ve el
-/// frontend, que no necesita saber que internamente son dos tablas.
+/// frontend, que no necesita saber que internamente son varias tablas.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CuadrillaCompleto {
     pub id: String,
@@ -34,16 +37,21 @@ pub struct CuadrillaCompleto {
     pub unidad_id: String,
     pub familia_id: Option<String>,
     pub sub_familia_id: Option<String>,
-    pub sub_total_mano_obra: Decimal,
-    pub sub_total_herramienta: Decimal,
-    pub costo_total: Decimal,
+    /// Valuación nacional (`region_id IS NULL`) — siempre existe salvo un
+    /// estado transitorio imposible desde este servicio, toda cuadrilla nace
+    /// con ella.
+    pub costo_nacional: Option<cuadrilla_costo::Model>,
     pub created_at: String,
     pub created_by: String,
     pub updated_at: Option<String>,
     pub updated_by: Option<String>,
 }
 
-pub(crate) fn combinar(insumo: insumo::Model, cuadrilla: cuadrilla::Model) -> CuadrillaCompleto {
+pub(crate) fn combinar(
+    insumo: insumo::Model,
+    _cuadrilla: cuadrilla::Model,
+    costo_nacional: Option<cuadrilla_costo::Model>,
+) -> CuadrillaCompleto {
     CuadrillaCompleto {
         id: insumo.id,
         clave: insumo.clave,
@@ -51,9 +59,7 @@ pub(crate) fn combinar(insumo: insumo::Model, cuadrilla: cuadrilla::Model) -> Cu
         unidad_id: insumo.unidad_id,
         familia_id: insumo.familia_id,
         sub_familia_id: insumo.sub_familia_id,
-        sub_total_mano_obra: cuadrilla.sub_total_mano_obra,
-        sub_total_herramienta: cuadrilla.sub_total_herramienta,
-        costo_total: cuadrilla.costo_total,
+        costo_nacional,
         created_at: insumo.created_at,
         created_by: insumo.created_by,
         updated_at: insumo.updated_at,
@@ -83,7 +89,8 @@ impl CuadrillaService {
             let Some(cua) = cuadrilla::Entity::find_by_id(&ins.id).one(repo.conexion()).await? else {
                 continue;
             };
-            resultado.push(combinar(ins, cua));
+            let costo_nacional = Self::buscar_costo_nacional(repo, &ins.id).await?;
+            resultado.push(combinar(ins, cua, costo_nacional));
         }
         Ok(resultado)
     }
@@ -101,9 +108,14 @@ impl CuadrillaService {
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla {id}")))?;
-        Ok(combinar(ins, cua))
+        let costo_nacional = Self::buscar_costo_nacional(repo, id).await?;
+        Ok(combinar(ins, cua, costo_nacional))
     }
 
+    /// Inserta `insumo` + `cuadrilla` + su fila de valuación nacional
+    /// (`cuadrilla_costo` con `region_id = NULL`) en la misma transacción —
+    /// toda cuadrilla nace con su fila nacional en cero (ver diccionario de
+    /// datos).
     pub async fn crear(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -124,6 +136,26 @@ impl CuadrillaService {
             familia_id: Set(datos.familia_id),
             sub_familia_id: Set(datos.sub_familia_id),
             deleted: Set(false),
+            created_at: Set(ahora.clone()),
+            created_by: Set(creado_por.clone()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(&txn)
+        .await?;
+
+        let cua = cuadrilla::ActiveModel { insumo_id: Set(id.clone()) }.insert(&txn).await?;
+
+        let costo_nacional = cuadrilla_costo::ActiveModel {
+            id: Set(nuevo_id()),
+            cuadrilla_id: Set(id),
+            region_id: Set(None),
+            sub_total_mano_obra: Set(Decimal::ZERO),
+            sub_total_herramienta: Set(Decimal::ZERO),
+            costo_total: Set(Decimal::ZERO),
+            deleted: Set(false),
             created_at: Set(ahora),
             created_by: Set(creado_por),
             updated_at: Set(None),
@@ -134,22 +166,13 @@ impl CuadrillaService {
         .insert(&txn)
         .await?;
 
-        let cua = cuadrilla::ActiveModel {
-            insumo_id: Set(id),
-            sub_total_mano_obra: Set(Decimal::ZERO),
-            sub_total_herramienta: Set(Decimal::ZERO),
-            costo_total: Set(Decimal::ZERO),
-        }
-        .insert(&txn)
-        .await?;
-
         txn.commit().await?;
-        Ok(combinar(ins, cua))
+        Ok(combinar(ins, cua, Some(costo_nacional)))
     }
 
     /// Solo actualiza los datos de catálogo (clave/descripción/unidad/familia)
-    /// — los subtotales no son editables, los administra
-    /// `CuadrillaDetalleService` a partir de la composición.
+    /// — la valuación no es editable aquí, la administran
+    /// `CuadrillaCostoService`/`CuadrillaCostoDetalleService`.
     pub async fn actualizar(
         repo: &dyn PortafolioRepository,
         id: String,
@@ -176,16 +199,30 @@ impl CuadrillaService {
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla {id}")))?;
-        Ok(combinar(ins, cua))
+        let costo_nacional = Self::buscar_costo_nacional(repo, &ins.id).await?;
+        Ok(combinar(ins, cua, costo_nacional))
     }
 
-    /// Borrado lógico del `insumo` — `cuadrilla` y su `cuadrilla_detalle` se quedan.
+    /// Borrado lógico del `insumo` — `cuadrilla` y su composición/valuación
+    /// se quedan.
     pub async fn eliminar(
         repo: &dyn PortafolioRepository,
         id: String,
         eliminado_por: String,
     ) -> Result<(), ServiceError> {
         crate::marcar_insumo_eliminado(repo, &id, "cuadrilla", eliminado_por).await
+    }
+
+    async fn buscar_costo_nacional(
+        repo: &dyn PortafolioRepository,
+        cuadrilla_id: &str,
+    ) -> Result<Option<cuadrilla_costo::Model>, ServiceError> {
+        Ok(cuadrilla_costo::Entity::find()
+            .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
+            .filter(cuadrilla_costo::Column::RegionId.is_null())
+            .filter(cuadrilla_costo::Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?)
     }
 }
 
@@ -291,7 +328,9 @@ mod tests {
         .await
         .expect("crear cuadrilla");
         assert_eq!(creada.clave, "CUA-1");
-        assert_eq!(creada.costo_total, Decimal::ZERO);
+        let costo_nacional = creada.costo_nacional.as_ref().expect("debe nacer con fila nacional");
+        assert!(costo_nacional.region_id.is_none());
+        assert_eq!(costo_nacional.costo_total, Decimal::ZERO);
 
         let listado = CuadrillaService::listar(&portafolio, "org-1")
             .await

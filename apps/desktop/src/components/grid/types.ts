@@ -3,7 +3,16 @@ export interface DataGridColumn {
   header: string;
   /** Initial width in px — required; the user can resize it by hand. */
   width: number;
+  /**
+   * Fills whatever horizontal space the other columns leave, instead of
+   * staying at a fixed width — `width` becomes its minimum instead of its
+   * fixed size, and it drops its own resize handle (dragging a column that
+   * auto-fills would fight the layout). At most one per grid.
+   */
+  grow?: boolean;
   numeric?: boolean;
+  /** Fixed decimal places for display only (numeric columns) — the raw value keeps full precision, and the editor shows it unrounded. */
+  decimals?: number;
   /** Edited and shown as a checkbox — for columns whose value is true/false. */
   boolean?: boolean;
   /** Text appended to the value for display only (e.g. "%") — it does not affect the real value when editing. */
@@ -47,9 +56,9 @@ export interface DataGridPersistProps {
   onDeleteRows?: (ids: string[]) => void | Promise<void>;
   /** Fires when an edit to an existing row is committed (check icon). */
   onEditRow?: (row: Row) => void | Promise<void>;
-  /** Fires when `onAddRow`/`onEditRow` rejects — the grid keeps the draft, but does not surface the error on its own. */
+  /** Fires when `onAddRow`/`onEditRow`/`onDeleteRows` rejects — the grid keeps the draft, but does not revert on its own. Default (when omitted): a destructive toast with the message. Pass this to opt out of the toast and handle it yourself (e.g. an inline error banner). */
   onSaveError?: (message: string) => void;
-  /** Fires when `onAddRow`/`onEditRow` resolves without an error. */
+  /** Fires when `onAddRow`/`onEditRow` resolves without an error (not on delete, which has no success feedback). Default (when omitted): a success toast ("Guardado exitosamente"). Pass this to opt out or show custom feedback. */
   onSaveSuccess?: () => void;
   /** Fires when an in-flight edit or insert is cancelled (X button) — to clear a previous save error. */
   onCancelEdit?: () => void;

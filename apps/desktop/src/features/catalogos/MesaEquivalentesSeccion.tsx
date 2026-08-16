@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, ChevronRight, Plus, RefreshCcw, Star, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listFamiliasInsumo, listMateriales, listProveedores, listUnidadesMedida } from "@/lib/tauri";
@@ -283,10 +283,9 @@ export function MesaEquivalentesSeccion() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargar },
               {
                 icono: Plus,
                 titulo: candidatos.length === 0 ? "Nada que subir en este pasillo" : "Subir visibles a la mesa",
@@ -295,6 +294,7 @@ export function MesaEquivalentesSeccion() {
               },
               { icono: X, titulo: "Vaciar mesa", onClick: vaciar, disabled: mesaIds.length === 0 },
             ]}
+            menu={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]}
           />
         </div>
       </div>

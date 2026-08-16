@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import {
@@ -25,8 +25,8 @@ import {
   listUsuarios,
   updateMaterial,
 } from "@/lib/tauri";
+import { toast } from "@/hooks/use-toast";
 import type { FamiliaInsumo, Material, MaterialData, Proveedor, ResultadoImportacion, UnidadMedida } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const SIN_PROVEEDOR = "— Sin proveedor —";
 const SIN_FAMILIA = "— Sin familia —";
@@ -34,9 +34,9 @@ const SIN_SUBFAMILIA = "— Sin sub familia —";
 const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -54,27 +54,17 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
   const [panelPreciosAbierto, setPanelPreciosAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [materialSeleccionadoId, setMaterialSeleccionadoId] = useState<string | null>(null);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
   const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLoteMateriales | null>(null);
   const [importandoLote, setImportandoLote] = useState(false);
-  const [mensajeLote, setMensajeLote] = useState<string | null>(null);
   const [noEncontradosLote, setNoEncontradosLote] = useState<string[] | null>(null);
 
   useEffect(() => {
-    if (!guardadoExitoso) return;
-    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
-    return () => clearTimeout(espera);
-  }, [guardadoExitoso]);
-
-  useEffect(() => {
-    if (!mensajeLote) return;
-    const espera = setTimeout(() => setMensajeLote(null), 3000);
-    return () => clearTimeout(espera);
-  }, [mensajeLote]);
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const recargarMateriales = () => {
     setCargando(true);
@@ -275,12 +265,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       onAddRow={(fila) => createMaterial(filaAMaterialData(fila)).then(recargarMateriales)}
       onEditRow={(fila) => updateMaterial(fila._id, filaAMaterialData(fila)).then(recargarMateriales)}
       onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteMaterial(id))).then(recargarMateriales)}
-      onSaveError={(mensaje) => setError(mensaje)}
-      onSaveSuccess={() => setGuardadoExitoso(true)}
-      onCancelEdit={() => {
-        setError(null);
-        setGuardadoExitoso(false);
-      }}
     />
   );
 
@@ -289,27 +273,12 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold">Materiales</h2>
-          <p
-            className={cn(
-              "text-xs font-medium",
-              error ? "text-destructive" : guardadoExitoso || mensajeLote ? "text-emerald-600" : "invisible",
-            )}
-          >
-            {error ?? mensajeLote ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
-          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icono: Trash2,
-                titulo: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-              },
               {
                 icono: Upload,
                 titulo: importando ? "Importando…" : "Importar desde CSV",
@@ -339,6 +308,16 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                     if (!v) setPanelPreciosAbierto(false);
                     return !v;
                   }),
+              },
+            ]}
+            menu={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
+              {
+                icono: Trash2,
+                titulo: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.deleteSelectedRows(),
+                disabled: !puedeEliminar,
+                destructivo: true,
               },
             ]}
           />
@@ -446,7 +425,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
         estado={estadoLote}
         onCerrar={() => setEstadoLote(null)}
         onAplicado={({ mensaje, noEncontrados }) => {
-          setMensajeLote(mensaje);
+          toast({ description: mensaje, variant: "success" });
           setNoEncontradosLote(noEncontrados.length > 0 ? noEncontrados : null);
           void recargarMateriales();
         }}

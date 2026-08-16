@@ -1,7 +1,7 @@
 import { forwardRef, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTable, type FilterFn, type RowSelectionState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, Search } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/SearchInput";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { GridUiContext, type GridUi } from "./gridContext";
 import { ROW_HEIGHT, widthVar } from "./gridLayout";
@@ -92,7 +93,7 @@ export const DataGrid = forwardRef<
     initialSelectedId?: string | null;
     /**
      * Search controlled by the parent (to move it into its own action bar, see
-     * `Buscador`) — when omitted, the grid handles its search internally and
+     * `SearchInput`) — when omitted, the grid handles its search internally and
      * draws its own row above the table.
      */
     search?: string;
@@ -111,6 +112,13 @@ export const DataGrid = forwardRef<
      * reload it keeps the rows on screen and only marks the wait at the top.
      */
     loading?: boolean;
+    /**
+     * Turns off the click-to-sort header handler for the whole grid — for a
+     * grid where the row order already carries its own meaning (e.g. a manual
+     * position with its own up/down controls), where sorting by column would
+     * clash with it. Defaults to `true`.
+     */
+    enableSorting?: boolean;
   } & DataGridPersistProps
 >(function DataGrid(
   {
@@ -131,6 +139,7 @@ export const DataGrid = forwardRef<
     onSearchChange,
     layoutKey,
     loading = false,
+    enableSorting = true,
   },
   ref,
 ) {
@@ -343,6 +352,7 @@ export const DataGrid = forwardRef<
       getColumnCanGlobalFilter: (column) => !String(column.id).startsWith("__"),
       columnResizeMode: "onChange",
       enableColumnResizing: true,
+      enableSorting,
       meta,
     },
     (state) => ({ rowSelection: state.rowSelection, globalFilter: state.globalFilter }),
@@ -961,7 +971,9 @@ export const DataGrid = forwardRef<
       onRowSelected?.(null);
     } catch (e) {
       setPendingDelete(null);
-      onSaveError?.(e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      if (onSaveError) onSaveError(message);
+      else toast({ description: message, variant: "destructive" });
     }
   };
 
@@ -1027,19 +1039,13 @@ export const DataGrid = forwardRef<
     <GridUiContext.Provider value={uiStore}>
     <div className="flex h-full flex-col">
       {!isSearchControlled && (
-        <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-          <Search size={13} className="shrink-0 text-muted-foreground" />
-          <Input
+        <div className="border-b border-border px-2 py-1.5">
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar…"
-            className="h-6 border-none px-0 py-0 text-xs shadow-none focus-visible:ring-0"
+            onChange={setSearch}
+            className="rounded-none border-none px-0"
+            inputClassName="w-full"
           />
-        </div>
-      )}
-      {saveError && (
-        <div className="shrink-0 truncate border-b border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive" title={saveError}>
-          {saveError}
         </div>
       )}
       {/* A reload over rows that are already on screen: they stay, and the wait

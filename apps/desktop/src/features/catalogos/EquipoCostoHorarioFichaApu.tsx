@@ -14,6 +14,7 @@ import {
 import { ComboboxFiltrable } from "@/components/ComboboxFiltrable";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { QuantityInput } from "@/components/QuantityInput";
+import { toast } from "@/hooks/use-toast";
 import {
   createEquipoCostoHorarioDetalle,
   deleteEquipoCostoHorarioDetalle,
@@ -164,6 +165,10 @@ export function EquipoCostoHorarioFichaApu({
     setAgregandoConsumo(false);
     setAgregandoOperacion(false);
   }, [equipo.id]);
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const cargarDetalles = (id: string) =>
     listEquipoCostoHorarioDetalles(id)
@@ -390,8 +395,6 @@ export function EquipoCostoHorarioFichaApu({
           </div>
           <p className="mt-0.5 text-xs text-foreground">{totales.descripcion}</p>
         </div>
-
-        {error && <p className="px-4 py-1 text-xs text-destructive">{error}</p>}
 
         {/* Cargos fijos */}
         <div className="border-b-2 border-foreground/20 p-4">

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calculator, Plus, RefreshCcw, Sigma, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
-import { Buscador } from "@/components/Buscador";
+import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { toast } from "@/hooks/use-toast";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, listUsuarios, updateFactorSalarioReal } from "@/lib/tauri";
 import type { FactorSalarioRealData, Region } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional (sin región)";
 
@@ -19,9 +19,9 @@ const FACTOR_SALARIO_REAL_API = {
 };
 
 const COLUMNAS_CONTROL = [
-  { field: "created_at", header: "Creado", width: 180, readOnly: true, date: true },
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
-  { field: "updated_at", header: "Actualizado", width: 180, readOnly: true, date: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
@@ -35,7 +35,6 @@ export function FactorSalarioRealSeccion({
   const gridRef = useRef<DataGridHandle>(null);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const { items, error, cargando, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(FACTOR_SALARIO_REAL_API);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const { organizacionActivaId } = useOrganizacionActiva();
   useEffect(() => {
@@ -43,10 +42,8 @@ export function FactorSalarioRealSeccion({
   }, [organizacionActivaId, reload]);
 
   useEffect(() => {
-    if (!guardadoExitoso) return;
-    const espera = setTimeout(() => setGuardadoExitoso(false), 3000);
-    return () => clearTimeout(espera);
-  }, [guardadoExitoso]);
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
 
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
@@ -109,20 +106,11 @@ export function FactorSalarioRealSeccion({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-        <p
-          className={cn(
-            "text-xs font-medium",
-            error ? "text-destructive" : guardadoExitoso ? "text-emerald-600" : "invisible",
-          )}
-        >
-          {error ?? (guardadoExitoso ? "Guardado exitosamente" : "—")}
-        </p>
+      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <Buscador value={busqueda} onChange={setBusqueda} />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
             acciones={[
-              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Calculator,
@@ -136,11 +124,15 @@ export function FactorSalarioRealSeccion({
                 onClick: () => filaSeleccionada && onEditarModelo(filaSeleccionada.id, filaSeleccionada.nombre),
                 disabled: !filaSeleccionada,
               },
+            ]}
+            menu={[
+              { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               {
                 icono: Trash2,
                 titulo: "Eliminar seleccionado",
                 onClick: () => gridRef.current?.deleteSelectedRows(),
                 disabled: !filaSeleccionada,
+                destructivo: true,
               },
             ]}
           />
@@ -162,11 +154,7 @@ export function FactorSalarioRealSeccion({
             const previo = items.find((f) => f.id === fila._id);
             actualizar(fila._id, filaAFactorData(fila, previo));
           }}
-          onSaveSuccess={() => setGuardadoExitoso(true)}
-          onCancelEdit={() => {
-            limpiarError();
-            setGuardadoExitoso(false);
-          }}
+          onCancelEdit={limpiarError}
         />
       </div>
     </div>

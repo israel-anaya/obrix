@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import type { FilaSalarioNominal } from "@/lib/csvSalarioNominal";
 import { createSalariosCategoriaFasarLote, listFactoresSalarioReal, listRegiones } from "@/lib/tauri";
@@ -16,6 +17,9 @@ import type { FactorSalarioReal, Region, SalarioLoteItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
+// Radix no permite un `SelectItem` con value="" — el region_id nacional (null
+// en el backend) necesita un valor propio para poder ofrecerse como opción.
+const NACIONAL_VALOR = "__nacional__";
 
 function hoy(): string {
   return new Date().toISOString().slice(0, 10);
@@ -167,32 +171,33 @@ export function ActualizarSalariosLoteDialog({
         {listo && (
           <div className="flex flex-col gap-2">
             <Campo label="Región">
-              <select
-                value={regionId}
-                onChange={(e) => setRegionId(e.target.value)}
-                className={CAMPO_INPUT_CLASE}
-              >
-                <option value="">{NACIONAL} (default)</option>
-                {regiones.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.nombre}
-                  </option>
-                ))}
-              </select>
+              <Select value={regionId || NACIONAL_VALOR} onValueChange={(v) => setRegionId(v === NACIONAL_VALOR ? "" : v)}>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
+                  {regiones.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Campo>
             <Campo label="Factor de Salario Real">
-              <select
-                value={factorId}
-                onChange={(e) => setFactorId(e.target.value)}
-                className={CAMPO_INPUT_CLASE}
-              >
-                <option value="">— Elige un FSR —</option>
-                {factoresDeRegion.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nombre} ({f.region_id ? (nombrePorRegionId[f.region_id] ?? f.region_id) : NACIONAL})
-                  </option>
-                ))}
-              </select>
+              <Select value={factorId} onValueChange={setFactorId}>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue placeholder="— Elige un FSR —" />
+                </SelectTrigger>
+                <SelectContent>
+                  {factoresDeRegion.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nombre} ({f.region_id ? (nombrePorRegionId[f.region_id] ?? f.region_id) : NACIONAL})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {factoresDeRegion.length === 0 && (
                 <p className="mt-0.5 text-[11px] text-destructive">
                   No hay un FSR para {regionId ? (nombrePorRegionId[regionId] ?? regionId) : NACIONAL}.

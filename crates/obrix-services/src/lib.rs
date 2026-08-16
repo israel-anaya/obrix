@@ -7,6 +7,8 @@
 pub mod categoria_fasar;
 pub mod cliente;
 pub mod cuadrilla;
+pub mod cuadrilla_costo;
+pub mod cuadrilla_costo_detalle;
 pub mod cuadrilla_detalle;
 pub mod equipo_costo_horario;
 pub mod equipo_costo_horario_detalle;
