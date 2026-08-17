@@ -467,7 +467,9 @@ export default function App() {
       if (catalogoId === "tabuladores-escalafon") return <EscalafonSalarioSeccion />;
       if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
-      if (catalogoId === "cuadrillas-trabajo") return <CuadrillasSeccion vista={cuadrillasVista} />;
+      if (catalogoId === "cuadrillas-trabajo") {
+        return <CuadrillasSeccion vista={cuadrillasVista} onProgreso={setProgreso} />;
+      }
       if (catalogoId === "herramienta") return <HerramientaSeccion />;
       if (catalogoId === "costos-horarios") return <EquipoCostoHorarioSeccion vista={equipoCostoHorarioVista} />;
       const config = CATALOGO_GRID_CONFIG[catalogoId];

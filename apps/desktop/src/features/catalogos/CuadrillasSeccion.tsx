@@ -16,6 +16,16 @@ export type CuadrillasVista = "grid" | "ficha";
  * `renderTabExtra` de `EditorTabs`) — este componente solo recibe la vista
  * activa ya resuelta, controlada desde afuera.
  */
-export function CuadrillasSeccion({ vista }: { vista: CuadrillasVista }) {
-  return <div className="h-full">{vista === "grid" ? <CuadrillasGridVista /> : <CuadrillasFicha />}</div>;
+export function CuadrillasSeccion({
+  vista,
+  onProgreso,
+}: {
+  vista: CuadrillasVista;
+  onProgreso?: (mensaje: string | null) => void;
+}) {
+  return (
+    <div className="h-full">
+      {vista === "grid" ? <CuadrillasGridVista onProgreso={onProgreso} /> : <CuadrillasFicha />}
+    </div>
+  );
 }

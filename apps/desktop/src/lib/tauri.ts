@@ -305,6 +305,9 @@ export function updateCuadrilla(id: string, cuadrilla: CuadrillaData): Promise<C
 export function deleteCuadrilla(id: string): Promise<void> {
   return invoke("delete_cuadrilla", { id });
 }
+export function importarCuadrillasCsv(path: string): Promise<ResultadoImportacion> {
+  return invoke("importar_cuadrillas_csv", { path });
+}
 export function listCuadrillaDetalles(cuadrillaInsumoId: string): Promise<CuadrillaDetalle[]> {
   return invoke("list_cuadrilla_detalles", { cuadrillaInsumoId });
 }

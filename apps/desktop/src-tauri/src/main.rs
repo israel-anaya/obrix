@@ -293,6 +293,7 @@ fn main() {
             commands::cuadrillas::create_cuadrilla,
             commands::cuadrillas::update_cuadrilla,
             commands::cuadrillas::delete_cuadrilla,
+            commands::cuadrillas::importar_cuadrillas_csv,
             commands::cuadrillas::list_cuadrilla_detalles,
             commands::cuadrillas::create_cuadrilla_detalle,
             commands::cuadrillas::update_cuadrilla_detalle,
