@@ -25,6 +25,10 @@ pub struct Model {
     /// `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación.
     pub costo: Decimal,
     pub importe: Decimal,
+    /// Foto de `salario_categoria_fasar.fecha_vigencia_desde` al recalcular
+    /// este renglón. Solo aplica a mano de obra (`categoria_fasar`); en
+    /// herramienta queda `NULL` (es porcentaje sobre el subtotal de MO).
+    pub fecha_precio: Option<String>,
     pub deleted: bool,
     pub created_at: String,
     pub created_by: String,

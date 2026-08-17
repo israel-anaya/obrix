@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Plus, RefreshCcw, Trash2, Upload, Users, X } from "lucide-react";
+import { FileText, Plus, RefreshCcw, Trash2, Upload, Users, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { CuadrillaDetallePanel } from "@/features/catalogos/CuadrillaDetallePanel";
+import { CuadrillaFormPanel } from "@/features/catalogos/CuadrillaFormPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createCuadrilla,
@@ -38,8 +39,9 @@ const COLUMNAS_CONTROL = [
  * Vista "Grid" de Cuadrillas de trabajo — grid de `cuadrilla` (extensión de
  * `insumo` cuando `tipo = mano_obra`, un equipo de trabajo compuesto) +
  * panel lateral con la composición (integrantes y herramienta) de la
- * cuadrilla seleccionada, mismo patrón maestro/detalle que
- * `CategoriaFasarSeccion`/`SalarioCategoriaFasarPanel`. Los tres subtotales
+ * cuadrilla seleccionada y ficha de identidad (`CuadrillaFormPanel`),
+ * mismo patrón maestro/detalle que
+ * `CategoriaFasarSeccion`/`SalarioCategoriaFasarPanel`/`CategoriaFasarFormPanel`. Los tres subtotales
  * que se ven en el grid son los de la valuación **nacional**
  * (`cuadrilla.costo_nacional`) — cache que recalcula el backend a partir de
  * la composición, no son editables aquí; las valuaciones regionales se ven
@@ -57,6 +59,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
   const [importando, setImportando] = useState(false);
   const [resultadoImportacion, setResultadoImportacion] = useState<ResultadoImportacion | null>(null);
   const [panelComposicionAbierto, setPanelComposicionAbierto] = useState(false);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [cuadrillaSeleccionadaId, setCuadrillaSeleccionadaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
@@ -219,7 +222,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
       initialRows={filas}
       loading={cargando}
       selectionMode="single"
-      highlightSelection={panelComposicionAbierto}
+      highlightSelection={panelComposicionAbierto || panelFichaAbierto}
       initialSelectedId={cuadrillaSeleccionadaId}
       search={busqueda}
       onSearchChange={setBusqueda}
@@ -250,6 +253,11 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
                 titulo: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
                 onClick: () => setPanelComposicionAbierto((v) => !v),
                 disabled: !panelComposicionAbierto && cuadrillas.length === 0,
+              },
+              {
+                icono: FileText,
+                titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
               },
             ]}
             menu={[
@@ -294,31 +302,59 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
         </div>
       )}
       <div className="min-h-0 flex-1">
-        {/* El grupo vive siempre: si el grid pasa de hijo directo a panel (o
-            al revés) React lo desmonta, el virtualizador vuelve a scroll 0 y
-            el renglón seleccionado deja de verse. */}
-        <ResizablePanelGroup orientation="vertical" className="h-full">
+        {/* Los grupos viven siempre: si el grid pasa de hijo directo a panel
+            (o al revés) React lo desmonta y el virtualizador vuelve a scroll 0. */}
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel
-            id="cuadrillas-grid"
-            defaultSize="25"
-            minSize="15"
+            id="cuadrillas-principal"
+            defaultSize="65"
+            minSize="40"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden"
           >
-            {grid}
+            <ResizablePanelGroup orientation="vertical" className="h-full">
+              <ResizablePanel
+                id="cuadrillas-grid"
+                defaultSize="25"
+                minSize="15"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                {grid}
+              </ResizablePanel>
+              {panelComposicionAbierto ? (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel
+                    id="cuadrillas-composicion"
+                    defaultSize="75"
+                    minSize="40"
+                    className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                  >
+                    <CuadrillaDetallePanel
+                      cuadrilla={cuadrillaSeleccionada}
+                      onCerrar={() => setPanelComposicionAbierto(false)}
+                      onComposicionCambiada={recargarCuadrillas}
+                    />
+                  </ResizablePanel>
+                </>
+              ) : null}
+            </ResizablePanelGroup>
           </ResizablePanel>
-          {panelComposicionAbierto ? (
+          {panelFichaAbierto ? (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel
-                id="cuadrillas-composicion"
-                defaultSize="75"
-                minSize="40"
+                id="cuadrillas-ficha"
+                defaultSize="35"
+                minSize="22"
                 className="flex min-h-0 min-w-0 flex-col overflow-hidden"
               >
-                <CuadrillaDetallePanel
+                <CuadrillaFormPanel
                   cuadrilla={cuadrillaSeleccionada}
-                  onCerrar={() => setPanelComposicionAbierto(false)}
-                  onComposicionCambiada={recargarCuadrillas}
+                  unidades={unidades}
+                  familias={familias}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={recargarCuadrillas}
                 />
               </ResizablePanel>
             </>

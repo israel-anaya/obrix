@@ -414,6 +414,8 @@ export interface CuadrillaCosto extends CamposControl {
   sub_total_mano_obra: string;
   sub_total_herramienta: string;
   costo_total: string;
+  /** Última vez que se pulsó ⟳ en esta valuación. No es `updated_at`. */
+  sincronizado_en: string | null;
 }
 
 /**
@@ -428,6 +430,8 @@ export interface CuadrillaCostoDetalle {
   cantidad: string;
   costo: string;
   importe: string;
+  /** Foto de `fecha_vigencia_desde` del salario al recalcular. Solo MO. */
+  fecha_precio: string | null;
   created_at: string;
   created_by: string;
   updated_at: string | null;

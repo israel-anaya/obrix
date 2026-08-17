@@ -90,9 +90,10 @@ export function CuadrillasFicha() {
     return listCuadrillas()
       .then((r) => {
         setCuadrillas(r);
-        // Si nada está seleccionado (primera carga) arranca en la primera —
-        // una ficha vacía es menos útil que abrir directo en la primera hoja.
-        setSeleccionadaId((actual) => actual ?? r[0]?.id ?? null);
+        // Si nada está seleccionado (primera carga) arranca en la primera por
+        // clave — misma hoja que el tope de la lista ordenada. Una ficha
+        // vacía es menos útil que abrir directo.
+        setSeleccionadaId((actual) => actual ?? ordenarPor(r, (c) => c.clave)[0]?.id ?? null);
       })
       .catch((e) => setError(String(e)))
       .finally(() => setCargando(false));
@@ -129,8 +130,9 @@ export function CuadrillasFicha() {
 
   const cuadrillasFiltradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return cuadrillas;
-    return cuadrillas.filter((c) => c.clave.toLowerCase().includes(q) || c.descripcion.toLowerCase().includes(q));
+    const lista = ordenarPor(cuadrillas, (c) => c.clave);
+    if (!q) return lista;
+    return lista.filter((c) => c.clave.toLowerCase().includes(q) || c.descripcion.toLowerCase().includes(q));
   }, [cuadrillas, busqueda]);
 
   // Navegación con ↑/↓ entre cuadrillas — ignorada mientras el formulario de
@@ -158,7 +160,7 @@ export function CuadrillasFicha() {
   useEffect(() => {
     if (!seleccionadaId) return;
     itemRefs.current.get(seleccionadaId)?.scrollIntoView({ block: "nearest" });
-  }, [seleccionadaId]);
+  }, [seleccionadaId, cuadrillasFiltradas]);
 
   const iniciarCreacion = () => {
     setEditandoId(null);
@@ -277,6 +279,20 @@ export function CuadrillasFicha() {
               ]}
             />
           </div>
+          <div
+            className="flex items-center gap-2 border-b border-border px-3 py-1 text-[10px] text-muted-foreground"
+            title="Proporción del costo: mano de obra (azul) vs. herramienta (ámbar)"
+          >
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2 shrink-0 rounded-sm bg-blue-500" aria-hidden />
+              MO
+            </span>
+            <span aria-hidden>/</span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2 shrink-0 rounded-sm bg-amber-500" aria-hidden />
+              Herramienta
+            </span>
+          </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {cargando && cuadrillas.length === 0 ? (
               <p className="p-3 text-xs text-muted-foreground">Cargando…</p>
@@ -289,6 +305,7 @@ export function CuadrillasFicha() {
                 const he = Number(c.costo_nacional?.sub_total_herramienta) || 0;
                 const pctMo = costo > 0 ? (mo / costo) * 100 : 0;
                 const pctHe = costo > 0 ? (he / costo) * 100 : 0;
+                const activa = seleccionadaId === c.id;
                 return (
                   <button
                     key={c.id}
@@ -297,15 +314,28 @@ export function CuadrillasFicha() {
                       else itemRefs.current.delete(c.id);
                     }}
                     type="button"
+                    aria-current={activa ? "true" : undefined}
                     onClick={() => setSeleccionadaId(c.id)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left hover:bg-muted/50",
-                      seleccionadaId === c.id && "bg-muted",
+                      "flex w-full flex-col items-start gap-0.5 border-b border-border/50 border-l-2 px-3 py-2 text-left hover:bg-muted/50",
+                      activa
+                        ? "border-l-primary bg-primary/10"
+                        : "border-l-transparent",
                     )}
                   >
-                    <span className="font-mono text-[10px] text-muted-foreground">{c.clave}</span>
-                    <span className="line-clamp-6 w-full text-xs font-medium">{c.descripcion}</span>
-                    <div className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="flex w-full items-start justify-between gap-2">
+                      <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
+                        {c.clave}
+                      </span>
+                      <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                        ${fmt(c.costo_nacional?.costo_total ?? "0")}
+                      </span>
+                    </div>
+                    <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{c.descripcion}</span>
+                    <div
+                      className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                      title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
+                    >
                       <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
                       <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
                     </div>
@@ -317,7 +347,6 @@ export function CuadrillasFicha() {
                         <Wrench size={11} className="text-amber-500" />${fmt(c.costo_nacional?.sub_total_herramienta ?? "0")}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium text-foreground">${fmt(c.costo_nacional?.costo_total ?? "0")}</span>
                   </button>
                 );
               })

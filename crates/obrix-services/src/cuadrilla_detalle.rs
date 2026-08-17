@@ -99,6 +99,7 @@ impl CuadrillaDetalleService {
                 cantidad: Set(cantidad),
                 costo: Set(Decimal::ZERO),
                 importe: Set(Decimal::ZERO),
+                fecha_precio: Set(None),
                 deleted: Set(false),
                 created_at: Set(ahora.clone()),
                 created_by: Set(creado_por.clone()),
@@ -625,6 +626,7 @@ mod tests {
         let costo_herramienta = costo_detalles.iter().find(|d| d.cuadrilla_detalle_id == fila_herramienta.id).unwrap();
         assert_eq!(costo_herramienta.costo, Decimal::from(1500), "costo de herramienta = sub_total_mano_obra");
         assert_eq!(costo_herramienta.importe, Decimal::from_str("45.00").unwrap());
+        assert_eq!(costo_herramienta.fecha_precio, None, "herramienta no tiene fecha_precio");
 
         // Borrar la herramienta deja el costo total igual al de mano de obra.
         let tras_borrar = CuadrillaDetalleService::eliminar(&portafolio, fila_herramienta.id.clone(), "usr-1".into())

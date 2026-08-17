@@ -21,6 +21,10 @@ pub struct Model {
     pub sub_total_mano_obra: Decimal,
     pub sub_total_herramienta: Decimal,
     pub costo_total: Decimal,
+    /// Última vez que se recalcularon los costos desde los insumos vigentes
+    /// (el ⟳ de la ficha). No es `updated_at`: editar clave/descripción o
+    /// cantidades no cuenta como sincronización.
+    pub sincronizado_en: Option<String>,
     pub deleted: bool,
     pub created_at: String,
     pub created_by: String,

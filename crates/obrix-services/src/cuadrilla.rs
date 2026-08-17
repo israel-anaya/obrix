@@ -189,6 +189,7 @@ impl CuadrillaService {
             sub_total_mano_obra: Set(Decimal::ZERO),
             sub_total_herramienta: Set(Decimal::ZERO),
             costo_total: Set(Decimal::ZERO),
+            sincronizado_en: Set(None),
             deleted: Set(false),
             created_at: Set(ahora),
             created_by: Set(creado_por),

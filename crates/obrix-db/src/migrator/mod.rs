@@ -10,6 +10,7 @@ mod m20260815_000001_equipo_costo_horario_subtotales;
 mod m20260815_000002_perfil_inactividad_equipo;
 mod m20260815_000003_cuadrilla_costo;
 mod m20260816_000001_familia_insumo_insumos_asociados;
+mod m20260816_000002_cuadrilla_costo_sincronizado;
 
 use sea_orm_migration::prelude::*;
 
@@ -31,6 +32,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260815_000002_perfil_inactividad_equipo::Migration),
             Box::new(m20260815_000003_cuadrilla_costo::Migration),
             Box::new(m20260816_000001_familia_insumo_insumos_asociados::Migration),
+            Box::new(m20260816_000002_cuadrilla_costo_sincronizado::Migration),
         ]
     }
 }

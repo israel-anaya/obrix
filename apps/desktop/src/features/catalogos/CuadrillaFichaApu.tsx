@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, HardHat, MapPin, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { AlertTriangle, CalendarDays, Globe2, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,7 @@ import {
   updateCuadrillaCostoDetalle,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
+import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
 import type {
   CategoriaFasar,
   Cuadrilla,
@@ -52,6 +53,200 @@ function fmt(valor: string): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return valor;
   return numero.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function centavos(valor: number): number {
+  return Math.round(valor * 100) / 100;
+}
+
+function fmtDelta(valor: number): string {
+  const abs = fmt(String(Math.abs(valor)));
+  if (valor > 0) return `+$${abs}`;
+  if (valor < 0) return `−$${abs}`;
+  return "$0.00";
+}
+
+function ChipDelta({ valor, className }: { valor: number; className?: string }) {
+  if (valor === 0) return null;
+  return (
+    <span
+      className={cn(
+        "inline-block animate-in fade-in-0 zoom-in-95 font-semibold tabular-nums",
+        valor > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400",
+        className,
+      )}
+    >
+      {fmtDelta(valor)}
+    </span>
+  );
+}
+
+/** Hasta 30 días: vigente. Más de 30: ámbar. Más de 90, o el salario vigente ya no coincide: crítico. */
+const DIAS_PRECIO_FRESCO = 30;
+const DIAS_PRECIO_CRITICO = 90;
+
+function FechaPrecioFrescura({
+  fecha,
+  fechaSalarioVigente,
+}: {
+  fecha: string;
+  fechaSalarioVigente?: string | null;
+}) {
+  const salarioCambio =
+    !!fechaSalarioVigente && fecha.slice(0, 10) !== fechaSalarioVigente.slice(0, 10);
+  const dias = diasTranscurridos(fecha);
+  const nivel = salarioCambio || (dias != null && dias > DIAS_PRECIO_CRITICO)
+    ? "critica"
+    : dias != null && dias > DIAS_PRECIO_FRESCO
+      ? "desactualizada"
+      : "vigente";
+  const titulo = salarioCambio
+    ? `El salario vigente cambió (${formatearFecha(fechaSalarioVigente)}). Sincroniza para actualizar este costo.`
+    : nivel === "critica"
+      ? `Precio con más de ${DIAS_PRECIO_CRITICO} días de vigencia`
+      : nivel === "desactualizada"
+        ? `Precio con más de ${DIAS_PRECIO_FRESCO} días de vigencia`
+        : formatearFecha(fecha);
+
+  return (
+    <div
+      title={titulo}
+      className={cn(
+        "inline-flex items-center justify-end gap-0.5 leading-tight",
+        nivel === "vigente" && "text-[10px] font-normal text-muted-foreground/70",
+        nivel === "desactualizada" && "text-[11px] font-medium text-amber-700 dark:text-amber-400",
+        nivel === "critica" && "text-[11px] font-semibold text-rose-600 dark:text-rose-400",
+      )}
+    >
+      {nivel === "critica" ? <AlertTriangle size={10} className="shrink-0" /> : null}
+      {formatearFecha(fecha)}
+    </div>
+  );
+}
+
+const MITAD_FILA = 0.5;
+
+/**
+ * Reordenar renglones de la ficha arrastrando el handle (⋮⋮). HTML5 nativo,
+ * el mismo enfoque que `useColumnDrag` en el grid: el navegador pinta la
+ * imagen del drag y no hay `mousemove` compitiendo con los inputs de cantidad.
+ * El handle es el único `draggable`; la fila solo recibe drop.
+ */
+function useFilaDrag({
+  ids,
+  onMove,
+  enabled,
+}: {
+  ids: string[];
+  onMove: (id: string, indiceDestino: number) => void;
+  enabled: boolean;
+}) {
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  const [soltarEn, setSoltarEn] = useState<{ id: string; antes: boolean } | null>(null);
+  const soltarEnRef = useRef(soltarEn);
+  soltarEnRef.current = soltarEn;
+  const arrastrandoRef = useRef<string | null>(null);
+
+  const limpiar = useCallback(() => {
+    arrastrandoRef.current = null;
+    setArrastrando(null);
+    setSoltarEn(null);
+  }, []);
+
+  const handleProps = useCallback(
+    (id: string) =>
+      enabled
+        ? {
+            draggable: true as const,
+            onDragStart: (e: DragEvent) => {
+              arrastrandoRef.current = id;
+              setArrastrando(id);
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", id);
+            },
+            onDragEnd: limpiar,
+          }
+        : {},
+    [enabled, limpiar],
+  );
+
+  const mitadSuperior = (e: DragEvent) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    return e.clientY - box.top < box.height * MITAD_FILA;
+  };
+
+  const filaProps = useCallback(
+    (id: string) =>
+      enabled
+        ? {
+            onDragOver: (e: DragEvent) => {
+              if (arrastrandoRef.current === null) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              const antes = mitadSuperior(e);
+              const actual = soltarEnRef.current;
+              if (!actual || actual.id !== id || actual.antes !== antes) {
+                setSoltarEn({ id, antes });
+              }
+            },
+            onDrop: (e: DragEvent) => {
+              const from = arrastrandoRef.current;
+              if (from === null) return limpiar();
+              e.preventDefault();
+              const to = ids.indexOf(id);
+              const fromIndex = ids.indexOf(from);
+              if (to < 0 || fromIndex < 0) return limpiar();
+              let dest = mitadSuperior(e) ? to : to + 1;
+              if (fromIndex < dest) dest -= 1;
+              limpiar();
+              if (dest !== fromIndex) onMove(from, dest);
+            },
+          }
+        : {},
+    [enabled, ids, onMove, limpiar],
+  );
+
+  const filaClass = useCallback(
+    (id: string): string | false => {
+      if (arrastrando === id) return "opacity-40";
+      return false;
+    },
+    [arrastrando],
+  );
+
+  // Índice del hueco visual (0 = antes del primero, `ids.length` = después del
+  // último). `null` si no hay drag o si soltar ahí no movería la fila.
+  const hueco = useMemo(() => {
+    if (!soltarEn || !arrastrando) return null;
+    const to = ids.indexOf(soltarEn.id);
+    const from = ids.indexOf(arrastrando);
+    if (to < 0 || from < 0) return null;
+    const dest = soltarEn.antes ? to : to + 1;
+    if (dest === from || dest === from + 1) return null;
+    return dest;
+  }, [soltarEn, arrastrando, ids]);
+
+  return useMemo(
+    () => ({ handleProps, filaProps, filaClass, hueco }),
+    [handleProps, filaProps, filaClass, hueco],
+  );
+}
+
+function MarcadorInsercion() {
+  return (
+    <tr aria-hidden className="pointer-events-none">
+      <td colSpan={7} className="relative h-0 p-0">
+        <div className="absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 items-center gap-2 px-1">
+          <span className="size-2 shrink-0 rounded-full bg-primary ring-2 ring-background" />
+          <span className="h-0.5 flex-1 bg-primary" />
+          <span className="rounded-sm bg-primary px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+            Soltar aquí
+          </span>
+          <span className="h-0.5 flex-1 bg-primary" />
+        </div>
+      </td>
+    </tr>
+  );
 }
 
 /**
@@ -94,6 +289,13 @@ export function CuadrillaFichaApu({
   const [confirmandoEliminarValuacion, setConfirmandoEliminarValuacion] = useState(false);
   const [pendingQuitar, setPendingQuitar] = useState<CuadrillaDetalle | null>(null);
   const [recalculando, setRecalculando] = useState(false);
+  const [mostrarFechaPrecio, setMostrarFechaPrecio] = useState(false);
+  const [destello, setDestello] = useState<{
+    ticket: number;
+    total: number;
+    filaId: string;
+    fila: number;
+  } | null>(null);
 
   useEffect(() => {
     listCategoriasFasar().then(setCategorias).catch(() => {});
@@ -110,7 +312,18 @@ export function CuadrillaFichaApu({
     setAgregandoIntegrante(false);
     setAgregandoHerramienta(false);
     setCreandoRegion(false);
+    setDestello(null);
   }, [cuadrilla.id]);
+
+  useEffect(() => {
+    setDestello(null);
+  }, [costoSeleccionadoId]);
+
+  useEffect(() => {
+    if (!destello) return;
+    const t = window.setTimeout(() => setDestello(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [destello]);
 
   const cargarDetalles = (id: string) =>
     listCuadrillaDetalles(id)
@@ -163,7 +376,18 @@ export function CuadrillaFichaApu({
   const trasMutarCantidad = async () => {
     onCambio();
     await cargarCostos(cuadrilla.id);
-    if (costoSeleccionadoId) await listCuadrillaCostoDetalles(costoSeleccionadoId).then(setCostoDetalles).catch(() => {});
+    if (!costoSeleccionadoId) {
+      setCostoDetalles([]);
+      return [] as CuadrillaCostoDetalle[];
+    }
+    try {
+      const r = await listCuadrillaCostoDetalles(costoSeleccionadoId);
+      setCostoDetalles(r);
+      return r;
+    } catch (e) {
+      setError(String(e));
+      return [] as CuadrillaCostoDetalle[];
+    }
   };
 
   const recalcular = async () => {
@@ -298,22 +522,47 @@ export function CuadrillaFichaApu({
     if (redondeada === Number(cd.cantidad)) return;
     setError(null);
     try {
-      await updateCuadrillaCostoDetalle(cd.id, { cantidad: String(redondeada) });
-      await trasMutarCantidad();
+      const totalAntes = Number(costoSeleccionado?.costo_total) || 0;
+      const importeAntes = Number(cd.importe) || 0;
+      const actualizado = await updateCuadrillaCostoDetalle(cd.id, { cantidad: String(redondeada) });
+      const nuevos = await trasMutarCantidad();
+      const importeDespues = Number(nuevos.find((n) => n.id === cd.id)?.importe) || 0;
+      const deltaTotal = centavos(Number(actualizado.costo_total) - totalAntes);
+      const deltaFila = centavos(importeDespues - importeAntes);
+      if (deltaTotal !== 0 || deltaFila !== 0) {
+        setDestello({ ticket: Date.now(), total: deltaTotal, filaId: detalle.id, fila: deltaFila });
+      }
     } catch (e) {
       setError(String(e));
     }
   };
 
-  const mover = async (detalle: CuadrillaDetalle, direccion: DireccionMovimiento) => {
+  const reordenar = async (filas: CuadrillaDetalle[], id: string, indiceDestino: number) => {
+    const fromIndex = filas.findIndex((d) => d.id === id);
+    if (fromIndex < 0 || fromIndex === indiceDestino) return;
+    const direccion: DireccionMovimiento = indiceDestino < fromIndex ? "arriba" : "abajo";
+    const pasos = Math.abs(indiceDestino - fromIndex);
     setError(null);
     try {
-      await moveCuadrillaDetalle(detalle.id, direccion);
+      for (let i = 0; i < pasos; i++) {
+        await moveCuadrillaDetalle(id, direccion);
+      }
       await trasMutarReceta();
     } catch (e) {
       setError(String(e));
     }
   };
+
+  const dragIntegrantes = useFilaDrag({
+    ids: integrantes.map((d) => d.id),
+    enabled: esNacional,
+    onMove: (id, dest) => void reordenar(integrantes, id, dest),
+  });
+  const dragHerramienta = useFilaDrag({
+    ids: herramientaDetalles.map((d) => d.id),
+    enabled: esNacional,
+    onMove: (id, dest) => void reordenar(herramientaDetalles, id, dest),
+  });
 
   const nombreDetalle = (detalle: CuadrillaDetalle) =>
     detalle.tipo === "categoria_fasar"
@@ -360,62 +609,105 @@ export function CuadrillaFichaApu({
 
           <Separator className="my-2" />
 
-          <div className="flex items-center gap-2">
-            <MapPin size={11} className="text-muted-foreground" />
-            <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
-              <SelectTrigger size="sm" className="w-[220px] rounded border border-border bg-background px-1.5 py-0.5 text-[11px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {costos.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!esNacional && (
+          <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 px-2.5 py-2">
+            <span
+              className={cn(
+                "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md",
+                esNacional ? "bg-primary/10 text-primary" : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+              )}
+              title={esNacional ? "Valuación nacional" : "Valuación regional"}
+            >
+              {esNacional ? <Globe2 size={16} /> : <MapPinned size={16} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-h-6 items-center gap-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Zona de precios
+                </p>
+                {!esNacional && (
+                  <button
+                    type="button"
+                    title="Eliminar valuación regional"
+                    onClick={() => setConfirmandoEliminarValuacion(true)}
+                    className="rounded p-0.5 text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+                {!creandoRegion ? (
+                  regionesSinValuacion.length > 0 && (
+                    <button
+                      type="button"
+                      title="Crear valuación regional"
+                      onClick={() => setCreandoRegion(true)}
+                      className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  )
+                ) : (
+                  <ComboboxFiltrable
+                    opciones={ordenarPor(regionesSinValuacion, (r) => r.nombre).map((r) => ({ id: r.id, etiqueta: r.nombre }))}
+                    placeholder="Buscar región…"
+                    onElegir={(id) => void crearValuacionRegional(id)}
+                    onCancelar={() => setCreandoRegion(false)}
+                    className="w-40"
+                  />
+                )}
+              </div>
+              <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
+                <SelectTrigger
+                  size="sm"
+                  className="h-7 w-full max-w-[260px] border-0 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-0"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {costos.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-1.5">
+                        {c.region_id ? <MapPinned size={12} /> : <Globe2 size={12} />}
+                        {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1">
               <button
                 type="button"
-                title="Eliminar valuación regional"
-                onClick={() => setConfirmandoEliminarValuacion(true)}
-                className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                title={
+                  recalculando
+                    ? "Recalculando costos…"
+                    : [
+                        "Recalcular costos de esta zona de precios con los salarios y la herramienta vigentes.",
+                        costoSeleccionado?.sincronizado_en
+                          ? `Última sincronización: ${formatearFecha(costoSeleccionado.sincronizado_en)}`
+                          : "Aún no se ha sincronizado con los insumos vigentes.",
+                      ].join("\n")
+                }
+                onClick={() => void recalcular()}
+                disabled={recalculando}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted",
+                  recalculando && "opacity-50",
+                )}
               >
-                <Trash2 size={12} />
+                <RefreshCcw size={12} className={cn(recalculando && "animate-spin")} />
+                {recalculando ? "Sincronizando…" : "Sincronizar"}
               </button>
-            )}
-            {!creandoRegion ? (
-              regionesSinValuacion.length > 0 && (
-                <button
-                  type="button"
-                  title="Crear valuación regional"
-                  onClick={() => setCreandoRegion(true)}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  <Plus size={12} />
-                </button>
-              )
-            ) : (
-              <ComboboxFiltrable
-                opciones={ordenarPor(regionesSinValuacion, (r) => r.nombre).map((r) => ({ id: r.id, etiqueta: r.nombre }))}
-                placeholder="Buscar región…"
-                onElegir={(id) => void crearValuacionRegional(id)}
-                onCancelar={() => setCreandoRegion(false)}
-                className="w-40"
-              />
-            )}
-            <button
-              type="button"
-              title="Recalcular costos de la valuación desde los insumos vigentes"
-              onClick={() => void recalcular()}
-              disabled={recalculando}
-              className={cn(
-                "ml-auto rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground",
-                recalculando && "opacity-50",
+              {costoSeleccionado?.sincronizado_en ? (
+                <span className="max-w-[8.5rem] text-right text-[9px] leading-tight text-muted-foreground tabular-nums">
+                  {formatearFecha(costoSeleccionado.sincronizado_en)}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
+                  <AlertTriangle size={10} className="shrink-0" />
+                  Sin sincronizar
+                </span>
               )}
-            >
-              <RefreshCcw size={12} className={cn(recalculando && "animate-spin")} />
-            </button>
+            </div>
           </div>
         </div>
 
@@ -427,9 +719,30 @@ export function CuadrillaFichaApu({
                 <th className="py-1 pr-2 font-semibold">Descripción</th>
                 <th className="w-16 py-1 pr-2 font-semibold">Unidad</th>
                 <th className="w-20 py-1 pr-2 text-right font-semibold">Cantidad</th>
-                <th className="w-24 py-1 pr-2 text-right font-semibold">Costo</th>
+                <th className="w-24 py-1 pr-2 text-right font-semibold">
+                  <span className="inline-flex items-center justify-end gap-1">
+                    Costo
+                    <button
+                      type="button"
+                      aria-pressed={mostrarFechaPrecio}
+                      title="Mostrar/ocultar fecha de precios"
+                      onClick={() => setMostrarFechaPrecio((v) => !v)}
+                      className={cn(
+                        "rounded p-0.5 normal-case tracking-normal",
+                        mostrarFechaPrecio
+                          ? "text-primary"
+                          : "text-muted-foreground/70 hover:text-foreground",
+                      )}
+                    >
+                      <CalendarDays
+                        size={12}
+                        className={mostrarFechaPrecio ? "fill-current" : undefined}
+                      />
+                    </button>
+                  </span>
+                </th>
                 <th className="w-24 py-1 text-right font-semibold">Importe</th>
-                <th className="w-6" />
+                <th className="w-14" />
               </tr>
             </thead>
 
@@ -453,7 +766,12 @@ export function CuadrillaFichaApu({
               {integrantes.map((d, i) => {
                 const cd = costoDetallePorDetalleId[d.id];
                 return (
-                  <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30">
+                  <Fragment key={d.id}>
+                    {dragIntegrantes.hueco === i && <MarcadorInsercion />}
+                    <tr
+                      className={cn("border-b border-border/50 hover:bg-muted/30", dragIntegrantes.filaClass(d.id))}
+                      {...dragIntegrantes.filaProps(d.id)}
+                    >
                     <td className="py-1 pr-2 font-mono text-muted-foreground">
                       {categoriaPorId[d.detalle_insumo_id]?.clave ?? d.detalle_insumo_id}
                     </td>
@@ -469,34 +787,49 @@ export function CuadrillaFichaApu({
                         className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                       />
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">${fmt(cd?.costo ?? "0")}</td>
-                    <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
+                    <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
+                      <div>${fmt(cd?.costo ?? "0")}</div>
+                      {mostrarFechaPrecio && cd?.fecha_precio ? (
+                        <FechaPrecioFrescura
+                          fecha={cd.fecha_precio}
+                          fechaSalarioVigente={
+                            esNacional
+                              ? categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
+                              : null
+                          }
+                        />
+                      ) : null}
+                    </td>
+                    <td
+                      className={cn(
+                        "py-1 text-right font-medium tabular-nums transition-colors duration-700",
+                        destello?.filaId === d.id && destello.fila > 0 && "bg-emerald-500/20",
+                        destello?.filaId === d.id && destello.fila < 0 && "bg-rose-500/20",
+                      )}
+                    >
+                      <span className="inline-flex items-baseline justify-end gap-1">
+                        {destello?.filaId === d.id && (
+                          <ChipDelta key={destello.ticket} valor={destello.fila} className="text-[10px]" />
+                        )}
+                        ${fmt(cd?.importe ?? "0")}
+                      </span>
+                    </td>
                     <td className="py-1 text-right">
                       {esNacional && (
                         <div className="flex items-center justify-end gap-0.5">
-                          <button
-                            type="button"
-                            title="Subir"
-                            disabled={i === 0}
-                            onClick={() => void mover(d, "arriba")}
-                            className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
+                          <span
+                            title="Arrastra para reordenar"
+                            className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                            {...dragIntegrantes.handleProps(d.id)}
                           >
-                            <ArrowUp size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Bajar"
-                            disabled={i === integrantes.length - 1}
-                            onClick={() => void mover(d, "abajo")}
-                            className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
-                          >
-                            <ArrowDown size={12} />
-                          </button>
+                            <GripVertical size={12} />
+                          </span>
+                          <Separator orientation="vertical" />
                           <button
                             type="button"
                             title="Quitar"
                             onClick={() => setPendingQuitar(d)}
-                            className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                           >
                             <X size={12} />
                           </button>
@@ -504,6 +837,10 @@ export function CuadrillaFichaApu({
                       )}
                     </td>
                   </tr>
+                  {dragIntegrantes.hueco === integrantes.length && i === integrantes.length - 1 && (
+                    <MarcadorInsercion />
+                  )}
+                  </Fragment>
                 );
               })}
               {esNacional && (
@@ -522,9 +859,9 @@ export function CuadrillaFichaApu({
                       <button
                         type="button"
                         onClick={() => setAgregandoIntegrante(true)}
-                        className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                       >
-                        <Plus size={11} /> Agregar renglón
+                        <Plus size={12} /> Agregar renglón
                       </button>
                     )}
                   </td>
@@ -559,7 +896,12 @@ export function CuadrillaFichaApu({
               {herramientaDetalles.map((d, i) => {
                 const cd = costoDetallePorDetalleId[d.id];
                 return (
-                  <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30">
+                  <Fragment key={d.id}>
+                    {dragHerramienta.hueco === i && <MarcadorInsercion />}
+                    <tr
+                      className={cn("border-b border-border/50 hover:bg-muted/30", dragHerramienta.filaClass(d.id))}
+                      {...dragHerramienta.filaProps(d.id)}
+                    >
                     <td className="py-1 pr-2 font-mono text-muted-foreground">
                       {herramientaPorId[d.detalle_insumo_id]?.clave ?? d.detalle_insumo_id}
                     </td>
@@ -576,33 +918,36 @@ export function CuadrillaFichaApu({
                       />
                     </td>
                     <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">${fmt(cd?.costo ?? "0")}</td>
-                    <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
+                    <td
+                      className={cn(
+                        "py-1 text-right font-medium tabular-nums transition-colors duration-700",
+                        destello?.filaId === d.id && destello.fila > 0 && "bg-emerald-500/20",
+                        destello?.filaId === d.id && destello.fila < 0 && "bg-rose-500/20",
+                      )}
+                    >
+                      <span className="inline-flex items-baseline justify-end gap-1">
+                        {destello?.filaId === d.id && (
+                          <ChipDelta key={destello.ticket} valor={destello.fila} className="text-[10px]" />
+                        )}
+                        ${fmt(cd?.importe ?? "0")}
+                      </span>
+                    </td>
                     <td className="py-1 text-right">
                       {esNacional && (
                         <div className="flex items-center justify-end gap-0.5">
-                          <button
-                            type="button"
-                            title="Subir"
-                            disabled={i === 0}
-                            onClick={() => void mover(d, "arriba")}
-                            className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
+                          <span
+                            title="Arrastra para reordenar"
+                            className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                            {...dragHerramienta.handleProps(d.id)}
                           >
-                            <ArrowUp size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Bajar"
-                            disabled={i === herramientaDetalles.length - 1}
-                            onClick={() => void mover(d, "abajo")}
-                            className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
-                          >
-                            <ArrowDown size={12} />
-                          </button>
+                            <GripVertical size={12} />
+                          </span>
+                          <Separator orientation="vertical" />
                           <button
                             type="button"
                             title="Quitar"
                             onClick={() => setPendingQuitar(d)}
-                            className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                           >
                             <X size={12} />
                           </button>
@@ -610,6 +955,9 @@ export function CuadrillaFichaApu({
                       )}
                     </td>
                   </tr>
+                  {dragHerramienta.hueco === herramientaDetalles.length &&
+                    i === herramientaDetalles.length - 1 && <MarcadorInsercion />}
+                  </Fragment>
                 );
               })}
               {esNacional && (
@@ -630,9 +978,9 @@ export function CuadrillaFichaApu({
                       <button
                         type="button"
                         onClick={() => setAgregandoHerramienta(true)}
-                        className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                       >
-                        <Plus size={11} /> Agregar renglón
+                        <Plus size={12} /> Agregar renglón
                       </button>
                     )}
                   </td>
@@ -652,9 +1000,21 @@ export function CuadrillaFichaApu({
         </div>
 
         {/* Costo total */}
-        <div className="flex items-center justify-between rounded-b-lg border-t-2 border-foreground/20 bg-muted/40 px-4 py-2.5">
+        <div
+          className={cn(
+            "flex items-center justify-between rounded-b-lg border-t-2 border-foreground/20 px-4 py-2.5 transition-colors duration-700",
+            destello && destello.total > 0 && "bg-emerald-500/20",
+            destello && destello.total < 0 && "bg-rose-500/20",
+            (!destello || destello.total === 0) && "bg-muted/40",
+          )}
+        >
           <span className="text-xs font-semibold uppercase tracking-widest">Costo directo</span>
-          <span className="text-xl font-bold tabular-nums">${fmt(costoSeleccionado?.costo_total ?? "0")}</span>
+          <span className="flex items-baseline gap-2">
+            {destello && (
+              <ChipDelta key={destello.ticket} valor={destello.total} className="text-sm" />
+            )}
+            <span className="text-xl font-bold tabular-nums">${fmt(costoSeleccionado?.costo_total ?? "0")}</span>
+          </span>
         </div>
       </div>
 

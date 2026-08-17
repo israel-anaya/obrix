@@ -80,6 +80,7 @@ impl CuadrillaCostoService {
             sub_total_mano_obra: Set(Decimal::ZERO),
             sub_total_herramienta: Set(Decimal::ZERO),
             costo_total: Set(Decimal::ZERO),
+            sincronizado_en: Set(None),
             deleted: Set(false),
             created_at: Set(ahora.clone()),
             created_by: Set(creado_por.clone()),
@@ -99,6 +100,7 @@ impl CuadrillaCostoService {
                 cantidad: Set(d.cantidad),
                 costo: Set(Decimal::ZERO),
                 importe: Set(Decimal::ZERO),
+                fecha_precio: Set(None),
                 deleted: Set(false),
                 created_at: Set(ahora.clone()),
                 created_by: Set(creado_por.clone()),
@@ -163,12 +165,17 @@ impl CuadrillaCostoService {
     /// composición — trae de nueva cuenta el salario vigente de cada
     /// integrante. Útil cuando los salarios de los insumos referenciados se
     /// actualizaron después del último cambio a la receta o a las cantidades.
+    /// Marca `sincronizado_en` para que la ficha muestre cuándo se jalaron
+    /// los insumos vigentes (no usa `updated_at`).
     pub async fn recalcular_costos(
         repo: &dyn PortafolioRepository,
         cuadrilla_costo_id: String,
     ) -> Result<cuadrilla_costo::Model, ServiceError> {
         let txn = repo.conexion().begin().await?;
         let resultado = Self::recalcular_valuacion(&txn, &cuadrilla_costo_id).await?;
+        let mut am: cuadrilla_costo::ActiveModel = resultado.into();
+        am.sincronizado_en = Set(Some(crate::ahora()));
+        let resultado = am.update(&txn).await?;
         txn.commit().await?;
         Ok(resultado)
     }
@@ -212,7 +219,7 @@ impl CuadrillaCostoService {
         }
 
         let mut sub_total_mano_obra = Decimal::ZERO;
-        let mut pendientes: Vec<(String, Decimal, Decimal)> = Vec::new();
+        let mut pendientes: Vec<(String, Decimal, Decimal, Option<String>)> = Vec::new();
         for d in detalles.iter().filter(|d| recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::CategoriaFasar) {
             let receta = &recetas[&d.cuadrilla_detalle_id];
             let salario = match Self::salario_vigente(txn, &receta.detalle_insumo_id, region_id.as_deref()).await? {
@@ -228,9 +235,9 @@ impl CuadrillaCostoService {
                     )));
                 }
             };
-            let importe = d.cantidad * salario;
+            let importe = d.cantidad * salario.salario_real_diario;
             sub_total_mano_obra += importe;
-            pendientes.push((d.id.clone(), salario, importe));
+            pendientes.push((d.id.clone(), salario.salario_real_diario, importe, Some(salario.fecha_vigencia_desde)));
         }
 
         let mut sub_total_herramienta = Decimal::ZERO;
@@ -238,10 +245,10 @@ impl CuadrillaCostoService {
             let costo = sub_total_mano_obra;
             let importe = costo * d.cantidad / Decimal::ONE_HUNDRED;
             sub_total_herramienta += importe;
-            pendientes.push((d.id.clone(), costo, importe));
+            pendientes.push((d.id.clone(), costo, importe, None));
         }
 
-        for (id, costo, importe) in pendientes {
+        for (id, costo, importe, fecha_precio) in pendientes {
             let mut am: cuadrilla_costo_detalle::ActiveModel = cuadrilla_costo_detalle::Entity::find_by_id(&id)
                 .one(txn)
                 .await?
@@ -249,6 +256,7 @@ impl CuadrillaCostoService {
                 .into();
             am.costo = Set(costo);
             am.importe = Set(importe);
+            am.fecha_precio = Set(fecha_precio);
             am.update(txn).await?;
         }
 
@@ -269,7 +277,7 @@ impl CuadrillaCostoService {
         txn: &DatabaseTransaction,
         insumo_id: &str,
         region_id: Option<&str>,
-    ) -> Result<Option<Decimal>, ServiceError> {
+    ) -> Result<Option<salario_categoria_fasar::Model>, ServiceError> {
         if let Some(region_id) = region_id {
             let regional = salario_categoria_fasar::Entity::find()
                 .filter(salario_categoria_fasar::Column::InsumoId.eq(insumo_id))
@@ -279,7 +287,7 @@ impl CuadrillaCostoService {
                 .one(txn)
                 .await?;
             if let Some(regional) = regional {
-                return Ok(Some(regional.salario_real_diario));
+                return Ok(Some(regional));
             }
         }
         let nacional = salario_categoria_fasar::Entity::find()
@@ -289,7 +297,7 @@ impl CuadrillaCostoService {
             .order_by_desc(salario_categoria_fasar::Column::FechaVigenciaDesde)
             .one(txn)
             .await?;
-        Ok(nacional.map(|s| s.salario_real_diario))
+        Ok(nacional)
     }
 
     /// Costo vigente de una cuadrilla para el consumidor externo
@@ -540,6 +548,45 @@ mod tests {
             .expect("listar cuadrilla_costo_detalle");
         assert_eq!(detalles.len(), 1);
         assert_eq!(detalles[0].cantidad, Decimal::from(2), "copia la cantidad de la valuación nacional");
+        assert_eq!(
+            detalles[0].fecha_precio.as_deref(),
+            Some("2026-01-01"),
+            "el recálculo de valuación copia fecha_vigencia_desde del salario"
+        );
+        assert_eq!(regional.sincronizado_en, None, "crear regional no es una sincronización ⟳");
+    }
+
+    #[tokio::test]
+    async fn recalculo_manual_marca_sincronizado_en_sin_confundirlo_con_updated_at() {
+        let portafolio = portafolio_con_fixtures().await;
+        let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
+        let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
+        registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
+        let cuadrilla_id = crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
+
+        let nacional = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .next()
+            .expect("valuación nacional");
+        assert_eq!(
+            nacional.sincronizado_en, None,
+            "agregar integrante recalcula la valuación pero no marca sincronizado_en"
+        );
+        let detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+            .await
+            .expect("listar cuadrilla_costo_detalle");
+        assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
+
+        let tras = CuadrillaCostoService::recalcular_costos(&portafolio, nacional.id.clone())
+            .await
+            .expect("recalcular costos");
+        assert!(tras.sincronizado_en.is_some(), "el ⟳ debe marcar sincronizado_en");
+        let detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+            .await
+            .expect("listar tras recálculo");
+        assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
     }
 
     #[tokio::test]
