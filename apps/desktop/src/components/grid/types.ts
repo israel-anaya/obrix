@@ -25,6 +25,13 @@ export interface DataGridColumn {
   options?: readonly string[] | ((row: Row) => readonly string[]);
   /** Audit columns (created_at/created_by/updated_at/updated_by) — visible but never editable. */
   readOnly?: boolean;
+  /**
+   * Captured when the record is created and fixed from then on — for a key or a
+   * code the rest of the data hangs off, which cannot change once it exists.
+   * The column takes input while the new row is a draft; on an existing record
+   * it behaves like `readOnly` (no editor, no paste, no Delete).
+   */
+  readOnlyOnEdit?: boolean;
   /** Name of the row field carrying the node depth — when given, the cell is indented like a tree. */
   indentBy?: string;
   /** Rendered as stars (0–5) in read mode; editing still works on the raw numeric value. */

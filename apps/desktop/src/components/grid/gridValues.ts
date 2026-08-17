@@ -10,8 +10,29 @@ export function emptyRow(columns: DataGridColumn[]): Row {
   };
 }
 
-export function firstEditableField(columns: DataGridColumn[]): string | undefined {
-  return columns.find((c) => !c.readOnly)?.field ?? columns[0]?.field;
+/**
+ * Whether the column takes input in a given row. `readOnly` never does; a
+ * `readOnlyOnEdit` one only while the row is the draft of a record that does
+ * not exist yet — see `isNewRow`.
+ */
+export function isFieldEditable(column: DataGridColumn, isNew: boolean): boolean {
+  if (column.readOnly) return false;
+  return isNew || !column.readOnlyOnEdit;
+}
+
+/**
+ * Whether the row is the draft of a record that does not exist yet. Any row
+ * that is not the open draft is an already-persisted record, so a
+ * `readOnlyOnEdit` column is locked there too — the restriction has to hold
+ * before the edit starts, not only once it is open.
+ */
+export function isNewRow(editing: EditState | null, rowId: string): boolean {
+  return editing !== null && editing.isNew && editing.id === rowId;
+}
+
+/** Where the cursor lands on a row: its first column that takes input. */
+export function firstEditableField(columns: DataGridColumn[], isNew = true): string | undefined {
+  return columns.find((c) => isFieldEditable(c, isNew))?.field ?? columns[0]?.field;
 }
 
 /** Accepts a decimal comma or dot (`1,5` / `1.5`) and Mexico-style thousands (`1.234,56`). */

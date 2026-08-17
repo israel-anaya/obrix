@@ -3,7 +3,7 @@ import type { RowSelectionState } from "@tanstack/react-table";
 import { activeGridClipboard, setActiveGridClipboard, type GridClipboard } from "@/components/grid/gridClipboard";
 import type { SelectionStore, Store } from "./gridStore";
 import { applyLineToRow, parseTsv, rowToTsv, writeClipboard } from "./gridTsv";
-import { displayValue, emptyValue } from "./gridValues";
+import { displayValue, emptyValue, isFieldEditable, isNewRow } from "./gridValues";
 import type { DataGridColumn, EditState, OpenCell, Row } from "./types";
 
 /** The native clipboard events fired inside an editor belong to the editor. */
@@ -91,7 +91,13 @@ export function useGridClipboard({
       startIdx = columns.findIndex((c) => c.field === selectedCell.field);
       if (startIdx < 0) startIdx = 0;
     }
-    const { row: next, changed } = applyLineToRow(row, line, startIdx, columns);
+    const { row: next, changed } = applyLineToRow(
+      row,
+      line,
+      startIdx,
+      columns,
+      isNewRow(editingRef.current, targetId),
+    );
     if (!changed) return;
     const nextRows = rowsRef.current.map((f) => (f._id === targetId ? next : f));
     rowsRef.current = nextRows;
@@ -107,13 +113,14 @@ export function useGridClipboard({
   const clearCopiedSelection = () => {
     const selectedCell = selectionStore.get();
     if (!selectedCell) return;
+    const isNew = isNewRow(editingRef.current, selectedCell.rowId);
     if (copyWholeRowRef.current) {
       const row = rowsRef.current.find((f) => f._id === selectedCell.rowId);
       if (!row) return;
       let next: Row = { ...row };
       let changed = false;
       for (const col of columns) {
-        if (col.readOnly) continue;
+        if (!isFieldEditable(col, isNew)) continue;
         const empty = emptyValue(col);
         if (next[col.field] !== empty) {
           next = { ...next, [col.field]: empty };
@@ -132,7 +139,7 @@ export function useGridClipboard({
       return;
     }
     const col = columnByField.get(selectedCell.field);
-    if (!col || col.readOnly) return;
+    if (!col || !isFieldEditable(col, isNew)) return;
     commitCellChange(selectedCell.rowId, col.field, emptyValue(col));
   };
 

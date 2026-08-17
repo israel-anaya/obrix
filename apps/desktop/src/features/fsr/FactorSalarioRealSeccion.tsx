@@ -100,6 +100,7 @@ export function FactorSalarioRealSeccion({
           field: "region",
           header: "Región",
           width: 180,
+          readOnlyOnEdit: true,
           options: [NACIONAL, ...ordenarPor(regiones, (r) => r.nombre).map((r) => r.nombre)],
         },
         ...COLUMNAS_CONTROL,

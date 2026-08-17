@@ -74,6 +74,10 @@ export function useOpenCell(rowId: string, field: string) {
 export const CELL_LOCKED = 1;
 export const CELL_SAVING = 2;
 export const CELL_ERROR = 4;
+/** This row is the draft of a record that does not exist yet (see `readOnlyOnEdit`). */
+export const CELL_ROW_NEW = 8;
+/** This row is the draft of a record that already exists. */
+export const CELL_ROW_EDIT = 16;
 
 export function useCellState(rowId: string, field: string): number {
   const { chrome } = useGridUi();
@@ -82,10 +86,12 @@ export function useCellState(rowId: string, field: string): number {
     useCallback(() => {
       const c = chrome.get();
       const e = c.editing;
+      const draft = e !== null && e.id === rowId ? e : null;
       return (
-        (e && e.id !== rowId ? CELL_LOCKED : 0) |
+        (e && !draft ? CELL_LOCKED : 0) |
         (c.saving ? CELL_SAVING : 0) |
-        (e?.id === rowId && c.errorFields.has(field) ? CELL_ERROR : 0)
+        (draft && c.errorFields.has(field) ? CELL_ERROR : 0) |
+        (draft ? (draft.isNew ? CELL_ROW_NEW : CELL_ROW_EDIT) : 0)
       );
     }, [chrome, rowId, field]),
   );

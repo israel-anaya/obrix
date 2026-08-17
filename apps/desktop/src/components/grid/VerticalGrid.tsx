@@ -37,7 +37,7 @@ import {
 import { ROW_HEIGHT } from "./gridLayout";
 import { createSelectionStore, createStore, EMPTY_CHROME } from "./gridStore";
 import { applyLineToRow, parseTsv, writeClipboard } from "./gridTsv";
-import { displayValue, emptyRow, emptyValue, firstEditableField } from "./gridValues";
+import { displayValue, emptyRow, emptyValue, firstEditableField, isFieldEditable, isNewRow } from "./gridValues";
 import { ResizeHandle } from "./header/ResizeHandle";
 import { GridCellMemo } from "./rows/GridCell";
 import { RowActions } from "./rows/RowActions";
@@ -707,7 +707,13 @@ export const VerticalGrid = forwardRef<
       ? 0
       : Math.max(0, orderedFields.indexOf(sel?.field ?? ""));
     const values = lines.map((line) => line[0] ?? "");
-    const { row: next, changed } = applyLineToRow(row, values, startIdx, orderedColumns);
+    const { row: next, changed } = applyLineToRow(
+      row,
+      values,
+      startIdx,
+      orderedColumns,
+      isNewRow(editingRef.current, targetId),
+    );
     if (!changed) return;
     const nextRows = rowsRef.current.map((r) => (r._id === targetId ? next : r));
     rowsRef.current = nextRows;
@@ -723,9 +729,10 @@ export const VerticalGrid = forwardRef<
   const clearCopiedSelection = () => {
     const sel = selectionStore.get();
     if (!sel) return;
+    const isNew = isNewRow(editingRef.current, sel.rowId);
     if (!copyWholeRowRef.current) {
       const column = columnByField.get(sel.field);
-      if (!column || column.readOnly) return;
+      if (!column || !isFieldEditable(column, isNew)) return;
       commitCellChange(sel.rowId, column.field, emptyValue(column));
       return;
     }
@@ -734,7 +741,7 @@ export const VerticalGrid = forwardRef<
     let next: Row = { ...row };
     let changed = false;
     for (const column of orderedColumns) {
-      if (column.readOnly) continue;
+      if (!isFieldEditable(column, isNew)) continue;
       const empty = emptyValue(column);
       if (next[column.field] !== empty) {
         next = { ...next, [column.field]: empty };
@@ -830,6 +837,11 @@ export const VerticalGrid = forwardRef<
     if (selectionMode === "multiple") setRowSelection({ [next._id]: true });
   };
 
+  // El teclado llega a las mismas celdas que el ratón, así que cada atajo que
+  // escribe pasa por la misma regla que `GridCell` (ver `readOnlyOnEdit`).
+  const canCapture = (column: DataGridColumn, rowId: string) =>
+    isFieldEditable(column, isNewRow(editingRef.current, rowId));
+
   const onContainerKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     // El evento burbujea desde el `<input>`/`<select>` del editor de celda —
@@ -889,7 +901,7 @@ export const VerticalGrid = forwardRef<
 
     if (!openCellNow && sel && e.key === "F2") {
       const column = columnByField.get(sel.field);
-      if (column && !column.readOnly) {
+      if (column && canCapture(column, sel.rowId)) {
         e.preventDefault();
         if (column.boolean) {
           const row = rowsRef.current.find((r) => r._id === sel.rowId);
@@ -903,7 +915,7 @@ export const VerticalGrid = forwardRef<
 
     if (!openCellNow && sel && e.key === " ") {
       const column = columnByField.get(sel.field);
-      if (column?.boolean && !column.readOnly) {
+      if (column?.boolean && canCapture(column, sel.rowId)) {
         e.preventDefault();
         const row = rowsRef.current.find((r) => r._id === sel.rowId);
         if (row) commitCellChange(sel.rowId, column.field, !row[column.field]);
@@ -915,7 +927,7 @@ export const VerticalGrid = forwardRef<
     // registro — no se guarda hasta ✓, igual que en Excel y que el `DataGrid`.
     if (!openCellNow && sel && (e.key === "Delete" || e.key === "Backspace")) {
       const column = columnByField.get(sel.field);
-      if (column && !column.readOnly) {
+      if (column && canCapture(column, sel.rowId)) {
         e.preventDefault();
         commitCellChange(sel.rowId, column.field, emptyValue(column));
       }
@@ -926,7 +938,7 @@ export const VerticalGrid = forwardRef<
     // el valor — igual que Excel y que el `DataGrid`.
     if (!openCellNow && sel && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const column = columnByField.get(sel.field);
-      if (column && !column.readOnly && !column.boolean) {
+      if (column && !column.boolean && canCapture(column, sel.rowId)) {
         e.preventDefault();
         openCellAt(sel.rowId, sel.field, e.key);
       }
@@ -997,7 +1009,8 @@ export const VerticalGrid = forwardRef<
     if (editingRef.current && editingRef.current.id !== rowId) return;
     copyWholeRowRef.current = true;
     const sel = selectionStore.get();
-    const field = sel?.field ?? firstEditableField(orderedColumns);
+    const field =
+      sel?.field ?? firstEditableField(orderedColumns, isNewRow(editingRef.current, rowId));
     if (field) selectionStore.set({ rowId, field });
     if (selectionMode === "multiple") setRowSelection({ [rowId]: true });
   };

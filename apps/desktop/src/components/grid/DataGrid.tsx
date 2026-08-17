@@ -19,7 +19,7 @@ import { GridUiContext, type GridUi } from "./gridContext";
 import { ROW_HEIGHT, widthVar } from "./gridLayout";
 import { createSelectionStore, createStore, EMPTY_CHROME } from "./gridStore";
 import { features } from "./gridTable";
-import { displayValue, emptyRow, emptyValue, firstEditableField } from "./gridValues";
+import { displayValue, emptyRow, emptyValue, firstEditableField, isFieldEditable, isNewRow } from "./gridValues";
 import { ColumnMenu } from "./header/ColumnMenu";
 import { HeaderCell } from "./header/HeaderCell";
 import { ResizeHandle } from "./header/ResizeHandle";
@@ -798,6 +798,11 @@ export const DataGrid = forwardRef<
     scrollRef,
   });
 
+  // The keyboard reaches the same cells the mouse does, so every shortcut that
+  // writes goes through the same rule as `GridCell` (see `readOnlyOnEdit`).
+  const canCapture = (column: DataGridColumn, rowId: string) =>
+    isFieldEditable(column, isNewRow(editingRef.current, rowId));
+
   const onContainerKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const selectedCell = selectionStore.get();
     const openCellNow = openCellStore.get();
@@ -876,7 +881,7 @@ export const DataGrid = forwardRef<
 
     if (!openCellNow && selectedCell && e.key === "F2") {
       const column = columnByField.get(selectedCell.field);
-      if (column && !column.readOnly) {
+      if (column && canCapture(column, selectedCell.rowId)) {
         e.preventDefault();
         if (column.boolean) {
           const row = rowsRef.current.find((f) => f._id === selectedCell.rowId);
@@ -890,7 +895,7 @@ export const DataGrid = forwardRef<
 
     if (!openCellNow && selectedCell && e.key === " ") {
       const column = columnByField.get(selectedCell.field);
-      if (column && column.boolean && !column.readOnly) {
+      if (column && column.boolean && canCapture(column, selectedCell.rowId)) {
         e.preventDefault();
         const row = rowsRef.current.find((f) => f._id === selectedCell.rowId);
         if (row) commitCellChange(selectedCell.rowId, column.field, !row[column.field]);
@@ -902,7 +907,7 @@ export const DataGrid = forwardRef<
     // do not persist until ✓. Just like Excel, without opening the editor.
     if (!openCellNow && selectedCell && (e.key === "Delete" || e.key === "Backspace")) {
       const column = columnByField.get(selectedCell.field);
-      if (column && !column.readOnly) {
+      if (column && canCapture(column, selectedCell.rowId)) {
         e.preventDefault();
         commitCellChange(selectedCell.rowId, column.field, emptyValue(column));
       }
@@ -915,7 +920,7 @@ export const DataGrid = forwardRef<
     // "type to replace" makes no sense.
     if (!openCellNow && selectedCell && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const column = columnByField.get(selectedCell.field);
-      if (column && !column.readOnly && !column.boolean) {
+      if (column && !column.boolean && canCapture(column, selectedCell.rowId)) {
         e.preventDefault();
         openCellAt(selectedCell.rowId, selectedCell.field, e.key);
       }
@@ -994,7 +999,7 @@ export const DataGrid = forwardRef<
     const columnId = target.closest("td")?.dataset.columnId;
     if (columnId && !columnId.startsWith("__")) return;
     copyWholeRowRef.current = columnId === "__index";
-    const field = firstEditableField(visibleColumnsRef.current);
+    const field = firstEditableField(visibleColumnsRef.current, isNewRow(editingRef.current, rowId));
     if (field) selectionStore.set({ rowId, field });
   };
 
@@ -1014,7 +1019,9 @@ export const DataGrid = forwardRef<
     const columnId = target.closest("td")?.dataset.columnId;
     const onData = columnId !== undefined && !columnId.startsWith("__");
     copyWholeRowRef.current = !onData;
-    const field = onData ? columnId : firstEditableField(visibleColumnsRef.current);
+    const field = onData
+      ? columnId
+      : firstEditableField(visibleColumnsRef.current, isNewRow(editingRef.current, rowId));
     if (field) selectionStore.set({ rowId, field });
     // Right-clicking outside the checked rows moves the selection onto that
     // one, the way a file manager does, so Delete acts on what is under the

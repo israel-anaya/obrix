@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useGridUi } from "../gridContext";
-import { parseNumber } from "../gridValues";
+import { isFieldEditable, isNewRow, parseNumber } from "../gridValues";
 import type { DataGridColumn, DataGridMeta, Row } from "../types";
 import { CellCombobox } from "./CellCombobox";
 
@@ -24,7 +24,8 @@ export function CellEditor({
   meta: DataGridMeta;
   forcedValue?: string;
 }) {
-  const columnsRef = useGridUi().columns;
+  const ui = useGridUi();
+  const columnsRef = ui.columns;
   // When `forcedValue` is given (the editor opened by typing straight over the
   // selected cell, without a double click), it starts by replacing the existing
   // value — just like Excel.
@@ -55,8 +56,10 @@ export function CellEditor({
 
   const navigate = (delta: 1 | -1, openEditor: boolean) => {
     // Read when the key is pressed, not when the editor mounts: Tab has to walk
-    // the columns as they are on screen — the user's order, hidden ones out.
-    const editable = columnsRef.current.filter((c) => !c.readOnly);
+    // the columns as they are on screen — the user's order, hidden ones out,
+    // and the ones this row no longer takes input in (see `readOnlyOnEdit`).
+    const isNew = isNewRow(ui.meta.current.editing, row._id);
+    const editable = columnsRef.current.filter((c) => isFieldEditable(c, isNew));
     const currentIdx = editable.findIndex((c) => c.field === column.field);
     const next = editable[currentIdx + delta];
     meta.selectCell(row._id, next ? next.field : column.field);

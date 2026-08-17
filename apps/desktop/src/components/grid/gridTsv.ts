@@ -1,4 +1,4 @@
-import { displayValue, parseNumber } from "./gridValues";
+import { displayValue, isFieldEditable, parseNumber } from "./gridValues";
 import type { DataGridColumn, Row } from "./types";
 
 function escapeTsv(value: string): string {
@@ -19,18 +19,24 @@ export function parseTsv(text: string): string[][] {
     .filter((line) => line.some((c) => c.trim() !== ""));
 }
 
+/**
+ * `isNew` tells whether the target row is the draft of a record that does not
+ * exist yet: a paste must not slip a value into a column the row would refuse
+ * from the keyboard (see `readOnlyOnEdit`).
+ */
 export function applyLineToRow(
   row: Row,
   line: string[],
   startIdx: number,
   columns: DataGridColumn[],
+  isNew: boolean,
 ): { row: Row; changed: boolean } {
   let next = { ...row };
   let changed = false;
   for (let i = 0; i < line.length; i++) {
     const col = columns[startIdx + i];
     if (!col) break;
-    const parsed = parsePastedValue(line[i] ?? "", col, next);
+    const parsed = isFieldEditable(col, isNew) ? parsePastedValue(line[i] ?? "", col, next) : null;
     if (parsed === null || next[col.field] === parsed) continue;
     next = { ...next, [col.field]: parsed };
     changed = true;
@@ -43,7 +49,6 @@ function parsePastedValue(
   column: DataGridColumn,
   row: Row,
 ): string | number | boolean | null {
-  if (column.readOnly) return null;
   const raw = text.trim();
   if (column.boolean) {
     const t = raw.toLowerCase();
