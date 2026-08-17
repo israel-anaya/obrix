@@ -73,7 +73,7 @@ export function MenuBar({
           sidebarVisible && "text-foreground",
         )}
       >
-        <PanelLeft size={15} />
+        <PanelLeft size={16} />
       </button>
 
       <div
@@ -94,7 +94,7 @@ export function MenuBar({
         onClick={onOpenSettings}
         className="flex h-full w-10 items-center justify-center text-muted-foreground hover:bg-background/80 hover:text-foreground"
       >
-        <Settings size={14} />
+        <Settings size={16} />
       </button>
 
       <div className="flex h-full items-stretch">
@@ -102,19 +102,19 @@ export function MenuBar({
           onClick={() => win.minimize()}
           className="flex w-10 items-center justify-center text-muted-foreground hover:bg-background/80 hover:text-foreground"
         >
-          <Minus size={14} />
+          <Minus size={16} />
         </button>
         <button
           onClick={() => win.toggleMaximize()}
           className="flex w-10 items-center justify-center text-muted-foreground hover:bg-background/80 hover:text-foreground"
         >
-          <Square size={11} />
+          <Square size={16} />
         </button>
         <button
           onClick={() => win.close()}
           className="flex w-10 items-center justify-center text-muted-foreground hover:bg-red-500 hover:text-white"
         >
-          <X size={14} />
+          <X size={16} />
         </button>
       </div>
     </div>

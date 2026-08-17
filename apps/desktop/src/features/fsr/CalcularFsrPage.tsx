@@ -116,7 +116,7 @@ function FichaGrupo({
   return (
     <div className="self-start overflow-hidden rounded border border-border">
       <div className="flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-        <Icono size={13} className="shrink-0" />
+        <Icono size={16} className="shrink-0" />
         {grupo}
       </div>
       <div className="flex flex-col gap-2 p-3">
@@ -282,14 +282,14 @@ export function CalcularFsrPage({ factorSalarioRealId }: { factorSalarioRealId: 
       {error && <p className="border-b border-border px-4 py-1.5 text-xs text-destructive">{error}</p>}
       {errorModelo && (
         <div className="flex items-center gap-2 border-b border-border bg-destructive/10 px-4 py-2 text-xs text-destructive">
-          <AlertTriangle size={14} className="shrink-0" />
+          <AlertTriangle size={16} className="shrink-0" />
           El modelo de cálculo tiene un problema: {errorModelo}
         </div>
       )}
 
       {!errorModelo && faltanDatosBase && (
         <div className="flex items-center gap-2 border-b border-border bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-400">
-          <AlertTriangle size={14} className="shrink-0" />
+          <AlertTriangle size={16} className="shrink-0" />
           Antes de calcular necesitas capturar la UMA y el salario mínimo vigentes del ejercicio.
         </div>
       )}

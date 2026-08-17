@@ -21,7 +21,7 @@ export function SearchInput({
 }) {
   return (
     <div className={cn("flex h-6 items-center gap-1 rounded-md border border-input px-1.5", className)}>
-      <Search size={12} className="shrink-0 text-muted-foreground" />
+      <Search size={16} className="shrink-0 text-muted-foreground" />
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -35,7 +35,7 @@ export function SearchInput({
           onClick={() => onChange("")}
           className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <X size={12} />
+          <X size={16} />
         </button>
       )}
     </div>

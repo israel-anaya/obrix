@@ -8,6 +8,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
+import { iconoDeFamilia } from "@/icons/familias";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { toast } from "@/hooks/use-toast";
 import { formatearFecha } from "@/lib/fecha";
@@ -328,6 +329,7 @@ export function EstanteriaMaterialesSeccion() {
                 const abierto = expandidos.has(fam.id);
                 const hijas = hijasPorPadreId[fam.id] ?? [];
                 const sinSub = conteoPorSubfamilia[fam.id]?.[SIN_SUBFAMILIA_ID] ?? 0;
+                const IconoFamilia = iconoDeFamilia(fam);
                 return (
                   <div key={fam.id}>
                     <div className="flex items-center">
@@ -337,7 +339,7 @@ export function EstanteriaMaterialesSeccion() {
                         onClick={() => toggleExpandido(fam.id)}
                         className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground"
                       >
-                        {abierto ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       </button>
                       <button
                         type="button"
@@ -349,7 +351,10 @@ export function EstanteriaMaterialesSeccion() {
                             "text-foreground",
                         )}
                       >
-                        <span className="truncate">{fam.nombre}</span>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <IconoFamilia size={24} className="shrink-0" />
+                          <span className="truncate">{fam.nombre}</span>
+                        </span>
                         <span className="num shrink-0 text-[11px]">{n}</span>
                       </button>
                     </div>

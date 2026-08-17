@@ -210,7 +210,7 @@ export function PruebaModeloCalculo({ parametros, calculados }: { parametros: Pa
             className="rounded p-0.5 hover:bg-primary-foreground/20"
             title="Agregar categoría"
           >
-            <Plus size={14} />
+            <Plus size={16} />
           </button>
         </div>
         <table className="w-full text-xs">

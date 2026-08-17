@@ -21,8 +21,9 @@ pub struct Model {
     /// convenio que `herramienta.porcentaje_mano_obra`), no una fracción 0-1.
     pub cantidad: Decimal,
     /// Si tipo = categoria_fasar: `salario_categoria_fasar.salario_real_diario`
-    /// vigente de la región de `cuadrilla_costo`. Si tipo = equipo_herramienta:
-    /// `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación.
+    /// vigente de la región de `cuadrilla_costo`, o 0 si no hay salario
+    /// vigente. Si tipo = equipo_herramienta: `cuadrilla_costo.sub_total_mano_obra`
+    /// de esta misma valuación.
     pub costo: Decimal,
     pub importe: Decimal,
     /// Foto de `salario_categoria_fasar.fecha_vigencia_desde` al recalcular

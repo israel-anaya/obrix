@@ -456,7 +456,7 @@ export function RadarMaterialesSeccion() {
             </button>
             {familiaId !== null && (
               <>
-                <ChevronRight size={10} className="shrink-0" />
+                <ChevronRight size={16} className="shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
@@ -474,7 +474,7 @@ export function RadarMaterialesSeccion() {
             )}
             {subFamiliaId !== null && (
               <>
-                <ChevronRight size={10} className="shrink-0" />
+                <ChevronRight size={16} className="shrink-0" />
                 <span className="truncate font-medium text-foreground">
                   {subFamiliaId ? (nombrePorFamiliaId[subFamiliaId] ?? subFamiliaId) : SIN_SUBFAMILIA}
                 </span>

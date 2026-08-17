@@ -107,7 +107,7 @@ export function HerramientaFormPanel({
             onClick={onCerrar}
             className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
       </div>

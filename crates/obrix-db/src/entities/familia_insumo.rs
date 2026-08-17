@@ -8,6 +8,7 @@ pub struct Model {
     pub parent_id: Option<String>,
     pub nombre: String,
     pub insumos_asociados: Option<String>,
+    pub icono: Option<String>,
     pub deleted: bool,
     pub created_at: String,
     pub created_by: String,

@@ -68,7 +68,7 @@ function AcercaDeSeccion() {
 function ServidorSeccion() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <Server size={28} className="text-muted-foreground" />
+      <Server size={16} className="text-muted-foreground" />
       <div className="max-w-sm">
         <h2 className="text-sm font-semibold">Conectarse a servidor</h2>
         <p className="mt-1 text-xs text-muted-foreground">

@@ -74,13 +74,26 @@ export function CategoriaFasarSeccion() {
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargarCategorias = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarCategorias = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     return listCategoriasFasar()
       .then(setCategorias)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (marcarCarga) setCargando(false);
+      });
   };
+
+  const recargarCategorias = () => cargarCategorias(true);
+  const refrescarCategorias = () => cargarCategorias(false);
 
   const recargarTodo = () => {
     void recargarCategorias();
@@ -238,9 +251,9 @@ export function CategoriaFasarSeccion() {
       onSearchChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
       onRowSelected={(fila) => setCategoriaSeleccionadaId(fila?._id ?? null)}
-      onAddRow={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(recargarCategorias)}
-      onEditRow={(fila) => updateCategoriaFasar(fila._id, filaACategoriaData(fila)).then(recargarCategorias)}
-      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCategoriaFasar(id))).then(recargarCategorias)}
+      onAddRow={(fila) => createCategoriaFasar(filaACategoriaData(fila)).then(refrescarCategorias)}
+      onEditRow={(fila) => updateCategoriaFasar(fila._id, filaACategoriaData(fila)).then(refrescarCategorias)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCategoriaFasar(id))).then(refrescarCategorias)}
     />
   );
 
@@ -332,7 +345,7 @@ export function CategoriaFasarSeccion() {
                           setPanelSalarioAbierto(false);
                           setPanelHistorialAbierto(false);
                         }}
-                        onSalarioRegistrado={recargarCategorias}
+                        onSalarioRegistrado={refrescarCategorias}
                         onVerHistorialCompleto={() => {
                           if (!panelHistorialAbierto) setHistorialFocoTicket((n) => n + 1);
                           setPanelHistorialAbierto((v) => !v);
@@ -346,7 +359,7 @@ export function CategoriaFasarSeccion() {
                         familias={familias}
                         nombresPorUsuarioId={nombresPorUsuarioId}
                         onCerrar={() => setPanelFichaAbierto(false)}
-                        onGuardado={recargarCategorias}
+                        onGuardado={refrescarCategorias}
                       />
                     )}
                   </ResizablePanel>
@@ -378,7 +391,7 @@ export function CategoriaFasarSeccion() {
         onCerrar={() => setEstadoLote(null)}
         onAplicado={(mensaje) => {
           toast({ description: mensaje, variant: "success" });
-          void recargarCategorias();
+          void refrescarCategorias();
         }}
       />
     </div>

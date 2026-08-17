@@ -191,7 +191,7 @@ export function CellCombobox({
           }}
           className={cn(className, "pr-5")}
         />
-        <ChevronDown size={12} className="pointer-events-none absolute right-0.5 text-muted-foreground" />
+        <ChevronDown size={16} className="pointer-events-none absolute right-0.5 text-muted-foreground" />
       </div>
       {rect &&
         createPortal(

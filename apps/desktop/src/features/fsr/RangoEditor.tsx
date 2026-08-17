@@ -53,13 +53,13 @@ export function RangoEditor({ renglones, onCambiar }: { renglones: RangoRenglon[
             onChange={(ev) => actualizar(i, { valor: Number(ev.target.value) })}
           />
           <Button variant="ghost" size="icon-sm" onClick={() => eliminar(i)} title="Eliminar renglón">
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </Button>
         </div>
       ))}
       <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" onClick={agregar}>
-          <Plus size={14} /> Agregar renglón
+          <Plus size={16} /> Agregar renglón
         </Button>
         {error && <span className="text-xs text-destructive">{error}</span>}
       </div>

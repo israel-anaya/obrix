@@ -48,23 +48,23 @@ export function RowContextMenu({
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="min-w-44">
         <ContextMenuItem onSelect={onCopy}>
-          <Copy />
+          <Copy size={16} />
           Copiar
           <ContextMenuShortcut>Ctrl+C</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onSelect={onCut}>
-          <Scissors />
+          <Scissors size={16} />
           Cortar
           <ContextMenuShortcut>Ctrl+X</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onSelect={onPaste}>
-          <ClipboardPaste />
+          <ClipboardPaste size={16} />
           Pegar
           <ContextMenuShortcut>Ctrl+V</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem disabled={!canAdd || editing} onSelect={onAddRow}>
-          <Plus />
+          <Plus size={16} />
           {addLabel}
         </ContextMenuItem>
         <ContextMenuItem
@@ -72,7 +72,7 @@ export function RowContextMenu({
           disabled={!canDelete || editing}
           onSelect={onDeleteRows}
         >
-          <Trash2 />
+          <Trash2 size={16} />
           Eliminar
         </ContextMenuItem>
       </ContextMenuContent>

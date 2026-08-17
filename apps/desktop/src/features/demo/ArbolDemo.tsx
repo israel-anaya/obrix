@@ -77,7 +77,7 @@ export function ArbolDemo() {
                   onClick={row.getToggleExpandedHandler()}
                   className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
-                  {row.getIsExpanded() ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  {row.getIsExpanded() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
               ) : (
                 <span className="w-[18px]" />

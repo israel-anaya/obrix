@@ -173,6 +173,9 @@ export const DataGrid = forwardRef<
   } = useGridLayout(layoutKey ?? config.title, config.columns);
   visibleColumnsRef.current = visibleColumns;
 
+  // Declarado antes que `useRowEditing`: su `onRowInserted` mueve la selección.
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
   const {
     rows,
     setRows,
@@ -201,10 +204,23 @@ export const DataGrid = forwardRef<
     onSaveError,
     onSaveSuccess,
     onCancelEdit,
+    // El alta guardada vuelve del backend con otro `_id` que el del borrador,
+    // así que la selección se movería a una fila que ya no existe: se le pasa
+    // al registro persistido, en la misma columna, que es donde el usuario
+    // estaba. Sin esto la fila recién dada de alta queda sin seleccionar y el
+    // panel de detalle se queda mostrando la anterior.
+    onRowInserted: (rowId) => {
+      setRowSelection({ [rowId]: true });
+      const sel = selectionStore.get();
+      const field =
+        sel && visibleColumnsRef.current.some((c) => c.field === sel.field)
+          ? sel.field
+          : firstEditableField(visibleColumnsRef.current, false);
+      if (field) selectionStore.set({ rowId, field });
+    },
   });
 
   const [pendingDelete, setPendingDelete] = useState<Row[] | null>(null);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [internalSearch, setInternalSearch] = useState("");
   const isSearchControlled = controlledSearch !== undefined;
   const search = isSearchControlled ? controlledSearch : internalSearch;
@@ -717,6 +733,35 @@ export const DataGrid = forwardRef<
   // `frozenOrder`), so accepting it is what moves the row to its place under the
   // sort. Without following it, the viewport stays where it was and the record
   // is just as lost, only later.
+  // Al cerrarse el borrador desaparecen los botones ✓/✗ que lo mandaban, y en
+  // un alta la fila entera (el registro persistido llega con otro `_id`). Si el
+  // foco estaba en alguno de ellos se va al `<body>`: el grid deja de cumplir
+  // `:focus-within` y el cursor de celda se vuelve invisible, aunque el renglón
+  // siga marcado. Se le devuelve el foco — solo si nadie más lo tomó mientras
+  // tanto (el buscador, un panel), para no arrebatárselo.
+  const teniaBorradorRef = useRef(false);
+  useEffect(() => {
+    const tenia = teniaBorradorRef.current;
+    teniaBorradorRef.current = editing !== null;
+    if (!tenia || editing) return;
+    const recuperar = () => {
+      const activo = document.activeElement;
+      if (activo && activo !== document.body) return;
+      const rowId = selectionStore.get()?.rowId;
+      const row = rowId ? rowRefs.current.get(rowId) : undefined;
+      (row ?? scrollRef.current)?.focus({ preventScroll: true });
+    };
+    // Dos intentos: en un alta la fila del borrador no se desmonta al cerrarse
+    // este, sino al llegar la lista del padre —un commit después—, así que el
+    // primero pasa de largo con el foco todavía en pie. En el segundo, además,
+    // ya está montada la fila del registro guardado y el foco cae en ella y no
+    // en el contenedor.
+    recuperar();
+    const raf = requestAnimationFrame(recuperar);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
   const lastDraftRef = useRef<string | null>(null);
   useEffect(() => {
     const closed = editing ? null : lastDraftRef.current;
@@ -1036,10 +1081,10 @@ export const DataGrid = forwardRef<
       ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end + 25
       : 0;
 
-  // Only stands in for the body when there is nothing to show yet. A reload
-  // with rows already on screen keeps them and just marks the wait at the top:
-  // blanking data the user is reading is worse than a stale second.
-  const showSkeleton = loading && visibleRows.length === 0;
+  // Stands in for the body during every wait, the first load and a reload over
+  // rows already on screen alike: one single way of saying "the data is on its
+  // way", in the place where the data will appear.
+  const showSkeleton = loading;
   const skeletonCount = Math.max(3, Math.ceil((bodyHeight - headerHeight) / ROW_HEIGHT));
 
   return (
@@ -1053,13 +1098,6 @@ export const DataGrid = forwardRef<
             className="rounded-none border-none px-0"
             inputClassName="w-full"
           />
-        </div>
-      )}
-      {/* A reload over rows that are already on screen: they stay, and the wait
-          shows as a thread of light crossing the top edge. */}
-      {loading && !showSkeleton && (
-        <div data-t="grid-loading" aria-hidden className="h-[3px] shrink-0 overflow-hidden bg-primary/25">
-          <div className="barra-progreso-indeterminada h-full w-1/3 rounded-full bg-primary" />
         </div>
       )}
       <RowContextMenu
@@ -1144,8 +1182,8 @@ export const DataGrid = forwardRef<
                               className={thButtonClasses.get(columnId)}
                             >
                               <table.FlexRender header={header} />
-                              {sorted === "asc" && <ArrowUp size={11} />}
-                              {sorted === "desc" && <ArrowDown size={11} />}
+                              {sorted === "asc" && <ArrowUp size={16} />}
+                              {sorted === "desc" && <ArrowDown size={16} />}
                             </button>
                           ) : columnId === "__index" ? (
                             <ColumnMenu

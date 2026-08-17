@@ -172,6 +172,8 @@ premezclado").
 | id | uuid | PK |
 | parent_id | uuid | FK → familia_insumo, nullable |
 | nombre | text | |
+| insumos_asociados | text | nullable — descripción de insumos típicos de la subfamilia |
+| icono | text | nullable — id del pictograma Lucide (`familia-aceros`); normalmente solo en familias raíz |
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
@@ -604,7 +606,10 @@ sobre la receta entera:
 1. Mano de obra: cada `cuadrilla_costo_detalle` cuyo `cuadrilla_detalle.tipo`
    = `categoria_fasar` toma `costo` =
    `salario_categoria_fasar.salario_real_diario` vigente de esa misma
-   región (misma prioridad regional → nacional). Con eso se obtiene
+   región (misma prioridad regional → nacional). Si no hay salario vigente
+   (ni regional ni nacional), `costo` e `importe` quedan en 0 y
+   `fecha_precio` en NULL — el renglón se conserva; un recálculo posterior
+   rellena el cache cuando ya exista salario. Con eso se obtiene
    `sub_total_mano_obra`.
 2. Herramienta: cada detalle cuyo `cuadrilla_detalle.tipo` =
    `equipo_herramienta` toma `costo` = el `sub_total_mano_obra` recién
@@ -648,7 +653,7 @@ los deriva el recálculo del `cuadrilla_costo` padre.
 | cuadrilla_costo_id | uuid | FK → cuadrilla_costo |
 | cuadrilla_detalle_id | uuid | FK → cuadrilla_detalle — debe pertenecer a la misma cuadrilla que `cuadrilla_costo.cuadrilla_insumo_id` |
 | cantidad | decimal | **capturable** — jornales/integrantes si el detalle es `categoria_fasar`; porcentaje 0–100 (no fracción 0–1) si es `equipo_herramienta`. Al dar de alta una herramienta en la receta, el default es `herramienta.porcentaje_mano_obra` |
-| costo | decimal | cache: si tipo = categoria_fasar, `salario_categoria_fasar.salario_real_diario` vigente de la región de `cuadrilla_costo`; si tipo = equipo_herramienta, `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación |
+| costo | decimal | cache: si tipo = categoria_fasar, `salario_categoria_fasar.salario_real_diario` vigente de la región de `cuadrilla_costo` (0 si no hay salario vigente); si tipo = equipo_herramienta, `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación |
 | importe | decimal | cache = cantidad × costo |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |

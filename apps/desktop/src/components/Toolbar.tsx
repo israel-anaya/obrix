@@ -31,7 +31,7 @@ export function Toolbar<T extends string>({
               isActive && "bg-background text-foreground",
             )}
           >
-            <Icon size={15} strokeWidth={2} />
+            <Icon size={16} strokeWidth={2} />
           </button>
         );
       })}

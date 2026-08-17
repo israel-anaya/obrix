@@ -260,7 +260,7 @@ export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId
       {error && <p className="border-b border-border px-4 py-1.5 text-xs text-destructive">{error}</p>}
       {errorValidacion && (
         <div className="flex items-center gap-2 border-b border-border bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-400">
-          <AlertTriangle size={14} className="shrink-0" />
+          <AlertTriangle size={16} className="shrink-0" />
           {errorValidacion}
         </div>
       )}

@@ -49,7 +49,7 @@ export function OrganizacionSwitcher() {
                 {activa?.rfc ?? ""}
               </span>
             </div>
-            <ChevronsUpDown className="shrink-0 opacity-50" />
+            <ChevronsUpDown size={16} className="shrink-0 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)" align="start">

@@ -52,11 +52,11 @@ function NodoArbolFijo({
         )}
       >
         {tieneHijos ? (
-          abierto ? <ChevronDown size={12} className="shrink-0" /> : <ChevronRight size={12} className="shrink-0" />
+          abierto ? <ChevronDown size={16} className="shrink-0" /> : <ChevronRight size={16} className="shrink-0" />
         ) : (
-          <span className="inline-block w-3 shrink-0" />
+          <span className="inline-block w-4 shrink-0" />
         )}
-        <Icono size={13} className="shrink-0" />
+        <Icono size={16} className="shrink-0" />
         <span className="truncate">{nodo.label}</span>
       </button>
       {tieneHijos && abierto && (
@@ -140,7 +140,7 @@ export function CatalogosSidebar({
                       onClick={() => agregar(grupo)}
                       className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
                     >
-                      <FilePlus2 size={13} />
+                      <FilePlus2 size={16} />
                     </button>
                     <button
                       type="button"
@@ -152,7 +152,7 @@ export function CatalogosSidebar({
                         !seleccionado && "opacity-30",
                       )}
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={16} />
                     </button>
                   </>
                 )
@@ -192,7 +192,7 @@ export function CatalogosSidebar({
                         seleccionado === item.id && "bg-background text-foreground",
                       )}
                     >
-                      <User size={13} />
+                      <User size={16} />
                       <span className="truncate">{item.nombre}</span>
                     </button>
                   ))}
@@ -212,18 +212,18 @@ export function CatalogosSidebar({
                             seleccionado === item.id && "bg-background text-foreground",
                           )}
                         >
-                          {nodoAbierto ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                          <Layers size={13} />
+                          {nodoAbierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          <Layers size={16} />
                           <span className="truncate">{item.nombre}</span>
                         </button>
                         {nodoAbierto && (
                           <div className="ml-6 flex flex-col border-l border-border pl-2">
                             <div className="flex items-center gap-1.5 px-2 py-1 text-[13px] text-muted-foreground">
-                              <FileText size={12} />
+                              <FileText size={16} />
                               Detalle 1
                             </div>
                             <div className="flex items-center gap-1.5 px-2 py-1 text-[13px] text-muted-foreground">
-                              <FileText size={12} />
+                              <FileText size={16} />
                               Detalle 2
                             </div>
                           </div>

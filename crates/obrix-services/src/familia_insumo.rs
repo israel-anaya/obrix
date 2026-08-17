@@ -18,6 +18,8 @@ pub struct FamiliaInsumoData {
     pub parent_id: Option<String>,
     #[serde(default)]
     pub insumos_asociados: Option<String>,
+    #[serde(default)]
+    pub icono: Option<String>,
 }
 
 pub struct FamiliaInsumoService;
@@ -54,6 +56,7 @@ impl FamiliaInsumoService {
             parent_id: Set(datos.parent_id),
             nombre: Set(datos.nombre),
             insumos_asociados: Set(datos.insumos_asociados),
+            icono: Set(datos.icono),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
@@ -79,6 +82,7 @@ impl FamiliaInsumoService {
             .into();
         modelo.nombre = Set(datos.nombre);
         modelo.insumos_asociados = Set(datos.insumos_asociados);
+        modelo.icono = Set(datos.icono);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(actualizado_por);
         Ok(modelo.update(repo.conexion()).await?)
@@ -114,6 +118,7 @@ impl FamiliaInsumoService {
             parent_id: Set(Some(parent_id.to_string())),
             nombre: Set(nombre.to_string()),
             insumos_asociados: Set(insumos_asociados),
+            icono: Set(None),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
@@ -136,6 +141,8 @@ impl DatosIniciales for FamiliaInsumoService {
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
         let mut padre_id_por_nombre: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
+        let mut icono_por_familia: std::collections::HashMap<String, Option<String>> =
+            std::collections::HashMap::new();
         let mut lector = csv::ReaderBuilder::new().from_reader(FAMILIAS_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvFamilia>().enumerate() {
             let fila = i + 2;
@@ -154,7 +161,17 @@ impl DatosIniciales for FamiliaInsumoService {
                     "familia_insumo.csv fila {fila}: subfamilia vacía"
                 )));
             }
+            let icono = {
+                let t = registro.icono.trim();
+                (!t.is_empty()).then(|| t.to_string())
+            };
             let padre_id = if let Some(id) = padre_id_por_nombre.get(&familia) {
+                let previo = icono_por_familia.get(&familia).cloned().flatten();
+                if icono.is_some() && icono != previo {
+                    return Err(ServiceError::Validacion(format!(
+                        "familia_insumo.csv fila {fila}: Icono distinto para la familia `{familia}`"
+                    )));
+                }
                 id.clone()
             } else {
                 let padre = Self::crear(
@@ -163,11 +180,13 @@ impl DatosIniciales for FamiliaInsumoService {
                         nombre: familia.clone(),
                         parent_id: None,
                         insumos_asociados: None,
+                        icono: icono.clone(),
                     },
                     admin.id.clone(),
                 )
                 .await?;
-                padre_id_por_nombre.insert(familia, padre.id.clone());
+                padre_id_por_nombre.insert(familia.clone(), padre.id.clone());
+                icono_por_familia.insert(familia, icono);
                 padre.id
             };
             let insumos_asociados = registro.insumos_asociados.trim().to_string();
@@ -192,6 +211,8 @@ struct RegistroCsvFamilia {
     subfamilia: String,
     #[serde(rename = "Insumos_asociados")]
     insumos_asociados: String,
+    #[serde(rename = "Icono", default)]
+    icono: String,
 }
 
 #[cfg(test)]
@@ -199,7 +220,12 @@ mod tests {
     use super::*;
 
     fn datos(nombre: &str) -> FamiliaInsumoData {
-        FamiliaInsumoData { nombre: nombre.to_string(), parent_id: None, insumos_asociados: None }
+        FamiliaInsumoData {
+            nombre: nombre.to_string(),
+            parent_id: None,
+            insumos_asociados: None,
+            icono: None,
+        }
     }
 
     #[test]

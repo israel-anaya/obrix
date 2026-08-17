@@ -7,7 +7,7 @@
 //! valuaciones recalcular tras el cambio.
 
 use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
-use obrix_db::entities::{cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, insumo, region, salario_categoria_fasar};
+use obrix_db::entities::{cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, region, salario_categoria_fasar};
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{
@@ -187,7 +187,8 @@ impl CuadrillaCostoService {
     /// algoritmo corre **dentro de una sola valuación** (ver diccionario de
     /// datos):
     /// 1. mano de obra: costo = salario vigente de esa misma región
-    ///    (regional → nacional, prioridad descendente).
+    ///    (regional → nacional, prioridad descendente). Si no hay salario
+    ///    vigente, costo/importe quedan en 0 y `fecha_precio` en `None`.
     /// 2. herramienta: costo = `sub_total_mano_obra` recién calculado de
     ///    esta misma valuación.
     /// 3. `costo_total` = suma de ambos subtotales.
@@ -222,22 +223,13 @@ impl CuadrillaCostoService {
         let mut pendientes: Vec<(String, Decimal, Decimal, Option<String>)> = Vec::new();
         for d in detalles.iter().filter(|d| recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::CategoriaFasar) {
             let receta = &recetas[&d.cuadrilla_detalle_id];
-            let salario = match Self::salario_vigente(txn, &receta.detalle_insumo_id, region_id.as_deref()).await? {
-                Some(salario) => salario,
-                None => {
-                    let descripcion = insumo::Entity::find_by_id(&receta.detalle_insumo_id)
-                        .one(txn)
-                        .await?
-                        .map(|i| i.descripcion)
-                        .unwrap_or_else(|| receta.detalle_insumo_id.clone());
-                    return Err(ServiceError::Validacion(format!(
-                        "\"{descripcion}\" no tiene un salario vigente registrado (ni regional ni nacional)"
-                    )));
-                }
+            let (costo, fecha_precio) = match Self::salario_vigente(txn, &receta.detalle_insumo_id, region_id.as_deref()).await? {
+                Some(salario) => (salario.salario_real_diario, Some(salario.fecha_vigencia_desde)),
+                None => (Decimal::ZERO, None),
             };
-            let importe = d.cantidad * salario.salario_real_diario;
+            let importe = d.cantidad * costo;
             sub_total_mano_obra += importe;
-            pendientes.push((d.id.clone(), salario.salario_real_diario, importe, Some(salario.fecha_vigencia_desde)));
+            pendientes.push((d.id.clone(), costo, importe, fecha_precio));
         }
 
         let mut sub_total_herramienta = Decimal::ZERO;

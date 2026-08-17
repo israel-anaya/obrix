@@ -9,7 +9,7 @@
 //! nacional, igual que `CategoriaFasar.salario_vigente`.
 
 use obrix_db::entities::insumo::{self, TipoInsumo};
-use obrix_db::entities::{categoria_fasar, cuadrilla, cuadrilla_costo, familia_insumo, herramienta};
+use obrix_db::entities::{categoria_fasar, cuadrilla, cuadrilla_costo, familia_insumo, herramienta, salario_categoria_fasar};
 use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
@@ -265,7 +265,9 @@ impl CuadrillaService {
     /// `jor`. Si el archivo no trae clave (columna ausente o celda vacía),
     /// se genera `CUA-001`, `CUA-002`, … continuando desde la `CUA-` más
     /// alta ya registrada. Las cantidades de herramienta en fracción
-    /// (`0.03`) se convierten a porcentaje 0–100.
+    /// (`0.03`) se convierten a porcentaje 0–100. Un integrante de mano de
+    /// obra sin salario vigente sí se agrega, con costo 0, y se reporta en
+    /// `errores` (`"{descripción} sin salario vigente, costo 0"`).
     pub async fn importar_csv(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -321,6 +323,14 @@ impl CuadrillaService {
             .await?
             .into_iter()
             .map(|h| h.insumo_id)
+            .collect();
+        let salarios_nacionales: std::collections::HashSet<String> = salario_categoria_fasar::Entity::find()
+            .filter(salario_categoria_fasar::Column::RegionId.is_null())
+            .filter(salario_categoria_fasar::Column::FechaVigenciaHasta.is_null())
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|s| s.insumo_id)
             .collect();
         let mut categoria_id_por_descripcion: HashMap<String, String> = HashMap::new();
         let mut herramienta_id_por_descripcion: HashMap<String, String> = HashMap::new();
@@ -416,7 +426,7 @@ impl CuadrillaService {
                     &categoria_id_por_descripcion,
                     &herramienta_id_por_descripcion,
                 ) {
-                    Ok(detalle) => detalles_ok.push((fila.fila, detalle)),
+                    Ok(detalle) => detalles_ok.push((fila.fila, fila.descripcion.clone(), detalle)),
                     Err(e) => errores.push(e),
                 }
             }
@@ -452,7 +462,9 @@ impl CuadrillaService {
                 }
             };
 
-            for (fila, detalle) in detalles_ok {
+            for (fila, descripcion, detalle) in detalles_ok {
+                let insumo_id = detalle.detalle_insumo_id.clone();
+                let es_mano_obra = categorias.contains(&insumo_id);
                 if let Err(e) = CuadrillaDetalleService::crear(
                     repo,
                     &cuadrilla.id,
@@ -462,6 +474,8 @@ impl CuadrillaService {
                 .await
                 {
                     errores.push(format!("fila {fila}: no se pudo agregar el detalle ({e})"));
+                } else if es_mano_obra && !salarios_nacionales.contains(&insumo_id) {
+                    errores.push(format!("{descripcion} sin salario vigente, costo 0"));
                 }
             }
             importados += 1;
@@ -723,6 +737,7 @@ mod tests {
             parent_id: Set(None),
             nombre: Set("Mano de obra".into()),
             insumos_asociados: Set(None),
+            icono: Set(None),
             deleted: Set(false),
             created_at: Set(now),
             created_by: Set("usr-1".into()),
@@ -1100,5 +1115,68 @@ mod tests {
             .expect("listar");
         assert_eq!(listado.len(), 1);
         assert_eq!(listado[0].clave, "C-3");
+    }
+
+    #[tokio::test]
+    async fn importar_csv_mano_de_obra_sin_salario_entra_en_cero_con_aviso() {
+        use crate::categoria_fasar::{CategoriaFasarData, CategoriaFasarService};
+        use crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService;
+        use crate::cuadrilla_detalle::CuadrillaDetalleService;
+
+        let (portafolio, org_id, admin_id) = portafolio_listo_para_importar().await;
+        let unidad_id = CategoriaFasarService::listar(&portafolio, &org_id)
+            .await
+            .expect("listar categorías")
+            .into_iter()
+            .next()
+            .expect("hay categorías sembradas")
+            .unidad_id;
+        CategoriaFasarService::crear(
+            &portafolio,
+            &org_id,
+            CategoriaFasarData {
+                clave: "CAT-SIN".into(),
+                descripcion: "Ayudante oficial extra".into(),
+                unidad_id,
+                familia_id: None,
+                sub_familia_id: None,
+            },
+            admin_id.clone(),
+        )
+        .await
+        .expect("crear categoría sin salario");
+
+        let csv = "Clave Cuadrilla,Descripción Cuadrilla,Sección,Descripción,Cantidad\n\
+                    C-SIN,Cuadrilla sin salario,MANO DE OBRA,Ayudante oficial extra,2\n";
+
+        let resultado = CuadrillaService::importar_csv(&portafolio, &org_id, csv, admin_id)
+            .await
+            .expect("importar con integrante sin salario");
+        assert_eq!(resultado.importados, 1);
+        assert!(
+            resultado.errores.iter().any(|e| e == "Ayudante oficial extra sin salario vigente, costo 0"),
+            "debe avisarse el costo en cero: {:?}",
+            resultado.errores
+        );
+
+        let listado = CuadrillaService::listar(&portafolio, &org_id)
+            .await
+            .expect("listar");
+        let cuadrilla = listado.iter().find(|c| c.clave == "C-SIN").expect("cuadrilla importada");
+        let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .expect("listar detalles");
+        assert_eq!(detalles.len(), 1, "el integrante debe quedar en la receta");
+
+        let nacional = cuadrilla.costo_nacional.as_ref().expect("valuación nacional");
+        assert_eq!(nacional.sub_total_mano_obra, Decimal::ZERO);
+        assert_eq!(nacional.costo_total, Decimal::ZERO);
+        let costos = CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+            .await
+            .expect("detalles de valuación");
+        assert_eq!(costos.len(), 1);
+        assert_eq!(costos[0].cantidad, Decimal::from(2));
+        assert_eq!(costos[0].costo, Decimal::ZERO);
+        assert_eq!(costos[0].importe, Decimal::ZERO);
     }
 }

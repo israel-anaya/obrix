@@ -370,7 +370,7 @@ export function EquipoCostoHorarioFichaApu({
         <div className="border-b-2 border-foreground/20 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              <Gauge size={11} className="text-emerald-500" />
+              <Gauge size={16} className="text-emerald-500" />
               Análisis de costo horario
             </span>
             <button
@@ -383,7 +383,7 @@ export function EquipoCostoHorarioFichaApu({
                 recalculando && "opacity-50",
               )}
             >
-              <RefreshCcw size={12} className={cn(recalculando && "animate-spin")} />
+              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
             </button>
           </div>
 
@@ -499,7 +499,7 @@ export function EquipoCostoHorarioFichaApu({
 
               <div className="mt-auto rounded-md border border-border p-3">
                 <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  <Timer size={12} className="text-blue-500" />
+                  <Timer size={16} className="text-blue-500" />
                   Cargos fijos
                 </span>
 
@@ -538,7 +538,7 @@ export function EquipoCostoHorarioFichaApu({
               <tr>
                 <td colSpan={7} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Fuel size={12} className="text-amber-500" />
+                    <Fuel size={16} className="text-amber-500" />
                     Consumo
                   </span>
                 </td>
@@ -586,7 +586,7 @@ export function EquipoCostoHorarioFichaApu({
                         onClick={() => void mover(d, "arriba")}
                         className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
                       >
-                        <ArrowUp size={12} />
+                        <ArrowUp size={16} />
                       </button>
                       <button
                         type="button"
@@ -595,7 +595,7 @@ export function EquipoCostoHorarioFichaApu({
                         onClick={() => void mover(d, "abajo")}
                         className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
                       >
-                        <ArrowDown size={12} />
+                        <ArrowDown size={16} />
                       </button>
                       <button
                         type="button"
@@ -603,7 +603,7 @@ export function EquipoCostoHorarioFichaApu({
                         onClick={() => setPendingQuitar(d)}
                         className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
-                        <X size={12} />
+                        <X size={16} />
                       </button>
                     </div>
                   </td>
@@ -626,7 +626,7 @@ export function EquipoCostoHorarioFichaApu({
                       onClick={() => setAgregandoConsumo(true)}
                       className="flex items-center gap-1 text-[11px] text-primary hover:underline"
                     >
-                      <Plus size={11} /> Agregar renglón
+                      <Plus size={16} /> Agregar renglón
                     </button>
                   )}
                 </td>
@@ -645,7 +645,7 @@ export function EquipoCostoHorarioFichaApu({
               <tr>
                 <td colSpan={7} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <HardHat size={12} className="text-violet-500" />
+                    <HardHat size={16} className="text-violet-500" />
                     Operación
                   </span>
                 </td>
@@ -696,7 +696,7 @@ export function EquipoCostoHorarioFichaApu({
                         onClick={() => void mover(d, "arriba")}
                         className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
                       >
-                        <ArrowUp size={12} />
+                        <ArrowUp size={16} />
                       </button>
                       <button
                         type="button"
@@ -705,7 +705,7 @@ export function EquipoCostoHorarioFichaApu({
                         onClick={() => void mover(d, "abajo")}
                         className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
                       >
-                        <ArrowDown size={12} />
+                        <ArrowDown size={16} />
                       </button>
                       <button
                         type="button"
@@ -713,7 +713,7 @@ export function EquipoCostoHorarioFichaApu({
                         onClick={() => setPendingQuitar(d)}
                         className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
-                        <X size={12} />
+                        <X size={16} />
                       </button>
                     </div>
                   </td>
@@ -733,7 +733,7 @@ export function EquipoCostoHorarioFichaApu({
                       onClick={() => setAgregandoOperacion(true)}
                       className="flex items-center gap-1 text-[11px] text-primary hover:underline"
                     >
-                      <Plus size={11} /> Agregar renglón
+                      <Plus size={16} /> Agregar renglón
                     </button>
                   )}
                 </td>

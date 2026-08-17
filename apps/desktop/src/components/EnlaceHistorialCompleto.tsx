@@ -19,9 +19,9 @@ export function EnlaceHistorialCompleto({
       onClick={onClick}
       className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
     >
-      <History size={13} strokeWidth={2.5} className="shrink-0" aria-hidden />
+      <History size={16} strokeWidth={2.5} className="shrink-0" aria-hidden />
       Resumen del histórico
-      <Flecha size={13} strokeWidth={2.5} className="shrink-0" aria-hidden />
+      <Flecha size={16} strokeWidth={2.5} className="shrink-0" aria-hidden />
     </button>
   );
 }

@@ -27,7 +27,7 @@ function SeccionBoton({
         activa === id && "bg-background text-foreground",
       )}
     >
-      <Icon size={13} className="shrink-0" />
+      <Icon size={16} className="shrink-0" />
       <span className="truncate">{label}</span>
       {badge && (
         <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">

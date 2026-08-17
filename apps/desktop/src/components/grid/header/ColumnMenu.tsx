@@ -36,7 +36,7 @@ export function ColumnMenu({
         title="Columnas"
         className="flex h-full w-full items-center justify-center text-muted-foreground outline-none hover:text-foreground data-open:text-foreground"
       >
-        <SlidersHorizontal size={12} />
+        <SlidersHorizontal size={16} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-80 text-xs">
         <DropdownMenuLabel className="text-xs">Columnas</DropdownMenuLabel>
@@ -59,7 +59,7 @@ export function ColumnMenu({
         })}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => onReset()} className="text-xs">
-          <RotateCcw size={12} />
+          <RotateCcw size={16} />
           Restablecer diseño
         </DropdownMenuItem>
       </DropdownMenuContent>

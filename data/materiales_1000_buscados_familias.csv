@@ -50,9 +50,9 @@ ACEEST-005,"Metal desplegado E-600 calibre 26 de 0.91 ancho x 22.00 mts. de larg
 SUV-TEMP2,"Clavo de 2"" a 4"" con cabeza.",kg,23.3797,Ferretería,Clavos
 ACEL-012,"Clavo de 1 1/2"", 2"", 2 1/2"" y 3"" sin cabeza.",kg,18.6676,Ferretería,Clavos
 ACEEST-013,Clavo sin cabeza para concreto caja con 25 kg.,kg,79.8,Ferretería,Clavos
-ACES-008,"Escalerilla p/muro de block de 12 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,14.4,Aceros,Malla electrosoldada
-ACES-009,"Escalerilla p/muro de block de 15 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,14.88,Aceros,Malla electrosoldada
-ACES-010,"Escalerilla p/muro de block de 20 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,15.36,Aceros,Malla electrosoldada
+ACES-008,"Escalerilla p/muro de block de 12 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,14.4,Aceros,Alambrón y alambre
+ACES-009,"Escalerilla p/muro de block de 15 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,14.88,Aceros,Alambrón y alambre
+ACES-010,"Escalerilla p/muro de block de 20 cm de espesor, calibre 12, en tramo de 3.00 mts. de largo.",ml,15.36,Aceros,Alambrón y alambre
 ACEEST-014,"Castillo prefabricado de 15 x 15 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,207.36,Aceros,Alambrón y alambre
 ACEEST-015,"Castillo prefabricado de 15 x 20 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,218.88,Aceros,Alambrón y alambre
 ACEEST-016,"Castillo prefabricado de 15 x 25 -4 lados de alambrón de 6.35 mm de diámetro, tramo de 6.00 ml.",ml,230.4,Aceros,Alambrón y alambre
@@ -102,7 +102,7 @@ AGAS-002,"Grava triturada 3/4"" para base asfáltica.",m3,465,Agregados,Bases y 
 AGAS-006,"Base grava - arena triturada 1 1/2"" finos para base asfáltica L.A.B. Mina de San Luis c/promedio de acarreo de 1 a 80 km.",m3,146.9,Agregados,Bases y sub-bases
 AGAS-008,"Base grava 1""- tepetate 1 1/2"" finos para base asfáltica L.A.B. Mina de San Luis con promedio de acarreo de 1 a 80 km.",m3,214,Agregados,Bases y sub-bases
 AGAS-010,Piedra sin seleccionar grande para base asfáltica L.A.B. Mina de San Luis.,m3,135.78,Agregados,Bases y sub-bases
-AGAS-011,"Piedra para filtro de tamaño 3"" a 10"" para base asfáltica L.A.B. Mina de San Luis.",m3,233,Agregados,Bases y sub-bases
+AGAS-011,"Piedra para filtro de tamaño 3"" a 10"" para base asfáltica L.A.B. Mina de San Luis.",m3,233,Agregados,Piedra para filtro
 AGAS-012,Tepetate con promedio de 1 a 80 km de acarreo.,m3,307,Agregados,Tepetate
 AGAS-021,Mezcla de tepetate con arenilla,m3,62.15,Agregados,Tepetate
 AGRE-001,Arena en camión de 6 m3.,Camion,3125,Agregados,Arena
@@ -122,7 +122,7 @@ AGRE-052,"Agua potable de uso no doméstico de 0 a 10,000 lts de consumo tarifa 
 AGRE-055,"Agua potable de uso no doméstico de 30,000 a 50,000 lts de consumo tarifa bimestral con subsidio cuota adicional de 29.00 por cada 1000 lts excedentes.",cuo,598.674,Instalaciones hidráulicas,Agua
 AGRE-058,"Agua potable de uso no doméstico de 90,000 a 120,000 lts de consumo tarifa bimestral con subsidio cuota adicional de 40.00 por cada 1000 lts excedentes.",cuo,2789.744,Instalaciones hidráulicas,Agua
 FRIG-51,Perla preexpandida de poliestireno para aligerar concreto marca Frigocel,kg,67.8,Agregados,Agregados ligeros
-AGRE-015,Cero fino y grueso polvo de mármol.,ton,4929,Agregados,
+AGRE-015,Cero fino y grueso polvo de mármol.,ton,4929,"Cementos, cales y yesos",Yeso fino y estuco
 SPGC-046,"Pigmento integral para concreto color café oscuro saco de 25 kg, marca SPG.",sac,967.28,Concretos y morteros,Endurecedores y colorantes
 PASA-214,"Endurecedor de superficies, tipo protecto dur S, endurecedor superficial mineral, saco de 50 kg.",sac,378.55,Concretos y morteros,Endurecedores y colorantes
 PASA-215,"Aditivos modificadores de concreto, protecto fluid N súper fluidificante p/concreto, tambo de 200 lt.",tmb,4300.78,Concretos y morteros,Aditivos
@@ -198,9 +198,9 @@ CMC-21672,"Boquicrest ultra azul místico, presentación en saco de 10 kg, Crest
 AGLU-007,Boquilla o junta piso presentación en saco de 10 kg.,sac,66.2413793103448,Concretos y morteros,Boquillas y juntas
 CMC-21687,"Juntacrest blanco, presentación en saco de 5 kg marca Crest.",sac,147.49,Concretos y morteros,Boquillas y juntas
 AGLU-TEMP,Pegazulejo blanco saco de 20 kg marca Crest.,sac,113,Concretos y morteros,Adhesivos para loseta
-CMC-21708,"Epoxy Crest blanco Himalaya, Crest.",cb,1158.0353,Concretos y morteros,Adhesivos para loseta
+CMC-21708,"Epoxy Crest blanco Himalaya, Crest.",cb,1158.0353,Concretos y morteros,Boquillas y juntas
 PASA-211,"Grouts tipo epoxi resanador mortero epóxico resanador 3 componentes, presentación en saco de 4 kg.",sac,609.07,Concretos y morteros,Grouts y autonivelantes
-PASA-291,"Recubrimiento superficies deportivas, protecto mezcla como aglutinante en canchas deportivas, tambo de 200 lt.",tmb,5136.98,"Cementos, cales y yesos",
+PASA-291,"Recubrimiento superficies deportivas, protecto mezcla como aglutinante en canchas deportivas, tambo de 200 lt.",tmb,5136.98,Pinturas y recubrimientos,Pastas y texturizados
 SPGC-059,"Mortero ultramix para pisos ultradelgados, color gris, presentación en cubeta de 27 kg.",cb,146.9,Concretos y morteros,Grouts y autonivelantes
 ROCA-402,Block aparente rosa 40 x 20 x 12 cms de resistencia 60 kg/cm3 marca Rocacero.,pza,7.2998,Mampostería,Block
 ROCA-403,Block aparente gris 40 x 20 x 12 cms de resistencia 40 kg/cm3 marca Rocacero.,pza,5.9325,Mampostería,Block
@@ -239,19 +239,19 @@ MATR-001,"Tablaroca-sheetrock normal de 2.44 mts. de largo x 1.22 mts. de ancho 
 MATR-003,"Tablaroca-sheetrock FC, firecode tipo X de 2.44 mts. de largo x 1.22 mts. de ancho x 12.7 mm. espesor, de la línea USG.",pza,135.4192,"Cementos, cales y yesos",Paneles de yeso
 MATR-007,"Tablaroca-sheetrock WR de 2.44 mts. de largo x 1.22 mts. de ancho x 12.7 mm. espesor, de la línea USG.",pza,171.7261,"Cementos, cales y yesos",Paneles de yeso
 MATR-009,"Tablacemento durock multiusos de 2.44 mts. de largo x 1.22 m de ancho x 12.7 mm. espesor, de la línea USG.",pza,411.094,"Cementos, cales y yesos",Tablacemento
-MATR-010,"Poste metálico 4.10, calibre 26 de 2.44 mts. de longitud, de la línea USG.",pza,35.7419,Aceros,Perfiles estructurales
-MATR-011,"Poste metálico 4.10, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,43.1547,Aceros,Perfiles estructurales
-MATR-013,"Poste metálico 6.35, calibre 26 de 2.44 mts. de longitud, de la línea USG.",pza,41.2902,Aceros,Perfiles estructurales
-MATR-016,"Poste metálico 9.20, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,64.975,Aceros,Perfiles estructurales
-MATR-012,"Canal metálico 4.10, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,35.8775,Aceros,Perfiles estructurales
-MATR-015,"Canal metálico 6.35, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,42.8722,Aceros,Perfiles estructurales
-MATR-019,"Canal listón de calibre 26 de 3.05 mts. de largo, de la línea USG.",pza,37.7081,Aceros,Perfiles estructurales
+MATR-010,"Poste metálico 4.10, calibre 26 de 2.44 mts. de longitud, de la línea USG.",pza,35.7419,Aceros,Canales
+MATR-011,"Poste metálico 4.10, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,43.1547,Aceros,Canales
+MATR-013,"Poste metálico 6.35, calibre 26 de 2.44 mts. de longitud, de la línea USG.",pza,41.2902,Aceros,Canales
+MATR-016,"Poste metálico 9.20, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,64.975,Aceros,Canales
+MATR-012,"Canal metálico 4.10, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,35.8775,Aceros,Canales
+MATR-015,"Canal metálico 6.35, calibre 26 de 3.05 mts. de longitud, de la línea USG.",pza,42.8722,Aceros,Canales
+MATR-019,"Canal listón de calibre 26 de 3.05 mts. de largo, de la línea USG.",pza,37.7081,Aceros,Canales
 MATR-020,"Canaleta de carga 4.10, calibre 22 de 3.05 mts. de longitud, de la línea USG.",pza,33.8096,Aceros,Perfiles estructurales
 MATR-041,"Redimix compuesto multiusos en cubeta de 6.0 kg, de la línea USG.",cb,72.0036,"Cementos, cales y yesos",Compuestos y cintas
 MATR-047,"Perfacinta cinta de refuerzo para juntas en tablero de yeso, de la línea USG.",roll,23.3345,"Cementos, cales y yesos",Compuestos y cintas
 MATR-049,"Easy sand 45 compuesto de 8.1 kg secado controlado para el tratamiento de juntas en tableros de yeso, de la línea USG.",sac,176.2348,"Cementos, cales y yesos",Compuestos y cintas
-MATR-057,"Tornillo autoroscable tipo S, BH S de 1"" para tablaroca y para metal calibre 26, de la línea USG.",kg,59.5284,"Cementos, cales y yesos",Paneles de yeso
-MATR-060,"Tornillo tipo tek broca 1"" para tablaroca y para metal calibre 14, de la línea USG.",kg,83.2245,"Cementos, cales y yesos",Paneles de yeso
+MATR-057,"Tornillo autoroscable tipo S, BH S de 1"" para tablaroca y para metal calibre 26, de la línea USG.",kg,59.5284,Ferretería,Tornillería
+MATR-060,"Tornillo tipo tek broca 1"" para tablaroca y para metal calibre 14, de la línea USG.",kg,83.2245,Ferretería,Tornillería
 MATR-080,Plafón astral texturizado de 0.61 x 122 cms. espesor de 9.6 mm. orilla de cuadrada.,pza,34.9057,Maderas,Plafones
 MATR-081,Plafón clean room auratone de 0.61 x 1.22 cms. espesor de 12.7 mm. de orilla cuadrada.,caj,1682.4683,Maderas,Plafones
 MATR-082,"Plafón eclipse auratone antimicrobial de 0.61 x 0.61cms, espesor de 12.7 mm. orilla de fine line.",caj,1039.6565,Maderas,Plafones
@@ -280,7 +280,7 @@ MIFE-210,Festermip 12 sbs ps 4.5 gravilla terracota en rollo de 1.00 m de ancho 
 MIFE-212,Festermip 15 app ps 4.5 gravilla terracota en rollo de 1.00 m de ancho x 10.00 mts. de largo marca Fester,roll,3387.06,Impermeabilizantes,Mantos prefabricados
 MIFE-092,Microseal 2F cubeta de 19 lt.,cb,1622.85,Impermeabilizantes,Cristalizantes
 MIFE-106,"Xypex concentrado blanco, en cubeta de 25 kg.",cb,8033.81,Impermeabilizantes,Cristalizantes
-CMC-00010,"Celotex placa de 1.22 x 1.22 mts. de 12 mm (1/2"") de espesor.",pza,478.77,Impermeabilizantes,Bandas y waterstops
+CMC-00010,"Celotex placa de 1.22 x 1.22 mts. de 12 mm (1/2"") de espesor.",pza,478.77,Concretos y morteros,Boquillas y juntas
 MIFE-005,"Banda flexible pvc ojillada 6"" de 25 mts. el rollo.",roll,6842.01,Impermeabilizantes,Bandas y waterstops
 MIFE-006,"Banda flexible pvc ojillada 7.5"" de 25 mts. el rollo.",roll,8068.68,Impermeabilizantes,Bandas y waterstops
 MIFE-007,"Banda flexible pvc ojillada 9"" de 25 mts. el rollo.",roll,11084.67,Impermeabilizantes,Bandas y waterstops
@@ -320,8 +320,8 @@ CMC-00565,Céspol fregadero flexible eco.,pza,17.37,Instalaciones sanitarias,Vá
 CMC-00601,Codo fofo de 45° x 150 mm marca Tisa.,pza,283.291,Instalaciones sanitarias,Conexiones sanitarias
 CMC-00605,Codo fofo de 90° x 100 mm marca Tisa.,pza,198.9139,Instalaciones sanitarias,Conexiones sanitarias
 CMC-00606,Codo fofo de 90° x 150 mm marca Tisa.,pza,361.6678,Instalaciones sanitarias,Conexiones sanitarias
-CMC-59151,"Codo 45° x 100 mm (4"") PPR termofusión marca Tubo plus.",pza,237.5034,Instalaciones sanitarias,Conexiones sanitarias
-CMC-59152,"Codo 90° x 100 mm (4"") PPR termofusión marca Tubo plus.",pza,359.5999,Instalaciones sanitarias,Conexiones sanitarias
+CMC-59151,"Codo 45° x 100 mm (4"") PPR termofusión marca Tubo plus.",pza,237.5034,Instalaciones hidráulicas,Conexiones
+CMC-59152,"Codo 90° x 100 mm (4"") PPR termofusión marca Tubo plus.",pza,359.5999,Instalaciones hidráulicas,Conexiones
 MPPL-4011,"Tubo pvc sanitario 2"", norma - cementar - tramo de 6 mts.",ml,160.78,Instalaciones sanitarias,Tubería PVC sanitaria
 MPPL-4012,"Tubo pvc sanitario 3"", norma - cementar - tramo de 6 mts.",ml,256.68,Instalaciones sanitarias,Tubería PVC sanitaria
 MPPL-4013,"Tubo pvc sanitario 4"", norma - cementar - tramo de 6 mts.",ml,337.59,Instalaciones sanitarias,Tubería PVC sanitaria
@@ -380,14 +380,14 @@ CMC-00280,Tubo galvanizado c-40 6.40 c/r 51.,tmo,2001.25,Instalaciones hidráuli
 CMC-00281,Tubo galvanizado c-40 6.40 c/r 64.,tmo,3178.44,Instalaciones hidráulicas,Tubería galvanizada
 CMC-00282,Tubo galvanizado c-40 6.40 c/r 75.,tmo,4179.06,Instalaciones hidráulicas,Tubería galvanizada
 CMC-00283,Tubo galvanizado c-40 6.40 c/r 100.,tmo,5914.57,Instalaciones hidráulicas,Tubería galvanizada
-CMC-00413,"Adaptador hidráulico hembra 13, tubo flex (hidr cementar).",pza,5.6,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00414,"Adaptador hidráulico hembra 19, tubo flex (hidr cementar).",pza,7.12,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00415,"Adaptador hidráulico hembra 25, tubo flex (hidr cementar).",pza,18.66,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00416,"Adaptador hidráulico hembra 32, tubo flex (hidr cementar).",pza,17.49,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00422,"Adaptador hidráulico macho 13, tubo flex (hidr cementar).",pza,4.44,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00423,"Adaptador hidráulico macho 19, tubo flex (hidr cementar).",pza,4.92,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00424,"Adaptador hidráulico macho 25, tubo flex (hidr cementar).",pza,8.98,Instalaciones hidráulicas,Tubería PVC hidráulica
-CMC-00425,"Adaptador hidráulico macho 32, tubo flex (hidr cementar).",pza,10.86,Instalaciones hidráulicas,Tubería PVC hidráulica
+CMC-00413,"Adaptador hidráulico hembra 13, tubo flex (hidr cementar).",pza,5.6,Instalaciones hidráulicas,Conexiones
+CMC-00414,"Adaptador hidráulico hembra 19, tubo flex (hidr cementar).",pza,7.12,Instalaciones hidráulicas,Conexiones
+CMC-00415,"Adaptador hidráulico hembra 25, tubo flex (hidr cementar).",pza,18.66,Instalaciones hidráulicas,Conexiones
+CMC-00416,"Adaptador hidráulico hembra 32, tubo flex (hidr cementar).",pza,17.49,Instalaciones hidráulicas,Conexiones
+CMC-00422,"Adaptador hidráulico macho 13, tubo flex (hidr cementar).",pza,4.44,Instalaciones hidráulicas,Conexiones
+CMC-00423,"Adaptador hidráulico macho 19, tubo flex (hidr cementar).",pza,4.92,Instalaciones hidráulicas,Conexiones
+CMC-00424,"Adaptador hidráulico macho 25, tubo flex (hidr cementar).",pza,8.98,Instalaciones hidráulicas,Conexiones
+CMC-00425,"Adaptador hidráulico macho 32, tubo flex (hidr cementar).",pza,10.86,Instalaciones hidráulicas,Conexiones
 MHPV-346,Reducción bushing hidráulica cédula 40 de pvc a cementar de 100 X 50 mm. sistema inglés.,pza,122.34,Instalaciones hidráulicas,Conexiones
 MHPV-347,Reducción bushing hidráulica cédula 40 de pvc a cementar de 100 X 60 mm. sistema inglés.,pza,122.34,Instalaciones hidráulicas,Conexiones
 MHPV-348,Reducción bushing hidráulica cédula 40 de pvc a cementar de 100 X 75 mm. sistema inglés.,pza,122.34,Instalaciones hidráulicas,Conexiones
@@ -440,7 +440,7 @@ MHSVG-0015,"Tubo de cobre tipo ""L"" de 51 mm. de diámetro, tramo de 6.10 mts. 
 MHSVG-0015A,"Tubo de cobre tipo ""L"" de 64 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,14787.44,Instalaciones de gas,Tubería de cobre para gas
 MHSVG-0015B,"Tubo de cobre tipo ""L"" de 75 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,19944.43,Instalaciones de gas,Tubería de cobre para gas
 MHSVG-0015C,"Tubo de cobre tipo ""L"" de 100 mm. de diámetro, tramo de 6.10 mts. marca Nacobre.",tmo,33098.88,Instalaciones de gas,Tubería de cobre para gas
-MHSVG-0016,"Tubo de cobre flexible de 13 mm. (rollo 15.24 mts. 50 pies), marca Nacobre.",roll,1752.4718,Instalaciones de gas,Tubería flexible
+MHSVG-0016,"Tubo de cobre flexible de 13 mm. (rollo 15.24 mts. 50 pies), marca Nacobre.",roll,1752.4718,Instalaciones de gas,Tubería de cobre para gas
 MHSVG-0108,Tuerca cónica corta de 13 mm. marca Nacobre.,pza,12.8481,Instalaciones de gas,Conexiones abocinadas
 MHSVG-0109,Tuerca cónica corta de 19 mm. marca Nacobre.,pza,34.6345,Instalaciones de gas,Conexiones abocinadas
 MHSVG-0117,"Campana niple abocinado 45º con rosca interior NPT 6 x 13, marca Nacobre.",pza,19.3569,Instalaciones de gas,Conexiones abocinadas
@@ -545,17 +545,17 @@ LAOS-146,"Lámpara fluorescente slimline, en colores, Is slim F96t12/B 75 Fa8 T1
 LAOS-154,"Lámpara de descarga de luz mixta, 220 volts Hwl, Hwl 250 220 E39 Eo90 luz mixta b lujo.",pza,184.2465,Instalaciones eléctricas,Lámparas y focos
 LAOS-159,"Lámpara de descarga de vapor de mercurio, Hql, Hql 1000 E39 Bt56 mercurio b lujo.",pza,850.7205,Instalaciones eléctricas,Lámparas y focos
 LAOS-166,"Lámpara de descarga de sodio alta presión, Nav T 150w súper 4y E40.",pza,316.4,Instalaciones eléctricas,Lámparas y focos
-CMC-26170,"Lámpara bajo voltaje fit open L-1106-0 blanco, Magg.",pza,356.854,Instalaciones eléctricas,Lámparas y focos
-CMC-27430,"Lámpara empotrar mi nidado K-1059-0 blanco, Magg.",pza,184.1222,Instalaciones eléctricas,Lámparas y focos
-CMC-27770,"Lámpara riel eco cilindro L-3301-0 blanco, Magg.",pza,76.5462,Instalaciones eléctricas,Lámparas y focos
-CMC-28370,"Lámpara sky indirecta 1X54W L-1438-0 blanca, Magg.",pza,835.7819,Instalaciones eléctricas,Lámparas y focos
-CMC-28620,"Lámpara exterior blue L-7059-0 blanco, Magg.",pza,398.9465,Instalaciones eléctricas,Lámparas y focos
+CMC-26170,"Lámpara bajo voltaje fit open L-1106-0 blanco, Magg.",pza,356.854,Instalaciones eléctricas,Luminarias
+CMC-27430,"Lámpara empotrar mi nidado K-1059-0 blanco, Magg.",pza,184.1222,Instalaciones eléctricas,Luminarias
+CMC-27770,"Lámpara riel eco cilindro L-3301-0 blanco, Magg.",pza,76.5462,Instalaciones eléctricas,Luminarias
+CMC-28370,"Lámpara sky indirecta 1X54W L-1438-0 blanca, Magg.",pza,835.7819,Instalaciones eléctricas,Luminarias
+CMC-28620,"Lámpara exterior blue L-7059-0 blanco, Magg.",pza,398.9465,Instalaciones eléctricas,Luminarias
 CMC-29270,"Lámpara 13W senc Gx 23 2700K F-9072-0, Magg.",pza,23.6283,Instalaciones eléctricas,Lámparas y focos
 CMC-29330,"Lámpara dicroica Mr16 50W/12V F-9047-0, Magg.",pza,10.848,Instalaciones eléctricas,Lámparas y focos
 CMC-29340,"Farol Mérida soportado V-2000-0 blanco, Magg.",pza,170.7317,Instalaciones eléctricas,Luminarias
 CMC-29460,"Farol San Miguel colgar V-2004-0 blanco, Magg.",pza,337.5649,Instalaciones eléctricas,Luminarias
 CMC-29550,"Farol Guanajuato suspendido V-2007-0 blanco, Magg.",pza,446.8133,Instalaciones eléctricas,Luminarias
-CMC-29860,"Lámpara jardín sub-a cubierta, a L-1300-1 negro, Magg.",pza,194.9702,Instalaciones eléctricas,Lámparas y focos
+CMC-29860,"Lámpara jardín sub-a cubierta, a L-1300-1 negro, Magg.",pza,194.9702,Instalaciones eléctricas,Luminarias
 ANCL-175,"Expansor anclo Z con tornillo y rondana de 4.7 mm. (3/16"").",pza,6.1,Ferretería,Anclas y taquetes
 ANCL-176,"Expansor anclo Z con tornillo y rondana de 6.5 mm. (1/4"").",pza,7.89,Ferretería,Anclas y taquetes
 ANCL-177,"Expansor anclo Z con tornillo y rondana de 7.9 mm. (5/16"").",pza,13.87,Ferretería,Anclas y taquetes
@@ -576,14 +576,14 @@ CMC-00318,Abrazadera sinfín de 50.,pza,16.7,Ferretería,Abrazaderas y soportes
 CMC-00319,Abrazadera sinfín de 64.,pza,19.03,Ferretería,Abrazaderas y soportes
 CMC-00328,Abrazadera para toma con salida roscada 160 x 13.,pza,103.2481,Ferretería,Abrazaderas y soportes
 CMC-00329,Abrazadera 75 mm dab-3 Milber,pza,5.4127,Ferretería,Abrazaderas y soportes
-CMC-00333,Abrazadera anclo uña conduit uc 25.,pza,6.05,Ferretería,Anclas y taquetes
-CMC-00334,Abrazadera anclo uña conduit uc 32.,pza,6.51,Ferretería,Anclas y taquetes
-CMC-00339,Abrazadera anclo omega conduit oc 25.,pza,3.28,Ferretería,Anclas y taquetes
-CMC-00340,Abrazadera anclo omega conduit oc 32.,pza,7.89,Ferretería,Anclas y taquetes
-CMC-00341,Abrazadera anclo omega conduit oc 38.,pza,9.14,Ferretería,Anclas y taquetes
-CMC-00354,Abrazadera anclo omega galvanizada de 19.,pza,7.89,Ferretería,Anclas y taquetes
-CMC-00355,Abrazadera anclo omega galvanizada de 25.,pza,7.89,Ferretería,Anclas y taquetes
-CMC-00356,Abrazadera anclo omega galvanizada de 32.,pza,9.14,Ferretería,Anclas y taquetes
+CMC-00333,Abrazadera anclo uña conduit uc 25.,pza,6.05,Ferretería,Abrazaderas y soportes
+CMC-00334,Abrazadera anclo uña conduit uc 32.,pza,6.51,Ferretería,Abrazaderas y soportes
+CMC-00339,Abrazadera anclo omega conduit oc 25.,pza,3.28,Ferretería,Abrazaderas y soportes
+CMC-00340,Abrazadera anclo omega conduit oc 32.,pza,7.89,Ferretería,Abrazaderas y soportes
+CMC-00341,Abrazadera anclo omega conduit oc 38.,pza,9.14,Ferretería,Abrazaderas y soportes
+CMC-00354,Abrazadera anclo omega galvanizada de 19.,pza,7.89,Ferretería,Abrazaderas y soportes
+CMC-00355,Abrazadera anclo omega galvanizada de 25.,pza,7.89,Ferretería,Abrazaderas y soportes
+CMC-00356,Abrazadera anclo omega galvanizada de 32.,pza,9.14,Ferretería,Abrazaderas y soportes
 AACE-0065,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 1/8"" x 3/4"".",pza,8087.94,Cancelería y vidrio,Herrería y rejas
 AACE-0066,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 1/8"" x 1"".",pza,9814.83,Cancelería y vidrio,Herrería y rejas
 AACE-0273,"Rejilla tipo irving negro tablero de 1.00 x 6.00 mts. de 3/16 x 1"".",pza,13847.86,Cancelería y vidrio,Herrería y rejas
@@ -889,20 +889,20 @@ ASPH-0570,Tope magnético 1054 C BP cromo brillante blister pack fabricación Ph
 ASPH-0529,Resbalón 46 C cromo brillante  fabricación Phillips.,pza,58.76,Ferretería,Herrajes
 ASPH-0557,Mirilla 200º C cromo brillante  fabricación Phillips.,pza,47.008,Ferretería,Herrajes
 ASPH-0291,Candado de latón macizo 14 GL BP gancho largo blister pack  fabricación Phillips.,pza,232.49,Ferretería,Cerrajería
-CMC-19260,"Manija metálica c/logo 12-001, American Standard (refacciones).",pza,27.1539,Ferretería,Cerrajería
-CMC-19261,"Manija plástica cr. 12-280, American Standard (refacciones).",pza,69.5289,Ferretería,Cerrajería
-CMC-19262,"Manija heritage cr. 12-400, American Standard (refacciones).",pza,151.3296,Ferretería,Cerrajería
-CMC-22168,"Manija escorpión doble 140 cromo brillante, Internacional de Accesorios México.",pza,376.7194,Ferretería,Cerrajería
+CMC-19260,"Manija metálica c/logo 12-001, American Standard (refacciones).",pza,27.1539,Instalaciones hidráulicas,Llaves y grifería
+CMC-19261,"Manija plástica cr. 12-280, American Standard (refacciones).",pza,69.5289,Instalaciones hidráulicas,Llaves y grifería
+CMC-19262,"Manija heritage cr. 12-400, American Standard (refacciones).",pza,151.3296,Instalaciones hidráulicas,Llaves y grifería
+CMC-22168,"Manija escorpión doble 140 cromo brillante, Internacional de Accesorios México.",pza,376.7194,Instalaciones hidráulicas,Llaves y grifería
 ASTE-0413,Manija mare roseta cuadrada baño MAREC03CM  fabricación Tesa.,pza,1640.76,Ferretería,Cerrajería
 ASYA-0671,Gatillo para entrada principal New York xny llave/llave apollo XNY96017CMT60 cromo mate blister  fabricación Yale.,pza,1280.968,Ferretería,Cerrajería
 CMC-03007,"Manera regadera monticel pla/cr t3124pmc, marca Moen.",jgo,3357.03,Instalaciones hidráulicas,Llaves y grifería
-CMC-03632,"Monomando lavabo Catania 9408ca-9 a inoxidable, marca Urrea.",pza,0,Instalaciones sanitarias,Muebles de baño
+CMC-03632,"Monomando lavabo Catania 9408ca-9 a inoxidable, marca Urrea.",pza,0,Instalaciones hidráulicas,Llaves y grifería
 CMC-03649,"Monomando tin/reg Catania 9445ca-9 a inoxidable, marca Urrea.",pza,0,Instalaciones hidráulicas,Llaves y grifería
-CMC-03701,"Mezcladora p/lavabo pared scala tipo cruceta cromada 20200921, marca Stanza.",pza,6748.74,Instalaciones sanitarias,Muebles de baño
+CMC-03701,"Mezcladora p/lavabo pared scala tipo cruceta cromada 20200921, marca Stanza.",pza,6748.74,Instalaciones hidráulicas,Llaves y grifería
 CMC-18125,"Regadera bych 2295b9 acero inoxidable, catania, marca Urrea.",pza,0,Instalaciones hidráulicas,Llaves y grifería
 CMC-19394,"Regadera plástico negra Sr-006-N, marca Helvex.",pza,125.1362,Instalaciones hidráulicas,Llaves y grifería
 CMC-49290,"Regadera teléfono 3008bm cromada, marca Dica.",pza,760.78,Instalaciones hidráulicas,Llaves y grifería
-CMC-17226,"Fluxómetro para inodoro fig.2532, marca Urrea.",pza,3256.16,Instalaciones sanitarias,Muebles de baño
+CMC-17226,"Fluxómetro para inodoro fig.2532, marca Urrea.",pza,3256.16,Instalaciones sanitarias,Accesorios sanitarios
 CMC-17229,"Fluxómetro p/ming. palanca 1312, marca Urrea.",pza,2658.22,Instalaciones sanitarias,Accesorios sanitarios
 CMC-17230,"Fluxómetro p/ming. pedal 1315, marca Urrea.",pza,2249.378,Instalaciones sanitarias,Accesorios sanitarios
 CMC-17232,"Fluxómetro elec. pilas taza fig.2533, marca Urrea.",pza,4556.4538,Instalaciones sanitarias,Accesorios sanitarios
@@ -934,7 +934,7 @@ CMC-17281,"Gancho doble 306, marca Urrea.",pza,0,Instalaciones sanitarias,Acceso
 CMC-17289,"Gancho contemporáneo 9306 cromo, marca Urrea.",pza,178.27,Instalaciones sanitarias,Accesorios sanitarios
 CMC-17298,"Gancho massimo ms. 06 cromo, marca Urrea.",pza,629.52,Instalaciones sanitarias,Accesorios sanitarios
 CMC-17368,"Gancho sencillo oasis cromo 6106, marca Helvex.",pza,349.4186,Instalaciones sanitarias,Accesorios sanitarios
-CMC-17019,"Agarradera tina coh-19-1 cromo/dorado, marca Urrea.",pza,300.1958,Instalaciones sanitarias,Muebles de baño
+CMC-17019,"Agarradera tina coh-19-1 cromo/dorado, marca Urrea.",pza,300.1958,Instalaciones sanitarias,Accesorios sanitarios
 MBPB-010,"Tina con relax incluye desagüe, línea clásica moderna plus de 167 x 91 x 45 cms. (largo, ancho, alto) con descansa brazos, para 1 persona, cap. de 230 lt.",pza,66798,Instalaciones sanitarias,Muebles de baño
 MBPB-014,"Tina con relax incluye desagüe, línea clásica moderna plus de 152 x 120 x 45 cms. (largo, ancho, alto) con descansa brazos, para 2 personas, cap. de 280 lt.",pza,13402.7,Instalaciones sanitarias,Muebles de baño
 CMC-02628,"Llave fregadero fig. 18ch cromo, marca Urrea.",pza,280.92,Instalaciones hidráulicas,Llaves y grifería

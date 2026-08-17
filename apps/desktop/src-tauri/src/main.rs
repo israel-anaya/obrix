@@ -425,6 +425,12 @@ mod tests {
             padre.insumos_asociados.is_none(),
             "la familia padre no tiene insumos_asociados propios"
         );
+        assert_eq!(
+            padre.icono.as_deref(),
+            Some("familia-concretos-morteros"),
+            "el padre debe traer el Icono de data/initial/familia_insumo.csv"
+        );
+        assert!(hija.icono.is_none(), "la subfamilia no lleva icono propio");
         for nombre in ["Instalaciones de gas", "Jardinería", "Muebles, cocinas y accesorios"] {
             let raiz = familias
                 .iter()

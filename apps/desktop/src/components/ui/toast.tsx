@@ -77,7 +77,7 @@ function ToastClose({ className, ...props }: React.ComponentProps<typeof ToastPr
       )}
       {...props}
     >
-      <XIcon size={13} />
+      <XIcon size={16} />
     </ToastPrimitive.Close>
   )
 }

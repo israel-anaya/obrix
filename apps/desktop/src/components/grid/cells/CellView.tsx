@@ -34,13 +34,13 @@ const Stars = memo(function Stars({
         const icon =
           fill > 0 && fill < 1 ? (
             <span className="relative inline-block" style={{ width: 13, height: 13 }}>
-              <Star size={13} className={cn("absolute inset-0", STAR_EMPTY)} />
+              <Star size={16} className={cn("absolute inset-0", STAR_EMPTY)} />
               <span className="absolute inset-0 overflow-hidden" style={{ width: "50%" }}>
-                <Star size={13} className={STAR_FILLED} />
+                <Star size={16} className={STAR_FILLED} />
               </span>
             </span>
           ) : (
-            <Star size={13} className={className} />
+            <Star size={16} className={className} />
           );
         if (!onPick) return <span key={i}>{icon}</span>;
         return (

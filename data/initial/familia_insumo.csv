@@ -1,217 +1,217 @@
-﻿Familia,Subfamilia,Insumos_asociados
-"Cementos, cales y yesos",Cemento gris,"Cemento Portland tipo I, tipo II, cemento gris a granel y en saco"
-"Cementos, cales y yesos",Cemento blanco,"Cemento blanco en saco, cemento blanco para acabados"
-"Cementos, cales y yesos",Cementos especiales,"Cemento de fraguado rápido, cemento expansivo, cemento para pozos"
-"Cementos, cales y yesos",Cal hidratada,"Cal hidratada tipo S, cal hidratada para mortero"
-"Cementos, cales y yesos",Cal viva,"Cal viva en terrón, cal viva molida"
-"Cementos, cales y yesos",Yeso de construcción,"Yeso para muros, yeso para plafones"
-"Cementos, cales y yesos",Yeso fino y estuco,"Yeso fino para acabados, estuco en polvo"
-"Cementos, cales y yesos",Paneles de yeso,"Tablaroca estándar, tablaroca resistente a la humedad, tablaroca resistente al fuego"
-"Cementos, cales y yesos",Tablacemento,"Placa de fibrocemento, tablacemento para exteriores"
-"Cementos, cales y yesos",Compuestos y cintas,"Pasta para juntas, cinta de papel, cinta malla para tablaroca"
-Agregados,Arena,"Arena de río, arena de mina, arena sílica, arena para revoltura"
-Agregados,Grava,"Grava triturada, grava de río, grava 3/4 y 3/8"
-Agregados,Tepetate,"Tepetate compactable, tepetate para relleno"
-Agregados,Tezontle,"Tezontle rojo, tezontle negro, tezontle para drenaje"
-Agregados,Tepezil,Tepezil para bases y sub-bases
-Agregados,Piedra braza,Piedra braza para cimentación y muros de contención
-Agregados,Piedra bola,Piedra bola para drenaje y decoración
-Agregados,Piedra para filtro,Grava y piedra graduada para filtros de agua
-Agregados,Bases y sub-bases,"Base hidráulica, sub-base, material para terracerías"
-Agregados,Agregados ligeros,"Agregado de tezontle ligero, perlita, vermiculita"
-Concretos y morteros,Concreto premezclado,"Concreto premezclado f'c 150, 200, 250, 300 kg/cm2"
-Concretos y morteros,Concreto elaborado en obra,"Mezcla de cemento, arena, grava y agua dosificada en obra"
-Concretos y morteros,Mortero de albañilería,Mortero cemento-arena para pega de block y tabique
-Concretos y morteros,Adhesivos para loseta,"Adhesivo cementoso, adhesivo flexible para loseta y azulejo"
-Concretos y morteros,Boquillas y juntas,"Boquilla para piso, boquilla epóxica, junta de dilatación"
-Concretos y morteros,Grouts y autonivelantes,"Grout de alta resistencia, mortero autonivelante para piso"
-Concretos y morteros,Aditivos,"Aditivo acelerante, retardante, plastificante, impermeabilizante integral"
-Concretos y morteros,Endurecedores y colorantes,"Endurecedor superficial para piso, colorante integral para concreto"
-Concretos y morteros,Fibras de refuerzo,"Fibra de polipropileno, fibra metálica para concreto"
-Concretos y morteros,Desmoldantes,Desmoldante para cimbra a base de aceite o emulsión
-Aceros,Varilla,"Varilla corrugada #3, #4, #5, #6, grado 42 y 60"
-Aceros,Alambrón y alambre,"Alambrón liso, alambre recocido, alambre galvanizado"
-Aceros,Malla electrosoldada,"Malla electrosoldada 6x6, 10x10"
-Aceros,Perfiles estructurales,"IPR, IPS, canal C, viga estructural"
-Aceros,Lámina,"Lámina galvanizada, lámina lisa, lámina pintro"
-Aceros,Placa de acero,Placa de acero al carbón en distintos calibres
-Aceros,Canales,Canal estructural C y U
-Aceros,Ángulos,"Ángulo de acero LI, ángulo estructural"
-Aceros,Soleras,Solera lisa de acero
-Aceros,Tubería de acero,"Tubo estructural cuadrado, rectangular y redondo, tubo cédula 40"
-Mampostería,Block,"Block hueco, block macizo, block ligero de concreto"
-Mampostería,Tabique,"Tabique rojo recocido, tabique multiperforado"
-Mampostería,Adoquín,Adoquín de concreto para banquetas y estacionamientos
-Mampostería,Teja,"Teja de barro, teja de concreto, teja asfáltica"
-Mampostería,Vigueta,Vigueta pretensada de concreto
-Mampostería,Bovedilla,"Bovedilla de concreto, poliestireno o barro"
-Mampostería,Casetones,Casetón de poliestireno para losa aligerada
-Mampostería,Tubos de concreto,Tubo de concreto para drenaje y alcantarillado
-Mampostería,Registros y brocales,"Registro de concreto, brocal prefabricado"
-Mampostería,Paneles y celosías,"Panel de concreto prefabricado, celosía decorativa"
-Maderas,Polines y barrotes,"Polín de pino, barrote para cimbra"
-Maderas,Tablón y duela de obra,Tablón de pino para andamio y cimbra
-Maderas,Chaflanes,Chaflán de madera para cantos de concreto
-Maderas,Triplay para cimbra,Triplay de pino de 19 mm para cimbra
-Maderas,Triplay de acabado,"Triplay decorativo, MDF, aglomerado"
-Maderas,Tableros,"Tablero OSB, tablero de partículas"
-Maderas,Duela de madera,Duela de madera sólida y flotante
-Maderas,Zoclos y molduras,"Zoclo de madera, moldura decorativa"
-Maderas,Puertas de madera,"Puerta de tambor, puerta de madera sólida"
-Maderas,Plafones,"Plafón de madera, plafón decorativo"
-Impermeabilizantes,Impermeabilizante acrílico,Impermeabilizante acrílico elastomérico para azotea
-Impermeabilizantes,Impermeabilizante asfáltico,"Impermeabilizante asfáltico emulsionado, chapopote"
-Impermeabilizantes,Mantos prefabricados,"Manto asfáltico modificado, manto autoadherible"
-Impermeabilizantes,Primarios e imprimantes,"Primario asfáltico, imprimante para adherencia"
-Impermeabilizantes,Membranas de refuerzo,"Membrana de poliéster, malla de refuerzo para impermeabilizante"
-Impermeabilizantes,Cristalizantes,Impermeabilizante cristalizante integral
-Impermeabilizantes,Selladores,"Sellador de juntas, sellador de poliuretano"
-Impermeabilizantes,Bandas y waterstops,"Waterstop de PVC, banda hidrófila para juntas de colado"
-Impermeabilizantes,Barreras de vapor,"Membrana de polietileno, barrera de vapor para losa"
-Impermeabilizantes,Recubrimientos epóxicos,Recubrimiento epóxico para pisos y tanques
-Pinturas y recubrimientos,Pintura vinílica,Pintura vinílica para interiores y exteriores
-Pinturas y recubrimientos,Esmalte,"Esmalte alquidálico, esmalte para metal"
-Pinturas y recubrimientos,Primarios,"Primario anticorrosivo, sellador-primario para muro"
-Pinturas y recubrimientos,Selladores de muro,"Sellador acrílico para muro, resane"
-Pinturas y recubrimientos,Pastas y texturizados,"Pasta texturizada, acabado rústico"
-Pinturas y recubrimientos,Estuco,"Estuco veneciano, estuco decorativo"
-Pinturas y recubrimientos,Pintura para tráfico,Pintura para señalamiento vial
-Pinturas y recubrimientos,Pintura para alberca,Pintura epóxica y de caucho clorado para albercas
-Pinturas y recubrimientos,Barnices,"Barniz para madera, barniz marino"
-Pinturas y recubrimientos,Thinner y solventes,"Thinner estándar, aguarrás, solvente para limpieza"
-Pisos y azulejos,Loseta,"Loseta cerámica, loseta de porcelanato"
-Pisos y azulejos,Azulejo,Azulejo cerámico para muro
-Pisos y azulejos,Piso vinílico,Piso vinílico en rollo y losetas
-Pisos y azulejos,Piso laminado,Piso laminado tipo madera
-Pisos y azulejos,Alfombra,Alfombra en rollo y en losetas modulares
-Pisos y azulejos,Mosaico,"Mosaico de pasta, mosaico vítreo"
-Pisos y azulejos,Mármol,Placa y piso de mármol
-Pisos y azulejos,Granito,Placa y piso de granito
-Pisos y azulejos,Cantera y caliza,"Cantera para piso y fachada, caliza"
-Pisos y azulejos,Accesorios de piso,"Perfiles de remate, cenefas, guardapolvos"
-Cancelería y vidrio,Perfiles de aluminio,Perfil de aluminio para cancelería y ventanería
-Cancelería y vidrio,Vidrio recocido,Vidrio claro y de color recocido
-Cancelería y vidrio,Vidrio templado y laminado,"Vidrio templado de seguridad, vidrio laminado"
-Cancelería y vidrio,Acrílicos y policarbonato,"Lámina de acrílico, lámina de policarbonato alveolar"
-Cancelería y vidrio,Domos y tragaluces,"Domo de policarbonato, tragaluz prefabricado"
-Cancelería y vidrio,Herrería y rejas,"Reja de herrería, protección metálica"
-Cancelería y vidrio,Puertas y canceles,"Cancel de baño, puerta de aluminio y vidrio"
-Cancelería y vidrio,Ventanas,Ventana corrediza y abatible de aluminio o PVC
-Cancelería y vidrio,Mosquiteros,Mosquitero de aluminio y fibra de vidrio
-Cancelería y vidrio,Accesorios de cancelería,"Jaladeras, rodamientos, sellos y felpas"
-Instalaciones hidráulicas,Tubería PVC hidráulica,"Tubo PVC hidráulico cédula 40, RD-26"
-Instalaciones hidráulicas,Tubería CPVC,Tubo CPVC para agua caliente
-Instalaciones hidráulicas,Tubería de cobre,Tubo de cobre tipo M y L
-Instalaciones hidráulicas,Tubería galvanizada,Tubo galvanizado para instalación hidráulica
-Instalaciones hidráulicas,Tubería PPR,Tubo PPR termofusión
-Instalaciones hidráulicas,Conexiones,"Coples, codos, tees, reducciones hidráulicas"
-Instalaciones hidráulicas,Válvulas de agua,"Válvula de esfera, válvula check, válvula de compuerta"
-Instalaciones hidráulicas,Llaves y grifería,"Llave de nariz, mezcladora, regadera"
-Instalaciones hidráulicas,Tinacos y cisternas,"Tinaco de polietileno, cisterna prefabricada"
-Instalaciones hidráulicas,Calentadores de gas,"Calentador de paso, calentador de depósito"
-Instalaciones hidráulicas,Calentadores solares,Calentador solar de tubos evacuados y placa plana
-Instalaciones hidráulicas,Bombas de agua,"Bomba centrífuga, bomba sumergible, hidroneumático"
-Instalaciones hidráulicas,Filtros y equipos de tratamiento,"Filtro de sedimentos, suavizador de agua, cloración"
-Instalaciones hidráulicas,Medidores de agua,Medidor volumétrico de agua potable
-Instalaciones hidráulicas,Agua,Agua potable para obra
-Instalaciones sanitarias,Muebles de baño,"WC, lavabo, mingitorio, regadera"
-Instalaciones sanitarias,Accesorios sanitarios,"Asiento, fluxómetro, dispensador, papelera"
-Instalaciones sanitarias,Tubería PVC sanitaria,"Tubo PVC sanitario de 2"" a 6"""
-Instalaciones sanitarias,Tubería de fierro fundido,Tubo de fierro fundido para drenaje
-Instalaciones sanitarias,Tubería de alcantarillado,Tubo de PVC y concreto para alcantarillado
-Instalaciones sanitarias,Conexiones sanitarias,"Codos, yee, tee sanitaria, reducción"
-Instalaciones sanitarias,Fosas sépticas,Fosa séptica prefabricada
-Instalaciones sanitarias,Coladeras y rejillas,"Coladera de piso, rejilla pluvial"
-Instalaciones sanitarias,Válvulas y trampas,"Trampa de grasa, válvula check sanitaria"
-Instalaciones sanitarias,Tuberías para drenaje pluvial,Tubo PVC y de lámina para bajada de agua pluvial
-Instalaciones eléctricas,Conductores,"Cable THHW, cable THW, cable de cobre desnudo"
-Instalaciones eléctricas,Canalizaciones,"Tubo conduit, tubo EMT, ducto de PVC eléctrico"
-Instalaciones eléctricas,Conexiones eléctricas,"Conectores, cajas de conexión, cinta aislante"
-Instalaciones eléctricas,Interruptores y contactos,"Apagador, contacto sencillo y polarizado, placa"
-Instalaciones eléctricas,Protección y tableros,"Interruptor termomagnético, centro de carga, pastillas"
-Instalaciones eléctricas,Luminarias,"Luminaria LED, lámpara de sobreponer y empotrar"
-Instalaciones eléctricas,Lámparas y focos,"Foco LED, foco ahorrador"
-Instalaciones eléctricas,Postes y brazos,"Poste de concreto y metálico, brazo para luminaria"
-Instalaciones eléctricas,Acometidas y mufas,"Mufa, base de medidor, acometida eléctrica"
-Instalaciones eléctricas,Charolas y escalerillas,"Charola metálica, escalerilla porta cables"
-Ferretería,Clavos,"Clavo de 1"" a 4"", clavo para cimbra"
-Ferretería,Tornillería,"Tornillo para tablaroca, tornillo autorroscante, tuercas"
-Ferretería,Anclas y taquetes,"Ancla de expansión, taquete de plástico y metálico"
-Ferretería,Abrazaderas y soportes,"Abrazadera para tubo, soporte metálico"
-Ferretería,Cerrajería,"Cerradura, chapa, candado"
-Ferretería,Herrajes,"Bisagra, jaladera, corredera"
-Ferretería,Adhesivos,"Silicón, pegamento de contacto, cinta doble cara"
-Ferretería,Soldadura,"Electrodo, alambre para soldar, fundente"
-Ferretería,Lijas y abrasivos,"Lija de agua, disco de corte, disco de desbaste"
-Ferretería,Consumibles,"Guantes desechables, trapo, estopa"
-Combustibles y lubricantes,Diésel,Diésel para maquinaria y plantas de luz
-Combustibles y lubricantes,Gasolina,Gasolina Magna y Premium para equipo menor
-Combustibles y lubricantes,Gas LP,Gas LP para sopletes y equipo
-Combustibles y lubricantes,Aceites de motor,"Aceite de motor 15W40, 20W50"
-Combustibles y lubricantes,Aceites hidráulicos,"Aceite hidráulico ISO 32, 46, 68"
-Combustibles y lubricantes,Grasas,"Grasa multiusos, grasa de litio"
-Combustibles y lubricantes,Anticongelantes y refrigerantes,"Anticongelante para radiador, refrigerante"
-Combustibles y lubricantes,Energía eléctrica,Consumo de energía eléctrica en obra
-Combustibles y lubricantes,Combustóleo y keroseno,"Combustóleo industrial, keroseno"
-Combustibles y lubricantes,Fluidos y aditivos,"Líquido de frenos, aditivo para combustible"
-Mano de obra,Albañilería,"Albañil, ayudante de albañil"
-Mano de obra,Herrería,"Herrero, soldador estructural"
-Mano de obra,Carpintería,"Carpintero de obra, cimbrador"
-Mano de obra,Electricidad,"Electricista, ayudante de electricista"
-Mano de obra,Plomería,"Plomero, instalador hidrosanitario"
-Mano de obra,Pintura,Pintor de obra
-Mano de obra,Operadores,Operador de maquinaria pesada y equipo
-Mano de obra,Ayudantes,"Peón, ayudante general"
-Equipo y herramienta,Accesorios de cimbra,"Clavos de cimbra, desmoldante, tensores, cuñas, separadores"
-Equipo y herramienta,Andamios,"Andamio tubular, marcos, plataformas, escaleras de andamio"
-Equipo y herramienta,Bombeo de concreto,"Bomba estacionaria de concreto, bomba pluma"
-Equipo y herramienta,Cimbra metálica,"Paneles metálicos, formaleta modular, puntales metálicos"
-Equipo y herramienta,Equipo de izaje,"Grúa torre, grúa telescópica, malacate, montacargas, winche"
-Equipo y herramienta,Equipo de seguridad,"Casco, arnés, guantes, lentes de seguridad, equipo de protección personal (%mo)"
-Equipo y herramienta,Equipo de soldadura y corte,"Máquina de soldar, equipo de oxicorte, careta y consumibles"
-Equipo y herramienta,Equipo de compactación,"Rodillo vibratorio, placa compactadora, bailarina"
-Equipo y herramienta,Equipo ligero,"Vibrador de concreto, cortadora de piso, revolvedora"
-Equipo y herramienta,Equipo pesado,"Retroexcavadora, motoniveladora, cargador frontal, excavadora"
-Equipo y herramienta,Equipo topográfico,"Estación total, nivel óptico, GPS de precisión, mira topográfica"
-Equipo y herramienta,Herramienta eléctrica,"Taladro, rotomartillo, sierra circular, esmeriladora"
-Equipo y herramienta,Herramienta manual,"Pala, pico, cucharas de albañil, herramienta de mano (%mo)"
-Equipo y herramienta,Herramienta de plomería/hidráulica,"Terraja, prensa para tubo, cortatubos"
-Equipo y herramienta,Transporte y fletes,"Volqueta, camión de carga, mezcladora móvil, flete de materiales"
-Instalaciones de gas,Tubería de cobre para gas,Tubo de cobre tipo L y K para gas
-Instalaciones de gas,Tubería flexible,"Conector flexible de gas, manguera para gas LP"
-Instalaciones de gas,Tubería de polietileno para gas,Tubo de polietileno para redes de gas natural
-Instalaciones de gas,Conexiones abocinadas,"Conexión abocinada, unión universal para gas"
-Instalaciones de gas,Reguladores de gas,Regulador de baja y alta presión
-Instalaciones de gas,Válvulas de gas,"Válvula de esfera para gas, válvula de corte"
-Instalaciones de gas,Tanques estacionarios,Tanque estacionario de gas LP
-Instalaciones de gas,Cilindros,Cilindro de gas LP de 20 y 30 kg
-Instalaciones de gas,Medidores de gas,Medidor de gas doméstico e industrial
-Instalaciones de gas,Accesorios de gas,"Abrazaderas, cinta para gas, detector de fugas"
-Jardinería,Tierra,"Tierra de hoja, tierra lama, tierra negra"
-Jardinería,Plantas,"Árboles, arbustos, plantas de ornato"
-Jardinería,Pasto,"Pasto en rollo, pasto en semilla"
-"Muebles, cocinas y accesorios",Cocinas integrales,"Cocina integral de melamina, madera o MDF"
-"Muebles, cocinas y accesorios",Parrillas y estufas,"Parrilla eléctrica y de gas, estufa empotrable"
-"Muebles, cocinas y accesorios",Gabinetes,Gabinete inferior y superior de cocina
-"Muebles, cocinas y accesorios",Bases y cubiertas,"Cubierta de granito, cuarzo o laminado"
-"Muebles, cocinas y accesorios",Tarjas,"Tarja de acero inoxidable, tarja de granito"
-"Muebles, cocinas y accesorios",Extractores y campanas,Campana extractora de cocina
-"Muebles, cocinas y accesorios",Trituradores,Triturador de alimentos para tarja
-"Muebles, cocinas y accesorios",Interceptores de grasa,Trampa de grasa para cocina
-"Muebles, cocinas y accesorios",Hornos y electrodomésticos,"Horno empotrable, microondas, refrigerador"
-"Muebles, cocinas y accesorios",Accesorios de cocina,"Jaladeras, correderas, organizadores"
-Básicos auxiliares,Concretos elaborados en obra,Mezcla de concreto dosificada en obra
-Básicos auxiliares,Morteros,Mortero cemento-arena para distintos usos
-Básicos auxiliares,Aplanados y enlucidos,"Aplanado de yeso, aplanado de mortero, enlucido fino"
-Básicos auxiliares,Lechadas y grouts,"Lechada de cemento, grout para anclajes"
-Básicos auxiliares,Firmes y plantillas,"Firme de concreto, plantilla de limpieza"
-Básicos auxiliares,Rellenos y bases,"Relleno compactado, material de banco para bases"
-Básicos auxiliares,Mezclas asfálticas,"Carpeta asfáltica, riego de liga"
-Básicos auxiliares,Sistemas de cimbra,"Sistema de cimbra completo (paneles, puntales, accesorios)"
-Básicos auxiliares,Sistemas de impermeabilización,Sistema completo de impermeabilización de azotea
-Básicos auxiliares,Sistemas de recubrimiento,Sistema de recubrimiento de piso o muro
-Básicos auxiliares,Sistemas de tablaroca,Sistema de muro o plafón de tablaroca completo
-Básicos auxiliares,Sistemas de piso,"Sistema de piso terminado (base, adhesivo, acabado)"
-Básicos auxiliares,Plantas de tratamiento y drenaje,"Planta de tratamiento paquete, sistema de drenaje"
-Básicos auxiliares,Obra falsa y andamiaje,"Obra falsa para puentes, andamiaje de apoyo"
-Básicos auxiliares,Pruebas y control de calidad,"Prueba de compresión de concreto, prueba de laboratorio"
+Familia,Subfamilia,Insumos_asociados,Icono
+"Cementos, cales y yesos",Cemento gris,"Cemento Portland tipo I, tipo II, cemento gris a granel y en saco",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Cemento blanco,"Cemento blanco en saco, cemento blanco para acabados",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Cementos especiales,"Cemento de fraguado rápido, cemento expansivo, cemento para pozos",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Cal hidratada,"Cal hidratada tipo S, cal hidratada para mortero",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Cal viva,"Cal viva en terrón, cal viva molida",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Yeso de construcción,"Yeso para muros, yeso para plafones",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Yeso fino y estuco,"Yeso fino para acabados, estuco en polvo",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Paneles de yeso,"Tablaroca estándar, tablaroca resistente a la humedad, tablaroca resistente al fuego",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Tablacemento,"Placa de fibrocemento, tablacemento para exteriores",familia-cementos-cales-yesos
+"Cementos, cales y yesos",Compuestos y cintas,"Pasta para juntas, cinta de papel, cinta malla para tablaroca",familia-cementos-cales-yesos
+Agregados,Arena,"Arena de río, arena de mina, arena sílica, arena para revoltura",familia-agregados
+Agregados,Grava,"Grava triturada, grava de río, grava 3/4 y 3/8",familia-agregados
+Agregados,Tepetate,"Tepetate compactable, tepetate para relleno",familia-agregados
+Agregados,Tezontle,"Tezontle rojo, tezontle negro, tezontle para drenaje",familia-agregados
+Agregados,Tepezil,Tepezil para bases y sub-bases,familia-agregados
+Agregados,Piedra braza,Piedra braza para cimentación y muros de contención,familia-agregados
+Agregados,Piedra bola,Piedra bola para drenaje y decoración,familia-agregados
+Agregados,Piedra para filtro,Grava y piedra graduada para filtros de agua,familia-agregados
+Agregados,Bases y sub-bases,"Base hidráulica, sub-base, material para terracerías",familia-agregados
+Agregados,Agregados ligeros,"Agregado de tezontle ligero, perlita, vermiculita",familia-agregados
+Concretos y morteros,Concreto premezclado,"Concreto premezclado f'c 150, 200, 250, 300 kg/cm2",familia-concretos-morteros
+Concretos y morteros,Concreto elaborado en obra,"Mezcla de cemento, arena, grava y agua dosificada en obra",familia-concretos-morteros
+Concretos y morteros,Mortero de albañilería,Mortero cemento-arena para pega de block y tabique,familia-concretos-morteros
+Concretos y morteros,Adhesivos para loseta,"Adhesivo cementoso, adhesivo flexible para loseta y azulejo",familia-concretos-morteros
+Concretos y morteros,Boquillas y juntas,"Boquilla para piso, boquilla epóxica, junta de dilatación",familia-concretos-morteros
+Concretos y morteros,Grouts y autonivelantes,"Grout de alta resistencia, mortero autonivelante para piso",familia-concretos-morteros
+Concretos y morteros,Aditivos,"Aditivo acelerante, retardante, plastificante, impermeabilizante integral",familia-concretos-morteros
+Concretos y morteros,Endurecedores y colorantes,"Endurecedor superficial para piso, colorante integral para concreto",familia-concretos-morteros
+Concretos y morteros,Fibras de refuerzo,"Fibra de polipropileno, fibra metálica para concreto",familia-concretos-morteros
+Concretos y morteros,Desmoldantes,Desmoldante para cimbra a base de aceite o emulsión,familia-concretos-morteros
+Aceros,Varilla,"Varilla corrugada #3, #4, #5, #6, grado 42 y 60",familia-aceros
+Aceros,Alambrón y alambre,"Alambrón liso, alambre recocido, alambre galvanizado",familia-aceros
+Aceros,Malla electrosoldada,"Malla electrosoldada 6x6, 10x10",familia-aceros
+Aceros,Perfiles estructurales,"IPR, IPS, canal C, viga estructural",familia-aceros
+Aceros,Lámina,"Lámina galvanizada, lámina lisa, lámina pintro",familia-aceros
+Aceros,Placa de acero,Placa de acero al carbón en distintos calibres,familia-aceros
+Aceros,Canales,Canal estructural C y U,familia-aceros
+Aceros,Ángulos,"Ángulo de acero LI, ángulo estructural",familia-aceros
+Aceros,Soleras,Solera lisa de acero,familia-aceros
+Aceros,Tubería de acero,"Tubo estructural cuadrado, rectangular y redondo, tubo cédula 40",familia-aceros
+Mampostería,Block,"Block hueco, block macizo, block ligero de concreto",familia-mamposteria
+Mampostería,Tabique,"Tabique rojo recocido, tabique multiperforado",familia-mamposteria
+Mampostería,Adoquín,Adoquín de concreto para banquetas y estacionamientos,familia-mamposteria
+Mampostería,Teja,"Teja de barro, teja de concreto, teja asfáltica",familia-mamposteria
+Mampostería,Vigueta,Vigueta pretensada de concreto,familia-mamposteria
+Mampostería,Bovedilla,"Bovedilla de concreto, poliestireno o barro",familia-mamposteria
+Mampostería,Casetones,Casetón de poliestireno para losa aligerada,familia-mamposteria
+Mampostería,Tubos de concreto,Tubo de concreto para drenaje y alcantarillado,familia-mamposteria
+Mampostería,Registros y brocales,"Registro de concreto, brocal prefabricado",familia-mamposteria
+Mampostería,Paneles y celosías,"Panel de concreto prefabricado, celosía decorativa",familia-mamposteria
+Maderas,Polines y barrotes,"Polín de pino, barrote para cimbra",familia-maderas
+Maderas,Tablón y duela de obra,Tablón de pino para andamio y cimbra,familia-maderas
+Maderas,Chaflanes,Chaflán de madera para cantos de concreto,familia-maderas
+Maderas,Triplay para cimbra,Triplay de pino de 19 mm para cimbra,familia-maderas
+Maderas,Triplay de acabado,"Triplay decorativo, MDF, aglomerado",familia-maderas
+Maderas,Tableros,"Tablero OSB, tablero de partículas",familia-maderas
+Maderas,Duela de madera,Duela de madera sólida y flotante,familia-maderas
+Maderas,Zoclos y molduras,"Zoclo de madera, moldura decorativa",familia-maderas
+Maderas,Puertas de madera,"Puerta de tambor, puerta de madera sólida",familia-maderas
+Maderas,Plafones,"Plafón de madera, plafón decorativo",familia-maderas
+Impermeabilizantes,Impermeabilizante acrílico,Impermeabilizante acrílico elastomérico para azotea,familia-impermeabilizantes
+Impermeabilizantes,Impermeabilizante asfáltico,"Impermeabilizante asfáltico emulsionado, chapopote",familia-impermeabilizantes
+Impermeabilizantes,Mantos prefabricados,"Manto asfáltico modificado, manto autoadherible",familia-impermeabilizantes
+Impermeabilizantes,Primarios e imprimantes,"Primario asfáltico, imprimante para adherencia",familia-impermeabilizantes
+Impermeabilizantes,Membranas de refuerzo,"Membrana de poliéster, malla de refuerzo para impermeabilizante",familia-impermeabilizantes
+Impermeabilizantes,Cristalizantes,Impermeabilizante cristalizante integral,familia-impermeabilizantes
+Impermeabilizantes,Selladores,"Sellador de juntas, sellador de poliuretano",familia-impermeabilizantes
+Impermeabilizantes,Bandas y waterstops,"Waterstop de PVC, banda hidrófila para juntas de colado",familia-impermeabilizantes
+Impermeabilizantes,Barreras de vapor,"Membrana de polietileno, barrera de vapor para losa",familia-impermeabilizantes
+Impermeabilizantes,Recubrimientos epóxicos,Recubrimiento epóxico para pisos y tanques,familia-impermeabilizantes
+Pinturas y recubrimientos,Pintura vinílica,Pintura vinílica para interiores y exteriores,familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Esmalte,"Esmalte alquidálico, esmalte para metal",familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Primarios,"Primario anticorrosivo, sellador-primario para muro",familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Selladores de muro,"Sellador acrílico para muro, resane",familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Pastas y texturizados,"Pasta texturizada, acabado rústico",familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Estuco,"Estuco veneciano, estuco decorativo",familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Pintura para tráfico,Pintura para señalamiento vial,familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Pintura para alberca,Pintura epóxica y de caucho clorado para albercas,familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Barnices,"Barniz para madera, barniz marino",familia-pinturas-recubrimientos
+Pinturas y recubrimientos,Thinner y solventes,"Thinner estándar, aguarrás, solvente para limpieza",familia-pinturas-recubrimientos
+Pisos y azulejos,Loseta,"Loseta cerámica, loseta de porcelanato",familia-pisos-azulejos
+Pisos y azulejos,Azulejo,Azulejo cerámico para muro,familia-pisos-azulejos
+Pisos y azulejos,Piso vinílico,Piso vinílico en rollo y losetas,familia-pisos-azulejos
+Pisos y azulejos,Piso laminado,Piso laminado tipo madera,familia-pisos-azulejos
+Pisos y azulejos,Alfombra,Alfombra en rollo y en losetas modulares,familia-pisos-azulejos
+Pisos y azulejos,Mosaico,"Mosaico de pasta, mosaico vítreo",familia-pisos-azulejos
+Pisos y azulejos,Mármol,Placa y piso de mármol,familia-pisos-azulejos
+Pisos y azulejos,Granito,Placa y piso de granito,familia-pisos-azulejos
+Pisos y azulejos,Cantera y caliza,"Cantera para piso y fachada, caliza",familia-pisos-azulejos
+Pisos y azulejos,Accesorios de piso,"Perfiles de remate, cenefas, guardapolvos",familia-pisos-azulejos
+Cancelería y vidrio,Perfiles de aluminio,Perfil de aluminio para cancelería y ventanería,familia-canceleria-vidrio
+Cancelería y vidrio,Vidrio recocido,Vidrio claro y de color recocido,familia-canceleria-vidrio
+Cancelería y vidrio,Vidrio templado y laminado,"Vidrio templado de seguridad, vidrio laminado",familia-canceleria-vidrio
+Cancelería y vidrio,Acrílicos y policarbonato,"Lámina de acrílico, lámina de policarbonato alveolar",familia-canceleria-vidrio
+Cancelería y vidrio,Domos y tragaluces,"Domo de policarbonato, tragaluz prefabricado",familia-canceleria-vidrio
+Cancelería y vidrio,Herrería y rejas,"Reja de herrería, protección metálica",familia-canceleria-vidrio
+Cancelería y vidrio,Puertas y canceles,"Cancel de baño, puerta de aluminio y vidrio",familia-canceleria-vidrio
+Cancelería y vidrio,Ventanas,Ventana corrediza y abatible de aluminio o PVC,familia-canceleria-vidrio
+Cancelería y vidrio,Mosquiteros,Mosquitero de aluminio y fibra de vidrio,familia-canceleria-vidrio
+Cancelería y vidrio,Accesorios de cancelería,"Jaladeras, rodamientos, sellos y felpas",familia-canceleria-vidrio
+Instalaciones hidráulicas,Tubería PVC hidráulica,"Tubo PVC hidráulico cédula 40, RD-26",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Tubería CPVC,Tubo CPVC para agua caliente,familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Tubería de cobre,Tubo de cobre tipo M y L,familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Tubería galvanizada,Tubo galvanizado para instalación hidráulica,familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Tubería PPR,Tubo PPR termofusión,familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Conexiones,"Coples, codos, tees, reducciones hidráulicas",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Válvulas de agua,"Válvula de esfera, válvula check, válvula de compuerta",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Llaves y grifería,"Llave de nariz, mezcladora, regadera",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Tinacos y cisternas,"Tinaco de polietileno, cisterna prefabricada",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Calentadores de gas,"Calentador de paso, calentador de depósito",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Calentadores solares,Calentador solar de tubos evacuados y placa plana,familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Bombas de agua,"Bomba centrífuga, bomba sumergible, hidroneumático",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Filtros y equipos de tratamiento,"Filtro de sedimentos, suavizador de agua, cloración",familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Medidores de agua,Medidor volumétrico de agua potable,familia-instalaciones-hidraulicas
+Instalaciones hidráulicas,Agua,Agua potable para obra,familia-instalaciones-hidraulicas
+Instalaciones sanitarias,Muebles de baño,"WC, lavabo, mingitorio, regadera",familia-instalaciones-sanitarias
+Instalaciones sanitarias,Accesorios sanitarios,"Asiento, fluxómetro, dispensador, papelera",familia-instalaciones-sanitarias
+Instalaciones sanitarias,Tubería PVC sanitaria,"Tubo PVC sanitario de 2"" a 6""",familia-instalaciones-sanitarias
+Instalaciones sanitarias,Tubería de fierro fundido,Tubo de fierro fundido para drenaje,familia-instalaciones-sanitarias
+Instalaciones sanitarias,Tubería de alcantarillado,Tubo de PVC y concreto para alcantarillado,familia-instalaciones-sanitarias
+Instalaciones sanitarias,Conexiones sanitarias,"Codos, yee, tee sanitaria, reducción",familia-instalaciones-sanitarias
+Instalaciones sanitarias,Fosas sépticas,Fosa séptica prefabricada,familia-instalaciones-sanitarias
+Instalaciones sanitarias,Coladeras y rejillas,"Coladera de piso, rejilla pluvial",familia-instalaciones-sanitarias
+Instalaciones sanitarias,Válvulas y trampas,"Trampa de grasa, válvula check sanitaria",familia-instalaciones-sanitarias
+Instalaciones sanitarias,Tuberías para drenaje pluvial,Tubo PVC y de lámina para bajada de agua pluvial,familia-instalaciones-sanitarias
+Instalaciones eléctricas,Conductores,"Cable THHW, cable THW, cable de cobre desnudo",familia-instalaciones-electricas
+Instalaciones eléctricas,Canalizaciones,"Tubo conduit, tubo EMT, ducto de PVC eléctrico",familia-instalaciones-electricas
+Instalaciones eléctricas,Conexiones eléctricas,"Conectores, cajas de conexión, cinta aislante",familia-instalaciones-electricas
+Instalaciones eléctricas,Interruptores y contactos,"Apagador, contacto sencillo y polarizado, placa",familia-instalaciones-electricas
+Instalaciones eléctricas,Protección y tableros,"Interruptor termomagnético, centro de carga, pastillas",familia-instalaciones-electricas
+Instalaciones eléctricas,Luminarias,"Luminaria LED, lámpara de sobreponer y empotrar",familia-instalaciones-electricas
+Instalaciones eléctricas,Lámparas y focos,"Foco LED, foco ahorrador",familia-instalaciones-electricas
+Instalaciones eléctricas,Postes y brazos,"Poste de concreto y metálico, brazo para luminaria",familia-instalaciones-electricas
+Instalaciones eléctricas,Acometidas y mufas,"Mufa, base de medidor, acometida eléctrica",familia-instalaciones-electricas
+Instalaciones eléctricas,Charolas y escalerillas,"Charola metálica, escalerilla porta cables",familia-instalaciones-electricas
+Ferretería,Clavos,"Clavo de 1"" a 4"", clavo para cimbra",familia-ferreteria
+Ferretería,Tornillería,"Tornillo para tablaroca, tornillo autorroscante, tuercas",familia-ferreteria
+Ferretería,Anclas y taquetes,"Ancla de expansión, taquete de plástico y metálico",familia-ferreteria
+Ferretería,Abrazaderas y soportes,"Abrazadera para tubo, soporte metálico",familia-ferreteria
+Ferretería,Cerrajería,"Cerradura, chapa, candado",familia-ferreteria
+Ferretería,Herrajes,"Bisagra, jaladera, corredera",familia-ferreteria
+Ferretería,Adhesivos,"Silicón, pegamento de contacto, cinta doble cara",familia-ferreteria
+Ferretería,Soldadura,"Electrodo, alambre para soldar, fundente",familia-ferreteria
+Ferretería,Lijas y abrasivos,"Lija de agua, disco de corte, disco de desbaste",familia-ferreteria
+Ferretería,Consumibles,"Guantes desechables, trapo, estopa",familia-ferreteria
+Combustibles y lubricantes,Diésel,Diésel para maquinaria y plantas de luz,familia-combustibles-lubricantes
+Combustibles y lubricantes,Gasolina,Gasolina Magna y Premium para equipo menor,familia-combustibles-lubricantes
+Combustibles y lubricantes,Gas LP,Gas LP para sopletes y equipo,familia-combustibles-lubricantes
+Combustibles y lubricantes,Aceites de motor,"Aceite de motor 15W40, 20W50",familia-combustibles-lubricantes
+Combustibles y lubricantes,Aceites hidráulicos,"Aceite hidráulico ISO 32, 46, 68",familia-combustibles-lubricantes
+Combustibles y lubricantes,Grasas,"Grasa multiusos, grasa de litio",familia-combustibles-lubricantes
+Combustibles y lubricantes,Anticongelantes y refrigerantes,"Anticongelante para radiador, refrigerante",familia-combustibles-lubricantes
+Combustibles y lubricantes,Energía eléctrica,Consumo de energía eléctrica en obra,familia-combustibles-lubricantes
+Combustibles y lubricantes,Combustóleo y keroseno,"Combustóleo industrial, keroseno",familia-combustibles-lubricantes
+Combustibles y lubricantes,Fluidos y aditivos,"Líquido de frenos, aditivo para combustible",familia-combustibles-lubricantes
+Mano de obra,Albañilería,"Albañil, ayudante de albañil",familia-mano-de-obra
+Mano de obra,Herrería,"Herrero, soldador estructural",familia-mano-de-obra
+Mano de obra,Carpintería,"Carpintero de obra, cimbrador",familia-mano-de-obra
+Mano de obra,Electricidad,"Electricista, ayudante de electricista",familia-mano-de-obra
+Mano de obra,Plomería,"Plomero, instalador hidrosanitario",familia-mano-de-obra
+Mano de obra,Pintura,Pintor de obra,familia-mano-de-obra
+Mano de obra,Operadores,Operador de maquinaria pesada y equipo,familia-mano-de-obra
+Mano de obra,Ayudantes,"Peón, ayudante general",familia-mano-de-obra
+Equipo y herramienta,Accesorios de cimbra,"Clavos de cimbra, desmoldante, tensores, cuñas, separadores",familia-equipo-herramienta
+Equipo y herramienta,Andamios,"Andamio tubular, marcos, plataformas, escaleras de andamio",familia-equipo-herramienta
+Equipo y herramienta,Bombeo de concreto,"Bomba estacionaria de concreto, bomba pluma",familia-equipo-herramienta
+Equipo y herramienta,Cimbra metálica,"Paneles metálicos, formaleta modular, puntales metálicos",familia-equipo-herramienta
+Equipo y herramienta,Equipo de izaje,"Grúa torre, grúa telescópica, malacate, montacargas, winche",familia-equipo-herramienta
+Equipo y herramienta,Equipo de seguridad,"Casco, arnés, guantes, lentes de seguridad, equipo de protección personal (%mo)",familia-equipo-herramienta
+Equipo y herramienta,Equipo de soldadura y corte,"Máquina de soldar, equipo de oxicorte, careta y consumibles",familia-equipo-herramienta
+Equipo y herramienta,Equipo de compactación,"Rodillo vibratorio, placa compactadora, bailarina",familia-equipo-herramienta
+Equipo y herramienta,Equipo ligero,"Vibrador de concreto, cortadora de piso, revolvedora",familia-equipo-herramienta
+Equipo y herramienta,Equipo pesado,"Retroexcavadora, motoniveladora, cargador frontal, excavadora",familia-equipo-herramienta
+Equipo y herramienta,Equipo topográfico,"Estación total, nivel óptico, GPS de precisión, mira topográfica",familia-equipo-herramienta
+Equipo y herramienta,Herramienta eléctrica,"Taladro, rotomartillo, sierra circular, esmeriladora",familia-equipo-herramienta
+Equipo y herramienta,Herramienta manual,"Pala, pico, cucharas de albañil, herramienta de mano (%mo)",familia-equipo-herramienta
+Equipo y herramienta,Herramienta de plomería/hidráulica,"Terraja, prensa para tubo, cortatubos",familia-equipo-herramienta
+Equipo y herramienta,Transporte y fletes,"Volqueta, camión de carga, mezcladora móvil, flete de materiales",familia-equipo-herramienta
+Instalaciones de gas,Tubería de cobre para gas,Tubo de cobre tipo L y K para gas,familia-instalaciones-de-gas
+Instalaciones de gas,Tubería flexible,"Conector flexible de gas, manguera para gas LP",familia-instalaciones-de-gas
+Instalaciones de gas,Tubería de polietileno para gas,Tubo de polietileno para redes de gas natural,familia-instalaciones-de-gas
+Instalaciones de gas,Conexiones abocinadas,"Conexión abocinada, unión universal para gas",familia-instalaciones-de-gas
+Instalaciones de gas,Reguladores de gas,Regulador de baja y alta presión,familia-instalaciones-de-gas
+Instalaciones de gas,Válvulas de gas,"Válvula de esfera para gas, válvula de corte",familia-instalaciones-de-gas
+Instalaciones de gas,Tanques estacionarios,Tanque estacionario de gas LP,familia-instalaciones-de-gas
+Instalaciones de gas,Cilindros,Cilindro de gas LP de 20 y 30 kg,familia-instalaciones-de-gas
+Instalaciones de gas,Medidores de gas,Medidor de gas doméstico e industrial,familia-instalaciones-de-gas
+Instalaciones de gas,Accesorios de gas,"Abrazaderas, cinta para gas, detector de fugas",familia-instalaciones-de-gas
+Jardinería,Tierra,"Tierra de hoja, tierra lama, tierra negra",familia-jardineria
+Jardinería,Plantas,"Árboles, arbustos, plantas de ornato",familia-jardineria
+Jardinería,Pasto,"Pasto en rollo, pasto en semilla",familia-jardineria
+"Muebles, cocinas y accesorios",Cocinas integrales,"Cocina integral de melamina, madera o MDF",familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Parrillas y estufas,"Parrilla eléctrica y de gas, estufa empotrable",familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Gabinetes,Gabinete inferior y superior de cocina,familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Bases y cubiertas,"Cubierta de granito, cuarzo o laminado",familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Tarjas,"Tarja de acero inoxidable, tarja de granito",familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Extractores y campanas,Campana extractora de cocina,familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Trituradores,Triturador de alimentos para tarja,familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Interceptores de grasa,Trampa de grasa para cocina,familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Hornos y electrodomésticos,"Horno empotrable, microondas, refrigerador",familia-muebles-cocinas-accesorios
+"Muebles, cocinas y accesorios",Accesorios de cocina,"Jaladeras, correderas, organizadores",familia-muebles-cocinas-accesorios
+Básicos auxiliares,Concretos elaborados en obra,Mezcla de concreto dosificada en obra,familia-basicos-auxiliares
+Básicos auxiliares,Morteros,Mortero cemento-arena para distintos usos,familia-basicos-auxiliares
+Básicos auxiliares,Aplanados y enlucidos,"Aplanado de yeso, aplanado de mortero, enlucido fino",familia-basicos-auxiliares
+Básicos auxiliares,Lechadas y grouts,"Lechada de cemento, grout para anclajes",familia-basicos-auxiliares
+Básicos auxiliares,Firmes y plantillas,"Firme de concreto, plantilla de limpieza",familia-basicos-auxiliares
+Básicos auxiliares,Rellenos y bases,"Relleno compactado, material de banco para bases",familia-basicos-auxiliares
+Básicos auxiliares,Mezclas asfálticas,"Carpeta asfáltica, riego de liga",familia-basicos-auxiliares
+Básicos auxiliares,Sistemas de cimbra,"Sistema de cimbra completo (paneles, puntales, accesorios)",familia-basicos-auxiliares
+Básicos auxiliares,Sistemas de impermeabilización,Sistema completo de impermeabilización de azotea,familia-basicos-auxiliares
+Básicos auxiliares,Sistemas de recubrimiento,Sistema de recubrimiento de piso o muro,familia-basicos-auxiliares
+Básicos auxiliares,Sistemas de tablaroca,Sistema de muro o plafón de tablaroca completo,familia-basicos-auxiliares
+Básicos auxiliares,Sistemas de piso,"Sistema de piso terminado (base, adhesivo, acabado)",familia-basicos-auxiliares
+Básicos auxiliares,Plantas de tratamiento y drenaje,"Planta de tratamiento paquete, sistema de drenaje",familia-basicos-auxiliares
+Básicos auxiliares,Obra falsa y andamiaje,"Obra falsa para puentes, andamiaje de apoyo",familia-basicos-auxiliares
+Básicos auxiliares,Pruebas y control de calidad,"Prueba de compresión de concreto, prueba de laboratorio",familia-basicos-auxiliares

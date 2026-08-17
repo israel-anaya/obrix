@@ -118,7 +118,7 @@ function FechaPrecioFrescura({
         nivel === "critica" && "text-[11px] font-semibold text-rose-600 dark:text-rose-400",
       )}
     >
-      {nivel === "critica" ? <AlertTriangle size={10} className="shrink-0" /> : null}
+      {nivel === "critica" ? <AlertTriangle size={16} className="shrink-0" /> : null}
       {formatearFecha(fecha)}
     </div>
   );
@@ -595,7 +595,7 @@ export function CuadrillaFichaApu({
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Users size={11} className="text-emerald-500" />
+            <Users size={16} className="text-emerald-500" />
             Análisis de cuadrilla
           </span>
 
@@ -631,7 +631,7 @@ export function CuadrillaFichaApu({
                     onClick={() => setConfirmandoEliminarValuacion(true)}
                     className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={16} />
                   </button>
                 )}
                 {!creandoRegion ? (
@@ -642,7 +642,7 @@ export function CuadrillaFichaApu({
                       onClick={() => setCreandoRegion(true)}
                       className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
-                      <Plus size={12} />
+                      <Plus size={16} />
                     </button>
                   )
                 ) : (
@@ -666,7 +666,7 @@ export function CuadrillaFichaApu({
                   {costos.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       <span className="flex items-center gap-1.5">
-                        {c.region_id ? <MapPinned size={12} /> : <Globe2 size={12} />}
+                        {c.region_id ? <MapPinned size={16} /> : <Globe2 size={16} />}
                         {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
                       </span>
                     </SelectItem>
@@ -694,7 +694,7 @@ export function CuadrillaFichaApu({
                   recalculando && "opacity-50",
                 )}
               >
-                <RefreshCcw size={12} className={cn(recalculando && "animate-spin")} />
+                <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
                 {recalculando ? "Sincronizando…" : "Sincronizar"}
               </button>
               {costoSeleccionado?.sincronizado_en ? (
@@ -703,7 +703,7 @@ export function CuadrillaFichaApu({
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
-                  <AlertTriangle size={10} className="shrink-0" />
+                  <AlertTriangle size={16} className="shrink-0" />
                   Sin sincronizar
                 </span>
               )}
@@ -735,7 +735,7 @@ export function CuadrillaFichaApu({
                       )}
                     >
                       <CalendarDays
-                        size={12}
+                        size={16}
                         className={mostrarFechaPrecio ? "fill-current" : undefined}
                       />
                     </button>
@@ -751,7 +751,7 @@ export function CuadrillaFichaApu({
               <tr>
                 <td colSpan={7} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <HardHat size={12} className="text-blue-500" />
+                    <HardHat size={16} className="text-blue-500" />
                     Mano de obra
                   </span>
                 </td>
@@ -822,7 +822,7 @@ export function CuadrillaFichaApu({
                             className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
                             {...dragIntegrantes.handleProps(d.id)}
                           >
-                            <GripVertical size={12} />
+                            <GripVertical size={16} />
                           </span>
                           <Separator orientation="vertical" />
                           <button
@@ -831,7 +831,7 @@ export function CuadrillaFichaApu({
                             onClick={() => setPendingQuitar(d)}
                             className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                           >
-                            <X size={12} />
+                            <X size={16} />
                           </button>
                         </div>
                       )}
@@ -861,7 +861,7 @@ export function CuadrillaFichaApu({
                         onClick={() => setAgregandoIntegrante(true)}
                         className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                       >
-                        <Plus size={12} /> Agregar renglón
+                        <Plus size={16} /> Agregar renglón
                       </button>
                     )}
                   </td>
@@ -881,7 +881,7 @@ export function CuadrillaFichaApu({
               <tr>
                 <td colSpan={7} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Wrench size={12} className="text-amber-500" />
+                    <Wrench size={16} className="text-amber-500" />
                     Herramienta
                   </span>
                 </td>
@@ -940,7 +940,7 @@ export function CuadrillaFichaApu({
                             className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
                             {...dragHerramienta.handleProps(d.id)}
                           >
-                            <GripVertical size={12} />
+                            <GripVertical size={16} />
                           </span>
                           <Separator orientation="vertical" />
                           <button
@@ -949,7 +949,7 @@ export function CuadrillaFichaApu({
                             onClick={() => setPendingQuitar(d)}
                             className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                           >
-                            <X size={12} />
+                            <X size={16} />
                           </button>
                         </div>
                       )}
@@ -980,7 +980,7 @@ export function CuadrillaFichaApu({
                         onClick={() => setAgregandoHerramienta(true)}
                         className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                       >
-                        <Plus size={12} /> Agregar renglón
+                        <Plus size={16} /> Agregar renglón
                       </button>
                     )}
                   </td>

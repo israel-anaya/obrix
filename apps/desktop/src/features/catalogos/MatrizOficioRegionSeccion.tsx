@@ -256,23 +256,34 @@ export function MatrizOficioRegionSeccion() {
                 <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 top-0 z-30 w-44 min-w-44 border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <th
+                        rowSpan={2}
+                        className="sticky left-0 top-0 z-30 w-44 min-w-44 border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
                         Oficio
                       </th>
                       {columnas.map((col) => (
                         <th
-                          key={col.id || "nac"}
-                          className="sticky top-0 z-20 w-14 max-w-14 border-b border-border bg-background px-1 py-1.5 text-center text-[11px] font-semibold leading-tight text-muted-foreground"
+                          key={`${col.id || "nac"}-grupo`}
+                          className="sticky top-0 z-20 h-7 w-14 max-w-14 border-b border-r border-border bg-background text-center"
                           title={col.nombre}
                         >
-                          <span className="flex flex-col items-center gap-0.5">
-                            {col.id ? (
-                              <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
-                            ) : (
-                              <Globe2 size={12} className="shrink-0 text-primary" />
-                            )}
-                            <span className="line-clamp-2 break-words">{col.nombre}</span>
-                          </span>
+                          {col.id ? (
+                            <MapPinned size={16} className="mx-auto text-amber-600 dark:text-amber-400" />
+                          ) : (
+                            <Globe2 size={16} className="mx-auto text-primary" />
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                    <tr>
+                      {columnas.map((col) => (
+                        <th
+                          key={`${col.id || "nac"}-nombre`}
+                          className="sticky top-7 z-20 w-14 max-w-14 border-b border-r border-border bg-background px-1 py-1 text-center text-[11px] font-semibold leading-tight text-muted-foreground"
+                          title={col.nombre}
+                        >
+                          <span className="line-clamp-2 break-words">{col.nombre}</span>
                         </th>
                       ))}
                     </tr>

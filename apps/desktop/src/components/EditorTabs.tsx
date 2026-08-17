@@ -66,7 +66,7 @@ export function EditorTabs({
             className="flex items-center px-1 py-2 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
             aria-label="Desplazar pestañas a la izquierda"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => scrollBy(SCROLL_STEP)}
@@ -74,7 +74,7 @@ export function EditorTabs({
             className="flex items-center px-1 py-2 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
             aria-label="Desplazar pestañas a la derecha"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={16} />
           </button>
         </div>
       )}
@@ -90,7 +90,7 @@ export function EditorTabs({
                 isActive && "bg-background text-foreground",
               )}
             >
-              {tab.icon && <tab.icon size={13} className="shrink-0" />}
+              {tab.icon && <tab.icon size={16} className="shrink-0" />}
               <span className="truncate">{tab.title}</span>
               {isActive && renderTabExtra?.(tab)}
               {tab.closable && (
@@ -101,7 +101,7 @@ export function EditorTabs({
                   }}
                   className="rounded opacity-0 hover:bg-border group-hover:opacity-100"
                 >
-                  <X size={13} />
+                  <X size={16} />
                 </button>
               )}
             </div>

@@ -156,7 +156,7 @@ export function HojaCalculoPage({ theme }: { theme: "light" | "dark" }) {
             onChange={handleFileChange}
           />
           <Button size="sm" variant="outline" onClick={handleImportClick} disabled={importando}>
-            <Upload className="mr-1.5 size-3.5" />
+            <Upload className="mr-1.5 size-4" />
             {importando ? "Importando…" : "Importar Excel"}
           </Button>
         </div>

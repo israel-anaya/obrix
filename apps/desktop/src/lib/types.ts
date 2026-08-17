@@ -150,12 +150,14 @@ export interface FamiliaInsumo extends CamposControl, CamposBorradoLogico {
   parent_id: string | null;
   nombre: string;
   insumos_asociados: string | null;
+  icono: string | null;
 }
 
 export interface FamiliaInsumoData {
   nombre: string;
   parent_id?: string | null;
   insumos_asociados?: string | null;
+  icono?: string | null;
 }
 
 /**

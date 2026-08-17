@@ -46,7 +46,7 @@ export function CuentaFooter({
               {cuenta.correo}
             </span>
           </div>
-          <ChevronsUpDown size={14} className="shrink-0 text-muted-foreground" />
+          <ChevronsUpDown size={16} className="shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="top" className="w-56">
           <DropdownMenuLabel className="flex items-center gap-2 font-normal">
@@ -64,20 +64,20 @@ export function CuentaFooter({
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled>
-            <UserRound />
+            <UserRound size={16} />
             Cuenta
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
-            <CreditCard />
+            <CreditCard size={16} />
             Facturación
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
-            <Bell />
+            <Bell size={16} />
             Notificaciones
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={onCerrarSesion}>
-            <LogOut />
+            <LogOut size={16} />
             Cerrar sesión
           </DropdownMenuItem>
         </DropdownMenuContent>

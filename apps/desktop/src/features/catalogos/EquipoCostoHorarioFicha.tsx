@@ -442,13 +442,13 @@ export function EquipoCostoHorarioFicha() {
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Timer size={11} className="text-blue-500" />${fmt(e.cf_cargo_fijo_hora)}
+                        <Timer size={16} className="text-blue-500" />${fmt(e.cf_cargo_fijo_hora)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Fuel size={11} className="text-amber-500" />${fmt(e.subtotal_consumo)}
+                        <Fuel size={16} className="text-amber-500" />${fmt(e.subtotal_consumo)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <HardHat size={11} className="text-violet-500" />${fmt(e.subtotal_operacion)}
+                        <HardHat size={16} className="text-violet-500" />${fmt(e.subtotal_operacion)}
                       </span>
                     </div>
                     <span className="text-[10px] font-medium text-foreground">${fmt(e.costo_horario_total)}/hr</span>

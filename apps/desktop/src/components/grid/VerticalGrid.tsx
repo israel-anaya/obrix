@@ -365,6 +365,9 @@ export const VerticalGrid = forwardRef<
     () => (groups ? flatten(groups) : config.columns.map((c) => ({ type: "field", field: c.field }))),
     [groups, config.columns],
   );
+  // Declarado antes que `useRowEditing`: su `onRowInserted` mueve la selección.
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
   const orderedColumns = useMemo(
     () =>
       items
@@ -405,10 +408,22 @@ export const VerticalGrid = forwardRef<
     onSaveError,
     onSaveSuccess,
     onCancelEdit,
+    // El alta guardada vuelve del backend con otro `_id` que el del borrador:
+    // la selección se pasa al registro persistido, en el mismo campo, que es
+    // donde el usuario estaba. Sin esto el registro recién dado de alta queda
+    // sin seleccionar.
+    onRowInserted: (rowId) => {
+      setRowSelection({ [rowId]: true });
+      const sel = selectionStore.get();
+      const field =
+        sel && columnsRef.current.some((c) => c.field === sel.field)
+          ? sel.field
+          : firstEditableField(columnsRef.current, false);
+      if (field) selectionStore.set({ rowId, field });
+    },
   });
 
   const [pendingDelete, setPendingDelete] = useState<Row[] | null>(null);
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [internalSearch, setInternalSearch] = useState("");
   const isSearchControlled = controlledSearch !== undefined;
   const search = isSearchControlled ? controlledSearch : internalSearch;
@@ -997,6 +1012,29 @@ export const VerticalGrid = forwardRef<
   // ── Ratón ────────────────────────────────────────────────────────────────
   const focusContainer = () => frameRef.current?.focus({ preventScroll: true });
 
+  // Igual que en el `DataGrid`: al cerrarse el borrador desaparecen los botones
+  // ✓/✗ que lo mandaban, y en un alta la columna entera del registro. Si el
+  // foco estaba ahí se va al `<body>`, el grid deja de cumplir `:focus-within`
+  // y el cursor de celda se vuelve invisible aunque el registro siga marcado.
+  const teniaBorradorRef = useRef(false);
+  useEffect(() => {
+    const tenia = teniaBorradorRef.current;
+    teniaBorradorRef.current = editing !== null;
+    if (!tenia || editing) return;
+    const recuperar = () => {
+      const activo = document.activeElement;
+      if (activo && activo !== document.body) return;
+      focusContainer();
+    };
+    // Dos intentos: en un alta la columna del borrador no se desmonta al
+    // cerrarse este, sino al llegar la lista del padre —un commit después—, así
+    // que el primero pasa de largo con el foco todavía en pie.
+    recuperar();
+    const raf = requestAnimationFrame(recuperar);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
   // El foco vive en el contenedor (no en cada celda, que se desmonta al
   // editar): sin él las flechas no llegarían a `onContainerKeyDown`.
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1040,7 +1078,10 @@ export const VerticalGrid = forwardRef<
   };
 
   // ── Pintura ──────────────────────────────────────────────────────────────
-  const showSkeleton = loading && visibleRows.length === 0;
+  // Sustituye al cuerpo en toda espera, lo mismo la primera carga que una
+  // recarga sobre registros ya en pantalla: una sola manera de decir "los datos
+  // vienen en camino", en el lugar donde van a aparecer.
+  const showSkeleton = loading;
   const skeletonRecords = 3;
   const recordCount = showSkeleton ? skeletonRecords : visibleRows.length;
   const canAdd = !isControlled || !!onAddRow;
@@ -1085,13 +1126,6 @@ export const VerticalGrid = forwardRef<
               className="rounded-none border-none px-0"
               inputClassName="w-full"
             />
-          </div>
-        )}
-        {/* Una recarga sobre registros que ya están en pantalla: se quedan, y
-            la espera se marca con un hilo de luz cruzando el borde. */}
-        {loading && !showSkeleton && (
-          <div data-t="grid-loading" aria-hidden className="h-[3px] shrink-0 overflow-hidden bg-primary/25">
-            <div className="barra-progreso-indeterminada h-full w-1/3 rounded-full bg-primary" />
           </div>
         )}
         <RowContextMenu
@@ -1208,7 +1242,7 @@ export const VerticalGrid = forwardRef<
                         onClick={() => handle.addRow()}
                         className="flex h-full w-8 items-center justify-center py-1 text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground disabled:opacity-40"
                       >
-                        <Plus size={14} />
+                        <Plus size={16} />
                       </button>
                     </th>
                   )}

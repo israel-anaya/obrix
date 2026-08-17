@@ -70,13 +70,26 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargarCuadrillas = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarCuadrillas = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     return listCuadrillas()
       .then(setCuadrillas)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (marcarCarga) setCargando(false);
+      });
   };
+
+  const recargarCuadrillas = () => cargarCuadrillas(true);
+  const refrescarCuadrillas = () => cargarCuadrillas(false);
 
   const recargarTodo = () => {
     void recargarCuadrillas();
@@ -96,7 +109,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
     try {
       const resultado = await importarCuadrillasCsv(path);
       setResultadoImportacion(resultado);
-      await recargarCuadrillas();
+      await refrescarCuadrillas();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -228,9 +241,9 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
       onSearchChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
       onRowSelected={(fila) => setCuadrillaSeleccionadaId(fila?._id ?? null)}
-      onAddRow={(fila) => createCuadrilla(filaACuadrillaData(fila)).then(recargarCuadrillas)}
-      onEditRow={(fila) => updateCuadrilla(fila._id, filaACuadrillaData(fila)).then(recargarCuadrillas)}
-      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCuadrilla(id))).then(recargarCuadrillas)}
+      onAddRow={(fila) => createCuadrilla(filaACuadrillaData(fila)).then(refrescarCuadrillas)}
+      onEditRow={(fila) => updateCuadrilla(fila._id, filaACuadrillaData(fila)).then(refrescarCuadrillas)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteCuadrilla(id))).then(refrescarCuadrillas)}
     />
   );
 
@@ -288,7 +301,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
               onClick={() => setResultadoImportacion(null)}
               className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <X size={13} />
+              <X size={16} />
             </button>
           </div>
           {resultadoImportacion.aviso && <p className="mt-1 text-muted-foreground">{resultadoImportacion.aviso}</p>}
@@ -332,7 +345,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
                     <CuadrillaDetallePanel
                       cuadrilla={cuadrillaSeleccionada}
                       onCerrar={() => setPanelComposicionAbierto(false)}
-                      onComposicionCambiada={recargarCuadrillas}
+                      onComposicionCambiada={refrescarCuadrillas}
                     />
                   </ResizablePanel>
                 </>
@@ -354,7 +367,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
                   familias={familias}
                   nombresPorUsuarioId={nombresPorUsuarioId}
                   onCerrar={() => setPanelFichaAbierto(false)}
-                  onGuardado={recargarCuadrillas}
+                  onGuardado={refrescarCuadrillas}
                 />
               </ResizablePanel>
             </>

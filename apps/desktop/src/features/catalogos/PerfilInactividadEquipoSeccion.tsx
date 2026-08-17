@@ -162,14 +162,27 @@ export function PerfilInactividadEquipoSeccion() {
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargar = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarPerfiles = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     setError(null);
     return listPerfilesInactividadEquipo()
       .then(setPerfiles)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (marcarCarga) setCargando(false);
+      });
   };
+
+  const recargar = () => cargarPerfiles(true);
+  const refrescar = () => cargarPerfiles(false);
 
   const { organizacionActivaId } = useOrganizacionActiva();
   useEffect(() => {
@@ -312,9 +325,9 @@ export function PerfilInactividadEquipoSeccion() {
                   onSearchChange={setBusqueda}
                   onSelectionChange={setPuedeEliminar}
                   onRowSelected={(fila) => setPerfilSeleccionadoId(fila?._id ?? null)}
-                  onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
-                  onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
-                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
+                  onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(refrescar)}
+                  onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(refrescar)}
+                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(refrescar)}
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
@@ -356,9 +369,9 @@ export function PerfilInactividadEquipoSeccion() {
                     onSearchChange={setBusquedaVertical}
                     onSelectionChange={setPuedeEliminarVertical}
                     onRowSelected={(fila) => setPerfilSeleccionadoId(fila?._id ?? null)}
-                    onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
-                    onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
-                    onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
+                    onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(refrescar)}
+                    onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(refrescar)}
+                    onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(refrescar)}
                   />
                 </div>
               </ResizablePanel>
@@ -377,7 +390,7 @@ export function PerfilInactividadEquipoSeccion() {
                   perfil={perfilSeleccionado}
                   nombresPorUsuarioId={nombresPorUsuarioId}
                   onCerrar={() => setPanelFichaAbierto(false)}
-                  onGuardado={recargar}
+                  onGuardado={refrescar}
                 />
               </ResizablePanel>
             </>

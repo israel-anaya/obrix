@@ -99,7 +99,7 @@ export function SalarioHistorialGrid({
       )}
     >
       <div className="mb-2 flex items-center gap-1.5">
-        <History size={13} className="shrink-0 text-muted-foreground" />
+        <History size={16} className="shrink-0 text-muted-foreground" />
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Histórico completo de salarios
         </h3>
@@ -140,9 +140,9 @@ export function SalarioHistorialGrid({
                 <td className="py-1 pr-2">
                   <span className="inline-flex items-center gap-1.5">
                     {s.region_id ? (
-                      <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                      <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
                     ) : (
-                      <Globe2 size={12} className="shrink-0 text-primary" />
+                      <Globe2 size={16} className="shrink-0 text-primary" />
                     )}
                     {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
                   </span>

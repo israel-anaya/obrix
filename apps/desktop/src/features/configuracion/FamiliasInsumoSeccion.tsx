@@ -61,6 +61,7 @@ function PanelGrid({
 
 const COLUMNAS_FAMILIA = [
   { field: "nombre", header: "Nombre", width: 240 },
+  { field: "icono", header: "Icono", width: 240 },
   { field: "insumos_asociados", header: "Insumos asociados", width: 320 },
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
   { field: "created_by", header: "Creado por", width: 220, readOnly: true },
@@ -75,6 +76,7 @@ function familiaAFila(f: FamiliaInsumo, nombresPorUsuarioId: Record<string, stri
   return {
     _id: f.id,
     nombre: f.nombre,
+    icono: f.icono ?? "",
     insumos_asociados: f.insumos_asociados ?? "",
     created_at: f.created_at,
     created_by: nombresPorUsuarioId[f.created_by] ?? f.created_by,
@@ -102,14 +104,27 @@ export function FamiliasInsumoSeccion() {
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargar = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarFamilias = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     setError(null);
     return listFamiliasInsumo()
       .then(setFamilias)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (marcarCarga) setCargando(false);
+      });
   };
+
+  const recargar = () => cargarFamilias(true);
+  const refrescar = () => cargarFamilias(false);
 
   useEffect(() => {
     listUsuarios().then((usuarios) => {
@@ -160,16 +175,18 @@ export function FamiliasInsumoSeccion() {
                 onAddRow={(fila) =>
                   createFamiliaInsumo({
                     nombre: String(fila.nombre),
+                    icono: String(fila.icono) || null,
                     insumos_asociados: String(fila.insumos_asociados) || null,
-                  }).then(recargar)
+                  }).then(refrescar)
                 }
                 onEditRow={(fila) =>
                   updateFamiliaInsumo(fila._id, {
                     nombre: String(fila.nombre),
+                    icono: String(fila.icono) || null,
                     insumos_asociados: String(fila.insumos_asociados) || null,
-                  }).then(recargar)
+                  }).then(refrescar)
                 }
-                onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
+                onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(refrescar)}
                 onSaveError={(mensaje) => setError(mensaje)}
               />
             </PanelGrid>
@@ -200,15 +217,17 @@ export function FamiliasInsumoSeccion() {
                       nombre: String(fila.nombre),
                       parent_id: familiaSeleccionadaId,
                       insumos_asociados: String(fila.insumos_asociados) || null,
-                    }).then(recargar)
+                      icono: String(fila.icono) || null,
+                    }).then(refrescar)
                   }
                   onEditRow={(fila) =>
                     updateFamiliaInsumo(fila._id, {
                       nombre: String(fila.nombre),
                       insumos_asociados: String(fila.insumos_asociados) || null,
-                    }).then(recargar)
+                      icono: String(fila.icono) || null,
+                    }).then(refrescar)
                   }
-                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(recargar)}
+                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteFamiliaInsumo(id))).then(refrescar)}
                   onSaveError={(mensaje) => setError(mensaje)}
                 />
               </PanelGrid>

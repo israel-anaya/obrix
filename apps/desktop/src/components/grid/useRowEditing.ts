@@ -21,10 +21,16 @@ export function useRowEditing({
   onSaveError,
   onSaveSuccess,
   onCancelEdit,
+  onRowInserted,
 }: {
   columns: DataGridColumn[];
   selection: SelectionStore;
   openCell: Store<OpenCell | null>;
+  /**
+   * Avisa con qué `_id` quedó guardado un alta, para que el grid mueva ahí su
+   * selección. Ver `idsAntesDelAltaRef`.
+   */
+  onRowInserted?: (rowId: string) => void;
 } & Pick<
   DataGridPersistProps,
   "initialRows" | "onAddRow" | "onEditRow" | "onSaveError" | "onSaveSuccess" | "onCancelEdit"
@@ -43,10 +49,29 @@ export function useRowEditing({
   const editingRef = useRef(editing);
   editingRef.current = editing;
   const copyWholeRowRef = useRef(false);
+  /**
+   * Foto de los `_id` que había justo antes de guardar un alta. El borrador
+   * viaja con un id local (`crypto.randomUUID`) y el registro persistido vuelve
+   * con el suyo, así que al llegar la lista del padre el borrador desaparece y
+   * la selección se quedaría apuntando a una fila que ya no existe. Comparando
+   * contra esta foto se reconoce al recién llegado y el grid lo vuelve a
+   * seleccionar — que es el registro con el que el usuario venía trabajando.
+   */
+  const idsAntesDelAltaRef = useRef<Set<string> | null>(null);
+  const onRowInsertedRef = useRef(onRowInserted);
+  onRowInsertedRef.current = onRowInserted;
 
   useEffect(() => {
     if (!initialRows) return;
     setRows((prev) => mergeRows(prev, initialRows, editingRef.current, savingRef.current));
+    const previos = idsAntesDelAltaRef.current;
+    if (!previos) return;
+    idsAntesDelAltaRef.current = null;
+    // Con más de un recién llegado no hay forma de saber cuál es el del alta
+    // (otra vista pudo haber agregado registros entre tanto): se deja la
+    // selección como esté antes que moverla al registro equivocado.
+    const nuevos = initialRows.filter((f) => !previos.has(f._id));
+    if (nuevos.length === 1) onRowInsertedRef.current?.(nuevos[0]._id);
   }, [initialRows]);
 
   const selectCell = (rowId: string, field: string) => {
@@ -114,7 +139,13 @@ export function useRowEditing({
     setErrorFields(new Set());
     try {
       if (current.isNew) {
-        if (isControlled) await onAddRow?.(sanitizedRow);
+        if (isControlled) {
+          // La foto se toma antes de guardar, con el borrador todavía dentro:
+          // así su id local queda del lado de "los que ya estaban" y no se
+          // confunde con el registro que devuelve el backend.
+          idsAntesDelAltaRef.current = new Set(nextRows.map((f) => f._id));
+          await onAddRow?.(sanitizedRow);
+        }
       } else if (isControlled) {
         await onEditRow?.(sanitizedRow);
       }
@@ -124,6 +155,9 @@ export function useRowEditing({
       // would make a later retry of a failed new row look like an edit of an
       // existing one, and it would try to update an id the backend never created.
       const message = e instanceof Error ? e.message : String(e);
+      // No hubo alta que seguir: la foto se descarta para que una recarga
+      // posterior, ajena a esto, no mueva la selección por su cuenta.
+      idsAntesDelAltaRef.current = null;
       savingRef.current = false;
       setSaving(false);
       setSaveError(message);
@@ -146,6 +180,7 @@ export function useRowEditing({
   const cancelEdit = () => {
     if (!editingRef.current || savingRef.current) return;
     const current = editingRef.current;
+    idsAntesDelAltaRef.current = null;
     openCellStore.set(null);
     if (current.isNew) {
       const nextRows = rowsRef.current.filter((f) => f._id !== current.id);

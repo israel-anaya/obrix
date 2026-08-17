@@ -59,13 +59,26 @@ export function EquipoCostoHorarioGridVista() {
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargarEquipos = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarEquipos = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     return listEquiposCostoHorario()
       .then(setEquipos)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (marcarCarga) setCargando(false);
+      });
   };
+
+  const recargarEquipos = () => cargarEquipos(true);
+  const refrescarEquipos = () => cargarEquipos(false);
 
   const recargarTodo = () => {
     void recargarEquipos();
@@ -260,9 +273,9 @@ export function EquipoCostoHorarioGridVista() {
           search={busqueda}
           onSearchChange={setBusqueda}
           onSelectionChange={setPuedeEliminar}
-          onAddRow={(fila) => createEquipoCostoHorario(filaAEquipoCostoHorarioData(fila)).then(recargarEquipos)}
-          onEditRow={(fila) => updateEquipoCostoHorario(fila._id, filaAEquipoCostoHorarioData(fila)).then(recargarEquipos)}
-          onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteEquipoCostoHorario(id))).then(recargarEquipos)}
+          onAddRow={(fila) => createEquipoCostoHorario(filaAEquipoCostoHorarioData(fila)).then(refrescarEquipos)}
+          onEditRow={(fila) => updateEquipoCostoHorario(fila._id, filaAEquipoCostoHorarioData(fila)).then(refrescarEquipos)}
+          onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteEquipoCostoHorario(id))).then(refrescarEquipos)}
         />
       </div>
     </div>

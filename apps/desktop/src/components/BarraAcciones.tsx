@@ -38,7 +38,7 @@ export function BarraAcciones({ acciones, menu }: { acciones: AccionBarra[]; men
             accion.disabled && "opacity-30",
           )}
         >
-          <accion.icono size={14} />
+          <accion.icono size={16} />
         </button>
       ))}
 
@@ -50,7 +50,7 @@ export function BarraAcciones({ acciones, menu }: { acciones: AccionBarra[]; men
               title="Más acciones"
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <MoreVertical size={14} />
+              <MoreVertical size={16} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -61,7 +61,7 @@ export function BarraAcciones({ acciones, menu }: { acciones: AccionBarra[]; men
                 variant={accion.destructivo ? "destructive" : "default"}
                 onSelect={accion.onClick}
               >
-                <accion.icono size={14} />
+                <accion.icono size={16} />
                 {accion.titulo}
               </DropdownMenuItem>
             ))}

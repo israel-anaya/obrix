@@ -29,7 +29,7 @@ export function CatalogoGeneralSeccion({
 }) {
   const gridRef = useRef<DataGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
-  const { items, error, cargando, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(descriptor.api);
+  const { items, error, cargando, crear, actualizar, eliminar, reload, refrescar, limpiarError } = useCatalogoGeneral(descriptor.api);
   const [busqueda, setBusqueda] = useState("");
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
@@ -146,7 +146,7 @@ export function CatalogoGeneralSeccion({
                     item: itemSeleccionado,
                     nombresPorUsuarioId,
                     onCerrar: () => setPanelFichaAbierto(false),
-                    onGuardado: () => void reload(),
+                    onGuardado: () => void refrescar(),
                   })}
                 </ResizablePanel>
               </>

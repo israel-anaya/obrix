@@ -71,16 +71,27 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargarMateriales = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar, borrar o registrar un precio trae los mismos materiales
+   * que ya se están viendo: marcarlo dejaría el grid en blanco y devolvería el
+   * scroll al inicio después de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarMateriales = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     return listMateriales()
       .then(setMateriales)
       .catch((e) => setError(String(e)))
       .finally(() => {
-        setCargando(false);
+        if (marcarCarga) setCargando(false);
         setHistorialTicket((n) => n + 1);
       });
   };
+
+  const recargarMateriales = () => cargarMateriales(true);
+  const refrescarMateriales = () => cargarMateriales(false);
 
   // Recarga todo lo que se muestra en esta vista — el catálogo en sí, y las
   // listas auxiliares (unidades, proveedores, familias, nombres de usuario)
@@ -104,7 +115,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
     try {
       const resultado = await importarMaterialesCsv(path);
       setResultadoImportacion(resultado);
-      await recargarMateriales();
+      await refrescarMateriales();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -270,9 +281,9 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       onSearchChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
       onRowSelected={(fila) => setMaterialSeleccionadoId(fila?._id ?? null)}
-      onAddRow={(fila) => createMaterial(filaAMaterialData(fila)).then(recargarMateriales)}
-      onEditRow={(fila) => updateMaterial(fila._id, filaAMaterialData(fila)).then(recargarMateriales)}
-      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteMaterial(id))).then(recargarMateriales)}
+      onAddRow={(fila) => createMaterial(filaAMaterialData(fila)).then(refrescarMateriales)}
+      onEditRow={(fila) => updateMaterial(fila._id, filaAMaterialData(fila)).then(refrescarMateriales)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteMaterial(id))).then(refrescarMateriales)}
     />
   );
 
@@ -350,7 +361,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
               onClick={() => setResultadoImportacion(null)}
               className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <X size={13} />
+              <X size={16} />
             </button>
           </div>
           {resultadoImportacion.aviso && <p className="mt-1 text-muted-foreground">{resultadoImportacion.aviso}</p>}
@@ -377,7 +388,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
               onClick={() => setNoEncontradosLote(null)}
               className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <X size={13} />
+              <X size={16} />
             </button>
           </div>
           <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-auto pl-4 text-muted-foreground">
@@ -424,7 +435,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                           setPanelPreciosAbierto(false);
                           setPanelHistorialAbierto(false);
                         }}
-                        onPrecioRegistrado={recargarMateriales}
+                        onPrecioRegistrado={refrescarMateriales}
                         onVerHistorialCompleto={() => {
                           if (!panelHistorialAbierto) setHistorialFocoTicket((n) => n + 1);
                           setPanelHistorialAbierto((v) => !v);
@@ -439,7 +450,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                         familias={familias}
                         nombresPorUsuarioId={nombresPorUsuarioId}
                         onCerrar={() => setPanelFichaAbierto(false)}
-                        onGuardado={recargarMateriales}
+                        onGuardado={refrescarMateriales}
                       />
                     )}
                   </ResizablePanel>
@@ -473,7 +484,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
         onAplicado={({ mensaje, noEncontrados }) => {
           toast({ description: mensaje, variant: "success" });
           setNoEncontradosLote(noEncontrados.length > 0 ? noEncontrados : null);
-          void recargarMateriales();
+          void refrescarMateriales();
         }}
         onProgreso={onProgreso}
       />

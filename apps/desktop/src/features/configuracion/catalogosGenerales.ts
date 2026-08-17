@@ -233,7 +233,11 @@ const familiasInsumo: CatalogoGeneralDescriptor<FamiliaInsumo, FamiliaInsumoData
   titulo: "Familias de insumo",
   grid: {
     title: "Familias de insumo",
-    columns: [{ field: "nombre", header: "Nombre", width: 240 }, ...COLUMNAS_CONTROL],
+    columns: [
+      { field: "nombre", header: "Nombre", width: 240 },
+      { field: "icono", header: "Icono", width: 240 },
+      ...COLUMNAS_CONTROL,
+    ],
   },
   api: {
     list: api.listFamiliasInsumo,
@@ -241,9 +245,9 @@ const familiasInsumo: CatalogoGeneralDescriptor<FamiliaInsumo, FamiliaInsumoData
     actualizar: api.updateFamiliaInsumo,
     eliminar: api.deleteFamiliaInsumo,
   },
-  aFila: (m) => ({ _id: m.id, nombre: m.nombre, ...filaControl(m) }),
+  aFila: (m) => ({ _id: m.id, nombre: m.nombre, icono: m.icono ?? "", ...filaControl(m) }),
   vacio: { nombre: "Nueva familia" },
-  filaANuevo: (f) => ({ nombre: String(f.nombre) }),
+  filaANuevo: (f) => ({ nombre: String(f.nombre), icono: String(f.icono) || null }),
 };
 
 const monedas: CatalogoGeneralDescriptor<Moneda, MonedaData> = {

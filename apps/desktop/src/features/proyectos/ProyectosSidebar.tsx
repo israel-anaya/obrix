@@ -35,7 +35,7 @@ export function ProyectosSidebar({
             onClick={onAgregar}
             className="rounded p-1 text-muted-foreground hover:bg-background/80 hover:text-foreground"
           >
-            <FilePlus2 size={14} />
+            <FilePlus2 size={16} />
           </button>
           <button
             title="Eliminar proyecto seleccionado"
@@ -43,7 +43,7 @@ export function ProyectosSidebar({
             disabled={!seleccionado}
             className="rounded p-1 text-muted-foreground hover:bg-background/80 hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
@@ -63,8 +63,8 @@ export function ProyectosSidebar({
                   seleccionado === p.id && "bg-background text-foreground",
                 )}
               >
-                {abierto ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                <Folder size={13} />
+                {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <Folder size={16} />
                 <span className="truncate">{p.nombre}</span>
               </button>
               {abierto && (
@@ -73,14 +73,14 @@ export function ProyectosSidebar({
                     onClick={() => onOpenHoja(p.id)}
                     className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
                   >
-                    <FilePlus2 size={13} />
+                    <FilePlus2 size={16} />
                     Hoja de presupuesto
                   </button>
                   <button
                     onClick={() => onOpenPrograma(p.id)}
                     className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
                   >
-                    <CalendarRange size={13} />
+                    <CalendarRange size={16} />
                     Programa de Obra
                   </button>
                 </div>

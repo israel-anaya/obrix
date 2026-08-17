@@ -57,13 +57,26 @@ export function HerramientaSeccion() {
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const recargarHerramientas = () => {
-    setCargando(true);
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarHerramientas = (marcarCarga: boolean) => {
+    if (marcarCarga) setCargando(true);
     return listHerramientas()
       .then(setHerramientas)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (marcarCarga) setCargando(false);
+      });
   };
+
+  const recargarHerramientas = () => cargarHerramientas(true);
+  const refrescarHerramientas = () => cargarHerramientas(false);
 
   const recargarTodo = () => {
     void recargarHerramientas();
@@ -197,9 +210,9 @@ export function HerramientaSeccion() {
       onSearchChange={setBusqueda}
       onSelectionChange={setPuedeEliminar}
       onRowSelected={(fila) => setHerramientaSeleccionadaId(fila?._id ?? null)}
-      onAddRow={(fila) => createHerramienta(filaAHerramientaData(fila)).then(recargarHerramientas)}
-      onEditRow={(fila) => updateHerramienta(fila._id, filaAHerramientaData(fila)).then(recargarHerramientas)}
-      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteHerramienta(id))).then(recargarHerramientas)}
+      onAddRow={(fila) => createHerramienta(filaAHerramientaData(fila)).then(refrescarHerramientas)}
+      onEditRow={(fila) => updateHerramienta(fila._id, filaAHerramientaData(fila)).then(refrescarHerramientas)}
+      onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteHerramienta(id))).then(refrescarHerramientas)}
     />
   );
 
@@ -261,7 +274,7 @@ export function HerramientaSeccion() {
                   familias={familias}
                   nombresPorUsuarioId={nombresPorUsuarioId}
                   onCerrar={() => setPanelFichaAbierto(false)}
-                  onGuardado={recargarHerramientas}
+                  onGuardado={refrescarHerramientas}
                 />
               </ResizablePanel>
             </>

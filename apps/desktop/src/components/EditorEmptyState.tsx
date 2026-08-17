@@ -45,7 +45,7 @@ export function EditorEmptyState({
               onClick={atajo.onClick}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <atajo.icon size={13} className="shrink-0" />
+              <atajo.icon size={16} className="shrink-0" />
               {atajo.label}
             </button>
           ))}

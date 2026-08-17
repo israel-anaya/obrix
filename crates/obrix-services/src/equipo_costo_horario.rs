@@ -503,6 +503,7 @@ mod tests {
             parent_id: Set(None),
             nombre: Set("Equipo pesado".into()),
             insumos_asociados: Set(None),
+            icono: Set(None),
             deleted: Set(false),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),

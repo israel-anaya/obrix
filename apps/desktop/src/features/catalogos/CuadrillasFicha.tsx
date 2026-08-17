@@ -341,10 +341,10 @@ export function CuadrillasFicha() {
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <HardHat size={11} className="text-blue-500" />${fmt(c.costo_nacional?.sub_total_mano_obra ?? "0")}
+                        <HardHat size={16} className="text-blue-500" />${fmt(c.costo_nacional?.sub_total_mano_obra ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Wrench size={11} className="text-amber-500" />${fmt(c.costo_nacional?.sub_total_herramienta ?? "0")}
+                        <Wrench size={16} className="text-amber-500" />${fmt(c.costo_nacional?.sub_total_herramienta ?? "0")}
                       </span>
                     </div>
                   </button>

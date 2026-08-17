@@ -362,6 +362,7 @@ mod tests {
     use crate::categoria_fasar::{CategoriaFasarData, CategoriaFasarService};
     use crate::cuadrilla::{CuadrillaData, CuadrillaService};
     use crate::cuadrilla_costo::CuadrillaCostoService;
+    use crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService;
     use crate::factor_salario_real::{FactorSalarioRealData, FactorSalarioRealService};
     use crate::herramienta::{HerramientaData, HerramientaService};
     use crate::salario_categoria_fasar::{SalarioCategoriaFasarData, SalarioCategoriaFasarService};
@@ -752,7 +753,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn falla_y_no_deja_fila_a_medias_si_falta_salario_vigente() {
+    async fn agrega_integrante_sin_salario_vigente_con_costo_cero() {
         let portafolio = portafolio_con_fixtures().await;
 
         let sin_salario = CategoriaFasarService::crear(
@@ -772,28 +773,32 @@ mod tests {
 
         let cuadrilla = crear_cuadrilla(&portafolio, "CUA-1").await;
 
-        let err = CuadrillaDetalleService::crear(
+        let resultado = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
             CuadrillaDetalleData { detalle_insumo_id: sin_salario.id, cantidad_nacional: Decimal::ONE },
             "usr-1".into(),
         )
         .await
-        .expect_err("no debe permitir agregar un integrante sin salario vigente");
-        match err {
-            ServiceError::Validacion(mensaje) => {
-                assert!(mensaje.contains("no tiene un salario vigente"), "mensaje inesperado: {mensaje}");
-            }
-            otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
-        }
+        .expect("debe agregar el integrante aunque no tenga salario vigente");
 
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar detalles");
-        assert!(
-            detalles.is_empty(),
-            "la transacción debe revertirse por completo, sin dejar la fila insertada"
-        );
+        assert_eq!(detalles.len(), 1, "el renglón de receta debe quedar insertado");
+
+        let nacional = resultado.costo_nacional.as_ref().expect("valuación nacional");
+        assert_eq!(nacional.sub_total_mano_obra, Decimal::ZERO);
+        assert_eq!(nacional.costo_total, Decimal::ZERO);
+
+        let costos = CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+            .await
+            .expect("detalles de valuación");
+        assert_eq!(costos.len(), 1);
+        assert_eq!(costos[0].cantidad, Decimal::ONE);
+        assert_eq!(costos[0].costo, Decimal::ZERO);
+        assert_eq!(costos[0].importe, Decimal::ZERO);
+        assert!(costos[0].fecha_precio.is_none());
     }
 
     #[tokio::test]

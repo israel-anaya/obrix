@@ -237,7 +237,7 @@ export function SalarioCategoriaFasarPanel({
       <div className="border-b-2 border-foreground/20 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <DollarSign size={11} className="text-emerald-500" />
+            <DollarSign size={16} className="text-emerald-500" />
             Salario
           </span>
           <button
@@ -246,7 +246,7 @@ export function SalarioCategoriaFasarPanel({
             onClick={onCerrar}
             className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
         {categoriaClave && (
@@ -273,7 +273,7 @@ export function SalarioCategoriaFasarPanel({
                   onClick={() => setFormAbierto(true)}
                   className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
-                  <Plus size={13} />
+                  <Plus size={16} />
                   <span className="text-[11px]">Nuevo salario</span>
                 </button>
               )}
@@ -313,14 +313,14 @@ export function SalarioCategoriaFasarPanel({
                     <SelectContent>
                       <SelectItem value={NACIONAL_VALOR}>
                         <span className="flex items-center gap-1.5">
-                          <Globe2 size={12} className="text-primary" />
+                          <Globe2 size={16} className="text-primary" />
                           {NACIONAL} (default)
                         </span>
                       </SelectItem>
                       {ordenarPor(regiones, (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           <span className="flex items-center gap-1.5">
-                            <MapPinned size={12} className="text-amber-600 dark:text-amber-400" />
+                            <MapPinned size={16} className="text-amber-600 dark:text-amber-400" />
                             {r.nombre}
                           </span>
                         </SelectItem>
@@ -397,9 +397,9 @@ export function SalarioCategoriaFasarPanel({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-medium">
                         {s.region_id ? (
-                          <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                          <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
                         ) : (
-                          <Globe2 size={12} className="shrink-0 text-primary" />
+                          <Globe2 size={16} className="shrink-0 text-primary" />
                         )}
                         {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
                       </span>
@@ -453,9 +453,9 @@ export function SalarioCategoriaFasarPanel({
                           <td className="py-1 pr-2">
                             <span className="inline-flex items-center gap-1.5">
                               {s.region_id ? (
-                                <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                                <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
                               ) : (
-                                <Globe2 size={12} className="shrink-0 text-primary" />
+                                <Globe2 size={16} className="shrink-0 text-primary" />
                               )}
                               {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
                             </span>
@@ -463,7 +463,7 @@ export function SalarioCategoriaFasarPanel({
                           <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
                           <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>
                           <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
-                            {vigente ? "—" : formatearFecha(s.fecha_vigencia_hasta)}
+                            {s.fecha_vigencia_hasta === null ? "—" : formatearFecha(s.fecha_vigencia_hasta)}
                           </td>
                           <td className="py-1 text-right">
                             <BadgeEstadoVigencia vigente={vigente} />

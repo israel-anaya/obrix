@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronRight, Plus, RefreshCcw, Star, X } from "luc
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { iconoDeFamilia } from "@/icons/familias";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listFamiliasInsumo, listMateriales, listProveedores, listUnidadesMedida } from "@/lib/tauri";
 import type { FamiliaInsumo, Material, Proveedor, UnidadMedida } from "@/lib/types";
@@ -322,6 +323,7 @@ export function MesaEquivalentesSeccion() {
                 const abierto = expandidos.has(fam.id);
                 const hijas = hijasPorPadreId[fam.id] ?? [];
                 const sinSub = conteoPorSubfamilia[fam.id]?.[SIN_SUBFAMILIA_ID] ?? 0;
+                const IconoFamilia = iconoDeFamilia(fam);
                 return (
                   <div key={fam.id}>
                     <div className="flex items-center">
@@ -331,7 +333,7 @@ export function MesaEquivalentesSeccion() {
                         onClick={() => toggleExpandido(fam.id)}
                         className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground"
                       >
-                        {abierto ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       </button>
                       <button
                         type="button"
@@ -346,7 +348,10 @@ export function MesaEquivalentesSeccion() {
                             "text-foreground",
                         )}
                       >
-                        <span className="truncate">{fam.nombre}</span>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <IconoFamilia size={14} className="shrink-0" />
+                          <span className="truncate">{fam.nombre}</span>
+                        </span>
                         <span className="num shrink-0 text-[11px]">{n}</span>
                       </button>
                     </div>
@@ -433,7 +438,7 @@ export function MesaEquivalentesSeccion() {
                           ya && "opacity-30",
                         )}
                       >
-                        {ya ? <Check size={12} /> : <Plus size={12} />}
+                        {ya ? <Check size={16} /> : <Plus size={16} />}
                       </button>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
@@ -494,7 +499,7 @@ export function MesaEquivalentesSeccion() {
                           onClick={() => bajar(m.id)}
                           className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                         >
-                          <X size={12} />
+                          <X size={16} />
                         </button>
                       </div>
                       <button
@@ -507,7 +512,7 @@ export function MesaEquivalentesSeccion() {
                             : "text-muted-foreground hover:bg-muted hover:text-foreground",
                         )}
                       >
-                        <Star size={10} className={elegidoId === m.id ? "fill-current" : ""} />
+                        <Star size={16} className={elegidoId === m.id ? "fill-current" : ""} />
                         {elegidoId === m.id ? "Elegido" : "Elegir"}
                       </button>
                     </div>

@@ -82,19 +82,32 @@ export function UsuariosSeccion() {
     if (errorMembresias) toast({ description: errorMembresias, variant: "destructive" });
   }, [errorMembresias]);
 
-  const recargarMembresias = () => {
+  /**
+   * `marcarCarga` decide si el grid pinta el esqueleto mientras llega la
+   * respuesta. Solo lo hacen las cargas completas —la primera vista y el botón
+   * Recargar—, donde no hay nada válido en pantalla que perder. El refresco que
+   * sigue a guardar o borrar trae los mismos registros que ya se están viendo:
+   * marcarlo dejaría el grid en blanco y devolvería el scroll al inicio después
+   * de cada ✓, y el guardado ya avisa por su cuenta.
+   */
+  const cargarMembresias = (marcarCarga: boolean) => {
     if (!usuarioSeleccionadoId) {
       setMembresias([]);
       setErrorMembresias(null);
       return Promise.resolve();
     }
-    setCargandoMembresias(true);
+    if (marcarCarga) setCargandoMembresias(true);
     setErrorMembresias(null);
     return listOrganizacionesDeUsuario(usuarioSeleccionadoId)
       .then(setMembresias)
       .catch((e) => setErrorMembresias(String(e)))
-      .finally(() => setCargandoMembresias(false));
+      .finally(() => {
+        if (marcarCarga) setCargandoMembresias(false);
+      });
   };
+
+  const recargarMembresias = () => cargarMembresias(true);
+  const refrescarMembresias = () => cargarMembresias(false);
 
   useEffect(() => {
     recargarMembresias();
@@ -246,7 +259,7 @@ export function UsuariosSeccion() {
                         idPorRazonSocial[String(fila.organizacion)] ?? "",
                       )
                         .then(() => recargarOrganizacionContext())
-                        .then(recargarMembresias)
+                        .then(refrescarMembresias)
                     }
                     onEditRow={(fila) =>
                       updateOrganizacionUsuario(
@@ -256,12 +269,12 @@ export function UsuariosSeccion() {
                         Boolean(fila.activo),
                       )
                         .then(() => recargarOrganizacionContext())
-                        .then(recargarMembresias)
+                        .then(refrescarMembresias)
                     }
                     onDeleteRows={(ids) =>
                       Promise.all(ids.map(deleteOrganizacionUsuario))
                         .then(() => recargarOrganizacionContext())
-                        .then(recargarMembresias)
+                        .then(refrescarMembresias)
                     }
                     onSaveError={(mensaje) => setErrorMembresias(mensaje)}
                   />

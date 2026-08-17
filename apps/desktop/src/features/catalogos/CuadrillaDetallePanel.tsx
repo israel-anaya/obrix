@@ -36,7 +36,6 @@ import {
   listRegiones,
   moveCuadrillaDetalle,
   updateCuadrillaCostoDetalle,
-  updateCuadrillaDetalle,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type {
@@ -270,6 +269,7 @@ export function CuadrillaDetallePanel({
           header: "Integrante (categoría FASAR)",
           width: 260,
           grow: true,
+          readOnlyOnEdit: true,
           options: [ELEGIR_INTEGRANTE, ...categorias.map((c) => `${c.clave} — ${c.descripcion}`)],
         },
         { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6 },
@@ -306,6 +306,7 @@ export function CuadrillaDetallePanel({
           header: "Herramienta",
           width: 260,
           grow: true,
+          readOnlyOnEdit: true,
           options: [ELEGIR_HERRAMIENTA, ...herramientas.map((h) => `${h.clave} — ${h.descripcion}`)],
         },
         { field: "cantidad", header: "% mano de obra", width: 110, numeric: true, suffix: "%" },
@@ -373,67 +374,65 @@ export function CuadrillaDetallePanel({
     <div className="flex h-full flex-col border-l-2 border-l-primary bg-muted/15">
       <div className="border-b-2 border-foreground/20 bg-background/80 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              <Users size={11} className="text-emerald-500" />
-              Composición
-            </span>
-            {cuadrilla ? (
-              <>
-                <div className="mt-1">
-                  <span className="font-mono text-base font-bold tracking-tight">{cuadrilla.clave}</span>
-                </div>
-                <p className="mt-0.5 truncate text-xs text-foreground" title={cuadrilla.descripcion}>
-                  {cuadrilla.descripcion}
-                </p>
-              </>
-            ) : null}
-          </div>
+          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <Users size={16} className="text-emerald-500" />
+            Composición
+          </span>
           <button
             type="button"
             title="Cerrar"
             onClick={onCerrar}
             className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
-        {cuadrillaId ? (
-          <div className="mt-2 flex min-w-0 items-center gap-1">
-            <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
-              <SelectTrigger size="sm" className="w-72 shrink-0 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {costos.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!esNacional && (
-              <button
-                type="button"
-                title="Eliminar valuación regional"
-                onClick={() => setConfirmandoEliminarValuacion(true)}
-                className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
-            {regionesSinValuacion.length > 0 && (
-              <button
-                type="button"
-                title="Crear valuación regional"
-                onClick={() => setCreandoRegion(true)}
-                className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <Plus size={12} />
-                <span className="text-[11px]">Región</span>
-              </button>
-            )}
-          </div>
+        {cuadrilla ? (
+          <>
+            <div className="mt-1 flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate font-mono text-base font-bold tracking-tight">{cuadrilla.clave}</span>
+              {cuadrillaId ? (
+                <div className="ml-auto flex shrink-0 items-center gap-1">
+                  <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
+                    <SelectTrigger size="sm" className="w-48 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {costos.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!esNacional && (
+                    <button
+                      type="button"
+                      title="Eliminar valuación regional"
+                      onClick={() => setConfirmandoEliminarValuacion(true)}
+                      className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                  {regionesSinValuacion.length > 0 && (
+                    <button
+                      type="button"
+                      title="Crear valuación regional"
+                      onClick={() => setCreandoRegion(true)}
+                      className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Plus size={16} />
+                      <span className="text-[11px]">Región</span>
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+            <p className="mt-0.5 truncate text-xs text-foreground" title={cuadrilla.descripcion}>
+              {cuadrilla.descripcion}
+            </p>
+          </>
         ) : null}
       </div>
 
@@ -455,7 +454,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => integrantesRef.current?.addRow()}
                       className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
-                      <Plus size={13} />
+                      <Plus size={16} />
                       <span className="text-[11px]">Agregar</span>
                     </button>
                     <Separator orientation="vertical" />
@@ -466,7 +465,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => void moverIntegrante("arriba")}
                       className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                     >
-                      <ArrowUp size={13} />
+                      <ArrowUp size={16} />
                     </button>
                     <button
                       type="button"
@@ -475,7 +474,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => void moverIntegrante("abajo")}
                       className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                     >
-                      <ArrowDown size={13} />
+                      <ArrowDown size={16} />
                     </button>
                     <Separator orientation="vertical" />
                     <button
@@ -485,7 +484,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => integrantesRef.current?.deleteSelectedRows()}
                       className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 )}
@@ -512,11 +511,6 @@ export function CuadrillaDetallePanel({
                   onEditRow={async (fila) => {
                     const detalle = integrantes.find((d) => d.id === fila._id);
                     if (!detalle) return;
-                    const detalleInsumoId = categoriaIdPorOpcion[String(fila.integrante)];
-                    if (!detalleInsumoId) throw new Error("Elige un integrante válido.");
-                    if (detalleInsumoId !== detalle.detalle_insumo_id) {
-                      await updateCuadrillaDetalle(detalle.id, { detalle_insumo_id: detalleInsumoId }).then(trasMutarReceta);
-                    }
                     await editarCantidad(detalle.id, Number(fila.cantidad));
                   }}
                   onDeleteRows={async (ids) => {
@@ -540,7 +534,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => herramientaRef.current?.addRow()}
                       className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
-                      <Plus size={13} />
+                      <Plus size={16} />
                       <span className="text-[11px]">Agregar</span>
                     </button>
                     <Separator orientation="vertical" />
@@ -551,7 +545,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => void moverHerramienta("arriba")}
                       className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                     >
-                      <ArrowUp size={13} />
+                      <ArrowUp size={16} />
                     </button>
                     <button
                       type="button"
@@ -563,7 +557,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => void moverHerramienta("abajo")}
                       className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                     >
-                      <ArrowDown size={13} />
+                      <ArrowDown size={16} />
                     </button>
                     <Separator orientation="vertical" />
                     <button
@@ -573,7 +567,7 @@ export function CuadrillaDetallePanel({
                       onClick={() => herramientaRef.current?.deleteSelectedRows()}
                       className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 )}
@@ -600,11 +594,6 @@ export function CuadrillaDetallePanel({
                   onEditRow={async (fila) => {
                     const detalle = herramientaDetalles.find((d) => d.id === fila._id);
                     if (!detalle) return;
-                    const detalleInsumoId = herramientaIdPorOpcion[String(fila.herramienta)];
-                    if (!detalleInsumoId) throw new Error("Elige una herramienta válida.");
-                    if (detalleInsumoId !== detalle.detalle_insumo_id) {
-                      await updateCuadrillaDetalle(detalle.id, { detalle_insumo_id: detalleInsumoId }).then(trasMutarReceta);
-                    }
                     await editarCantidad(detalle.id, Number(fila.cantidad));
                   }}
                   onDeleteRows={async (ids) => {

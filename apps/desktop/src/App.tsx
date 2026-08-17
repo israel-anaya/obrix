@@ -102,7 +102,7 @@ function renderVistaSwitcher<T extends string>(
           }}
           className="rounded p-0.5 hover:bg-border"
         >
-          <Icon size={13} className={actual === id ? "text-primary" : "text-muted-foreground/40"} />
+          <Icon size={16} className={actual === id ? "text-primary" : "text-muted-foreground/40"} />
         </button>
       ))}
     </div>

@@ -603,6 +603,7 @@ mod tests {
             parent_id: Set(None),
             nombre: Set("Herramienta de mano".into()),
             insumos_asociados: Set(None),
+            icono: Set(None),
             deleted: Set(false),
             created_at: Set(now),
             created_by: Set("usr-1".into()),
