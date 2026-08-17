@@ -1083,7 +1083,10 @@ export const DataGrid = forwardRef<
         onCopy={onCopy}
         onCut={onCut}
         onPaste={onPaste}
-        className="min-h-0 flex-1 overflow-auto outline-none"
+        // `group/grid`: de este contenedor cuelga el cursor de celda (ver
+        // `RING_CURSOR` en `GridCell`) — es el elemento enfocable y, por
+        // `asChild`, el disparador del menú contextual.
+        className="group/grid min-h-0 flex-1 overflow-auto outline-none"
       >
         <table.Subscribe selector={(state) => state.columnSizing}>
           {(_columnSizing) => (

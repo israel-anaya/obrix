@@ -38,6 +38,12 @@ export interface DataGridColumn {
   stars?: boolean;
   /** Rendered with the Mexico-region date format (see `lib/fecha.ts`) — the real value is unchanged. */
   date?: boolean;
+  /**
+   * Starts hidden; the user can show it from the column menu. Survives a
+   * reset of the layout (it hides again) and a first visit with no stored
+   * layout. Showing it is remembered as `revealed` in `gridLayoutStorage`.
+   */
+  hiddenByDefault?: boolean;
   /** @deprecated No longer applies — per-column filtering was replaced by a global search (see `DataGrid`). */
   noFilter?: boolean;
   /** Value a new row starts with (via `addRow`), instead of "" / 0 / false. */

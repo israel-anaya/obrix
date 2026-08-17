@@ -274,6 +274,7 @@ export function CuadrillaDetallePanel({
         },
         { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6 },
         { field: "costo", header: "Salario real", width: 140, numeric: true, readOnly: true },
+        { field: "fecha_precio", header: "Fecha precio", width: 126, readOnly: true, date: true, hiddenByDefault: true },
         { field: "importe", header: "Importe", width: 110, numeric: true, readOnly: true },
       ],
     }),
@@ -289,6 +290,7 @@ export function CuadrillaDetallePanel({
           integrante: opcionPorCategoriaId[d.detalle_insumo_id] ?? ELEGIR_INTEGRANTE,
           cantidad: Number(cd?.cantidad ?? 0),
           costo: `$${fmt(cd?.costo ?? "0")}`,
+          fecha_precio: cd?.fecha_precio ?? "",
           importe: `$${fmt(cd?.importe ?? "0")}`,
         };
       }),

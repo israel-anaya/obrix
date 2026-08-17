@@ -6,6 +6,23 @@ import { CELL_ERROR, CELL_LOCKED, CELL_ROW_EDIT, CELL_ROW_NEW, CELL_SAVING, useC
 import { isFieldEditable } from "../gridValues";
 import type { DataGridColumn, Row } from "../types";
 
+/**
+ * El anillo de la celda con el cursor, dibujado solo mientras el grid tiene el
+ * foco: un grid en segundo plano compite con el panel, el diálogo o el buscador
+ * que sí lo tienen, y dos cursores a la vez no dicen cuál responde al teclado.
+ *
+ * Va por CSS y no por estado: el foco entra y sale a cada rato, y llevarlo a un
+ * store repintaría todas las celdas montadas cada vez. `:focus-within` sobre el
+ * contenedor (que es a la vez el elemento enfocable y el disparador del menú
+ * contextual) cubre también la celda en edición, porque el editor vive dentro.
+ *
+ * `data-state=open` es ese menú contextual: se lleva el foco a un portal fuera
+ * del contenedor, y sin esta parte el cursor desaparecería justo mientras se
+ * elige Copiar o Pegar —que actúan sobre esa celda—.
+ */
+const RING_CURSOR =
+  "group-focus-within/grid:ring-2 group-focus-within/grid:ring-primary group-data-[state=open]/grid:ring-2 group-data-[state=open]/grid:ring-primary";
+
 function GridCell({ column, row }: { column: DataGridColumn; row: Row }) {
   const ui = useGridUi();
   const meta = ui.meta.current;
@@ -50,7 +67,8 @@ function GridCell({ column, row }: { column: DataGridColumn; row: Row }) {
       className={cn(
         "flex h-full min-h-[22px] min-w-0 items-center px-1 ring-inset",
         muted && "text-muted-foreground",
-        selected && !hasError && "ring-2 ring-primary",
+        selected && !hasError && RING_CURSOR,
+        // El error no es cursor sino dato inválido: se ve enfocado o no.
         hasError && "ring-2 ring-destructive",
       )}
       title={hasError ? (meta.saveError ?? "Revisa este campo") : undefined}

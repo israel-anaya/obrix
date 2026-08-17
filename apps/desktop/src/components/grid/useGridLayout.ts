@@ -64,10 +64,19 @@ export function useGridLayout(storageKey: string, columns: DataGridColumn[]) {
     return result;
   }, [layout.order, fields, knownFields]);
 
-  const hiddenFields = useMemo(
-    () => new Set(layout.hidden.filter((f) => knownFields.has(f))),
-    [layout.hidden, knownFields],
+  const hiddenByDefault = useMemo(
+    () => new Set(columns.filter((c) => c.hiddenByDefault).map((c) => c.field)),
+    [columns],
   );
+
+  const hiddenFields = useMemo(() => {
+    const hidden = new Set(layout.hidden.filter((f) => knownFields.has(f)));
+    const revealed = new Set(layout.revealed.filter((f) => knownFields.has(f)));
+    for (const field of hiddenByDefault) {
+      if (!revealed.has(field)) hidden.add(field);
+    }
+    return hidden;
+  }, [layout.hidden, layout.revealed, knownFields, hiddenByDefault]);
 
   /** Every column in the user's order, hidden ones included — the list the
    * column menu shows. */
@@ -122,14 +131,22 @@ export function useGridLayout(storageKey: string, columns: DataGridColumn[]) {
   const toggleColumn = useCallback(
     (field: string) => {
       const hidden = new Set(hiddenFields);
-      if (hidden.has(field)) hidden.delete(field);
-      // Hiding every column would leave a grid with no way back — the menu
-      // disables the last checkbox, and this makes sure of it either way.
-      else if (hidden.size + 1 < knownFields.size) hidden.add(field);
-      else return;
-      write({ hidden: orderedFields.filter((f) => hidden.has(f)) });
+      const revealed = new Set(layoutRef.current.revealed.filter((f) => knownFields.has(f)));
+      if (hidden.has(field)) {
+        hidden.delete(field);
+        if (hiddenByDefault.has(field)) revealed.add(field);
+      } else if (hidden.size + 1 < knownFields.size) {
+        hidden.add(field);
+        revealed.delete(field);
+      } else return;
+      // Persist only the user's overrides: hidden fields that are not the
+      // column's default, and default-hidden fields they chose to show.
+      write({
+        hidden: orderedFields.filter((f) => hidden.has(f) && !hiddenByDefault.has(f)),
+        revealed: orderedFields.filter((f) => revealed.has(f)),
+      });
     },
-    [hiddenFields, knownFields, orderedFields, write],
+    [hiddenFields, knownFields, orderedFields, hiddenByDefault, write],
   );
 
   const resetLayout = useCallback(() => {

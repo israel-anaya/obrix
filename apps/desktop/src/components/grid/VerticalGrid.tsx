@@ -1136,7 +1136,10 @@ export const VerticalGrid = forwardRef<
               e.preventDefault();
               applyPaste(parseTsv(e.clipboardData.getData("text/plain")));
             }}
-            className="flex min-h-0 flex-1 flex-col outline-none"
+            // `group/grid`: de este marco cuelga el cursor de celda (ver
+            // `RING_CURSOR` en `GridCell`) — es el elemento enfocable y, por
+            // `asChild`, el disparador del menú contextual.
+            className="group/grid flex min-h-0 flex-1 flex-col outline-none"
           >
             {/* El encabezado vive en su propia tabla, fuera del área que se
                 desplaza, y solo se sincroniza en horizontal. No va pegado con

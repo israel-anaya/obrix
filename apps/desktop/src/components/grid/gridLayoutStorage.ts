@@ -27,10 +27,15 @@ export interface GridLayout {
   order: string[];
   /** Fields the user hid. */
   hidden: string[];
+  /**
+   * Fields with `hiddenByDefault` that the user chose to show. Without this,
+   * an empty `hidden` list cannot tell "never customized" from "I unhid it".
+   */
+  revealed: string[];
   sort: GridSort[];
 }
 
-export const EMPTY_LAYOUT: GridLayout = { widths: {}, order: [], hidden: [], sort: [] };
+export const EMPTY_LAYOUT: GridLayout = { widths: {}, order: [], hidden: [], revealed: [], sort: [] };
 
 function storageKey(key: string): string {
   return `${PREFIX}${key}`;
@@ -62,7 +67,7 @@ function sanitize(raw: unknown): GridLayout {
       })
     : [];
 
-  return { widths, order: stringList(data.order), hidden: stringList(data.hidden), sort };
+  return { widths, order: stringList(data.order), hidden: stringList(data.hidden), revealed: stringList(data.revealed), sort };
 }
 
 export function loadLayout(key: string): GridLayout {
@@ -82,6 +87,7 @@ function isDefault(layout: GridLayout): boolean {
     Object.keys(layout.widths).length === 0 &&
     layout.order.length === 0 &&
     layout.hidden.length === 0 &&
+    layout.revealed.length === 0 &&
     layout.sort.length === 0
   );
 }
