@@ -163,8 +163,9 @@ export interface FamiliaInsumoData {
  * `factor_salario_real`) para derivar el costo horario en espera y en
  * reserva de un `equipo_costo_horario` — ver `perfil_inactividad_equipo` en
  * el diccionario de datos. Cada porcentaje (0-100, como texto para no
- * perder precisión al viajar por IPC) se aplica al rubro activo homónimo
- * que ya cachea `equipo_costo_horario`.
+ * perder precisión al viajar por IPC) se aplica al rubro activo que ya
+ * cachea `equipo_costo_horario` — cargos fijos, operación, y consumo
+ * partido por naturaleza (combustible, lubricante, llantas).
  */
 export interface PerfilInactividadEquipo extends CamposControl, CamposBorradoLogico {
   id: string;
@@ -174,13 +175,17 @@ export interface PerfilInactividadEquipo extends CamposControl, CamposBorradoLog
   espera_inversion_porcentaje: string;
   espera_seguro_porcentaje: string;
   espera_mantenimiento_porcentaje: string;
-  espera_consumo_porcentaje: string;
+  espera_combustible_porcentaje: string;
+  espera_lubricante_porcentaje: string;
+  espera_llantas_porcentaje: string;
   espera_operacion_porcentaje: string;
   reserva_depreciacion_porcentaje: string;
   reserva_inversion_porcentaje: string;
   reserva_seguro_porcentaje: string;
   reserva_mantenimiento_porcentaje: string;
-  reserva_consumo_porcentaje: string;
+  reserva_combustible_porcentaje: string;
+  reserva_lubricante_porcentaje: string;
+  reserva_llantas_porcentaje: string;
   reserva_operacion_porcentaje: string;
 }
 
@@ -190,13 +195,17 @@ export interface PerfilInactividadEquipoData {
   espera_inversion_porcentaje: string;
   espera_seguro_porcentaje: string;
   espera_mantenimiento_porcentaje: string;
-  espera_consumo_porcentaje: string;
+  espera_combustible_porcentaje: string;
+  espera_lubricante_porcentaje: string;
+  espera_llantas_porcentaje: string;
   espera_operacion_porcentaje: string;
   reserva_depreciacion_porcentaje: string;
   reserva_inversion_porcentaje: string;
   reserva_seguro_porcentaje: string;
   reserva_mantenimiento_porcentaje: string;
-  reserva_consumo_porcentaje: string;
+  reserva_combustible_porcentaje: string;
+  reserva_lubricante_porcentaje: string;
+  reserva_llantas_porcentaje: string;
   reserva_operacion_porcentaje: string;
 }
 

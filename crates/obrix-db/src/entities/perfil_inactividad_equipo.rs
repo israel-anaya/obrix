@@ -5,10 +5,11 @@ use sea_orm::entity::prelude::*;
 /// `factor_salario_real`): porcentaje de cada rubro de costo horario que
 /// aplica cuando un equipo está inactivo, ver diccionario de datos. Cada
 /// porcentaje (0-100) se aplica al rubro activo que ya cachea
-/// `equipo_costo_horario` — los cuatro cargos fijos por separado más
-/// `subtotal_consumo` y `subtotal_operacion`. Varios equipos pueden
-/// compartir el mismo perfil; el borrado es lógico (`deleted`) y no rompe
-/// el vínculo de equipos que ya lo usan.
+/// `equipo_costo_horario` — los cuatro cargos fijos por separado,
+/// `subtotal_operacion`, y el consumo partido por naturaleza (combustible,
+/// lubricante, llantas), no sobre `subtotal_consumo` entero. Varios equipos
+/// pueden compartir el mismo perfil; el borrado es lógico (`deleted`) y no
+/// rompe el vínculo de equipos que ya lo usan.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "perfil_inactividad_equipo")]
 pub struct Model {
@@ -20,13 +21,23 @@ pub struct Model {
     pub espera_inversion_porcentaje: Decimal,
     pub espera_seguro_porcentaje: Decimal,
     pub espera_mantenimiento_porcentaje: Decimal,
-    pub espera_consumo_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `tipo = consumo` y `naturaleza = combustible`.
+    pub espera_combustible_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = lubricante`.
+    pub espera_lubricante_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = llantas`.
+    pub espera_llantas_porcentaje: Decimal,
     pub espera_operacion_porcentaje: Decimal,
     pub reserva_depreciacion_porcentaje: Decimal,
     pub reserva_inversion_porcentaje: Decimal,
     pub reserva_seguro_porcentaje: Decimal,
     pub reserva_mantenimiento_porcentaje: Decimal,
-    pub reserva_consumo_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = combustible`.
+    pub reserva_combustible_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = lubricante`.
+    pub reserva_lubricante_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = llantas`.
+    pub reserva_llantas_porcentaje: Decimal,
     pub reserva_operacion_porcentaje: Decimal,
     pub deleted: bool,
     pub created_at: String,

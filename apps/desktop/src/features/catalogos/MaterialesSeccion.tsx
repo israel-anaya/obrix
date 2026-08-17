@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileSpreadsheet, FileText, History, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
+import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -57,6 +57,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
   const [historialTicket, setHistorialTicket] = useState(0);
+  const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
   const [materialSeleccionadoId, setMaterialSeleccionadoId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
@@ -304,6 +305,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                 onClick: () =>
                   setPanelPreciosAbierto((v) => {
                     if (!v) setPanelFichaAbierto(false);
+                    else setPanelHistorialAbierto(false);
                     return !v;
                   }),
               },
@@ -312,15 +314,12 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                 titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
                 onClick: () =>
                   setPanelFichaAbierto((v) => {
-                    if (!v) setPanelPreciosAbierto(false);
+                    if (!v) {
+                      setPanelPreciosAbierto(false);
+                      setPanelHistorialAbierto(false);
+                    }
                     return !v;
                   }),
-              },
-              {
-                icono: History,
-                titulo: panelHistorialAbierto ? "Ocultar historial de precios" : "Ver historial de precios",
-                onClick: () => setPanelHistorialAbierto((v) => !v),
-                disabled: !panelHistorialAbierto && materiales.length === 0,
               },
             ]}
             menu={[
@@ -421,8 +420,16 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                         materialId={materialSeleccionadoId}
                         materialClave={materialSeleccionado?.clave}
                         materialDescripcion={materialSeleccionado?.descripcion}
-                        onCerrar={() => setPanelPreciosAbierto(false)}
+                        onCerrar={() => {
+                          setPanelPreciosAbierto(false);
+                          setPanelHistorialAbierto(false);
+                        }}
                         onPrecioRegistrado={recargarMateriales}
+                        onVerHistorialCompleto={() => {
+                          if (!panelHistorialAbierto) setHistorialFocoTicket((n) => n + 1);
+                          setPanelHistorialAbierto((v) => !v);
+                        }}
+                        historialAbierto={panelHistorialAbierto}
                       />
                     ) : (
                       <MaterialFormPanel
@@ -453,6 +460,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                   materialId={materialSeleccionadoId}
                   nombresPorUsuarioId={nombresPorUsuarioId}
                   revision={historialTicket}
+                  focoTicket={historialFocoTicket}
                 />
               </ResizablePanel>
             </>

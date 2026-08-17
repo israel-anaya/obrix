@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileSpreadsheet, FileText, History, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -64,6 +64,7 @@ export function CategoriaFasarSeccion() {
   const [panelSalarioAbierto, setPanelSalarioAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
+  const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLote | null>(null);
@@ -263,6 +264,7 @@ export function CategoriaFasarSeccion() {
                 onClick: () =>
                   setPanelSalarioAbierto((v) => {
                     if (!v) setPanelFichaAbierto(false);
+                    else setPanelHistorialAbierto(false);
                     return !v;
                   }),
                 disabled: !panelSalarioAbierto && categorias.length === 0,
@@ -272,15 +274,12 @@ export function CategoriaFasarSeccion() {
                 titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
                 onClick: () =>
                   setPanelFichaAbierto((v) => {
-                    if (!v) setPanelSalarioAbierto(false);
+                    if (!v) {
+                      setPanelSalarioAbierto(false);
+                      setPanelHistorialAbierto(false);
+                    }
                     return !v;
                   }),
-              },
-              {
-                icono: History,
-                titulo: panelHistorialAbierto ? "Ocultar historial de salarios" : "Ver historial de salarios",
-                onClick: () => setPanelHistorialAbierto((v) => !v),
-                disabled: !panelHistorialAbierto && categorias.length === 0,
               },
             ]}
             menu={[
@@ -329,8 +328,16 @@ export function CategoriaFasarSeccion() {
                         categoriaId={categoriaSeleccionadaId}
                         categoriaClave={categoriaSeleccionada?.clave}
                         categoriaDescripcion={categoriaSeleccionada?.descripcion}
-                        onCerrar={() => setPanelSalarioAbierto(false)}
+                        onCerrar={() => {
+                          setPanelSalarioAbierto(false);
+                          setPanelHistorialAbierto(false);
+                        }}
                         onSalarioRegistrado={recargarCategorias}
+                        onVerHistorialCompleto={() => {
+                          if (!panelHistorialAbierto) setHistorialFocoTicket((n) => n + 1);
+                          setPanelHistorialAbierto((v) => !v);
+                        }}
+                        historialAbierto={panelHistorialAbierto}
                       />
                     ) : (
                       <CategoriaFasarFormPanel
@@ -359,6 +366,7 @@ export function CategoriaFasarSeccion() {
                 <SalarioHistorialGrid
                   categoriaId={categoriaSeleccionadaId}
                   nombresPorUsuarioId={nombresPorUsuarioId}
+                  focoTicket={historialFocoTicket}
                 />
               </ResizablePanel>
             </>

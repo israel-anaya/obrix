@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Globe2, MapPinned } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Globe2, History, MapPinned } from "lucide-react";
+import { BadgeEstadoVigencia } from "@/components/BadgeEstadoVigencia";
 import { listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
 import type { Region, SalarioCategoriaFasar } from "@/lib/types";
 import { formatearFecha } from "@/lib/fecha";
@@ -15,16 +16,36 @@ const NACIONAL = "Nacional";
 export function SalarioHistorialGrid({
   categoriaId,
   nombresPorUsuarioId = {},
+  focoTicket = 0,
 }: {
   categoriaId: string | null;
   nombresPorUsuarioId?: Record<string, string>;
+  /** Sube al pedir foco desde el resumen del panel lateral. */
+  focoTicket?: number;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [resaltado, setResaltado] = useState(false);
   const [salarios, setSalarios] = useState<SalarioCategoriaFasar[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Sin categoría no hay nada que pedir, así que tampoco hay espera: el estado
   // arranca a `false` y solo se enciende cuando de verdad se sale a buscar.
   const [cargando, setCargando] = useState(false);
+
+  useEffect(() => {
+    if (!focoTicket) return;
+    const mostrar = window.setTimeout(() => {
+      const el = rootRef.current;
+      el?.focus({ preventScroll: true });
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      setResaltado(true);
+    }, 50);
+    const ocultar = window.setTimeout(() => setResaltado(false), 1450);
+    return () => {
+      clearTimeout(mostrar);
+      clearTimeout(ocultar);
+    };
+  }, [focoTicket]);
 
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
@@ -68,14 +89,26 @@ export function SalarioHistorialGrid({
     [salarios],
   );
 
-  if (!categoriaId) {
-    return <p className="p-3 text-xs text-muted-foreground">Selecciona una categoría para ver su historial de salarios.</p>;
-  }
-
   return (
-    <div className="flex h-full flex-col overflow-auto p-3">
-      {error && <p className="pb-2 text-xs text-destructive">{error}</p>}
-      {cargando ? (
+    <div
+      ref={rootRef}
+      tabIndex={-1}
+      className={cn(
+        "flex h-full flex-col overflow-auto p-3 outline-none transition-shadow duration-700",
+        resaltado && "ring-2 ring-inset ring-primary/40",
+      )}
+    >
+      <div className="mb-2 flex items-center gap-1.5">
+        <History size={13} className="shrink-0 text-muted-foreground" />
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Histórico completo de salarios
+        </h3>
+      </div>
+      {!categoriaId ? (
+        <p className="text-xs text-muted-foreground">Selecciona una categoría para ver su historial de salarios.</p>
+      ) : error ? (
+        <p className="text-xs text-destructive">{error}</p>
+      ) : cargando ? (
         <p className="text-xs text-muted-foreground">Cargando…</p>
       ) : salarios.length === 0 ? (
         <p className="text-xs text-muted-foreground">Sin historial.</p>
@@ -89,7 +122,8 @@ export function SalarioHistorialGrid({
               <th className="py-1 pr-2 text-right font-medium">Salario real</th>
               <th className="py-1 pr-2 font-medium">Usuario</th>
               <th className="py-1 pr-2 text-right font-medium">Desde</th>
-              <th className="py-1 text-right font-medium">Hasta</th>
+              <th className="py-1 pr-2 text-right font-medium">Hasta</th>
+              <th className="py-1 text-right font-medium">Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -118,17 +152,11 @@ export function SalarioHistorialGrid({
                 <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
                 <td className="py-1 pr-2">{nombresPorUsuarioId[s.created_by] ?? s.created_by}</td>
                 <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>
+                <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
+                  {vigente ? "—" : formatearFecha(s.fecha_vigencia_hasta)}
+                </td>
                 <td className="py-1 text-right">
-                  {vigente ? (
-                    <span className="inline-flex items-center justify-end gap-1 font-medium text-emerald-700 dark:text-emerald-400">
-                      <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                      vigente
-                    </span>
-                  ) : (
-                    <span className="tabular-nums text-muted-foreground">
-                      {formatearFecha(s.fecha_vigencia_hasta)}
-                    </span>
-                  )}
+                  <BadgeEstadoVigencia vigente={vigente} />
                 </td>
               </tr>
               );

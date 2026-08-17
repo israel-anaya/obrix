@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Globe2, MapPinned, Plus, X } from "lucide-react";
 import { CurrencyInput } from "@/components/CurrencyInput";
+import { BadgeEstadoVigencia } from "@/components/BadgeEstadoVigencia";
+import { EnlaceHistorialCompleto } from "@/components/EnlaceHistorialCompleto";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -31,9 +33,8 @@ function fmt(valor: number, decimales = 2): string {
 
 /**
  * Panel: vigencia de salario+FSR vigente + formulario para registrar una
- * nueva arriba, historial completo abajo. Se sincroniza con `categoriaId` —
- * pensado para vivir junto al grid de Categorías FASAR, mostrando las
- * vigencias de la categoría seleccionada en la fila. El FSR (número) y el
+ * nueva. Si el padre pasa `onVerHistorialCompleto`, el histórico no se
+ * duplica aquí: un enlace abre la tabla inferior. El FSR (número) y el
  * salario real no los pide el usuario: se calculan aquí mismo, corriendo el
  * modelo de cálculo del FSR elegido con `salario_nominal` = salario base
  * capturado (ver `evaluarModelo`) — el backend solo guarda lo ya calculado,
@@ -46,6 +47,8 @@ export function SalarioCategoriaFasarPanel({
   captura,
   onCerrar,
   onSalarioRegistrado,
+  onVerHistorialCompleto,
+  historialAbierto = false,
 }: {
   categoriaId: string | null;
   categoriaClave?: string;
@@ -54,6 +57,9 @@ export function SalarioCategoriaFasarPanel({
   captura?: { regionId: string | null; ticket: number; abrir: boolean } | null;
   onCerrar: () => void;
   onSalarioRegistrado?: () => void;
+  /** Abre o cierra la tabla inferior — misma fuente, detalle completo. */
+  onVerHistorialCompleto?: () => void;
+  historialAbierto?: boolean;
 }) {
   const [salarios, setSalarios] = useState<SalarioCategoriaFasar[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
@@ -255,7 +261,7 @@ export function SalarioCategoriaFasarPanel({
         <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona una categoría para ver sus salarios.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <section className="border-b border-border p-3">
+          <section className="min-h-0 flex-1 overflow-auto border-b border-border p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Salario vigente
@@ -411,64 +417,65 @@ export function SalarioCategoriaFasarPanel({
             )}
           </section>
 
-          <section className="min-h-0 flex-1 overflow-auto p-3">
-            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Histórico de salarios
-            </h4>
-            {salarios.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Sin historial.</p>
-            ) : (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="py-1 pr-2 font-medium">Región</th>
-                    <th className="py-1 pr-2 text-right font-medium">Salario real</th>
-                    <th className="py-1 pr-2 text-right font-medium">Desde</th>
-                    <th className="py-1 text-right font-medium">Hasta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historial.map((s) => {
-                    const vigente = s.fecha_vigencia_hasta === null;
-                    return (
-                    <tr
-                      key={s.id}
-                      className={cn(
-                        "border-b border-border/50 last:border-none",
-                        vigente && "bg-emerald-500/5",
-                      )}
-                    >
-                      <td className="py-1 pr-2">
-                        <span className="inline-flex items-center gap-1.5">
-                          {s.region_id ? (
-                            <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
-                          ) : (
-                            <Globe2 size={12} className="shrink-0 text-primary" />
-                          )}
-                          {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
-                        </span>
-                      </td>
-                      <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
-                      <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>
-                      <td className="py-1 text-right">
-                        {vigente ? (
-                          <span className="inline-flex items-center justify-end gap-1 font-medium text-emerald-700 dark:text-emerald-400">
-                            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                            vigente
-                          </span>
-                        ) : (
-                          <span className="tabular-nums text-muted-foreground">
-                            {formatearFecha(s.fecha_vigencia_hasta)}
-                          </span>
-                        )}
-                      </td>
+          {onVerHistorialCompleto ? (
+            <section className="px-3 py-2">
+              <EnlaceHistorialCompleto onClick={onVerHistorialCompleto} abierto={historialAbierto} />
+            </section>
+          ) : (
+            <section className="min-h-0 flex-1 overflow-auto p-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Histórico de salarios
+              </h4>
+              {historial.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Sin historial.</p>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-1 pr-2 font-medium">Región</th>
+                      <th className="py-1 pr-2 text-right font-medium">Salario real</th>
+                      <th className="py-1 pr-2 text-right font-medium">Desde</th>
+                      <th className="py-1 pr-2 text-right font-medium">Hasta</th>
+                      <th className="py-1 text-right font-medium">Estado</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </section>
+                  </thead>
+                  <tbody>
+                    {historial.map((s) => {
+                      const vigente = s.fecha_vigencia_hasta === null;
+                      return (
+                        <tr
+                          key={s.id}
+                          className={cn(
+                            "border-b border-border/50 last:border-none",
+                            vigente && "bg-emerald-500/5",
+                          )}
+                        >
+                          <td className="py-1 pr-2">
+                            <span className="inline-flex items-center gap-1.5">
+                              {s.region_id ? (
+                                <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                              ) : (
+                                <Globe2 size={12} className="shrink-0 text-primary" />
+                              )}
+                              {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
+                            </span>
+                          </td>
+                          <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
+                          <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>
+                          <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
+                            {vigente ? "—" : formatearFecha(s.fecha_vigencia_hasta)}
+                          </td>
+                          <td className="py-1 text-right">
+                            <BadgeEstadoVigencia vigente={vigente} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          )}
         </div>
       )}
     </div>

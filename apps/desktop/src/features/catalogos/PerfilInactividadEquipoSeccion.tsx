@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { VerticalGrid, type VerticalGridGroup } from "@/components/grid/VerticalGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { PerfilInactividadEquipoFormPanel } from "@/features/catalogos/PerfilInactividadEquipoFormPanel";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createPerfilInactividadEquipo,
   deletePerfilInactividadEquipo,
   listPerfilesInactividadEquipo,
+  listUsuarios,
   updatePerfilInactividadEquipo,
 } from "@/lib/tauri";
 import type { PerfilInactividadEquipo, PerfilInactividadEquipoData } from "@/lib/types";
@@ -30,13 +32,17 @@ const CONFIG: DataGridConfig = {
     { field: "espera_inversion_porcentaje", header: "Espera · Inversión %", width: 140, numeric: true, suffix: "%" },
     { field: "espera_seguro_porcentaje", header: "Espera · Seguro %", width: 130, numeric: true, suffix: "%" },
     { field: "espera_mantenimiento_porcentaje", header: "Espera · Mantenimiento %", width: 150, numeric: true, suffix: "%" },
-    { field: "espera_consumo_porcentaje", header: "Espera · Consumo %", width: 140, numeric: true, suffix: "%" },
+    { field: "espera_combustible_porcentaje", header: "Espera · Combustible %", width: 155, numeric: true, suffix: "%" },
+    { field: "espera_lubricante_porcentaje", header: "Espera · Lubricante %", width: 150, numeric: true, suffix: "%" },
+    { field: "espera_llantas_porcentaje", header: "Espera · Llantas %", width: 135, numeric: true, suffix: "%" },
     { field: "espera_operacion_porcentaje", header: "Espera · Operación %", width: 140, numeric: true, suffix: "%" },
     { field: "reserva_depreciacion_porcentaje", header: "Reserva · Depreciación %", width: 150, numeric: true, suffix: "%" },
     { field: "reserva_inversion_porcentaje", header: "Reserva · Inversión %", width: 150, numeric: true, suffix: "%" },
     { field: "reserva_seguro_porcentaje", header: "Reserva · Seguro %", width: 140, numeric: true, suffix: "%" },
     { field: "reserva_mantenimiento_porcentaje", header: "Reserva · Mantenimiento %", width: 160, numeric: true, suffix: "%" },
-    { field: "reserva_consumo_porcentaje", header: "Reserva · Consumo %", width: 150, numeric: true, suffix: "%" },
+    { field: "reserva_combustible_porcentaje", header: "Reserva · Combustible %", width: 165, numeric: true, suffix: "%" },
+    { field: "reserva_lubricante_porcentaje", header: "Reserva · Lubricante %", width: 160, numeric: true, suffix: "%" },
+    { field: "reserva_llantas_porcentaje", header: "Reserva · Llantas %", width: 145, numeric: true, suffix: "%" },
     { field: "reserva_operacion_porcentaje", header: "Reserva · Operación %", width: 150, numeric: true, suffix: "%" },
     ...COLUMNAS_CONTROL,
   ],
@@ -73,7 +79,9 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
         id: "costos_x_consumo",
         title: "Costos por consumo",
         fields: [
-          "espera_consumo_porcentaje",
+          "espera_combustible_porcentaje",
+          "espera_lubricante_porcentaje",
+          "espera_llantas_porcentaje",
         ]        
       },
       {
@@ -103,7 +111,9 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
         id: "costos_x_consumo_equipo_reserva",
         title: "Costos por consumo",
         fields: [
-          "reserva_consumo_porcentaje",
+          "reserva_combustible_porcentaje",
+          "reserva_lubricante_porcentaje",
+          "reserva_llantas_porcentaje",
         ]        
       },
       {
@@ -122,13 +132,15 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
  * `insumo`, igual que `factor_salario_real`) para derivar el costo horario
  * en espera y en reserva de un `equipo_costo_horario`, ver diccionario de
  * datos. Un renglón por perfil (p. ej. "CMIC frente / patio 2026"), con sus
- * 12 porcentajes editables en la misma fila — mismo patrón maestro que
- * `HerramientaSeccion`/`EquipoCostoHorarioGridVista`.
+ * 16 porcentajes editables en la misma fila — mismo patrón maestro que
+ * `HerramientaSeccion`/`EquipoCostoHorarioGridVista`. **Ver ficha** abre el
+ * panel a la derecha (`PerfilInactividadEquipoFormPanel`) con el registro
+ * seleccionado, igual que materiales/herramienta.
  *
  * La vista va partida en dos sobre los mismos datos: arriba el `DataGrid` de
  * siempre (un perfil por renglón, para compararlos de un vistazo) y abajo el
  * `VerticalGrid`, que acuesta la tabla —un perfil por columna, cada porcentaje
- * un renglón agrupado por espera/reserva— porque son 12 campos y a lo ancho
+ * un renglón agrupado por espera/reserva— porque son 16 campos y a lo ancho
  * obligan a pasearse. Las dos rejillas guardan por los mismos comandos y
  * cualquiera de las dos recarga a las dos.
  */
@@ -142,6 +154,9 @@ export function PerfilInactividadEquipoSeccion() {
   const [busqueda, setBusqueda] = useState("");
   const [busquedaVertical, setBusquedaVertical] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
+  const [perfilSeleccionadoId, setPerfilSeleccionadoId] = useState<string | null>(null);
+  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -159,6 +174,9 @@ export function PerfilInactividadEquipoSeccion() {
   const { organizacionActivaId } = useOrganizacionActiva();
   useEffect(() => {
     recargar();
+    listUsuarios().then((usuarios) => {
+      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizacionActivaId]);
 
@@ -169,18 +187,22 @@ export function PerfilInactividadEquipoSeccion() {
     espera_inversion_porcentaje: p.espera_inversion_porcentaje,
     espera_seguro_porcentaje: p.espera_seguro_porcentaje,
     espera_mantenimiento_porcentaje: p.espera_mantenimiento_porcentaje,
-    espera_consumo_porcentaje: p.espera_consumo_porcentaje,
+    espera_combustible_porcentaje: p.espera_combustible_porcentaje,
+    espera_lubricante_porcentaje: p.espera_lubricante_porcentaje,
+    espera_llantas_porcentaje: p.espera_llantas_porcentaje,
     espera_operacion_porcentaje: p.espera_operacion_porcentaje,
     reserva_depreciacion_porcentaje: p.reserva_depreciacion_porcentaje,
     reserva_inversion_porcentaje: p.reserva_inversion_porcentaje,
     reserva_seguro_porcentaje: p.reserva_seguro_porcentaje,
     reserva_mantenimiento_porcentaje: p.reserva_mantenimiento_porcentaje,
-    reserva_consumo_porcentaje: p.reserva_consumo_porcentaje,
+    reserva_combustible_porcentaje: p.reserva_combustible_porcentaje,
+    reserva_lubricante_porcentaje: p.reserva_lubricante_porcentaje,
+    reserva_llantas_porcentaje: p.reserva_llantas_porcentaje,
     reserva_operacion_porcentaje: p.reserva_operacion_porcentaje,
     created_at: p.created_at,
-    created_by: p.created_by,
+    created_by: nombresPorUsuarioId[p.created_by] ?? p.created_by,
     updated_at: p.updated_at ?? "",
-    updated_by: p.updated_by ?? "",
+    updated_by: (p.updated_by && nombresPorUsuarioId[p.updated_by]) ?? p.updated_by ?? "",
   }));
 
   const filaADatos = (fila: Row): PerfilInactividadEquipoData => ({
@@ -189,15 +211,21 @@ export function PerfilInactividadEquipoSeccion() {
     espera_inversion_porcentaje: String(fila.espera_inversion_porcentaje ?? "0"),
     espera_seguro_porcentaje: String(fila.espera_seguro_porcentaje ?? "0"),
     espera_mantenimiento_porcentaje: String(fila.espera_mantenimiento_porcentaje ?? "0"),
-    espera_consumo_porcentaje: String(fila.espera_consumo_porcentaje ?? "0"),
+    espera_combustible_porcentaje: String(fila.espera_combustible_porcentaje ?? "0"),
+    espera_lubricante_porcentaje: String(fila.espera_lubricante_porcentaje ?? "0"),
+    espera_llantas_porcentaje: String(fila.espera_llantas_porcentaje ?? "0"),
     espera_operacion_porcentaje: String(fila.espera_operacion_porcentaje ?? "0"),
     reserva_depreciacion_porcentaje: String(fila.reserva_depreciacion_porcentaje ?? "0"),
     reserva_inversion_porcentaje: String(fila.reserva_inversion_porcentaje ?? "0"),
     reserva_seguro_porcentaje: String(fila.reserva_seguro_porcentaje ?? "0"),
     reserva_mantenimiento_porcentaje: String(fila.reserva_mantenimiento_porcentaje ?? "0"),
-    reserva_consumo_porcentaje: String(fila.reserva_consumo_porcentaje ?? "0"),
+    reserva_combustible_porcentaje: String(fila.reserva_combustible_porcentaje ?? "0"),
+    reserva_lubricante_porcentaje: String(fila.reserva_lubricante_porcentaje ?? "0"),
+    reserva_llantas_porcentaje: String(fila.reserva_llantas_porcentaje ?? "0"),
     reserva_operacion_porcentaje: String(fila.reserva_operacion_porcentaje ?? "0"),
   });
+
+  const perfilSeleccionado = perfiles.find((p) => p.id === perfilSeleccionadoId) ?? null;
 
   return (
     <div className="flex h-full flex-col">
@@ -208,7 +236,14 @@ export function PerfilInactividadEquipoSeccion() {
         <div className="flex items-center gap-2">
           <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            acciones={[
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icono: FileText,
+                titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
+              },
+            ]}
             menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargar },
               {
@@ -254,64 +289,99 @@ export function PerfilInactividadEquipoSeccion() {
         </div>
       </details>
       <div className="min-h-0 flex-1">
-        <ResizablePanelGroup orientation="vertical" className="h-full">
-          <ResizablePanel defaultSize="55" minSize="20" className="flex flex-col overflow-hidden">
-            <DataGrid
-              ref={gridRef}
-              config={CONFIG}
-              initialRows={filas}
-              loading={cargando}
-              selectionMode="single"
-              search={busqueda}
-              onSearchChange={setBusqueda}
-              onSelectionChange={setPuedeEliminar}
-              onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
-              onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
-              onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize="45" minSize="20" className="flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-              <h3 className="text-sm font-semibold">Perfiles acostados</h3>
-              <div className="flex items-center gap-2">
-                <SearchInput value={busquedaVertical} onChange={setBusquedaVertical} />
-                <BarraAcciones
-                  acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => verticalRef.current?.addRow() }]}
-                  menu={[
-                    {
-                      icono: Trash2,
-                      titulo: "Eliminar seleccionado",
-                      onClick: () => verticalRef.current?.deleteSelectedRows(),
-                      disabled: !puedeEliminarVertical,
-                      destructivo: true,
-                    },
-                  ]}
+        {/* El grupo horizontal vive siempre: si el grid pasa de hijo directo a
+            panel (o al revés) React lo desmonta y se pierde scroll/selección. */}
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="perfiles-inactividad-grid"
+            defaultSize="65"
+            minSize="40"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            <ResizablePanelGroup orientation="vertical" className="h-full">
+              <ResizablePanel defaultSize="55" minSize="20" className="flex flex-col overflow-hidden">
+                <DataGrid
+                  ref={gridRef}
+                  config={CONFIG}
+                  initialRows={filas}
+                  loading={cargando}
+                  selectionMode="single"
+                  highlightSelection={panelFichaAbierto}
+                  initialSelectedId={perfilSeleccionadoId}
+                  search={busqueda}
+                  onSearchChange={setBusqueda}
+                  onSelectionChange={setPuedeEliminar}
+                  onRowSelected={(fila) => setPerfilSeleccionadoId(fila?._id ?? null)}
+                  onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
+                  onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
+                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
                 />
-              </div>
-            </div>
-            <div className="min-h-0 flex-1">
-              <VerticalGrid
-                ref={verticalRef}
-                config={CONFIG_VERTICAL}
-                groups={GRUPOS_VERTICAL}
-                // Encabezado en blanco: el nombre del perfil ya es el primer
-                // renglón de la ficha, repetirlo arriba no agrega nada. Va `""`
-                // y no `null` porque el grid solo cae al valor por omisión
-                // cuando esto es nulo (ver `renderRecordHeader`).
-                renderRecordHeader={() => ""}
-                initialRows={filas}
-                loading={cargando}
-                selectionMode="single"
-                search={busquedaVertical}
-                onSearchChange={setBusquedaVertical}
-                onSelectionChange={setPuedeEliminarVertical}
-                onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
-                onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
-                onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
-              />
-            </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize="45" minSize="20" className="flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+                  <h3 className="text-sm font-semibold">Perfiles acostados</h3>
+                  <div className="flex items-center gap-2">
+                    <SearchInput value={busquedaVertical} onChange={setBusquedaVertical} />
+                    <BarraAcciones
+                      acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => verticalRef.current?.addRow() }]}
+                      menu={[
+                        {
+                          icono: Trash2,
+                          titulo: "Eliminar seleccionado",
+                          onClick: () => verticalRef.current?.deleteSelectedRows(),
+                          disabled: !puedeEliminarVertical,
+                          destructivo: true,
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <VerticalGrid
+                    ref={verticalRef}
+                    config={CONFIG_VERTICAL}
+                    groups={GRUPOS_VERTICAL}
+                    // Encabezado en blanco: el nombre del perfil ya es el primer
+                    // renglón de la ficha, repetirlo arriba no agrega nada. Va `""`
+                    // y no `null` porque el grid solo cae al valor por omisión
+                    // cuando esto es nulo (ver `renderRecordHeader`).
+                    renderRecordHeader={() => ""}
+                    initialRows={filas}
+                    loading={cargando}
+                    selectionMode="single"
+                    highlightSelection={panelFichaAbierto}
+                    initialSelectedId={perfilSeleccionadoId}
+                    search={busquedaVertical}
+                    onSearchChange={setBusquedaVertical}
+                    onSelectionChange={setPuedeEliminarVertical}
+                    onRowSelected={(fila) => setPerfilSeleccionadoId(fila?._id ?? null)}
+                    onAddRow={(fila) => createPerfilInactividadEquipo(filaADatos(fila)).then(recargar)}
+                    onEditRow={(fila) => updatePerfilInactividadEquipo(fila._id, filaADatos(fila)).then(recargar)}
+                    onDeleteRows={(ids) => Promise.all(ids.map((id) => deletePerfilInactividadEquipo(id))).then(recargar)}
+                  />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </ResizablePanel>
+          {panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="perfiles-inactividad-ficha"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <PerfilInactividadEquipoFormPanel
+                  perfil={perfilSeleccionado}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={recargar}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
         </ResizablePanelGroup>
       </div>
     </div>

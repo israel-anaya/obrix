@@ -422,8 +422,8 @@ export function EstanteriaMaterialesSeccion() {
                   : "Nada en este pasillo con el filtro actual."}
               </p>
             ) : (
-              <div className="min-h-0 flex-1 overflow-auto p-2">
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2">
+              <div className="@container min-h-0 flex-1 overflow-auto p-2">
+                <div className="grid grid-cols-2 gap-2 @min-[28rem]:grid-cols-3 @min-[40rem]:grid-cols-4">
                   {visibles.map((m) => {
                     const sinPrecio = !m.precio_vigente;
                     const seleccionado = m.id === seleccionadoId;
@@ -433,7 +433,7 @@ export function EstanteriaMaterialesSeccion() {
                         type="button"
                         onClick={() => setSeleccionadoId(m.id)}
                         className={cn(
-                          "flex flex-col rounded-md border border-border bg-card p-2.5 text-left hover:border-foreground/25 hover:bg-muted/40",
+                          "flex flex-col rounded-md border border-border bg-card p-2 text-left hover:border-foreground/25 hover:bg-muted/40",
                           seleccionado && "border-primary ring-1 ring-primary",
                           sinPrecio && !seleccionado && "border-dashed",
                         )}
@@ -444,7 +444,7 @@ export function EstanteriaMaterialesSeccion() {
                             {simboloPorUnidadId[m.unidad_id] ?? m.unidad_id}
                           </span>
                         </div>
-                        <p className="mt-1 line-clamp-2 min-h-8 text-[12px] leading-snug">{m.descripcion}</p>
+                        <p className="mt-1 line-clamp-2 text-[12px] leading-snug">{m.descripcion}</p>
                         <div className="mt-2 flex items-end justify-between gap-2">
                           <span className={cn("text-[12px] font-medium", sinPrecio && "text-amber-700 dark:text-amber-400")}>
                             {formatearDinero(m.precio_vigente)}

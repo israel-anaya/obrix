@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Plus, X } from "lucide-react";
+import { DollarSign, Globe2, MapPinned, Plus, X } from "lucide-react";
 import { CurrencyInput } from "@/components/CurrencyInput";
+import { BadgeEstadoVigencia } from "@/components/BadgeEstadoVigencia";
+import { EnlaceHistorialCompleto } from "@/components/EnlaceHistorialCompleto";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -33,12 +35,9 @@ function formatearFecha(fecha: string): string {
 }
 
 /**
- * Panel: precio vigente + formulario para registrar uno nuevo arriba,
- * historial completo abajo. Se sincroniza con `materialId` — pensado para
- * vivir junto al grid de Materiales, mostrando los precios del material
- * seleccionado en la fila. Registrar un precio nuevo cierra automáticamente
- * el anterior (lo resuelve el backend) y avisa al padre vía
- * `onPrecioRegistrado` para que refresque la columna "Costo actual" del grid.
+ * Panel: precio vigente + formulario para registrar uno nuevo. Si el padre
+ * pasa `onVerHistorialCompleto`, el histórico no se duplica aquí: un enlace
+ * abre o cierra la tabla inferior (misma fuente, detalle completo).
  */
 export function PreciosMaterialPanel({
   materialId,
@@ -46,12 +45,17 @@ export function PreciosMaterialPanel({
   materialDescripcion,
   onCerrar,
   onPrecioRegistrado,
+  onVerHistorialCompleto,
+  historialAbierto = false,
 }: {
   materialId: string | null;
   materialClave?: string;
   materialDescripcion?: string;
   onCerrar: () => void;
   onPrecioRegistrado?: () => void;
+  /** Abre o cierra la tabla inferior — misma fuente, detalle completo. */
+  onVerHistorialCompleto?: () => void;
+  historialAbierto?: boolean;
 }) {
   const { organizaciones, organizacionActivaId } = useOrganizacionActiva();
   const organizacionActiva = organizaciones.find((o) => o.id === organizacionActivaId) ?? null;
@@ -180,6 +184,19 @@ export function PreciosMaterialPanel({
   const preciosMoneda = useMemo(() => precios.filter((p) => p.moneda === monedaSeleccionada), [precios, monedaSeleccionada]);
   const moneda = monedas.find((m) => m.codigo === monedaSeleccionada);
 
+  const historial = useMemo(
+    () =>
+      [...preciosMoneda].sort((a, b) => {
+        const porDesde = b.fecha_vigencia_desde.localeCompare(a.fecha_vigencia_desde);
+        if (porDesde !== 0) return porDesde;
+        if ((a.fecha_vigencia_hasta === null) !== (b.fecha_vigencia_hasta === null)) {
+          return a.fecha_vigencia_hasta === null ? -1 : 1;
+        }
+        return b.created_at.localeCompare(a.created_at);
+      }),
+    [preciosMoneda],
+  );
+
   // Puede haber un vigente por región a la vez (más el nacional, sin región,
   // que es el default cuando un proyecto no tiene uno propio) — no es un
   // solo valor, es una lista.
@@ -225,7 +242,7 @@ export function PreciosMaterialPanel({
         <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un material para ver sus precios.</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <section className="border-b border-border p-3">
+          <section className="min-h-0 flex-1 overflow-auto border-b border-border p-3">
             <label className="mb-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
               Moneda
               <Select value={monedaSeleccionada} onValueChange={setMonedaSeleccionada}>
@@ -293,10 +310,18 @@ export function PreciosMaterialPanel({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
+                      <SelectItem value={NACIONAL_VALOR}>
+                        <span className="flex items-center gap-1.5">
+                          <Globe2 size={12} className="text-primary" />
+                          {NACIONAL} (default)
+                        </span>
+                      </SelectItem>
                       {ordenarPor(regiones, (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
-                          {r.nombre}
+                          <span className="flex items-center gap-1.5">
+                            <MapPinned size={12} className="text-amber-600 dark:text-amber-400" />
+                            {r.nombre}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -337,7 +362,12 @@ export function PreciosMaterialPanel({
                 {vigentes.map((p) => (
                   <li key={p.id} className="rounded-md border border-border p-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        {p.region_id ? (
+                          <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <Globe2 size={12} className="shrink-0 text-primary" />
+                        )}
                         {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                       </span>
                       <span className="font-medium">{formatearPrecio(p)}</span>
@@ -351,57 +381,67 @@ export function PreciosMaterialPanel({
             )}
           </section>
 
-          <section className="min-h-0 flex-1 overflow-auto p-3">
-            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Histórico de precios ({monedaSeleccionada})
-            </h4>
-            {preciosMoneda.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Sin historial.</p>
-            ) : (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="py-1 pr-2 font-medium">Región</th>
-                    <th className="py-1 pr-2 text-right font-medium">Precio</th>
-                    <th className="py-1 pr-2 font-medium">Usuario</th>
-                    <th className="py-1 pr-2 text-right font-medium">Desde</th>
-                    <th className="py-1 text-right font-medium">Hasta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preciosMoneda.map((p) => {
-                    const vigente = p.fecha_vigencia_hasta === null;
-                    return (
-                    <tr
-                      key={p.id}
-                      className={cn(
-                        "border-b border-border/50 last:border-none",
-                        vigente && "bg-emerald-500/5",
-                      )}
-                    >
-                      <td className="py-1 pr-2">{p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}</td>
-                      <td className="py-1 pr-2 text-right tabular-nums">${p.precio}</td>
-                      <td className="py-1 pr-2">{nombresPorUsuarioId[p.created_by] ?? p.created_by}</td>
-                      <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(p.fecha_vigencia_desde)}</td>
-                      <td className="py-1 text-right">
-                        {vigente ? (
-                          <span className="inline-flex items-center justify-end gap-1 font-medium text-emerald-700 dark:text-emerald-400">
-                            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-                            vigente
-                          </span>
-                        ) : (
-                          <span className="tabular-nums text-muted-foreground">
-                            {formatearFecha(p.fecha_vigencia_hasta)}
-                          </span>
-                        )}
-                      </td>
+          {onVerHistorialCompleto ? (
+            <section className="px-3 py-2">
+              <EnlaceHistorialCompleto onClick={onVerHistorialCompleto} abierto={historialAbierto} />
+            </section>
+          ) : (
+            <section className="min-h-0 flex-1 overflow-auto p-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Histórico de precios ({monedaSeleccionada})
+              </h4>
+              {historial.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Sin historial.</p>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-1 pr-2 font-medium">Región</th>
+                      <th className="py-1 pr-2 text-right font-medium">Precio</th>
+                      <th className="py-1 pr-2 font-medium">Usuario</th>
+                      <th className="py-1 pr-2 text-right font-medium">Desde</th>
+                      <th className="py-1 pr-2 text-right font-medium">Hasta</th>
+                      <th className="py-1 text-right font-medium">Estado</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </section>
+                  </thead>
+                  <tbody>
+                    {historial.map((p) => {
+                      const vigente = p.fecha_vigencia_hasta === null;
+                      return (
+                        <tr
+                          key={p.id}
+                          className={cn(
+                            "border-b border-border/50 last:border-none",
+                            vigente && "bg-emerald-500/5",
+                          )}
+                        >
+                          <td className="py-1 pr-2">
+                            <span className="inline-flex items-center gap-1.5">
+                              {p.region_id ? (
+                                <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                              ) : (
+                                <Globe2 size={12} className="shrink-0 text-primary" />
+                              )}
+                              {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
+                            </span>
+                          </td>
+                          <td className="py-1 pr-2 text-right tabular-nums">${p.precio}</td>
+                          <td className="py-1 pr-2">{nombresPorUsuarioId[p.created_by] ?? p.created_by}</td>
+                          <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(p.fecha_vigencia_desde)}</td>
+                          <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
+                            {vigente ? "—" : formatearFecha(p.fecha_vigencia_hasta)}
+                          </td>
+                          <td className="py-1 text-right">
+                            <BadgeEstadoVigencia vigente={vigente} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          )}
         </div>
       )}
     </div>
