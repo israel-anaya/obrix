@@ -369,17 +369,35 @@ export function PreciosMaterialPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {preciosMoneda.map((p) => (
-                    <tr key={p.id} className="border-b border-border/50 last:border-none">
+                  {preciosMoneda.map((p) => {
+                    const vigente = p.fecha_vigencia_hasta === null;
+                    return (
+                    <tr
+                      key={p.id}
+                      className={cn(
+                        "border-b border-border/50 last:border-none",
+                        vigente && "bg-emerald-500/5",
+                      )}
+                    >
                       <td className="py-1 pr-2">{p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}</td>
                       <td className="py-1 pr-2 text-right tabular-nums">${p.precio}</td>
                       <td className="py-1 pr-2">{nombresPorUsuarioId[p.created_by] ?? p.created_by}</td>
                       <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(p.fecha_vigencia_desde)}</td>
-                      <td className="py-1 text-right tabular-nums text-muted-foreground">
-                        {p.fecha_vigencia_hasta ? formatearFecha(p.fecha_vigencia_hasta) : "vigente"}
+                      <td className="py-1 text-right">
+                        {vigente ? (
+                          <span className="inline-flex items-center justify-end gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+                            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                            vigente
+                          </span>
+                        ) : (
+                          <span className="tabular-nums text-muted-foreground">
+                            {formatearFecha(p.fecha_vigencia_hasta)}
+                          </span>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

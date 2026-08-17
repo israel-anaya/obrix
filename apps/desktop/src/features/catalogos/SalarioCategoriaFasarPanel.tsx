@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Plus, X } from "lucide-react";
+import { DollarSign, Globe2, MapPinned, Plus, X } from "lucide-react";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
+import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,6 @@ export function SalarioCategoriaFasarPanel({
   const [salarios, setSalarios] = useState<SalarioCategoriaFasar[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [factores, setFactores] = useState<FactorSalarioReal[]>([]);
-  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,9 +84,6 @@ export function SalarioCategoriaFasarPanel({
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
     listFactoresSalarioReal().then(setFactores).catch(() => {});
-    listUsuarios().then((usuarios) => {
-      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
-    });
   }, []);
 
   // Igual que en PreciosMaterialPanel: se espera un momento a que la
@@ -217,6 +213,19 @@ export function SalarioCategoriaFasarPanel({
     [salarios, nombrePorRegionId],
   );
 
+  const historial = useMemo(
+    () =>
+      [...salarios].sort((a, b) => {
+        const porDesde = b.fecha_vigencia_desde.localeCompare(a.fecha_vigencia_desde);
+        if (porDesde !== 0) return porDesde;
+        if ((a.fecha_vigencia_hasta === null) !== (b.fecha_vigencia_hasta === null)) {
+          return a.fecha_vigencia_hasta === null ? -1 : 1;
+        }
+        return b.created_at.localeCompare(a.created_at);
+      }),
+    [salarios],
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b-2 border-foreground/20 px-4 py-3">
@@ -296,10 +305,18 @@ export function SalarioCategoriaFasarPanel({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
+                      <SelectItem value={NACIONAL_VALOR}>
+                        <span className="flex items-center gap-1.5">
+                          <Globe2 size={12} className="text-primary" />
+                          {NACIONAL} (default)
+                        </span>
+                      </SelectItem>
                       {ordenarPor(regiones, (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
-                          {r.nombre}
+                          <span className="flex items-center gap-1.5">
+                            <MapPinned size={12} className="text-amber-600 dark:text-amber-400" />
+                            {r.nombre}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -372,7 +389,12 @@ export function SalarioCategoriaFasarPanel({
                 {vigentes.map((s) => (
                   <li key={s.id} className="rounded-md border border-border p-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        {s.region_id ? (
+                          <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <Globe2 size={12} className="shrink-0 text-primary" />
+                        )}
                         {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
                       </span>
                       <span className="font-medium">${s.salario_real_diario}</span>
@@ -401,23 +423,48 @@ export function SalarioCategoriaFasarPanel({
                   <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="py-1 pr-2 font-medium">Región</th>
                     <th className="py-1 pr-2 text-right font-medium">Salario real</th>
-                    <th className="py-1 pr-2 font-medium">Usuario</th>
                     <th className="py-1 pr-2 text-right font-medium">Desde</th>
                     <th className="py-1 text-right font-medium">Hasta</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {salarios.map((s) => (
-                    <tr key={s.id} className="border-b border-border/50 last:border-none">
-                      <td className="py-1 pr-2">{s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}</td>
+                  {historial.map((s) => {
+                    const vigente = s.fecha_vigencia_hasta === null;
+                    return (
+                    <tr
+                      key={s.id}
+                      className={cn(
+                        "border-b border-border/50 last:border-none",
+                        vigente && "bg-emerald-500/5",
+                      )}
+                    >
+                      <td className="py-1 pr-2">
+                        <span className="inline-flex items-center gap-1.5">
+                          {s.region_id ? (
+                            <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                          ) : (
+                            <Globe2 size={12} className="shrink-0 text-primary" />
+                          )}
+                          {s.region_id ? (nombrePorRegionId[s.region_id] ?? s.region_id) : NACIONAL}
+                        </span>
+                      </td>
                       <td className="py-1 pr-2 text-right tabular-nums">${s.salario_real_diario}</td>
-                      <td className="py-1 pr-2">{nombresPorUsuarioId[s.created_by] ?? s.created_by}</td>
                       <td className="py-1 pr-2 text-right tabular-nums">{formatearFecha(s.fecha_vigencia_desde)}</td>
-                      <td className="py-1 text-right tabular-nums text-muted-foreground">
-                        {s.fecha_vigencia_hasta ? formatearFecha(s.fecha_vigencia_hasta) : "vigente"}
+                      <td className="py-1 text-right">
+                        {vigente ? (
+                          <span className="inline-flex items-center justify-end gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+                            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                            vigente
+                          </span>
+                        ) : (
+                          <span className="tabular-nums text-muted-foreground">
+                            {formatearFecha(s.fecha_vigencia_hasta)}
+                          </span>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

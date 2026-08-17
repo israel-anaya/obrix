@@ -87,7 +87,7 @@ export function CategoriaFasarSeccion() {
     listFamiliasInsumo().then(setFamilias).catch((e) => setError(String(e)));
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
-    });
+    }).catch((e) => setError(String(e)));
   };
 
   const actualizarSalariosLote = async () => {
@@ -356,7 +356,10 @@ export function CategoriaFasarSeccion() {
                 minSize="20"
                 className="flex min-h-0 min-w-0 flex-col overflow-hidden"
               >
-                <SalarioHistorialGrid categoriaId={categoriaSeleccionadaId} />
+                <SalarioHistorialGrid
+                  categoriaId={categoriaSeleccionadaId}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                />
               </ResizablePanel>
             </>
           ) : null}

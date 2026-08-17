@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
+import { DollarSign, FileSpreadsheet, FileText, History, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -10,6 +10,7 @@ import {
   type EstadoActualizacionLoteMateriales,
 } from "@/features/catalogos/ActualizarCostosMaterialesLoteDialog";
 import { MaterialFormPanel } from "@/features/catalogos/MaterialFormPanel";
+import { PrecioHistorialGrid } from "@/features/catalogos/PrecioHistorialGrid";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { validarCsvCostoMaterial } from "@/lib/csvPrecioMaterial";
@@ -54,6 +55,8 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
   const [resultadoImportacion, setResultadoImportacion] = useState<ResultadoImportacion | null>(null);
   const [panelPreciosAbierto, setPanelPreciosAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
+  const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
+  const [historialTicket, setHistorialTicket] = useState(0);
   const [materialSeleccionadoId, setMaterialSeleccionadoId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
@@ -72,7 +75,10 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
     return listMateriales()
       .then(setMateriales)
       .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
+      .finally(() => {
+        setCargando(false);
+        setHistorialTicket((n) => n + 1);
+      });
   };
 
   // Recarga todo lo que se muestra en esta vista — el catálogo en sí, y las
@@ -257,7 +263,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
       initialRows={filas}
       loading={cargando}
       selectionMode="single"
-      highlightSelection={panelPreciosAbierto || panelFichaAbierto}
+      highlightSelection={panelPreciosAbierto || panelFichaAbierto || panelHistorialAbierto}
       initialSelectedId={materialSeleccionadoId}
       search={busqueda}
       onSearchChange={setBusqueda}
@@ -309,6 +315,12 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
                     if (!v) setPanelPreciosAbierto(false);
                     return !v;
                   }),
+              },
+              {
+                icono: History,
+                titulo: panelHistorialAbierto ? "Ocultar historial de precios" : "Ver historial de precios",
+                onClick: () => setPanelHistorialAbierto((v) => !v),
+                disabled: !panelHistorialAbierto && materiales.length === 0,
               },
             ]}
             menu={[
@@ -377,46 +389,71 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
         </div>
       )}
       <div className="min-h-0 flex-1">
-        {/* El grupo vive siempre: si el grid pasa de hijo directo a panel (o
-            al revés) React lo desmonta, el virtualizador vuelve a scroll 0 y
-            el renglón seleccionado deja de verse. */}
-        <ResizablePanelGroup orientation="horizontal" className="h-full">
+        {/* Los grupos viven siempre para no desmontar el grid al abrir precios,
+            ficha o historial (si no, el virtualizador vuelve a scroll 0). */}
+        <ResizablePanelGroup orientation="vertical" className="h-full">
           <ResizablePanel
-            id="materiales-grid"
+            id="materiales-principal"
             defaultSize="65"
-            minSize="40"
+            minSize="35"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden"
           >
-            {grid}
+            <ResizablePanelGroup orientation="horizontal" className="h-full">
+              <ResizablePanel
+                id="materiales-grid"
+                defaultSize="65"
+                minSize="40"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                {grid}
+              </ResizablePanel>
+              {panelPreciosAbierto || panelFichaAbierto ? (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel
+                    id="materiales-detalle"
+                    defaultSize="35"
+                    minSize="22"
+                    className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                  >
+                    {panelPreciosAbierto ? (
+                      <PreciosMaterialPanel
+                        materialId={materialSeleccionadoId}
+                        materialClave={materialSeleccionado?.clave}
+                        materialDescripcion={materialSeleccionado?.descripcion}
+                        onCerrar={() => setPanelPreciosAbierto(false)}
+                        onPrecioRegistrado={recargarMateriales}
+                      />
+                    ) : (
+                      <MaterialFormPanel
+                        material={materialSeleccionado}
+                        unidades={unidades}
+                        proveedores={proveedores}
+                        familias={familias}
+                        nombresPorUsuarioId={nombresPorUsuarioId}
+                        onCerrar={() => setPanelFichaAbierto(false)}
+                        onGuardado={recargarMateriales}
+                      />
+                    )}
+                  </ResizablePanel>
+                </>
+              ) : null}
+            </ResizablePanelGroup>
           </ResizablePanel>
-          {panelPreciosAbierto || panelFichaAbierto ? (
+          {panelHistorialAbierto ? (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel
-                id="materiales-detalle"
+                id="materiales-historial"
                 defaultSize="35"
-                minSize="22"
+                minSize="20"
                 className="flex min-h-0 min-w-0 flex-col overflow-hidden"
               >
-                {panelPreciosAbierto ? (
-                  <PreciosMaterialPanel
-                    materialId={materialSeleccionadoId}
-                    materialClave={materialSeleccionado?.clave}
-                    materialDescripcion={materialSeleccionado?.descripcion}
-                    onCerrar={() => setPanelPreciosAbierto(false)}
-                    onPrecioRegistrado={recargarMateriales}
-                  />
-                ) : (
-                  <MaterialFormPanel
-                    material={materialSeleccionado}
-                    unidades={unidades}
-                    proveedores={proveedores}
-                    familias={familias}
-                    nombresPorUsuarioId={nombresPorUsuarioId}
-                    onCerrar={() => setPanelFichaAbierto(false)}
-                    onGuardado={recargarMateriales}
-                  />
-                )}
+                <PrecioHistorialGrid
+                  materialId={materialSeleccionadoId}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  revision={historialTicket}
+                />
               </ResizablePanel>
             </>
           ) : null}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, RefreshCcw } from "lucide-react";
+import { DollarSign, Globe2, MapPinned, RefreshCcw } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -173,9 +173,12 @@ export function MatrizOficioRegionSeccion() {
       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-1.5">
         <div className="flex min-w-0 items-center gap-3">
           <h2 className="shrink-0 text-sm font-semibold">Matriz oficio × región</h2>
-          <p className={cn("truncate text-xs", error ? "font-medium text-destructive" : "text-muted-foreground")}>
+          <p
+            className={cn("truncate text-xs", error ? "font-medium text-destructive" : "text-muted-foreground")}
+            title={error ? undefined : "Clic en un hueco para capturar esa zona"}
+          >
             {error ??
-              `${llenas}/${celdas || 0} celdas con vigencia · clic en un hueco para capturar esa zona`}
+              `${filas.length} ${filas.length === 1 ? "oficio" : "oficios"} · ${columnas.length} ${columnas.length === 1 ? "zona" : "zonas"} · ${llenas}/${celdas || 0} vigentes`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -262,7 +265,14 @@ export function MatrizOficioRegionSeccion() {
                           className="sticky top-0 z-20 w-14 max-w-14 border-b border-border bg-background px-1 py-1.5 text-center text-[11px] font-semibold leading-tight text-muted-foreground"
                           title={col.nombre}
                         >
-                          <span className="line-clamp-2 break-words">{col.nombre}</span>
+                          <span className="flex flex-col items-center gap-0.5">
+                            {col.id ? (
+                              <MapPinned size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                            ) : (
+                              <Globe2 size={12} className="shrink-0 text-primary" />
+                            )}
+                            <span className="line-clamp-2 break-words">{col.nombre}</span>
+                          </span>
                         </th>
                       ))}
                     </tr>
@@ -300,8 +310,8 @@ export function MatrizOficioRegionSeccion() {
                                 }
                                 className={cn(
                                   "flex h-full min-h-9 w-full items-center justify-end px-1 py-1.5 text-right hover:ring-1 hover:ring-inset hover:ring-primary/40",
-                                  vacia && "text-muted-foreground",
-                                  seleccionadaId === c.id && vacia && "bg-primary/5",
+                                  vacia && "bg-muted/50 text-muted-foreground hover:bg-muted/70",
+                                  seleccionadaId === c.id && vacia && "bg-muted/70",
                                 )}
                                 style={vacia ? undefined : { background: tonoCelda(n, minMonto, maxMonto) }}
                               >

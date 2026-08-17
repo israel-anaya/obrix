@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2, Users, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -370,50 +370,24 @@ export function CuadrillaDetallePanel({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border px-3 py-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <h3 className="shrink-0 text-xs font-semibold text-muted-foreground">
-              Composición{cuadrillaId ? " en" : ""}
-            </h3>
-            {cuadrillaId && (
+    <div className="flex h-full flex-col border-l-2 border-l-primary bg-muted/15">
+      <div className="border-b-2 border-foreground/20 bg-background/80 px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <Users size={11} className="text-emerald-500" />
+              Composición
+            </span>
+            {cuadrilla ? (
               <>
-                <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
-                  <SelectTrigger size="sm" className="w-72 shrink-0 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {costos.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!esNacional && (
-                  <button
-                    type="button"
-                    title="Eliminar valuación regional"
-                    onClick={() => setConfirmandoEliminarValuacion(true)}
-                    className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-                {regionesSinValuacion.length > 0 && (
-                  <button
-                    type="button"
-                    title="Crear valuación regional"
-                    onClick={() => setCreandoRegion(true)}
-                    className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <Plus size={12} />
-                    <span className="text-[11px]">Región</span>
-                  </button>
-                )}
+                <div className="mt-1">
+                  <span className="font-mono text-base font-bold tracking-tight">{cuadrilla.clave}</span>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-foreground" title={cuadrilla.descripcion}>
+                  {cuadrilla.descripcion}
+                </p>
               </>
-            )}
+            ) : null}
           </div>
           <button
             type="button"
@@ -424,6 +398,43 @@ export function CuadrillaDetallePanel({
             <X size={14} />
           </button>
         </div>
+        {cuadrillaId ? (
+          <div className="mt-2 flex min-w-0 items-center gap-1">
+            <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
+              <SelectTrigger size="sm" className="w-72 shrink-0 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {costos.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!esNacional && (
+              <button
+                type="button"
+                title="Eliminar valuación regional"
+                onClick={() => setConfirmandoEliminarValuacion(true)}
+                className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
+            {regionesSinValuacion.length > 0 && (
+              <button
+                type="button"
+                title="Crear valuación regional"
+                onClick={() => setCreandoRegion(true)}
+                className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <Plus size={12} />
+                <span className="text-[11px]">Región</span>
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {!cuadrillaId ? (
