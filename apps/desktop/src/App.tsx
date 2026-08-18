@@ -596,7 +596,7 @@ export default function App() {
   const menus: MenuDef[] = [
     {
       id: "file",
-      label: "File",
+      label: "Archivo",
       actions: [
         { label: "Crear portafolio…", onClick: handleCrearPortafolio, disabled: !cuenta },
         { label: "Abrir portafolio…", onClick: handleAbrirPortafolio, disabled: !cuenta },
@@ -611,7 +611,7 @@ export default function App() {
     },
     {
       id: "edit",
-      label: "Edit",
+      label: "Editar",
       actions: [
         { label: "Deshacer", shortcut: "Ctrl+Z", disabled: true },
         { label: "Rehacer", shortcut: "Ctrl+Shift+Z", disabled: true },
@@ -623,7 +623,7 @@ export default function App() {
     },
     {
       id: "selection",
-      label: "Selection",
+      label: "Selección",
       actions: [
         { label: "Seleccionar todo", shortcut: "Ctrl+A", disabled: true },
         { label: "Expandir selección", disabled: true },
@@ -631,7 +631,7 @@ export default function App() {
     },
     {
       id: "view",
-      label: "View",
+      label: "Ver",
       actions: [
         {
           label: sidebarVisible ? "Ocultar barra lateral" : "Mostrar barra lateral",
@@ -672,12 +672,13 @@ export default function App() {
           onOpenSettings={openSettingsTab}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={() => setSidebarVisible((v) => !v)}
-        />
+        >
+          <OrganizacionSwitcher />
+        </MenuBar>
         <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
           {portafolioAbierto && sidebarVisible && (
             <>
               <ResizablePanel defaultSize="18" minSize="12" maxSize="40" className="flex flex-col bg-muted/40">
-                <OrganizacionSwitcher />
                 <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{renderSidebar()}</div>
                 <CuentaFooter cuenta={cuenta} onCerrarSesion={handleCerrarSesion} />

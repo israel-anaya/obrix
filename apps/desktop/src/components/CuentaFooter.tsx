@@ -17,8 +17,8 @@ function iniciales(nombre: string): string {
 
 /**
  * Identidad de la sesión activa, fija en la parte inferior del sidebar —
- * igual que `OrganizacionSwitcher` arriba, es independiente de la sección
- * (Proyectos/Catálogos) para que no desaparezca al cambiar de pestaña.
+ * independiente de la sección (Proyectos/Catálogos) para que no desaparezca
+ * al cambiar de pestaña.
  * Del menú, solo "Cerrar sesión" está implementado — el resto son opciones
  * de la referencia visual sin funcionalidad detrás todavía.
  */
