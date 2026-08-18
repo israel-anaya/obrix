@@ -466,6 +466,9 @@ export const VerticalGrid = forwardRef<
   const [labelWidth, setLabelWidth] = useState(labelWidthProp);
   const [recordWidths, setRecordWidths] = useState<Record<string, number>>({});
   const [resizingKey, setResizingKey] = useState<string | null>(null);
+  useEffect(() => {
+    setLabelWidth(labelWidthProp);
+  }, [labelWidthProp]);
   const widthsRef = useRef({ label: labelWidth, records: recordWidths, base: recordWidthProp });
   widthsRef.current = { label: labelWidth, records: recordWidths, base: recordWidthProp };
   const labelWidthRef = useRef(labelWidth);

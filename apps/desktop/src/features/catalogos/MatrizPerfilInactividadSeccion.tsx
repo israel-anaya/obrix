@@ -127,7 +127,7 @@ export function MatrizPerfilInactividadSeccion() {
 
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup orientation="horizontal" className="h-full">
-          <ResizablePanel id="matriz-inactividad-rubros" defaultSize="10" minSize="7" className="flex min-h-0 flex-col">
+          <ResizablePanel id="matriz-inactividad-rubros" defaultSize="23" minSize="16" className="flex min-h-0 flex-col">
             <div className="border-b border-border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Rubros
             </div>
@@ -153,7 +153,7 @@ export function MatrizPerfilInactividadSeccion() {
 
           <ResizablePanel
             id="matriz-inactividad-tablero"
-            defaultSize="90"
+            defaultSize="77"
             minSize="32"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden"
           >
@@ -161,7 +161,8 @@ export function MatrizPerfilInactividadSeccion() {
               ref={gridRef}
               config={CONFIG_VERTICAL}
               groups={grupos}
-              recordWidth={75}
+              labelWidth={150}
+              recordWidth={86}
               // Encabezado en blanco: el nombre del perfil ya es el primer
               // renglón, repetirlo arriba no agrega nada. Va `""` y no `null`
               // porque el grid solo cae al valor por omisión cuando esto es
