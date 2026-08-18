@@ -11,10 +11,10 @@ import {
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 
 /**
- * Selector de organización activa, en la barra superior junto al menú de la
- * app — es contexto global (catálogos y proyectos cuelgan de la organización).
- * Cambiar aquí dispara el evento que consumen las vistas suscritas via
- * `useOrganizacionActiva`.
+ * Selector de organización activa, en el encabezado del panel lateral junto
+ * al menú de la app — es contexto global (catálogos y proyectos cuelgan de
+ * la organización). Cambiar aquí dispara el evento que consumen las vistas
+ * suscritas via `useOrganizacionActiva`.
  */
 export function OrganizacionSwitcher() {
   const { organizaciones, organizacionActivaId, cambiarOrganizacion } = useOrganizacionActiva();
@@ -37,7 +37,7 @@ export function OrganizacionSwitcher() {
         <button
           type="button"
           title={error ?? etiqueta}
-          className="flex h-7 max-w-[220px] min-w-0 items-center gap-1.5 rounded px-1.5 text-left hover:bg-background/80"
+          className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded px-1.5 text-left hover:bg-background/80"
         >
           <span className="flex size-4 shrink-0 items-center justify-center rounded-[3px] bg-primary text-primary-foreground">
             <Building2 size={11} />

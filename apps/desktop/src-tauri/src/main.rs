@@ -65,6 +65,13 @@ impl AppState {
         *self.activo.write().await = Some(activo);
     }
 
+    /// Suelta el portafolio activo (y uno pendiente de confirmación, si lo
+    /// hay) — la conexión se cierra al dropear el `Box`.
+    pub async fn cerrar(&self) {
+        *self.activo.write().await = None;
+        *self.pendiente.write().await = None;
+    }
+
     /// Cambia la organización activa del portafolio ya abierto, sin tocar la
     /// conexión ni `usuario_id_activo`. El llamador es responsable de
     /// verificar antes que la cuenta activa tiene membresía en esa
@@ -220,6 +227,7 @@ fn main() {
             commands::auth::cerrar_sesion,
             commands::portafolio::crear_portafolio,
             commands::portafolio::abrir_portafolio,
+            commands::portafolio::cerrar_portafolio,
             commands::portafolio::confirmar_apertura_portafolio_ajeno,
             commands::portafolio::listar_portafolios_recientes,
             commands::portafolio::set_organizacion_activa,

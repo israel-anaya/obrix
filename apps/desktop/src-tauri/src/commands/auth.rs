@@ -29,6 +29,7 @@ pub async fn iniciar_sesion(
 #[tauri::command]
 pub async fn cerrar_sesion(state: tauri::State<'_, AppState>) -> Result<(), String> {
     auth::cerrar_sesion()?;
+    state.cerrar().await;
     state.limpiar_cuenta().await;
     Ok(())
 }

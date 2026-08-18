@@ -7,6 +7,7 @@ import { CuentaFooter } from "@/components/CuentaFooter";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
 import { LoginGate } from "@/components/LoginGate";
 import { MenuBar, type MenuDef } from "@/components/MenuBar";
+import { SidebarHeader } from "@/components/SidebarHeader";
 import { WindowFrame } from "@/components/WindowFrame";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
 import { EditorEmptyState } from "@/components/EditorEmptyState";
@@ -49,7 +50,6 @@ import { CalcularFsrPage } from "@/features/fsr/CalcularFsrPage";
 import { FactorSalarioRealSeccion } from "@/features/fsr/FactorSalarioRealSeccion";
 import { ModeloCalculoPage } from "@/features/fsr/ModeloCalculoPage";
 import { OrganizacionContext } from "@/features/organizacion/OrganizacionContext";
-import { OrganizacionSwitcher } from "@/features/organizacion/OrganizacionSwitcher";
 import { ProyectosSidebar } from "@/features/proyectos/ProyectosSidebar";
 import type { Proyecto } from "@/features/proyectos/types";
 import { useTheme } from "@/hooks/useTheme";
@@ -57,6 +57,7 @@ import { nombreDesdePath } from "@/lib/utils";
 import type { AccountInfo, Organizacion, PortafolioReciente } from "@/lib/types";
 import {
   abrirPortafolio,
+  cerrarPortafolio,
   cerrarSesion,
   confirmarAperturaPortafolioAjeno,
   crearPortafolio,
@@ -185,6 +186,8 @@ export default function App() {
     try {
       await cerrarSesion();
       setCuenta(null);
+      setSesionError(null);
+      resetearPortafolio();
     } catch (e) {
       setSesionError(String(e));
     }
@@ -268,6 +271,25 @@ export default function App() {
     const path = await open({ filters: FILTROS_PORTAFOLIO, multiple: false });
     if (!path || Array.isArray(path)) return;
     await abrirPortafolioEnRuta(path);
+  };
+
+  const resetearPortafolio = () => {
+    setPortafolio(null);
+    setPortafolioError(null);
+    setTabs([]);
+    setActiveTabId("");
+    setProyectos([]);
+    setProyectoSeleccionado(null);
+  };
+
+  const handleCerrarPortafolio = async () => {
+    if (!portafolioAbierto) return;
+    try {
+      await cerrarPortafolio();
+      resetearPortafolio();
+    } catch (e) {
+      setPortafolioError(String(e));
+    }
   };
 
   useEffect(() => {
@@ -600,6 +622,7 @@ export default function App() {
       actions: [
         { label: "Crear portafolio…", onClick: handleCrearPortafolio, disabled: !cuenta },
         { label: "Abrir portafolio…", onClick: handleAbrirPortafolio, disabled: !cuenta },
+        { label: "Cerrar portafolio", onClick: handleCerrarPortafolio, disabled: !portafolioAbierto },
         "separator",
         { label: "Nuevo proyecto", onClick: agregarProyecto, disabled: !portafolioAbierto },
         "separator",
@@ -667,18 +690,11 @@ export default function App() {
       }}
     >
       <WindowFrame>
-        <MenuBar
-          menus={menus}
-          onOpenSettings={openSettingsTab}
-          sidebarVisible={sidebarVisible}
-          onToggleSidebar={() => setSidebarVisible((v) => !v)}
-        >
-          <OrganizacionSwitcher />
-        </MenuBar>
         <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
           {portafolioAbierto && sidebarVisible && (
             <>
               <ResizablePanel defaultSize="18" minSize="12" maxSize="40" className="flex flex-col bg-muted/40">
+                <SidebarHeader menus={menus} onHideSidebar={() => setSidebarVisible(false)} />
                 <Toolbar items={SECCIONES} active={seccion} onSelect={setSeccion} />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{renderSidebar()}</div>
                 <CuentaFooter cuenta={cuenta} onCerrarSesion={handleCerrarSesion} />
@@ -687,6 +703,14 @@ export default function App() {
             </>
           )}
           <ResizablePanel className="flex flex-col overflow-hidden">
+            <MenuBar
+              menus={menus}
+              onOpenSettings={openSettingsTab}
+              sidebarVisible={sidebarVisible}
+              onToggleSidebar={() => setSidebarVisible((v) => !v)}
+              showAppMenu={!portafolioAbierto || !sidebarVisible}
+              showSidebarToggle={portafolioAbierto && !sidebarVisible}
+            />
             <EditorTabs
               tabs={tabs}
               activeId={activeTabId}

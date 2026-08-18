@@ -199,6 +199,12 @@ pub async fn confirmar_apertura_portafolio_ajeno(
 }
 
 #[tauri::command]
+pub async fn cerrar_portafolio(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    state.cerrar().await;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn listar_portafolios_recientes() -> Result<Vec<crate::recientes::PortafolioReciente>, String> {
     crate::recientes::listar()
 }

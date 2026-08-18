@@ -71,6 +71,10 @@ export function abrirPortafolio(path: string): Promise<ResultadoAbrirPortafolio>
   return invoke("abrir_portafolio", { path });
 }
 
+export function cerrarPortafolio(): Promise<void> {
+  return invoke("cerrar_portafolio");
+}
+
 export function confirmarAperturaPortafolioAjeno(confirmar: boolean): Promise<string | null> {
   return invoke("confirmar_apertura_portafolio_ajeno", { confirmar });
 }
