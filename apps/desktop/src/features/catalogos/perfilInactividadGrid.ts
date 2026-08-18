@@ -47,16 +47,26 @@ export const CONFIG: DataGridConfig = {
 /**
  * El mismo catálogo acostado: cada perfil es una columna y cada porcentaje un
  * renglón. Bajo el título de su grupo ("En espera", "En reserva") el prefijo
- * de la etiqueta sobra, así que se recorta — los campos son exactamente los
- * mismos de `CONFIG`, para que las dos vistas nunca se separen.
+ * de la etiqueta sobra, así que se recorta — los campos persistidos son los
+ * mismos de `CONFIG`. `promedio_porcentaje` es solo de esta vista (media de
+ * los rubros visibles; no se guarda).
  */
 export const CONFIG_VERTICAL: DataGridConfig = {
   title: "Perfil",
-  columns: CONFIG.columns.map((c) => ({ ...c, header: c.header.replace(/^(Espera|Reserva) · /, "") })),
+  columns: [
+    ...CONFIG.columns.map((c) => ({ ...c, header: c.header.replace(/^(Espera|Reserva) · /, "") })),
+    {
+      field: "promedio_porcentaje",
+      header: "Promedio %",
+      width: 120,
+      readOnly: true,
+      ...PCT,
+    },
+  ],
 };
 
 export const GRUPOS_VERTICAL: VerticalGridGroup[] = [
-  { id: "identificacion", title: null, fields: ["nombre"] },
+  { id: "identificacion", title: null, fields: ["nombre", "promedio_porcentaje"] },
   {
     id: "equipo_espera",
     title: "Maquinaria y equipo en espera ",
@@ -188,4 +198,21 @@ export function contarCampos(groups: VerticalGridGroup[]): number {
     if (g.groups) n += contarCampos(g.groups);
   }
   return n;
+}
+
+export function camposDeGrupo(g: VerticalGridGroup): string[] {
+  if (g.fields) return [...g.fields];
+  return (g.groups ?? []).flatMap(camposDeGrupo);
+}
+
+/** Media aritmética de los % indicados (0 cuenta). No se persiste. */
+export function promedioPorcentaje(fila: Row, campos: string[]): string {
+  if (campos.length === 0) return "0";
+  let suma = 0;
+  for (const c of campos) {
+    const n = Number(fila[c] ?? 0);
+    suma += Number.isFinite(n) ? n : 0;
+  }
+  const avg = suma / campos.length;
+  return Number.isInteger(avg) ? String(avg) : avg.toFixed(1);
 }

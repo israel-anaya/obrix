@@ -203,3 +203,56 @@ body {
 .pinned-cell-edit {
   background-image: linear-gradient(var(--row-edit), var(--row-edit));
 }
+
+/*
+ * Banda del patrón zebra (`zebra` en `DataGrid`/`VerticalGrid`, apagado por
+ * omisión). Se mezcla a partir de la paleta en lugar de fijar un color, para
+ * que siga al tema sin una segunda definición por cada uno, y queda opaca a
+ * propósito: la misma clase la usan las celdas ancladas, que con un tinte
+ * translúcido dejarían ver lo que pasa por debajo al desplazarse (ver arriba).
+ * La proporción es distinta en cada tema para igualar lo que se percibe: la
+ * banda queda a unos 11/255 del fondo en ambos, por debajo de los 16 de la fila
+ * seleccionada (`bg-accent`) y de los 19 del tinte de borrador. Ese orden es a
+ * propósito — la banda es una guía de lectura y no debe pesar más que lo que
+ * marca dónde estás parado o qué estás editando.
+ */
+:root {
+  --row-zebra: hsl(var(--muted));
+}
+
+.dark {
+  --row-zebra: color-mix(in oklab, hsl(var(--muted)) 70%, hsl(var(--background)));
+}
+
+.row-zebra {
+  background-color: var(--row-zebra);
+}
+
+/*
+ * Fondo de los renglones que titulan un grupo del `VerticalGrid`. Son dos
+ * niveles y se distinguen entre sí, no solo del resto: el de sección arranca
+ * del color de los bordes (el tono con el que la interfaz ya dibuja
+ * estructura) y el anidado se queda a medio camino hacia el fondo.
+ *
+ * Quedan por encima de todos los tintes de dato —banda zebra 11, registro
+ * seleccionado 16, borrador 19, contra 32 y 23 de salto por canal— porque un
+ * título no compite con ellos: separa. Y opacos, que es lo que impide ver
+ * pasar el contenido por debajo al desplazarse en horizontal.
+ */
+:root {
+  --row-grupo: hsl(var(--border));
+  --row-subgrupo: color-mix(in oklab, hsl(var(--border)) 70%, hsl(var(--background)));
+}
+
+.dark {
+  --row-grupo: color-mix(in oklab, hsl(var(--border)) 85%, hsl(var(--background)));
+  --row-subgrupo: color-mix(in oklab, hsl(var(--border)) 60%, hsl(var(--background)));
+}
+
+.row-grupo {
+  background-color: var(--row-grupo);
+}
+
+.row-subgrupo {
+  background-color: var(--row-subgrupo);
+}

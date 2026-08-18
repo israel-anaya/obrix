@@ -31,6 +31,7 @@ export const VirtualRow = memo(function VirtualRow({
   pinnedColumns,
   selected,
   selectionMode,
+  banda,
 }: {
   row: {
     id: string;
@@ -47,6 +48,8 @@ export const VirtualRow = memo(function VirtualRow({
   pinnedColumns: ReadonlySet<string>;
   selected: boolean;
   selectionMode: "multiple" | "single";
+  /** Esta fila cae en una banda del patrón zebra (ver `zebra` en `DataGrid`). */
+  banda: boolean;
 }) {
   const rowId = row.original._id;
   const active = useIsRowActive(rowId);
@@ -59,7 +62,9 @@ export const VirtualRow = memo(function VirtualRow({
     ? DRAFT_PINNED_CELL_CLASS[draftKind]
     : visuallySelected
       ? "bg-accent"
-      : "bg-background";
+      : banda
+        ? "row-zebra"
+        : "bg-background";
 
   // Stable ref: an inline callback detaches and reattaches on every render
   // (React calls it with `null`, then with the node), rebuilding the Map row by row.
@@ -95,6 +100,7 @@ export const VirtualRow = memo(function VirtualRow({
         "flex cursor-default outline-none",
         DRAFT_ROW_CLASS[draftKind],
         !isDraft && visuallySelected && "bg-accent",
+        !isDraft && !visuallySelected && banda && "row-zebra",
       )}
     >
       {columnIds.map((columnId) => {

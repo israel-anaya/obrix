@@ -8,9 +8,11 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import {
   CONFIG_VERTICAL,
   GRUPOS_VERTICAL,
+  camposDeGrupo,
   contarCampos,
   filaADatos,
   perfilAFila,
+  promedioPorcentaje,
 } from "@/features/catalogos/perfilInactividadGrid";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -81,7 +83,16 @@ export function MatrizPerfilInactividadSeccion() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizacionActivaId]);
 
-  const filas = perfiles.map((p) => perfilAFila(p, nombresPorUsuarioId));
+  const camposPromedio =
+    pasillo === "espera"
+      ? camposDeGrupo(GRUPO_ESPERA)
+      : pasillo === "reserva"
+        ? camposDeGrupo(GRUPO_RESERVA)
+        : [...camposDeGrupo(GRUPO_ESPERA), ...camposDeGrupo(GRUPO_RESERVA)];
+  const filas = perfiles.map((p) => {
+    const fila = perfilAFila(p, nombresPorUsuarioId);
+    return { ...fila, promedio_porcentaje: promedioPorcentaje(fila, camposPromedio) };
+  });
   const grupos = gruposDe(pasillo);
   const nEspera = contarCampos([GRUPO_ESPERA]);
   const nReserva = contarCampos([GRUPO_RESERVA]);
@@ -161,6 +172,7 @@ export function MatrizPerfilInactividadSeccion() {
               ref={gridRef}
               config={CONFIG_VERTICAL}
               groups={grupos}
+              zebra
               labelWidth={150}
               recordWidth={86}
               // Encabezado en blanco: el nombre del perfil ya es el primer

@@ -95,7 +95,7 @@ export interface VerticalGridGroup {
 
 type FlatItem =
   | { type: "title"; id: string; title: ReactNode; className?: string; depth: number }
-  | { type: "field"; field: string };
+  | { type: "field"; field: string; depth: number };
 
 function tieneTitulo(title: ReactNode): boolean {
   return title !== undefined && title !== null && title !== false && title !== "";
@@ -112,9 +112,27 @@ function flatten(groups: VerticalGridGroup[], depth = 0): FlatItem[] {
     // jerarquía que se ve, no con la del árbol — si no, el primer título
     // visible saldría con el estilo de subsección sin nada encima.
     if (g.groups) out.push(...flatten(g.groups, titulado ? depth + 1 : depth));
-    else if (g.fields) for (const field of g.fields) out.push({ type: "field", field });
+    // Los campos cuelgan de su grupo: si este tiene título van un nivel más
+    // adentro que él, y si no lo tiene se quedan donde estaba el grupo — la
+    // misma regla que arriba, para que la sangría dibuje la jerarquía que se ve.
+    else if (g.fields)
+      for (const field of g.fields) out.push({ type: "field", field, depth: titulado ? depth + 1 : depth });
   }
   return out;
+}
+
+/** Muesca de sangría por nivel del árbol de grupos, en px. */
+const SANGRIA_NIVEL = 12;
+/** Margen izquierdo del primer nivel — lo que valía el `px-2` de la etiqueta. */
+const SANGRIA_BASE = 8;
+
+/**
+ * Cuánto se corre a la derecha lo que vive en el nivel `depth`. La jerarquía
+ * solo se dibuja en la columna de etiquetas: los registros son columnas y no
+ * tienen nivel que mostrar.
+ */
+function sangria(depth: number): number {
+  return SANGRIA_BASE + depth * SANGRIA_NIVEL;
 }
 
 /**
@@ -143,11 +161,14 @@ const RecordCell = memo(function RecordCell({
   row,
   selected,
   selectionMode,
+  banda,
 }: {
   column: DataGridColumn;
   row: Row;
   selected: boolean;
   selectionMode: "multiple" | "single";
+  /** El campo cae en una banda del patrón zebra (ver `zebra` en `VerticalGrid`). */
+  banda: boolean;
 }) {
   const active = useIsRowActive(row._id);
   const draftKind = useDraftKind(row._id);
@@ -159,7 +180,13 @@ const RecordCell = memo(function RecordCell({
       style={{ height: ROW_HEIGHT }}
       className={cn(
         "overflow-hidden border-b border-r border-border p-0 align-middle text-xs",
-        draftKind !== "" ? DRAFT_ROW_CLASS[draftKind] : visuallySelected && "bg-accent",
+        // El borrador y el registro seleccionado —que son de columna— mandan
+        // sobre la banda, que es de renglón.
+        draftKind !== ""
+          ? DRAFT_ROW_CLASS[draftKind]
+          : visuallySelected
+            ? "bg-accent"
+            : banda && "row-zebra",
       )}
     >
       <GridCellMemo column={column} row={row} />
@@ -314,6 +341,16 @@ export const VerticalGrid = forwardRef<
     recordHeaderHeight?: number;
     /** Botón "+" al final del encabezado, además de `ref.addRow()` — solo si hay con qué dar de alta. */
     showAddButton?: boolean;
+    /**
+     * Pinta un fondo alterno campo por campo — bandas horizontales, que aquí
+     * cruzan todos los registros. Apagado por omisión: ayuda a seguir un campo
+     * a lo ancho en una ficha larga, pero compite con el tinte del borrador y
+     * con el registro seleccionado, que son de columna.
+     *
+     * Alterna contando solo los campos: los renglones de título no rompen el
+     * ritmo de la banda ni gastan turno.
+     */
+    zebra?: boolean;
   } & DataGridPersistProps
 >(function VerticalGrid(
   {
@@ -339,6 +376,7 @@ export const VerticalGrid = forwardRef<
     recordWidth: recordWidthProp = RECORD_WIDTH,
     recordHeaderHeight,
     showAddButton = true,
+    zebra = false,
   },
   ref,
 ) {
@@ -362,7 +400,8 @@ export const VerticalGrid = forwardRef<
     [config.columns],
   );
   const items = useMemo<FlatItem[]>(
-    () => (groups ? flatten(groups) : config.columns.map((c) => ({ type: "field", field: c.field }))),
+    // Sin `groups` no hay jerarquía que dibujar: todos los campos al ras.
+    () => (groups ? flatten(groups) : config.columns.map((c) => ({ type: "field", field: c.field, depth: 0 }))),
     [groups, config.columns],
   );
   // Declarado antes que `useRowEditing`: su `onRowInserted` mueve la selección.
@@ -1092,6 +1131,9 @@ export const VerticalGrid = forwardRef<
   const fullSpan = 1 + recordCount + (addColumn ? 1 : 0);
 
   let topLevelTitles = 0;
+  // Turno de la banda zebra. Cuenta campos pintados, no renglones: los títulos
+  // de sección van en medio y no deben gastar turno ni cortar la alternancia.
+  let campoIndex = -1;
 
   // Las dos tablas se dibujan con `table-layout: fixed` y un ancho total
   // explícito: con el reparto automático, el `<colgroup>` es solo una
@@ -1120,7 +1162,7 @@ export const VerticalGrid = forwardRef<
 
   return (
     <GridUiContext.Provider value={uiStore}>
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col pl-[5px]">
         {!isSearchControlled && (
           <div className="border-b border-border px-2 py-1.5">
             <SearchInput
@@ -1278,10 +1320,10 @@ export const VerticalGrid = forwardRef<
                           className={cn(
                             topLevel
                               ? cn(
-                                  "border-b-2 border-foreground/20 py-3",
+                                  "row-grupo border-b-2 border-foreground/20 py-3",
                                   topLevelTitles > 1 && "border-t-2",
                                 )
-                              : "border-b border-r border-border bg-muted/60 py-1 font-semibold text-foreground",
+                              : "row-subgrupo border-b border-r border-border py-1 font-semibold text-foreground",
                             item.className ?? (topLevel ? "text-sm font-semibold" : undefined),
                           )}
                         >
@@ -1291,7 +1333,10 @@ export const VerticalGrid = forwardRef<
                               que es donde el título encabeza a sus campos. El
                               margen va dentro (no en la celda) para que lo
                               conserve también ya pegado. */}
-                          <span className={cn("sticky left-0 inline-block", topLevel ? "px-4" : "px-3")}>
+                          <span
+                            className={cn("sticky left-0 inline-block", topLevel ? "pr-4" : "pr-3")}
+                            style={{ paddingLeft: sangria(item.depth) }}
+                          >
                             {item.title}
                           </span>
                         </td>
@@ -1300,14 +1345,17 @@ export const VerticalGrid = forwardRef<
                   }
                   const column = columnByField.get(item.field);
                   if (!column) return null;
+                  campoIndex += 1;
+                  const banda = zebra && campoIndex % 2 === 1;
                   return (
                     <tr key={item.field} style={{ height: ROW_HEIGHT }}>
                       <th
                         scope="row"
                         data-field={column.field}
-                        style={{ width: labelWidth }}
+                        style={{ width: labelWidth, paddingLeft: sangria(item.depth) }}
                         className={cn(
-                          "sticky left-0 z-10 border-b border-r border-border bg-background px-2 py-0.5 text-left align-middle text-xs font-normal",
+                          "sticky left-0 z-10 border-b border-r border-border pr-2 py-0.5 text-left align-middle text-xs font-normal",
+                          banda ? "row-zebra" : "bg-background",
                           column.readOnly && "text-muted-foreground",
                         )}
                       >
@@ -1328,6 +1376,7 @@ export const VerticalGrid = forwardRef<
                               row={row}
                               selected={!!rowSelection[row._id]}
                               selectionMode={selectionMode}
+                              banda={banda}
                             />
                           ))}
                       {addColumn && <td className="border-b border-r border-border p-0" />}

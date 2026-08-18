@@ -119,6 +119,16 @@ export const DataGrid = forwardRef<
      * clash with it. Defaults to `true`.
      */
     enableSorting?: boolean;
+    /**
+     * Pinta un fondo alterno renglón por renglón. Apagado por omisión: en un
+     * grid denso la banda ayuda a seguir una fila larga hasta la última
+     * columna, pero compite con el tinte del borrador y con la fila
+     * seleccionada, así que se enciende donde de verdad hace falta.
+     *
+     * Alterna por posición en pantalla, no por registro: al ordenar o buscar,
+     * las bandas siguen viéndose parejas.
+     */
+    zebra?: boolean;
   } & DataGridPersistProps
 >(function DataGrid(
   {
@@ -140,6 +150,7 @@ export const DataGrid = forwardRef<
     layoutKey,
     loading = false,
     enableSorting = true,
+    zebra = false,
   },
   ref,
 ) {
@@ -1245,6 +1256,7 @@ export const DataGrid = forwardRef<
                           cellClasses={cellClasses}
                           pinnedColumns={pinnedColumns}
                           selected={row.getIsSelected()}
+                          banda={zebra && item.index % 2 === 1}
                           selectionMode={selectionMode}
                         />
                       );
