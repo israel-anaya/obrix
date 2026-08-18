@@ -1,12 +1,10 @@
-use obrix_db::entities::proveedor::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::proveedor::{ActiveModel, Column, Entity, Model};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Proveedores de referencia de la industria de la construcción en México.
 /// Fuente de verdad en `data/initial/proveedor.csv`, embebido tal cual en el
@@ -140,9 +138,8 @@ impl DatosIniciales for ProveedorService {
         let mut lector = csv::ReaderBuilder::new().from_reader(PROVEEDORES_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvProveedor>().enumerate() {
             let fila = i + 2;
-            let registro = registro.map_err(|e| {
-                ServiceError::Validacion(format!("proveedor.csv fila {fila}: {e}"))
-            })?;
+            let registro = registro
+                .map_err(|e| ServiceError::Validacion(format!("proveedor.csv fila {fila}: {e}")))?;
             let razon_social = registro.razon_social.trim().to_string();
             if razon_social.is_empty() {
                 return Err(ServiceError::Validacion(format!(
@@ -197,6 +194,8 @@ mod tests {
 
     #[test]
     fn validar_acepta_datos_completos() {
-        assert!(ProveedorService::validar(&datos("Proveedor demo", "XAXX010101000"), false).is_ok());
+        assert!(
+            ProveedorService::validar(&datos("Proveedor demo", "XAXX010101000"), false).is_ok()
+        );
     }
 }

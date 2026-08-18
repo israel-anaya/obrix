@@ -6,18 +6,21 @@
 //! cambio de cantidad crea/borra/recalcula la fila espejo en **cada**
 //! valuación existente de la cuadrilla (nacional y regionales).
 
-use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
-use obrix_db::entities::{categoria_fasar, cuadrilla, cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, herramienta, insumo};
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
+use obrix_db::entities::{
+    categoria_fasar, cuadrilla, cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle,
+    herramienta, insumo,
+};
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter, QueryOrder,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
+    QueryOrder, TransactionTrait,
 };
 
-use crate::cuadrilla::{combinar as combinar_cuadrilla, CuadrillaCompleto};
+use crate::cuadrilla::{CuadrillaCompleto, combinar as combinar_cuadrilla};
 use crate::cuadrilla_costo::CuadrillaCostoService;
-use crate::{nuevo_id, ServiceError};
+use crate::{ServiceError, nuevo_id};
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -178,7 +181,10 @@ impl CuadrillaDetalleService {
             .filter(cuadrilla_costo_detalle::Column::Deleted.eq(false))
             .all(&txn)
             .await?;
-        let cuadrilla_costo_ids: Vec<String> = detalles_costo.iter().map(|d| d.cuadrilla_costo_id.clone()).collect();
+        let cuadrilla_costo_ids: Vec<String> = detalles_costo
+            .iter()
+            .map(|d| d.cuadrilla_costo_id.clone())
+            .collect();
         for d in detalles_costo {
             let mut am: cuadrilla_costo_detalle::ActiveModel = d.into();
             am.deleted = Set(true);
@@ -266,10 +272,18 @@ impl CuadrillaDetalleService {
         txn: &DatabaseTransaction,
         detalle_insumo_id: &str,
     ) -> Result<TipoCuadrillaDetalle, ServiceError> {
-        if categoria_fasar::Entity::find_by_id(detalle_insumo_id).one(txn).await?.is_some() {
+        if categoria_fasar::Entity::find_by_id(detalle_insumo_id)
+            .one(txn)
+            .await?
+            .is_some()
+        {
             return Ok(TipoCuadrillaDetalle::CategoriaFasar);
         }
-        if herramienta::Entity::find_by_id(detalle_insumo_id).one(txn).await?.is_some() {
+        if herramienta::Entity::find_by_id(detalle_insumo_id)
+            .one(txn)
+            .await?
+            .is_some()
+        {
             return Ok(TipoCuadrillaDetalle::EquipoHerramienta);
         }
         Err(ServiceError::Validacion(format!(
@@ -290,7 +304,9 @@ impl CuadrillaDetalleService {
         let cuadrilla_ins = insumo::Entity::find_by_id(cuadrilla_insumo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla {cuadrilla_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("cuadrilla {cuadrilla_insumo_id}"))
+            })?;
         let detalle_ins = insumo::Entity::find_by_id(detalle_insumo_id)
             .one(txn)
             .await?
@@ -336,11 +352,15 @@ impl CuadrillaDetalleService {
         let cua = cuadrilla::Entity::find_by_id(cuadrilla_insumo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla {cuadrilla_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("cuadrilla {cuadrilla_insumo_id}"))
+            })?;
         let ins = insumo::Entity::find_by_id(cuadrilla_insumo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla {cuadrilla_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("cuadrilla {cuadrilla_insumo_id}"))
+            })?;
         let costo_nacional = cuadrilla_costo::Entity::find()
             .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_insumo_id))
             .filter(cuadrilla_costo::Column::RegionId.is_null())
@@ -361,8 +381,8 @@ mod tests {
     use crate::factor_salario_real::{FactorSalarioRealData, FactorSalarioRealService};
     use crate::herramienta::{HerramientaData, HerramientaService};
     use crate::salario_categoria_fasar::{SalarioCategoriaFasarData, SalarioCategoriaFasarService};
-    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use obrix_db::PortafolioSqliteRepository;
+    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
     use std::str::FromStr;
@@ -412,6 +432,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -430,6 +451,7 @@ mod tests {
             rfc: Set("XAXX020202000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -442,8 +464,11 @@ mod tests {
         .await
         .unwrap();
 
-        for (id, simbolo, descripcion) in [("um-jor", "jor", "Jornal"), ("um-pza", "pza", "Pieza"), ("um-cuad", "cuad", "Cuadrilla")]
-        {
+        for (id, simbolo, descripcion) in [
+            ("um-jor", "jor", "Jornal"),
+            ("um-pza", "pza", "Pieza"),
+            ("um-cuad", "cuad", "Cuadrilla"),
+        ] {
             unidad_medida::ActiveModel {
                 id: Set(id.into()),
                 simbolo: Set(simbolo.into()),
@@ -526,7 +551,10 @@ mod tests {
         categoria.id
     }
 
-    async fn crear_cuadrilla(portafolio: &PortafolioSqliteRepository, clave: &str) -> CuadrillaCompleto {
+    async fn crear_cuadrilla(
+        portafolio: &PortafolioSqliteRepository,
+        clave: &str,
+    ) -> CuadrillaCompleto {
         CuadrillaService::crear(
             portafolio,
             "org-1",
@@ -548,8 +576,10 @@ mod tests {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr_nacional(&portafolio).await;
 
-        let oficial = crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
-        let ayudante = crear_categoria_con_salario(&portafolio, &fsr, "CAT-2", "Ayudante", "400").await;
+        let oficial =
+            crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
+        let ayudante =
+            crear_categoria_con_salario(&portafolio, &fsr, "CAT-2", "Ayudante", "400").await;
 
         let herramienta = HerramientaService::crear(
             &portafolio,
@@ -572,7 +602,10 @@ mod tests {
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::ONE },
+            CuadrillaDetalleData {
+                detalle_insumo_id: oficial.clone(),
+                cantidad: Decimal::ONE,
+            },
             "usr-1".into(),
         )
         .await
@@ -581,13 +614,19 @@ mod tests {
         let tras_ayudante = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: ayudante.clone(), cantidad: Decimal::from(2) },
+            CuadrillaDetalleData {
+                detalle_insumo_id: ayudante.clone(),
+                cantidad: Decimal::from(2),
+            },
             "usr-1".into(),
         )
         .await
         .expect("agregar ayudantes");
         // 1×700 + 2×400 = 1500 — todavía sin herramienta.
-        let nacional = tras_ayudante.costo_nacional.as_ref().expect("valuación nacional");
+        let nacional = tras_ayudante
+            .costo_nacional
+            .as_ref()
+            .expect("valuación nacional");
         assert_eq!(nacional.sub_total_mano_obra, Decimal::from(1500));
         assert_eq!(nacional.sub_total_herramienta, Decimal::ZERO);
         assert_eq!(nacional.costo_total, Decimal::from(1500));
@@ -595,48 +634,93 @@ mod tests {
         let detalle_herramienta = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: herramienta.id.clone(), cantidad: Decimal::from(3) },
+            CuadrillaDetalleData {
+                detalle_insumo_id: herramienta.id.clone(),
+                cantidad: Decimal::from(3),
+            },
             "usr-1".into(),
         )
         .await
         .expect("agregar herramienta");
         // 3% de 1500 = 45.
-        let nacional = detalle_herramienta.costo_nacional.as_ref().expect("valuación nacional");
+        let nacional = detalle_herramienta
+            .costo_nacional
+            .as_ref()
+            .expect("valuación nacional");
         assert_eq!(nacional.sub_total_mano_obra, Decimal::from(1500));
-        assert_eq!(nacional.sub_total_herramienta, Decimal::from_str("45.00").unwrap());
+        assert_eq!(
+            nacional.sub_total_herramienta,
+            Decimal::from_str("45.00").unwrap()
+        );
         assert_eq!(nacional.costo_total, Decimal::from_str("1545.00").unwrap());
 
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar detalles");
         assert_eq!(detalles.len(), 3);
-        let fila_herramienta = detalles.iter().find(|d| d.detalle_insumo_id == herramienta.id).expect("fila herramienta");
-        assert_eq!(fila_herramienta.tipo, TipoCuadrillaDetalle::EquipoHerramienta);
+        let fila_herramienta = detalles
+            .iter()
+            .find(|d| d.detalle_insumo_id == herramienta.id)
+            .expect("fila herramienta");
+        assert_eq!(
+            fila_herramienta.tipo,
+            TipoCuadrillaDetalle::EquipoHerramienta
+        );
         // Recién agregada como único renglón de su tipo: orden propio, no
         // continúa el contador de mano de obra.
         assert_eq!(fila_herramienta.orden, 0);
 
-        let costo_detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+        let costo_detalles =
+            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
+                &portafolio,
+                &nacional.id,
+            )
             .await
             .expect("listar cuadrilla_costo_detalle");
-        let costo_herramienta = costo_detalles.iter().find(|d| d.cuadrilla_detalle_id == fila_herramienta.id).unwrap();
-        assert_eq!(costo_herramienta.costo, Decimal::from(1500), "costo de herramienta = sub_total_mano_obra");
-        assert_eq!(costo_herramienta.importe, Decimal::from_str("45.00").unwrap());
-        assert_eq!(costo_herramienta.fecha_precio, None, "herramienta no tiene fecha_precio");
+        let costo_herramienta = costo_detalles
+            .iter()
+            .find(|d| d.cuadrilla_detalle_id == fila_herramienta.id)
+            .unwrap();
+        assert_eq!(
+            costo_herramienta.costo,
+            Decimal::from(1500),
+            "costo de herramienta = sub_total_mano_obra"
+        );
+        assert_eq!(
+            costo_herramienta.importe,
+            Decimal::from_str("45.00").unwrap()
+        );
+        assert_eq!(
+            costo_herramienta.fecha_precio, None,
+            "herramienta no tiene fecha_precio"
+        );
 
         // Borrar la herramienta deja el costo total igual al de mano de obra.
-        let tras_borrar = CuadrillaDetalleService::eliminar(&portafolio, fila_herramienta.id.clone(), "usr-1".into())
-            .await
-            .expect("borrar herramienta");
-        let nacional = tras_borrar.costo_nacional.as_ref().expect("valuación nacional");
+        let tras_borrar = CuadrillaDetalleService::eliminar(
+            &portafolio,
+            fila_herramienta.id.clone(),
+            "usr-1".into(),
+        )
+        .await
+        .expect("borrar herramienta");
+        let nacional = tras_borrar
+            .costo_nacional
+            .as_ref()
+            .expect("valuación nacional");
         assert_eq!(nacional.sub_total_herramienta, Decimal::ZERO);
         assert_eq!(nacional.costo_total, nacional.sub_total_mano_obra);
 
-        let costo_detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+        let costo_detalles =
+            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
+                &portafolio,
+                &nacional.id,
+            )
             .await
             .expect("listar cuadrilla_costo_detalle");
         assert!(
-            costo_detalles.iter().all(|d| d.cuadrilla_detalle_id != fila_herramienta.id),
+            costo_detalles
+                .iter()
+                .all(|d| d.cuadrilla_detalle_id != fila_herramienta.id),
             "el detalle de valuación de la herramienta borrada no debe seguir activo"
         );
     }
@@ -646,14 +730,19 @@ mod tests {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr_nacional(&portafolio).await;
 
-        let oficial = crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
-        let ayudante = crear_categoria_con_salario(&portafolio, &fsr, "CAT-2", "Ayudante", "400").await;
+        let oficial =
+            crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
+        let ayudante =
+            crear_categoria_con_salario(&portafolio, &fsr, "CAT-2", "Ayudante", "400").await;
         let cuadrilla = crear_cuadrilla(&portafolio, "CUA-1").await;
 
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::ONE },
+            CuadrillaDetalleData {
+                detalle_insumo_id: oficial.clone(),
+                cantidad: Decimal::ONE,
+            },
             "usr-1".into(),
         )
         .await
@@ -661,7 +750,10 @@ mod tests {
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: ayudante.clone(), cantidad: Decimal::from(2) },
+            CuadrillaDetalleData {
+                detalle_insumo_id: ayudante.clone(),
+                cantidad: Decimal::from(2),
+            },
             "usr-1".into(),
         )
         .await
@@ -670,17 +762,32 @@ mod tests {
         let antes = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar antes");
-        let fila_ayudante = antes.iter().find(|d| d.detalle_insumo_id == ayudante).unwrap().clone();
+        let fila_ayudante = antes
+            .iter()
+            .find(|d| d.detalle_insumo_id == ayudante)
+            .unwrap()
+            .clone();
 
-        CuadrillaDetalleService::mover(&portafolio, fila_ayudante.id.clone(), DireccionMovimiento::Arriba)
-            .await
-            .expect("mover ayudante hacia arriba");
+        CuadrillaDetalleService::mover(
+            &portafolio,
+            fila_ayudante.id.clone(),
+            DireccionMovimiento::Arriba,
+        )
+        .await
+        .expect("mover ayudante hacia arriba");
 
         let despues = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar despues");
-        let integrantes: Vec<&str> = despues.iter().map(|d| d.detalle_insumo_id.as_str()).collect();
-        assert_eq!(integrantes, vec![ayudante.as_str(), oficial.as_str()], "el ayudante debe quedar primero");
+        let integrantes: Vec<&str> = despues
+            .iter()
+            .map(|d| d.detalle_insumo_id.as_str())
+            .collect();
+        assert_eq!(
+            integrantes,
+            vec![ayudante.as_str(), oficial.as_str()],
+            "el ayudante debe quedar primero"
+        );
     }
 
     #[tokio::test]
@@ -693,14 +800,20 @@ mod tests {
         let err = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: otra_cuadrilla.id, cantidad: Decimal::ONE },
+            CuadrillaDetalleData {
+                detalle_insumo_id: otra_cuadrilla.id,
+                cantidad: Decimal::ONE,
+            },
             "usr-1".into(),
         )
         .await
         .expect_err("no debe permitir anidar cuadrillas");
         match err {
             ServiceError::Validacion(mensaje) => {
-                assert!(mensaje.contains("no puede contener otra cuadrilla"), "mensaje inesperado: {mensaje}");
+                assert!(
+                    mensaje.contains("no puede contener otra cuadrilla"),
+                    "mensaje inesperado: {mensaje}"
+                );
             }
             otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
         }
@@ -708,7 +821,10 @@ mod tests {
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar detalles");
-        assert!(detalles.is_empty(), "no debe quedar una fila a medias tras el rechazo");
+        assert!(
+            detalles.is_empty(),
+            "no debe quedar una fila a medias tras el rechazo"
+        );
     }
 
     #[tokio::test]
@@ -734,14 +850,20 @@ mod tests {
         let err = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: categoria_ajena.id, cantidad: Decimal::ONE },
+            CuadrillaDetalleData {
+                detalle_insumo_id: categoria_ajena.id,
+                cantidad: Decimal::ONE,
+            },
             "usr-1".into(),
         )
         .await
         .expect_err("no debe permitir mezclar organizaciones");
         match err {
             ServiceError::Validacion(mensaje) => {
-                assert!(mensaje.contains("misma organización"), "mensaje inesperado: {mensaje}");
+                assert!(
+                    mensaje.contains("misma organización"),
+                    "mensaje inesperado: {mensaje}"
+                );
             }
             otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
         }
@@ -771,7 +893,10 @@ mod tests {
         let resultado = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: sin_salario.id, cantidad: Decimal::ONE },
+            CuadrillaDetalleData {
+                detalle_insumo_id: sin_salario.id,
+                cantidad: Decimal::ONE,
+            },
             "usr-1".into(),
         )
         .await
@@ -780,9 +905,16 @@ mod tests {
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar detalles");
-        assert_eq!(detalles.len(), 1, "el renglón de receta debe quedar insertado");
+        assert_eq!(
+            detalles.len(),
+            1,
+            "el renglón de receta debe quedar insertado"
+        );
 
-        let nacional = resultado.costo_nacional.as_ref().expect("valuación nacional");
+        let nacional = resultado
+            .costo_nacional
+            .as_ref()
+            .expect("valuación nacional");
         assert_eq!(nacional.sub_total_mano_obra, Decimal::ZERO);
         assert_eq!(nacional.costo_total, Decimal::ZERO);
 
@@ -800,51 +932,85 @@ mod tests {
     async fn eliminar_renglon_borra_sus_cuadrilla_costo_detalle_en_todas_las_regiones() {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr_nacional(&portafolio).await;
-        let oficial = crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
+        let oficial =
+            crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
         let cuadrilla = crear_cuadrilla(&portafolio, "CUA-1").await;
 
         crate::region::RegionService::crear(
             &portafolio,
-            crate::region::RegionData { nombre: "Norte".into(), estado: "Nuevo León".into(), factor_ajuste: None },
+            crate::region::RegionData {
+                nombre: "Norte".into(),
+                estado: "Nuevo León".into(),
+                factor_ajuste: None,
+            },
             "usr-1".into(),
         )
         .await
         .expect("crear region");
-        let region_id = crate::region::RegionService::listar(&portafolio).await.unwrap()[0].id.clone();
+        let region_id = crate::region::RegionService::listar(&portafolio)
+            .await
+            .unwrap()[0]
+            .id
+            .clone();
 
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::from(2) },
+            CuadrillaDetalleData {
+                detalle_insumo_id: oficial.clone(),
+                cantidad: Decimal::from(2),
+            },
             "usr-1".into(),
         )
         .await
         .expect("agregar oficial");
 
-        let regional = CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla.id, region_id, "usr-1".into())
-            .await
-            .expect("crear valuación regional");
-        assert_eq!(regional.sub_total_mano_obra, Decimal::from(1400), "usa la cantidad de la receta y el salario nacional");
+        let regional = CuadrillaCostoService::crear_regional(
+            &portafolio,
+            &cuadrilla.id,
+            region_id,
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear valuación regional");
+        assert_eq!(
+            regional.sub_total_mano_obra,
+            Decimal::from(1400),
+            "usa la cantidad de la receta y el salario nacional"
+        );
 
-        let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id).await.unwrap();
-        let fila_oficial = detalles.iter().find(|d| d.detalle_insumo_id == oficial).unwrap().clone();
+        let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .unwrap();
+        let fila_oficial = detalles
+            .iter()
+            .find(|d| d.detalle_insumo_id == oficial)
+            .unwrap()
+            .clone();
 
         CuadrillaDetalleService::eliminar(&portafolio, fila_oficial.id.clone(), "usr-1".into())
             .await
             .expect("eliminar renglon");
 
         let costo_detalles_regional =
-            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &regional.id)
-                .await
-                .expect("listar cuadrilla_costo_detalle regional");
-        assert!(costo_detalles_regional.is_empty(), "el detalle regional también debe borrarse");
-
-        let regional_recalculada = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
+                &portafolio,
+                &regional.id,
+            )
             .await
-            .unwrap()
-            .into_iter()
-            .find(|c| c.id == regional.id)
-            .unwrap();
+            .expect("listar cuadrilla_costo_detalle regional");
+        assert!(
+            costo_detalles_regional.is_empty(),
+            "el detalle regional también debe borrarse"
+        );
+
+        let regional_recalculada =
+            CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+                .await
+                .unwrap()
+                .into_iter()
+                .find(|c| c.id == regional.id)
+                .unwrap();
         assert_eq!(regional_recalculada.costo_total, Decimal::ZERO);
     }
 
@@ -852,31 +1018,55 @@ mod tests {
     async fn actualizar_cantidad_recalcula_todas_las_valuaciones() {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr_nacional(&portafolio).await;
-        let oficial = crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
+        let oficial =
+            crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
         let cuadrilla = crear_cuadrilla(&portafolio, "CUA-1").await;
 
         crate::region::RegionService::crear(
             &portafolio,
-            crate::region::RegionData { nombre: "Norte".into(), estado: "Nuevo León".into(), factor_ajuste: None },
+            crate::region::RegionData {
+                nombre: "Norte".into(),
+                estado: "Nuevo León".into(),
+                factor_ajuste: None,
+            },
             "usr-1".into(),
         )
         .await
         .expect("crear region");
-        let region_id = crate::region::RegionService::listar(&portafolio).await.unwrap()[0].id.clone();
+        let region_id = crate::region::RegionService::listar(&portafolio)
+            .await
+            .unwrap()[0]
+            .id
+            .clone();
 
         let tras_crear = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::ONE },
+            CuadrillaDetalleData {
+                detalle_insumo_id: oficial.clone(),
+                cantidad: Decimal::ONE,
+            },
             "usr-1".into(),
         )
         .await
         .expect("agregar oficial");
-        assert_eq!(tras_crear.costo_nacional.as_ref().unwrap().sub_total_mano_obra, Decimal::from(700));
+        assert_eq!(
+            tras_crear
+                .costo_nacional
+                .as_ref()
+                .unwrap()
+                .sub_total_mano_obra,
+            Decimal::from(700)
+        );
 
-        let regional = CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla.id, region_id, "usr-1".into())
-            .await
-            .expect("crear valuación regional");
+        let regional = CuadrillaCostoService::crear_regional(
+            &portafolio,
+            &cuadrilla.id,
+            region_id,
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear valuación regional");
         assert_eq!(regional.sub_total_mano_obra, Decimal::from(700));
 
         let fila = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
@@ -890,20 +1080,34 @@ mod tests {
         let actualizada = CuadrillaDetalleService::actualizar(
             &portafolio,
             fila.id.clone(),
-            CuadrillaDetalleEditarData { detalle_insumo_id: oficial, cantidad: Decimal::from(3) },
+            CuadrillaDetalleEditarData {
+                detalle_insumo_id: oficial,
+                cantidad: Decimal::from(3),
+            },
             Some("usr-1".into()),
         )
         .await
         .expect("actualizar cantidad");
         // 3 × 700 = 2100 en nacional y en regional (mismo salario).
-        assert_eq!(actualizada.costo_nacional.as_ref().unwrap().sub_total_mano_obra, Decimal::from(2100));
-        let regional_recalculada = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
-            .await
-            .unwrap()
-            .into_iter()
-            .find(|c| c.id == regional.id)
-            .unwrap();
-        assert_eq!(regional_recalculada.sub_total_mano_obra, Decimal::from(2100));
+        assert_eq!(
+            actualizada
+                .costo_nacional
+                .as_ref()
+                .unwrap()
+                .sub_total_mano_obra,
+            Decimal::from(2100)
+        );
+        let regional_recalculada =
+            CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+                .await
+                .unwrap()
+                .into_iter()
+                .find(|c| c.id == regional.id)
+                .unwrap();
+        assert_eq!(
+            regional_recalculada.sub_total_mano_obra,
+            Decimal::from(2100)
+        );
 
         let fila = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await

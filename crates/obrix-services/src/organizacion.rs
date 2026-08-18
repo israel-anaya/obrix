@@ -1,15 +1,17 @@
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::{
     moneda,
     organizacion::{ActiveModel, Column, Entity, Model, TipoOrganizacion},
 };
-use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use rust_decimal::Decimal;
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion_usuario::OrganizacionUsuarioService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
+
+/// Jornada diurna LFT — valor con el que nace toda organización.
+const HORAS_JORNADA_DEFAULT: i64 = 8;
 
 #[derive(serde::Deserialize)]
 pub struct OrganizacionData {
@@ -20,6 +22,7 @@ pub struct OrganizacionData {
     /// grid (que llega con `tipo: ""`) truene al deserializar el comando.
     pub tipo: String,
     pub moneda_default_id: String,
+    pub horas_jornada: Decimal,
 }
 
 pub struct OrganizacionService;
@@ -48,6 +51,11 @@ impl OrganizacionService {
         if datos.moneda_default_id.trim().is_empty() {
             return Err(ServiceError::Validacion(format!(
                 "No se puede {accion} una organización sin moneda default."
+            )));
+        }
+        if datos.horas_jornada <= Decimal::ZERO {
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} una organización con horas de jornada menores o iguales a cero."
             )));
         }
         Ok(())
@@ -105,7 +113,9 @@ impl OrganizacionService {
 
     /// La organización sembrada por el usuario "sistema" (`admin@obrix.local`)
     /// — es decir, la organización demo creada junto con el portafolio.
-    pub async fn buscar_admin_obrix(repo: &dyn PortafolioRepository) -> Result<Model, ServiceError> {
+    pub async fn buscar_admin_obrix(
+        repo: &dyn PortafolioRepository,
+    ) -> Result<Model, ServiceError> {
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
         Entity::find()
             .filter(Column::CreatedBy.eq(admin.id))
@@ -127,6 +137,7 @@ impl OrganizacionService {
             rfc: Set(datos.rfc),
             tipo: Set(tipo),
             moneda_default_id: Set(datos.moneda_default_id),
+            horas_jornada: Set(datos.horas_jornada),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
@@ -155,6 +166,7 @@ impl OrganizacionService {
         modelo.rfc = Set(datos.rfc);
         modelo.tipo = Set(tipo);
         modelo.moneda_default_id = Set(datos.moneda_default_id);
+        modelo.horas_jornada = Set(datos.horas_jornada);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(actualizado_por);
         Ok(modelo.update(repo.conexion()).await?)
@@ -191,7 +203,11 @@ impl DatosIniciales for OrganizacionService {
             .filter(moneda::Column::Codigo.eq("MXN"))
             .one(repo.conexion())
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado("moneda MXN (debe sembrarse antes que organizacion)".to_string()))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(
+                    "moneda MXN (debe sembrarse antes que organizacion)".to_string(),
+                )
+            })?;
         Self::crear(
             repo,
             OrganizacionData {
@@ -199,6 +215,7 @@ impl DatosIniciales for OrganizacionService {
                 rfc: "XAXX010101000".to_string(),
                 tipo: "despacho".to_string(),
                 moneda_default_id: mxn.id,
+                horas_jornada: Decimal::from(HORAS_JORNADA_DEFAULT),
             },
             admin.id,
         )
@@ -211,39 +228,135 @@ impl DatosIniciales for OrganizacionService {
 mod tests {
     use super::*;
 
-    fn datos(razon_social: &str, rfc: &str, tipo: &str, moneda_default_id: &str) -> OrganizacionData {
+    fn datos(
+        razon_social: &str,
+        rfc: &str,
+        tipo: &str,
+        moneda_default_id: &str,
+    ) -> OrganizacionData {
+        datos_con_horas(
+            razon_social,
+            rfc,
+            tipo,
+            moneda_default_id,
+            Decimal::from(HORAS_JORNADA_DEFAULT),
+        )
+    }
+
+    fn datos_con_horas(
+        razon_social: &str,
+        rfc: &str,
+        tipo: &str,
+        moneda_default_id: &str,
+        horas_jornada: Decimal,
+    ) -> OrganizacionData {
         OrganizacionData {
             razon_social: razon_social.to_string(),
             rfc: rfc.to_string(),
             tipo: tipo.to_string(),
             moneda_default_id: moneda_default_id.to_string(),
+            horas_jornada,
         }
     }
 
     #[test]
     fn validar_rechaza_razon_social_vacia_o_solo_espacios() {
-        assert!(OrganizacionService::validar(&datos("", "XAXX010101000", "despacho", "mxn"), false).is_err());
-        assert!(OrganizacionService::validar(&datos("   ", "XAXX010101000", "despacho", "mxn"), true).is_err());
+        assert!(
+            OrganizacionService::validar(&datos("", "XAXX010101000", "despacho", "mxn"), false)
+                .is_err()
+        );
+        assert!(
+            OrganizacionService::validar(&datos("   ", "XAXX010101000", "despacho", "mxn"), true)
+                .is_err()
+        );
     }
 
     #[test]
     fn validar_rechaza_rfc_vacio() {
-        assert!(OrganizacionService::validar(&datos("Despacho demo", "", "despacho", "mxn"), false).is_err());
+        assert!(
+            OrganizacionService::validar(&datos("Despacho demo", "", "despacho", "mxn"), false)
+                .is_err()
+        );
     }
 
     #[test]
     fn validar_rechaza_tipo_vacio() {
-        assert!(OrganizacionService::validar(&datos("Despacho demo", "XAXX010101000", "", "mxn"), false).is_err());
+        assert!(
+            OrganizacionService::validar(
+                &datos("Despacho demo", "XAXX010101000", "", "mxn"),
+                false
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn validar_rechaza_moneda_default_id_vacio() {
-        assert!(OrganizacionService::validar(&datos("Despacho demo", "XAXX010101000", "despacho", ""), false).is_err());
+        assert!(
+            OrganizacionService::validar(
+                &datos("Despacho demo", "XAXX010101000", "despacho", ""),
+                false
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn validar_rechaza_horas_jornada_cero_o_negativas() {
+        assert!(
+            OrganizacionService::validar(
+                &datos_con_horas(
+                    "Despacho demo",
+                    "XAXX010101000",
+                    "despacho",
+                    "mxn",
+                    Decimal::ZERO
+                ),
+                false,
+            )
+            .is_err()
+        );
+        assert!(
+            OrganizacionService::validar(
+                &datos_con_horas(
+                    "Despacho demo",
+                    "XAXX010101000",
+                    "despacho",
+                    "mxn",
+                    Decimal::from(-1),
+                ),
+                true,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn validar_acepta_horas_jornada_fraccionarias() {
+        assert!(
+            OrganizacionService::validar(
+                &datos_con_horas(
+                    "Despacho demo",
+                    "XAXX010101000",
+                    "despacho",
+                    "mxn",
+                    Decimal::new(75, 1),
+                ),
+                false,
+            )
+            .is_ok()
+        );
     }
 
     #[test]
     fn validar_acepta_datos_completos() {
-        assert!(OrganizacionService::validar(&datos("Despacho demo", "XAXX010101000", "despacho", "mxn"), false).is_ok());
+        assert!(
+            OrganizacionService::validar(
+                &datos("Despacho demo", "XAXX010101000", "despacho", "mxn"),
+                false
+            )
+            .is_ok()
+        );
     }
 
     #[test]

@@ -8,23 +8,23 @@
 //! (`cargo_variable_hora`/`costo_horario_total`) — `cf_cargo_fijo_hora` no se
 //! toca aquí, lo administra `EquipoCostoHorarioService`.
 
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::equipo_costo_horario_detalle::{
     NaturalezaEquipoCostoHorarioDetalle, TipoEquipoCostoHorarioDetalle,
 };
 use obrix_db::entities::{
-    categoria_fasar, cuadrilla, equipo_costo_horario, equipo_costo_horario_detalle, insumo, material, moneda,
-    organizacion, precio_material, salario_categoria_fasar,
+    categoria_fasar, cuadrilla, equipo_costo_horario, equipo_costo_horario_detalle, insumo,
+    material, moneda, organizacion, precio_material, salario_categoria_fasar,
 };
-use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter, QueryOrder,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
+    QueryOrder, TransactionTrait,
 };
 
 use crate::cuadrilla_costo::CuadrillaCostoService;
-use crate::equipo_costo_horario::{combinar as combinar_equipo, EquipoCostoHorarioCompleto};
-use crate::{nuevo_id, ServiceError};
+use crate::equipo_costo_horario::{EquipoCostoHorarioCompleto, combinar as combinar_equipo};
+use crate::{ServiceError, nuevo_id};
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -51,7 +51,10 @@ impl EquipoCostoHorarioDetalleService {
         equipo_costo_horario_insumo_id: &str,
     ) -> Result<Vec<equipo_costo_horario_detalle::Model>, ServiceError> {
         Ok(equipo_costo_horario_detalle::Entity::find()
-            .filter(equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId.eq(equipo_costo_horario_insumo_id))
+            .filter(
+                equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId
+                    .eq(equipo_costo_horario_insumo_id),
+            )
             .order_by_asc(equipo_costo_horario_detalle::Column::Orden)
             .all(repo.conexion())
             .await?)
@@ -67,7 +70,12 @@ impl EquipoCostoHorarioDetalleService {
 
         let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
         let naturaleza = Self::resolver_naturaleza(tipo.clone(), datos.naturaleza, None)?;
-        Self::validar_referencia(&txn, equipo_costo_horario_insumo_id, &datos.detalle_insumo_id).await?;
+        Self::validar_referencia(
+            &txn,
+            equipo_costo_horario_insumo_id,
+            &datos.detalle_insumo_id,
+        )
+        .await?;
         let orden = Self::siguiente_orden(&txn, equipo_costo_horario_insumo_id).await?;
 
         equipo_costo_horario_detalle::ActiveModel {
@@ -107,12 +115,23 @@ impl EquipoCostoHorarioDetalleService {
         let existente = equipo_costo_horario_detalle::Entity::find_by_id(&id)
             .one(&txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}"))
+            })?;
         let equipo_costo_horario_insumo_id = existente.equipo_costo_horario_insumo_id.clone();
 
         let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
-        let naturaleza = Self::resolver_naturaleza(tipo.clone(), datos.naturaleza, existente.naturaleza.clone())?;
-        Self::validar_referencia(&txn, &equipo_costo_horario_insumo_id, &datos.detalle_insumo_id).await?;
+        let naturaleza = Self::resolver_naturaleza(
+            tipo.clone(),
+            datos.naturaleza,
+            existente.naturaleza.clone(),
+        )?;
+        Self::validar_referencia(
+            &txn,
+            &equipo_costo_horario_insumo_id,
+            &datos.detalle_insumo_id,
+        )
+        .await?;
 
         let mut am: equipo_costo_horario_detalle::ActiveModel = existente.into();
         am.detalle_insumo_id = Set(datos.detalle_insumo_id);
@@ -128,16 +147,23 @@ impl EquipoCostoHorarioDetalleService {
         Ok(resultado)
     }
 
-    pub async fn eliminar(repo: &dyn PortafolioRepository, id: String) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
+    pub async fn eliminar(
+        repo: &dyn PortafolioRepository,
+        id: String,
+    ) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
         let txn = repo.conexion().begin().await?;
 
         let existente = equipo_costo_horario_detalle::Entity::find_by_id(&id)
             .one(&txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}"))
+            })?;
         let equipo_costo_horario_insumo_id = existente.equipo_costo_horario_insumo_id.clone();
 
-        equipo_costo_horario_detalle::Entity::delete_by_id(id).exec(&txn).await?;
+        equipo_costo_horario_detalle::Entity::delete_by_id(id)
+            .exec(&txn)
+            .await?;
 
         let resultado = Self::recalcular(&txn, &equipo_costo_horario_insumo_id).await?;
         txn.commit().await?;
@@ -175,20 +201,24 @@ impl EquipoCostoHorarioDetalleService {
         let existente = equipo_costo_horario_detalle::Entity::find_by_id(&id)
             .one(&txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}"))
+            })?;
         let equipo_costo_horario_insumo_id = existente.equipo_costo_horario_insumo_id.clone();
 
         let misma_tabla = equipo_costo_horario_detalle::Entity::find()
-            .filter(equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId.eq(&equipo_costo_horario_insumo_id))
+            .filter(
+                equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId
+                    .eq(&equipo_costo_horario_insumo_id),
+            )
             .filter(equipo_costo_horario_detalle::Column::Tipo.eq(existente.tipo.clone()))
             .order_by_asc(equipo_costo_horario_detalle::Column::Orden)
             .all(&txn)
             .await?;
 
-        let indice = misma_tabla
-            .iter()
-            .position(|d| d.id == id)
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}")))?;
+        let indice = misma_tabla.iter().position(|d| d.id == id).ok_or_else(|| {
+            ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}"))
+        })?;
         let indice_vecino = match direccion {
             DireccionMovimiento::Arriba => indice.checked_sub(1),
             DireccionMovimiento::Abajo => (indice + 1 < misma_tabla.len()).then_some(indice + 1),
@@ -211,11 +241,19 @@ impl EquipoCostoHorarioDetalleService {
         let equipo = equipo_costo_horario::Entity::find_by_id(&equipo_costo_horario_insumo_id)
             .one(&txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {equipo_costo_horario_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "equipo_costo_horario {equipo_costo_horario_insumo_id}"
+                ))
+            })?;
         let ins = insumo::Entity::find_by_id(&equipo_costo_horario_insumo_id)
             .one(&txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {equipo_costo_horario_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "equipo_costo_horario {equipo_costo_horario_insumo_id}"
+                ))
+            })?;
         let resultado = combinar_equipo(ins, equipo);
         txn.commit().await?;
         Ok(resultado)
@@ -231,13 +269,25 @@ impl EquipoCostoHorarioDetalleService {
         txn: &DatabaseTransaction,
         detalle_insumo_id: &str,
     ) -> Result<TipoEquipoCostoHorarioDetalle, ServiceError> {
-        if material::Entity::find_by_id(detalle_insumo_id).one(txn).await?.is_some() {
+        if material::Entity::find_by_id(detalle_insumo_id)
+            .one(txn)
+            .await?
+            .is_some()
+        {
             return Ok(TipoEquipoCostoHorarioDetalle::Consumo);
         }
-        if categoria_fasar::Entity::find_by_id(detalle_insumo_id).one(txn).await?.is_some() {
+        if categoria_fasar::Entity::find_by_id(detalle_insumo_id)
+            .one(txn)
+            .await?
+            .is_some()
+        {
             return Ok(TipoEquipoCostoHorarioDetalle::Operacion);
         }
-        if cuadrilla::Entity::find_by_id(detalle_insumo_id).one(txn).await?.is_some() {
+        if cuadrilla::Entity::find_by_id(detalle_insumo_id)
+            .one(txn)
+            .await?
+            .is_some()
+        {
             return Ok(TipoEquipoCostoHorarioDetalle::Operacion);
         }
         Err(ServiceError::Validacion(format!(
@@ -286,14 +336,19 @@ impl EquipoCostoHorarioDetalleService {
         let equipo_ins = insumo::Entity::find_by_id(equipo_costo_horario_insumo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {equipo_costo_horario_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "equipo_costo_horario {equipo_costo_horario_insumo_id}"
+                ))
+            })?;
         let detalle_ins = insumo::Entity::find_by_id(detalle_insumo_id)
             .one(txn)
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("insumo {detalle_insumo_id}")))?;
         if equipo_ins.organizacion_id != detalle_ins.organizacion_id {
             return Err(ServiceError::Validacion(
-                "el insumo debe pertenecer a la misma organización que el equipo de costo horario".to_string(),
+                "el insumo debe pertenecer a la misma organización que el equipo de costo horario"
+                    .to_string(),
             ));
         }
         Ok(())
@@ -304,7 +359,10 @@ impl EquipoCostoHorarioDetalleService {
         equipo_costo_horario_insumo_id: &str,
     ) -> Result<i32, ServiceError> {
         let maximo = equipo_costo_horario_detalle::Entity::find()
-            .filter(equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId.eq(equipo_costo_horario_insumo_id))
+            .filter(
+                equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId
+                    .eq(equipo_costo_horario_insumo_id),
+            )
             .order_by_desc(equipo_costo_horario_detalle::Column::Orden)
             .one(txn)
             .await?;
@@ -324,18 +382,29 @@ impl EquipoCostoHorarioDetalleService {
         let ins = insumo::Entity::find_by_id(equipo_costo_horario_insumo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {equipo_costo_horario_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "equipo_costo_horario {equipo_costo_horario_insumo_id}"
+                ))
+            })?;
         let org = organizacion::Entity::find_by_id(&ins.organizacion_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("organizacion {}", ins.organizacion_id)))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("organizacion {}", ins.organizacion_id))
+            })?;
         let moneda_default = moneda::Entity::find_by_id(&org.moneda_default_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("moneda {}", org.moneda_default_id)))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("moneda {}", org.moneda_default_id))
+            })?;
 
         let detalles = equipo_costo_horario_detalle::Entity::find()
-            .filter(equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId.eq(equipo_costo_horario_insumo_id))
+            .filter(
+                equipo_costo_horario_detalle::Column::EquipoCostoHorarioInsumoId
+                    .eq(equipo_costo_horario_insumo_id),
+            )
             .order_by_asc(equipo_costo_horario_detalle::Column::Orden)
             .all(txn)
             .await?;
@@ -344,7 +413,10 @@ impl EquipoCostoHorarioDetalleService {
         let mut subtotal_operacion = Decimal::ZERO;
         let mut pendientes: Vec<(String, Decimal, Decimal)> = Vec::new();
 
-        for d in detalles.iter().filter(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Consumo) {
+        for d in detalles
+            .iter()
+            .filter(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Consumo)
+        {
             let precio = precio_material::Entity::find()
                 .filter(precio_material::Column::MaterialId.eq(&d.detalle_insumo_id))
                 .filter(precio_material::Column::RegionId.is_null())
@@ -364,7 +436,10 @@ impl EquipoCostoHorarioDetalleService {
             pendientes.push((d.id.clone(), precio.precio, importe));
         }
 
-        for d in detalles.iter().filter(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Operacion) {
+        for d in detalles
+            .iter()
+            .filter(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Operacion)
+        {
             let costo = if let Some(salario) = salario_categoria_fasar::Entity::find()
                 .filter(salario_categoria_fasar::Column::InsumoId.eq(&d.detalle_insumo_id))
                 .filter(salario_categoria_fasar::Column::RegionId.is_null())
@@ -391,20 +466,28 @@ impl EquipoCostoHorarioDetalleService {
         let cargo_variable_hora = subtotal_consumo + subtotal_operacion;
 
         for (id, costo, importe) in pendientes {
-            let mut am: equipo_costo_horario_detalle::ActiveModel = equipo_costo_horario_detalle::Entity::find_by_id(&id)
-                .one(txn)
-                .await?
-                .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}")))?
-                .into();
+            let mut am: equipo_costo_horario_detalle::ActiveModel =
+                equipo_costo_horario_detalle::Entity::find_by_id(&id)
+                    .one(txn)
+                    .await?
+                    .ok_or_else(|| {
+                        ServiceError::NoEncontrado(format!("equipo_costo_horario_detalle {id}"))
+                    })?
+                    .into();
             am.costo = Set(costo);
             am.importe = Set(importe);
             am.update(txn).await?;
         }
 
-        let equipo_existente = equipo_costo_horario::Entity::find_by_id(equipo_costo_horario_insumo_id)
-            .one(txn)
-            .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {equipo_costo_horario_insumo_id}")))?;
+        let equipo_existente =
+            equipo_costo_horario::Entity::find_by_id(equipo_costo_horario_insumo_id)
+                .one(txn)
+                .await?
+                .ok_or_else(|| {
+                    ServiceError::NoEncontrado(format!(
+                        "equipo_costo_horario {equipo_costo_horario_insumo_id}"
+                    ))
+                })?;
         let cf_cargo_fijo_hora = equipo_existente.cf_cargo_fijo_hora;
         let mut eq: equipo_costo_horario::ActiveModel = equipo_existente.into();
         eq.subtotal_consumo = Set(subtotal_consumo);
@@ -416,7 +499,11 @@ impl EquipoCostoHorarioDetalleService {
         let ins = insumo::Entity::find_by_id(equipo_costo_horario_insumo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {equipo_costo_horario_insumo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "equipo_costo_horario {equipo_costo_horario_insumo_id}"
+                ))
+            })?;
         Ok(combinar_equipo(ins, equipo))
     }
 }
@@ -430,8 +517,8 @@ mod tests {
     use crate::material::{MaterialData, MaterialService};
     use crate::precio_material::{PrecioMaterialData, PrecioMaterialService};
     use crate::salario_categoria_fasar::{SalarioCategoriaFasarData, SalarioCategoriaFasarService};
-    use obrix_db::entities::{moneda as moneda_entity, organizacion, unidad_medida, usuario};
     use obrix_db::PortafolioSqliteRepository;
+    use obrix_db::entities::{moneda as moneda_entity, organizacion, unidad_medida, usuario};
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
     use std::str::FromStr;
@@ -481,6 +568,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -556,7 +644,10 @@ mod tests {
         portafolio
     }
 
-    async fn crear_equipo(portafolio: &PortafolioSqliteRepository, clave: &str) -> EquipoCostoHorarioCompleto {
+    async fn crear_equipo(
+        portafolio: &PortafolioSqliteRepository,
+        clave: &str,
+    ) -> EquipoCostoHorarioCompleto {
         EquipoCostoHorarioService::crear(
             portafolio,
             "org-1",
@@ -624,7 +715,10 @@ mod tests {
         material.id
     }
 
-    async fn crear_operador_con_salario(portafolio: &PortafolioSqliteRepository, salario_real_diario: &str) -> String {
+    async fn crear_operador_con_salario(
+        portafolio: &PortafolioSqliteRepository,
+        salario_real_diario: &str,
+    ) -> String {
         let fsr = FactorSalarioRealService::crear(
             portafolio,
             "org-1".into(),
@@ -694,8 +788,14 @@ mod tests {
         .await
         .expect("agregar consumo de diesel");
         // 8 lt × 22.50 = 180.00
-        assert_eq!(tras_consumo.cargo_variable_hora, Decimal::from_str("180.00").unwrap());
-        assert_eq!(tras_consumo.costo_horario_total, equipo.cf_cargo_fijo_hora + Decimal::from_str("180.00").unwrap());
+        assert_eq!(
+            tras_consumo.cargo_variable_hora,
+            Decimal::from_str("180.00").unwrap()
+        );
+        assert_eq!(
+            tras_consumo.costo_horario_total,
+            equipo.cf_cargo_fijo_hora + Decimal::from_str("180.00").unwrap()
+        );
 
         let tras_operacion = EquipoCostoHorarioDetalleService::crear(
             &portafolio,
@@ -710,7 +810,10 @@ mod tests {
         .await
         .expect("agregar operacion");
         // 180.00 + 0.125 × 500 = 180.00 + 62.5 = 242.5
-        assert_eq!(tras_operacion.cargo_variable_hora, Decimal::from_str("242.500").unwrap());
+        assert_eq!(
+            tras_operacion.cargo_variable_hora,
+            Decimal::from_str("242.500").unwrap()
+        );
         assert_eq!(
             tras_operacion.costo_horario_total,
             equipo.cf_cargo_fijo_hora + Decimal::from_str("242.500").unwrap()
@@ -720,21 +823,34 @@ mod tests {
             .await
             .expect("listar detalles");
         assert_eq!(detalles.len(), 2);
-        let fila_consumo = detalles.iter().find(|d| d.detalle_insumo_id == diesel).unwrap();
+        let fila_consumo = detalles
+            .iter()
+            .find(|d| d.detalle_insumo_id == diesel)
+            .unwrap();
         assert_eq!(fila_consumo.tipo, TipoEquipoCostoHorarioDetalle::Consumo);
         assert_eq!(
             fila_consumo.naturaleza,
             Some(NaturalezaEquipoCostoHorarioDetalle::Combustible)
         );
-        let fila_operacion = detalles.iter().find(|d| d.detalle_insumo_id == operador).unwrap();
-        assert_eq!(fila_operacion.tipo, TipoEquipoCostoHorarioDetalle::Operacion);
+        let fila_operacion = detalles
+            .iter()
+            .find(|d| d.detalle_insumo_id == operador)
+            .unwrap();
+        assert_eq!(
+            fila_operacion.tipo,
+            TipoEquipoCostoHorarioDetalle::Operacion
+        );
         assert_eq!(fila_operacion.naturaleza, None);
         assert_eq!(fila_operacion.costo, Decimal::from_str("500").unwrap());
 
-        let tras_borrar = EquipoCostoHorarioDetalleService::eliminar(&portafolio, fila_operacion.id.clone())
-            .await
-            .expect("borrar operacion");
-        assert_eq!(tras_borrar.cargo_variable_hora, Decimal::from_str("180.00").unwrap());
+        let tras_borrar =
+            EquipoCostoHorarioDetalleService::eliminar(&portafolio, fila_operacion.id.clone())
+                .await
+                .expect("borrar operacion");
+        assert_eq!(
+            tras_borrar.cargo_variable_hora,
+            Decimal::from_str("180.00").unwrap()
+        );
     }
 
     #[tokio::test]

@@ -42,6 +42,8 @@ export interface Organizacion extends CamposControl, CamposBorradoLogico {
   tipo: TipoOrganizacion;
   /** Moneda usada por default al capturar precios — requerida, siempre sembrada con MXN. */
   moneda_default_id: string;
+  /** Horas que componen una jornada laboral — default "8" (jornada diurna LFT). */
+  horas_jornada: string;
 }
 
 export interface OrganizacionData {
@@ -49,6 +51,7 @@ export interface OrganizacionData {
   rfc: string;
   tipo: TipoOrganizacion;
   moneda_default_id: string;
+  horas_jornada: string;
 }
 
 export const ROLES_USUARIO = ["admin", "propietario", "editor", "lector"] as const;

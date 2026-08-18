@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use sea_orm::{Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 
-use crate::migrator::Migrator;
 use crate::DbError;
+use crate::migrator::Migrator;
 
 /// Abstrae el acceso a los datos de un portafolio — hoy un archivo SQLite
 /// local, a futuro también un servidor remoto (Postgres). El resto de la
@@ -138,6 +138,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-mxn".into()),
+            horas_jornada: Set(rust_decimal::Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-admin".into()),
             updated_at: Set(None),

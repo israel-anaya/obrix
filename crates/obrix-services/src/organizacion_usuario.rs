@@ -2,15 +2,13 @@
 //! `usuario`). Usado internamente para resolver `usuario_id_activo`, y desde
 //! el detalle "Organizaciones" del maestro/detalle de usuarios en Ajustes.
 
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::organizacion;
 use obrix_db::entities::organizacion::TipoOrganizacion;
 use obrix_db::entities::organizacion_usuario::{ActiveModel, Column, Entity, Model};
-use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
-use crate::{nuevo_id, ServiceError};
+use crate::{ServiceError, nuevo_id};
 
 pub struct OrganizacionUsuarioData {
     pub organizacion_id: String,

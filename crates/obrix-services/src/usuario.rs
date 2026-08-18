@@ -1,10 +1,8 @@
-use obrix_db::entities::usuario::{ActiveModel, Column, Entity, Model, RolUsuario};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::usuario::{ActiveModel, Column, Entity, Model, RolUsuario};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 #[derive(serde::Deserialize)]
 pub struct UsuarioData {
@@ -25,9 +23,7 @@ impl UsuarioService {
     /// `usuario` es una identidad global (ver `organizacion_usuario`) — no
     /// cuelga de una organización, así que se listan todos sin filtro.
     pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
-        Ok(Entity::find()
-            .all(repo.conexion())
-            .await?)
+        Ok(Entity::find().all(repo.conexion()).await?)
     }
 
     /// `correo` es único globalmente (`usuario` no cuelga de una
@@ -46,7 +42,9 @@ impl UsuarioService {
     /// El usuario "sistema" (`admin@obrix.local`) sembrado en cada
     /// portafolio — usado como atribución de `created_by`/`updated_by`
     /// para los primeros usuarios reales que se dan de alta.
-    pub async fn buscar_admin_obrix(repo: &dyn PortafolioRepository) -> Result<Model, ServiceError> {
+    pub async fn buscar_admin_obrix(
+        repo: &dyn PortafolioRepository,
+    ) -> Result<Model, ServiceError> {
         Self::buscar_por_correo(repo, CORREO_ADMIN_OBRIX)
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado("usuario admin sembrado".to_string()))

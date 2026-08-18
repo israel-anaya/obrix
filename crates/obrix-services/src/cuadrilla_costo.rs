@@ -7,16 +7,18 @@
 //! (`CuadrillaDetalleService`) es quien decide cuáles valuaciones recalcular
 //! tras el cambio.
 
-use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
-use obrix_db::entities::{cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, region, salario_categoria_fasar};
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
+use obrix_db::entities::{
+    cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, region, salario_categoria_fasar,
+};
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryFilter,
-    QueryOrder, TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait, DatabaseTransaction,
+    EntityTrait, QueryFilter, QueryOrder, TransactionTrait,
 };
 
-use crate::{nuevo_id, ServiceError};
+use crate::{ServiceError, nuevo_id};
 
 pub struct CuadrillaCostoService;
 
@@ -45,7 +47,11 @@ impl CuadrillaCostoService {
     ) -> Result<cuadrilla_costo::Model, ServiceError> {
         let txn = repo.conexion().begin().await?;
 
-        if region::Entity::find_by_id(&region_id).one(&txn).await?.is_none() {
+        if region::Entity::find_by_id(&region_id)
+            .one(&txn)
+            .await?
+            .is_none()
+        {
             return Err(ServiceError::NoEncontrado(format!("region {region_id}")));
         }
         let existente = cuadrilla_costo::Entity::find()
@@ -65,7 +71,11 @@ impl CuadrillaCostoService {
             .filter(cuadrilla_costo::Column::Deleted.eq(false))
             .one(&txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("valuación nacional de cuadrilla {cuadrilla_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "valuación nacional de cuadrilla {cuadrilla_id}"
+                ))
+            })?;
         let recetas = cuadrilla_detalle::Entity::find()
             .filter(cuadrilla_detalle::Column::CuadrillaInsumoId.eq(cuadrilla_id))
             .filter(cuadrilla_detalle::Column::Deleted.eq(false))
@@ -198,7 +208,9 @@ impl CuadrillaCostoService {
         let costo_existente = cuadrilla_costo::Entity::find_by_id(cuadrilla_costo_id)
             .one(txn)
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla_costo {cuadrilla_costo_id}")))?;
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("cuadrilla_costo {cuadrilla_costo_id}"))
+            })?;
         let region_id = costo_existente.region_id.clone();
 
         let detalles = cuadrilla_costo_detalle::Entity::find()
@@ -213,26 +225,41 @@ impl CuadrillaCostoService {
                 let receta = cuadrilla_detalle::Entity::find_by_id(&d.cuadrilla_detalle_id)
                     .one(txn)
                     .await?
-                    .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla_detalle {}", d.cuadrilla_detalle_id)))?;
+                    .ok_or_else(|| {
+                        ServiceError::NoEncontrado(format!(
+                            "cuadrilla_detalle {}",
+                            d.cuadrilla_detalle_id
+                        ))
+                    })?;
                 recetas.insert(d.cuadrilla_detalle_id.clone(), receta);
             }
         }
 
         let mut sub_total_mano_obra = Decimal::ZERO;
         let mut pendientes: Vec<(String, Decimal, Decimal, Option<String>)> = Vec::new();
-        for d in detalles.iter().filter(|d| recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::CategoriaFasar) {
+        for d in detalles.iter().filter(|d| {
+            recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::CategoriaFasar
+        }) {
             let receta = &recetas[&d.cuadrilla_detalle_id];
-            let (costo, fecha_precio) = match Self::salario_vigente(txn, &receta.detalle_insumo_id, region_id.as_deref()).await? {
-                Some(salario) => (salario.salario_real_diario, Some(salario.fecha_vigencia_desde)),
-                None => (Decimal::ZERO, None),
-            };
+            let (costo, fecha_precio) =
+                match Self::salario_vigente(txn, &receta.detalle_insumo_id, region_id.as_deref())
+                    .await?
+                {
+                    Some(salario) => (
+                        salario.salario_real_diario,
+                        Some(salario.fecha_vigencia_desde),
+                    ),
+                    None => (Decimal::ZERO, None),
+                };
             let importe = receta.cantidad * costo;
             sub_total_mano_obra += importe;
             pendientes.push((d.id.clone(), costo, importe, fecha_precio));
         }
 
         let mut sub_total_herramienta = Decimal::ZERO;
-        for d in detalles.iter().filter(|d| recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::EquipoHerramienta) {
+        for d in detalles.iter().filter(|d| {
+            recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::EquipoHerramienta
+        }) {
             let receta = &recetas[&d.cuadrilla_detalle_id];
             let costo = sub_total_mano_obra;
             let importe = costo * receta.cantidad / Decimal::ONE_HUNDRED;
@@ -241,11 +268,14 @@ impl CuadrillaCostoService {
         }
 
         for (id, costo, importe, fecha_precio) in pendientes {
-            let mut am: cuadrilla_costo_detalle::ActiveModel = cuadrilla_costo_detalle::Entity::find_by_id(&id)
-                .one(txn)
-                .await?
-                .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla_costo_detalle {id}")))?
-                .into();
+            let mut am: cuadrilla_costo_detalle::ActiveModel =
+                cuadrilla_costo_detalle::Entity::find_by_id(&id)
+                    .one(txn)
+                    .await?
+                    .ok_or_else(|| {
+                        ServiceError::NoEncontrado(format!("cuadrilla_costo_detalle {id}"))
+                    })?
+                    .into();
             am.costo = Set(costo);
             am.importe = Set(importe);
             am.fecha_precio = Set(fecha_precio);
@@ -334,8 +364,8 @@ mod tests {
     use crate::factor_salario_real::{FactorSalarioRealData, FactorSalarioRealService};
     use crate::region::{RegionData, RegionService};
     use crate::salario_categoria_fasar::{SalarioCategoriaFasarData, SalarioCategoriaFasarService};
-    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use obrix_db::PortafolioSqliteRepository;
+    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
     use std::str::FromStr;
@@ -385,6 +415,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -397,7 +428,10 @@ mod tests {
         .await
         .unwrap();
 
-        for (id, simbolo, descripcion) in [("um-jor", "jor", "Jornal"), ("um-cuad", "cuad", "Cuadrilla")] {
+        for (id, simbolo, descripcion) in [
+            ("um-jor", "jor", "Jornal"),
+            ("um-cuad", "cuad", "Cuadrilla"),
+        ] {
             unidad_medida::ActiveModel {
                 id: Set(id.into()),
                 simbolo: Set(simbolo.into()),
@@ -425,7 +459,11 @@ mod tests {
     async fn crear_region(portafolio: &PortafolioSqliteRepository, nombre: &str) -> String {
         RegionService::crear(
             portafolio,
-            RegionData { nombre: nombre.into(), estado: "Nuevo León".into(), factor_ajuste: None },
+            RegionData {
+                nombre: nombre.into(),
+                estado: "Nuevo León".into(),
+                factor_ajuste: None,
+            },
             "usr-1".into(),
         )
         .await
@@ -433,7 +471,11 @@ mod tests {
         .id
     }
 
-    async fn crear_fsr(portafolio: &PortafolioSqliteRepository, nombre: &str, region_id: Option<String>) -> String {
+    async fn crear_fsr(
+        portafolio: &PortafolioSqliteRepository,
+        nombre: &str,
+        region_id: Option<String>,
+    ) -> String {
         FactorSalarioRealService::crear(
             portafolio,
             "org-1".into(),
@@ -450,7 +492,11 @@ mod tests {
         .id
     }
 
-    async fn crear_categoria(portafolio: &PortafolioSqliteRepository, clave: &str, descripcion: &str) -> String {
+    async fn crear_categoria(
+        portafolio: &PortafolioSqliteRepository,
+        clave: &str,
+        descripcion: &str,
+    ) -> String {
         CategoriaFasarService::crear(
             portafolio,
             "org-1",
@@ -492,7 +538,11 @@ mod tests {
         .expect("registrar salario");
     }
 
-    async fn crear_cuadrilla_con_integrante(portafolio: &PortafolioSqliteRepository, insumo_id: &str, cantidad: Decimal) -> String {
+    async fn crear_cuadrilla_con_integrante(
+        portafolio: &PortafolioSqliteRepository,
+        insumo_id: &str,
+        cantidad: Decimal,
+    ) -> String {
         let cuadrilla = CuadrillaService::crear(
             portafolio,
             "org-1",
@@ -510,7 +560,10 @@ mod tests {
         CuadrillaDetalleService::crear(
             portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: insumo_id.to_string(), cantidad },
+            CuadrillaDetalleData {
+                detalle_insumo_id: insumo_id.to_string(),
+                cantidad,
+            },
             "usr-1".into(),
         )
         .await
@@ -524,31 +577,51 @@ mod tests {
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
         registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
-        let cuadrilla_id = crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::from(2)).await;
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::from(2)).await;
         let region_id = crear_region(&portafolio, "Norte").await;
 
-        let regional = CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla_id, region_id.clone(), "usr-1".into())
-            .await
-            .expect("crear valuación regional");
+        let regional = CuadrillaCostoService::crear_regional(
+            &portafolio,
+            &cuadrilla_id,
+            region_id.clone(),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear valuación regional");
         assert_eq!(regional.region_id.as_deref(), Some(region_id.as_str()));
         // Sin salario regional propio: cae al nacional (700) × 2 = 1400.
         assert_eq!(regional.sub_total_mano_obra, Decimal::from(1400));
         assert_eq!(regional.costo_total, Decimal::from(1400));
 
-        let detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &regional.id)
+        let detalles =
+            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
+                &portafolio,
+                &regional.id,
+            )
             .await
             .expect("listar cuadrilla_costo_detalle");
-        let receta = crate::cuadrilla_detalle::CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
-            .await
-            .expect("listar receta");
-        assert_eq!(receta[0].cantidad, Decimal::from(2), "la cantidad es de la receta, no de la valuación");
+        let receta = crate::cuadrilla_detalle::CuadrillaDetalleService::listar_por_cuadrilla(
+            &portafolio,
+            &cuadrilla_id,
+        )
+        .await
+        .expect("listar receta");
+        assert_eq!(
+            receta[0].cantidad,
+            Decimal::from(2),
+            "la cantidad es de la receta, no de la valuación"
+        );
         assert_eq!(detalles.len(), 1);
         assert_eq!(
             detalles[0].fecha_precio.as_deref(),
             Some("2026-01-01"),
             "el recálculo de valuación copia fecha_vigencia_desde del salario"
         );
-        assert_eq!(regional.sincronizado_en, None, "crear regional no es una sincronización ⟳");
+        assert_eq!(
+            regional.sincronizado_en, None,
+            "crear regional no es una sincronización ⟳"
+        );
     }
 
     #[tokio::test]
@@ -557,7 +630,8 @@ mod tests {
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
         registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
-        let cuadrilla_id = crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
 
         let nacional = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
             .await
@@ -569,7 +643,11 @@ mod tests {
             nacional.sincronizado_en, None,
             "agregar integrante recalcula la valuación pero no marca sincronizado_en"
         );
-        let detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+        let detalles =
+            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
+                &portafolio,
+                &nacional.id,
+            )
             .await
             .expect("listar cuadrilla_costo_detalle");
         assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
@@ -577,8 +655,15 @@ mod tests {
         let tras = CuadrillaCostoService::recalcular_costos(&portafolio, nacional.id.clone())
             .await
             .expect("recalcular costos");
-        assert!(tras.sincronizado_en.is_some(), "el ⟳ debe marcar sincronizado_en");
-        let detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
+        assert!(
+            tras.sincronizado_en.is_some(),
+            "el ⟳ debe marcar sincronizado_en"
+        );
+        let detalles =
+            crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
+                &portafolio,
+                &nacional.id,
+            )
             .await
             .expect("listar tras recálculo");
         assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
@@ -590,15 +675,28 @@ mod tests {
         let fsr_nacional = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
         registrar_salario(&portafolio, &oficial, &fsr_nacional, None, "700").await;
-        let cuadrilla_id = crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::from(2)).await;
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::from(2)).await;
 
         let region_id = crear_region(&portafolio, "Norte").await;
         let fsr_norte = crear_fsr(&portafolio, "FSR Norte", Some(region_id.clone())).await;
-        registrar_salario(&portafolio, &oficial, &fsr_norte, Some(region_id.clone()), "900").await;
+        registrar_salario(
+            &portafolio,
+            &oficial,
+            &fsr_norte,
+            Some(region_id.clone()),
+            "900",
+        )
+        .await;
 
-        let regional = CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla_id, region_id, "usr-1".into())
-            .await
-            .expect("crear valuación regional");
+        let regional = CuadrillaCostoService::crear_regional(
+            &portafolio,
+            &cuadrilla_id,
+            region_id,
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear valuación regional");
         // Con salario regional propio: 900 × 2 = 1800, no el nacional.
         assert_eq!(regional.sub_total_mano_obra, Decimal::from(1800));
     }
@@ -609,17 +707,24 @@ mod tests {
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
         registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
-        let cuadrilla_id = crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
 
-        let nacional = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla_id).await.unwrap();
+        let nacional = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
+            .await
+            .unwrap();
         let nacional_id = nacional[0].id.clone();
 
-        let err = CuadrillaCostoService::eliminar_regional(&portafolio, nacional_id, "usr-1".into())
-            .await
-            .expect_err("no debe permitir borrar la nacional");
+        let err =
+            CuadrillaCostoService::eliminar_regional(&portafolio, nacional_id, "usr-1".into())
+                .await
+                .expect_err("no debe permitir borrar la nacional");
         match err {
             ServiceError::Validacion(mensaje) => {
-                assert!(mensaje.contains("valuación nacional"), "mensaje inesperado: {mensaje}");
+                assert!(
+                    mensaje.contains("valuación nacional"),
+                    "mensaje inesperado: {mensaje}"
+                );
             }
             otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
         }
@@ -631,23 +736,41 @@ mod tests {
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
         registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
-        let cuadrilla_id = crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
         let region_id = crear_region(&portafolio, "Norte").await;
-        CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla_id, region_id.clone(), "usr-1".into())
-            .await
-            .expect("crear valuación regional");
+        CuadrillaCostoService::crear_regional(
+            &portafolio,
+            &cuadrilla_id,
+            region_id.clone(),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear valuación regional");
 
-        let costo_region = CuadrillaCostoService::resolver_costo_total(portafolio.conexion(), &cuadrilla_id, Some(region_id.as_str()))
-            .await
-            .expect("resolver costo con region")
-            .expect("debe existir");
+        let costo_region = CuadrillaCostoService::resolver_costo_total(
+            portafolio.conexion(),
+            &cuadrilla_id,
+            Some(region_id.as_str()),
+        )
+        .await
+        .expect("resolver costo con region")
+        .expect("debe existir");
         assert_eq!(costo_region, Decimal::from(700));
 
         let otra_region_id = crear_region(&portafolio, "Sur").await;
-        let costo_fallback = CuadrillaCostoService::resolver_costo_total(portafolio.conexion(), &cuadrilla_id, Some(otra_region_id.as_str()))
-            .await
-            .expect("resolver costo con fallback")
-            .expect("debe existir");
-        assert_eq!(costo_fallback, Decimal::from(700), "sin valuación en Sur, cae a la nacional");
+        let costo_fallback = CuadrillaCostoService::resolver_costo_total(
+            portafolio.conexion(),
+            &cuadrilla_id,
+            Some(otra_region_id.as_str()),
+        )
+        .await
+        .expect("resolver costo con fallback")
+        .expect("debe existir");
+        assert_eq!(
+            costo_fallback,
+            Decimal::from(700),
+            "sin valuación en Sur, cae a la nacional"
+        );
     }
 }

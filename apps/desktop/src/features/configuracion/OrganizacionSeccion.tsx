@@ -91,6 +91,7 @@ export function OrganizacionSeccion() {
           width: 160,
           options: ordenarPor(monedas, (m) => m.codigo).map((m) => m.codigo),
         },
+        { field: "horas_jornada", header: "Horas por jornada", numeric: true, width: 150, default: 8 },
         ...COLUMNAS_CONTROL,
       ],
     }),
@@ -105,6 +106,7 @@ export function OrganizacionSeccion() {
         rfc: o.rfc,
         tipo: o.tipo,
         moneda_default: codigoPorMonedaId[o.moneda_default_id] ?? "",
+        horas_jornada: o.horas_jornada,
         created_at: o.created_at,
         created_by: nombresPorUsuarioId[o.created_by] ?? o.created_by,
         updated_at: o.updated_at ?? "",
@@ -123,6 +125,7 @@ export function OrganizacionSeccion() {
     // que el valor siempre es un código válido salvo en una fila nueva sin
     // tocar todavía — mismo caso límite que ya existe hoy para `tipo`.
     moneda_default_id: monedaIdPorCodigo[String(fila.moneda_default)] ?? "",
+    horas_jornada: String(fila.horas_jornada ?? 8),
   });
 
   return (

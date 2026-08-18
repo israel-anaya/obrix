@@ -6,15 +6,15 @@
 //! Por ahora solo soporta crear y consultar — la UI para reabrir/corregir
 //! una vigencia ya cerrada queda para cuando haya un caso real que lo pida.
 
-use obrix_db::entities::salario_categoria_fasar::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::salario_categoria_fasar::{ActiveModel, Column, Entity, Model};
 use rust_decimal::Decimal;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
     QueryOrder, TransactionTrait,
 };
 
-use crate::{nuevo_id, ServiceError};
+use crate::{ServiceError, nuevo_id};
 
 #[derive(Clone, serde::Deserialize)]
 pub struct SalarioCategoriaFasarData {
@@ -176,8 +176,8 @@ mod tests {
     use crate::categoria_fasar::{CategoriaFasarData, CategoriaFasarService};
     use crate::factor_salario_real::{FactorSalarioRealData, FactorSalarioRealService};
     use crate::region::{RegionData, RegionService};
-    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use obrix_db::PortafolioSqliteRepository;
+    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
     use std::str::FromStr;
@@ -227,6 +227,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -355,12 +356,16 @@ mod tests {
         .expect("crear segunda vigencia nacional");
         assert!(segundo.fecha_vigencia_hasta.is_none());
 
-        let historial = SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &categoria.id)
-            .await
-            .expect("listar historial");
+        let historial =
+            SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &categoria.id)
+                .await
+                .expect("listar historial");
         assert_eq!(historial.len(), 2);
 
-        let primero_actualizado = historial.iter().find(|v| v.id == primero.id).expect("primera vigencia");
+        let primero_actualizado = historial
+            .iter()
+            .find(|v| v.id == primero.id)
+            .expect("primera vigencia");
         assert_eq!(
             primero_actualizado.fecha_vigencia_hasta.as_deref(),
             Some("2026-06-01"),
@@ -371,7 +376,10 @@ mod tests {
             .await
             .expect("obtener vigente")
             .expect("debe haber una vigencia nacional vigente");
-        assert_eq!(vigente.id, segundo.id, "la vigente debe ser la más reciente, no la cerrada");
+        assert_eq!(
+            vigente.id, segundo.id,
+            "la vigente debe ser la más reciente, no la cerrada"
+        );
 
         // Una región distinta es una vigencia independiente: no debe cerrar
         // la vigencia nacional abierta.
@@ -392,10 +400,14 @@ mod tests {
         .expect("crear vigencia regional");
         assert!(en_norte.fecha_vigencia_hasta.is_none());
 
-        let historial = SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &categoria.id)
-            .await
-            .expect("listar historial");
-        let segundo_actualizado = historial.iter().find(|v| v.id == segundo.id).expect("segunda vigencia");
+        let historial =
+            SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &categoria.id)
+                .await
+                .expect("listar historial");
+        let segundo_actualizado = historial
+            .iter()
+            .find(|v| v.id == segundo.id)
+            .expect("segunda vigencia");
         assert!(
             segundo_actualizado.fecha_vigencia_hasta.is_none(),
             "la vigencia nacional vigente no debe cerrarse al registrar una vigencia regional"
@@ -494,24 +506,35 @@ mod tests {
         .expect("crear lote");
         assert_eq!(creados.len(), 2);
 
-        let vigente_albanil = SalarioCategoriaFasarService::vigente_nacional(&portafolio, &albanil.id)
-            .await
-            .expect("vigente albañil")
-            .expect("debe haber vigente");
-        assert_eq!(vigente_albanil.salario_base_diario, Decimal::from_str("349.31").unwrap());
+        let vigente_albanil =
+            SalarioCategoriaFasarService::vigente_nacional(&portafolio, &albanil.id)
+                .await
+                .expect("vigente albañil")
+                .expect("debe haber vigente");
+        assert_eq!(
+            vigente_albanil.salario_base_diario,
+            Decimal::from_str("349.31").unwrap()
+        );
         assert!(vigente_albanil.fecha_vigencia_hasta.is_none());
 
-        let historial_albanil = SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &albanil.id)
-            .await
-            .expect("historial albañil");
+        let historial_albanil =
+            SalarioCategoriaFasarService::listar_por_categoria(&portafolio, &albanil.id)
+                .await
+                .expect("historial albañil");
         assert_eq!(historial_albanil.len(), 2);
-        let cerrado = historial_albanil.iter().find(|v| v.id != vigente_albanil.id).expect("previo");
+        let cerrado = historial_albanil
+            .iter()
+            .find(|v| v.id != vigente_albanil.id)
+            .expect("previo");
         assert_eq!(cerrado.fecha_vigencia_hasta.as_deref(), Some("2026-08-13"));
 
         let vigente_peon = SalarioCategoriaFasarService::vigente_nacional(&portafolio, &peon.id)
             .await
             .expect("vigente peón")
             .expect("debe haber vigente");
-        assert_eq!(vigente_peon.salario_base_diario, Decimal::from_str("214.33").unwrap());
+        assert_eq!(
+            vigente_peon.salario_base_diario,
+            Decimal::from_str("214.33").unwrap()
+        );
     }
 }

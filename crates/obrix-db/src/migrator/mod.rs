@@ -13,6 +13,7 @@ mod m20260816_000001_familia_insumo_insumos_asociados;
 mod m20260816_000002_cuadrilla_costo_sincronizado;
 mod m20260817_000001_familia_insumo_icono;
 mod m20260818_000001_cuadrilla_detalle_cantidad;
+mod m20260818_000002_organizacion_horas_jornada;
 
 use sea_orm_migration::prelude::*;
 
@@ -37,6 +38,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260816_000002_cuadrilla_costo_sincronizado::Migration),
             Box::new(m20260817_000001_familia_insumo_icono::Migration),
             Box::new(m20260818_000001_cuadrilla_detalle_cantidad::Migration),
+            Box::new(m20260818_000002_organizacion_horas_jornada::Migration),
         ]
     }
 }

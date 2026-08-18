@@ -4,18 +4,17 @@
 //! Cuando se agreguen mano_obra/equipo_herramienta/basico_auxiliar, `insumo`
 //! deberá separarse en su propio servicio reutilizable.
 
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::insumo::{self, TipoInsumo};
 use obrix_db::entities::{material, moneda, organizacion};
-use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
 };
 
 use crate::precio_material::{PrecioMaterialData, PrecioMaterialService};
 use crate::unidad_medida::UnidadMedidaService;
-use crate::{id_insumo_existente, nuevo_id, recordar_insumo, ServiceError};
+use crate::{ServiceError, id_insumo_existente, nuevo_id, recordar_insumo};
 use std::collections::HashMap;
 
 #[derive(serde::Deserialize)]
@@ -54,7 +53,11 @@ pub struct MaterialCompleto {
     pub updated_by: Option<String>,
 }
 
-fn combinar(insumo: insumo::Model, material: material::Model, precio_vigente: Option<Decimal>) -> MaterialCompleto {
+fn combinar(
+    insumo: insumo::Model,
+    material: material::Model,
+    precio_vigente: Option<Decimal>,
+) -> MaterialCompleto {
     MaterialCompleto {
         id: insumo.id,
         clave: insumo.clave,
@@ -280,7 +283,8 @@ impl MaterialService {
         contenido_csv: &str,
         creado_por: String,
     ) -> Result<ResultadoImportacion, ServiceError> {
-        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {}).await
+        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {})
+            .await
     }
 
     pub async fn importar_csv_con_progreso(
@@ -325,10 +329,15 @@ impl MaterialService {
             .filter(|f| f.parent_id.is_none())
             .map(|f| (f.nombre.to_lowercase(), f.id.clone()))
             .collect();
-        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> = familias
-            .iter()
-            .filter_map(|f| f.parent_id.as_ref().map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone())))
-            .collect();
+        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> =
+            familias
+                .iter()
+                .filter_map(|f| {
+                    f.parent_id
+                        .as_ref()
+                        .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
+                })
+                .collect();
 
         let insumos_material = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
@@ -347,7 +356,13 @@ impl MaterialService {
         let mut por_descripcion: HashMap<String, String> = HashMap::new();
         for ins in &insumos_material {
             clave_por_id.insert(ins.id.clone(), ins.clave.clone());
-            recordar_insumo(&mut por_clave, &mut por_descripcion, &ins.id, &ins.clave, &ins.descripcion);
+            recordar_insumo(
+                &mut por_clave,
+                &mut por_descripcion,
+                &ins.id,
+                &ins.clave,
+                &ins.descripcion,
+            );
         }
 
         let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
@@ -358,7 +373,10 @@ impl MaterialService {
 
         let tiene_columna_clave = lector
             .headers()
-            .map(|h| h.iter().any(|columna| columna.trim().eq_ignore_ascii_case("clave")))
+            .map(|h| {
+                h.iter()
+                    .any(|columna| columna.trim().eq_ignore_ascii_case("clave"))
+            })
             .unwrap_or(false);
 
         let registros: Vec<Result<RegistroCsvMaterial, csv::Error>> =
@@ -383,13 +401,18 @@ impl MaterialService {
 
             let unidad_texto = registro.unidad.trim().to_lowercase();
             let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto).cloned() else {
-                errores.push(format!("fila {fila}: unidad \"{}\" no encontrada, se omitió", registro.unidad.trim()));
+                errores.push(format!(
+                    "fila {fila}: unidad \"{}\" no encontrada, se omitió",
+                    registro.unidad.trim()
+                ));
                 continue;
             };
 
             let costo_texto = registro.costo.trim();
             let Some(costo) = parsear_decimal(costo_texto) else {
-                errores.push(format!("fila {fila}: costo \"{costo_texto}\" no es un número válido, se omitió"));
+                errores.push(format!(
+                    "fila {fila}: costo \"{costo_texto}\" no es un número válido, se omitió"
+                ));
                 continue;
             };
 
@@ -412,7 +435,9 @@ impl MaterialService {
             let sub_familia_id = if subfamilia_texto.is_empty() {
                 None
             } else if let Some(familia_id) = &familia_id {
-                match hija_id_por_padre_y_nombre.get(&(familia_id.clone(), subfamilia_texto.to_lowercase())) {
+                match hija_id_por_padre_y_nombre
+                    .get(&(familia_id.clone(), subfamilia_texto.to_lowercase()))
+                {
                     Some(id) => Some(id.clone()),
                     None => {
                         errores.push(format!(
@@ -428,8 +453,13 @@ impl MaterialService {
                 None
             };
 
-            let clave_archivo = registro.clave.as_deref().map(str::trim).filter(|c| !c.is_empty());
-            let existente_id = id_insumo_existente(clave_archivo, &descripcion, &por_clave, &por_descripcion);
+            let clave_archivo = registro
+                .clave
+                .as_deref()
+                .map(str::trim)
+                .filter(|c| !c.is_empty());
+            let existente_id =
+                id_insumo_existente(clave_archivo, &descripcion, &por_clave, &por_descripcion);
             let clave = match (clave_archivo, existente_id.as_deref()) {
                 (Some(clave_archivo), _) => clave_archivo.to_string(),
                 (None, Some(id)) => clave_por_id
@@ -463,7 +493,9 @@ impl MaterialService {
                         m
                     }
                     Err(e) => {
-                        errores.push(format!("fila {fila}: no se pudo actualizar el material ({e})"));
+                        errores.push(format!(
+                            "fila {fila}: no se pudo actualizar el material ({e})"
+                        ));
                         continue;
                     }
                 }
@@ -502,7 +534,11 @@ impl MaterialService {
             )
             .await
             {
-                let verbo = if extra.is_some() { "actualizado" } else { "creado" };
+                let verbo = if extra.is_some() {
+                    "actualizado"
+                } else {
+                    "creado"
+                };
                 errores.push(format!(
                     "fila {fila}: material {verbo} pero no se pudo registrar el costo ({e})"
                 ));
@@ -518,7 +554,12 @@ impl MaterialService {
             None
         };
 
-        Ok(ResultadoImportacion::nuevo(creados, actualizados, errores, aviso))
+        Ok(ResultadoImportacion::nuevo(
+            creados,
+            actualizados,
+            errores,
+            aviso,
+        ))
     }
 }
 
@@ -534,7 +575,12 @@ pub struct ResultadoImportacion {
 }
 
 impl ResultadoImportacion {
-    pub fn nuevo(creados: u32, actualizados: u32, errores: Vec<String>, aviso: Option<String>) -> Self {
+    pub fn nuevo(
+        creados: u32,
+        actualizados: u32,
+        errores: Vec<String>,
+        aviso: Option<String>,
+    ) -> Self {
         Self {
             importados: creados + actualizados,
             creados,
@@ -563,7 +609,10 @@ struct RegistroCsvMaterial {
 
 /// Acepta separador decimal `.`, símbolo `$` y separadores de miles `,`/espacios.
 fn parsear_decimal(texto: &str) -> Option<Decimal> {
-    let limpio: String = texto.chars().filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-').collect();
+    let limpio: String = texto
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .collect();
     if limpio.is_empty() {
         return None;
     }
@@ -701,25 +750,41 @@ mod tests {
     #[tokio::test]
     async fn validar_unidad_existe_acepta_unidad_existente() {
         let (portafolio, unidad_id, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, &unidad_id)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_rechaza_unidad_inexistente() {
         let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, "no-existe")
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
     async fn validar_familia_existe_acepta_nulo() {
         let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_familia_existe(&portafolio, &None).await.is_ok());
+        assert!(
+            crate::validar_familia_existe(&portafolio, &None)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_familia_existe_acepta_familia_existente() {
         let (portafolio, _, familia_id) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_familia_existe(&portafolio, &Some(familia_id)).await.is_ok());
+        assert!(
+            crate::validar_familia_existe(&portafolio, &Some(familia_id))
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -780,6 +845,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -817,7 +883,11 @@ mod tests {
     #[tokio::test]
     async fn validar_proveedor_existe_acepta_nulo() {
         let (portafolio, _) = portafolio_con_proveedor().await;
-        assert!(crate::validar_proveedor_existe(&portafolio, &None).await.is_ok());
+        assert!(
+            crate::validar_proveedor_existe(&portafolio, &None)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -889,6 +959,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -1041,6 +1112,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -1119,10 +1191,17 @@ mod tests {
             .await
             .expect("importar csv");
 
-        assert_eq!(resultado.importados, 2, "solo las 2 filas válidas deben importarse");
+        assert_eq!(
+            resultado.importados, 2,
+            "solo las 2 filas válidas deben importarse"
+        );
         assert_eq!(resultado.creados, 2);
         assert_eq!(resultado.actualizados, 0);
-        assert_eq!(resultado.errores.len(), 2, "las 2 filas inválidas deben reportarse como error");
+        assert_eq!(
+            resultado.errores.len(),
+            2,
+            "las 2 filas inválidas deben reportarse como error"
+        );
         assert!(
             resultado.aviso.is_some_and(|a| a.contains("MAT-")),
             "sin columna Clave debe avisarse que se autogeneran claves MAT-"
@@ -1162,7 +1241,10 @@ mod tests {
             .await
             .expect("importar csv2");
         assert_eq!(resultado2.importados, 2);
-        assert_eq!(resultado2.aviso, None, "con columna Clave presente no debe avisarse nada");
+        assert_eq!(
+            resultado2.aviso, None,
+            "con columna Clave presente no debe avisarse nada"
+        );
 
         let materiales2 = MaterialService::listar(&portafolio, "org-1")
             .await

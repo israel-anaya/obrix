@@ -3,15 +3,15 @@
 //! Por ahora solo soporta crear y consultar — la UI para reabrir/corregir
 //! una vigencia ya cerrada queda para cuando haya un caso real que lo pida.
 
-use obrix_db::entities::precio_material::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::precio_material::{ActiveModel, Column, Entity, Model};
 use rust_decimal::Decimal;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
     QueryOrder, TransactionTrait,
 };
 
-use crate::{nuevo_id, ServiceError};
+use crate::{ServiceError, nuevo_id};
 
 #[derive(Clone, serde::Deserialize)]
 pub struct PrecioMaterialData {
@@ -167,8 +167,8 @@ impl PrecioMaterialService {
 mod tests {
     use super::*;
     use crate::material::{MaterialData, MaterialService};
-    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use obrix_db::PortafolioSqliteRepository;
+    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
     use std::str::FromStr;
@@ -219,6 +219,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -304,7 +305,10 @@ mod tests {
             .expect("listar historial");
         assert_eq!(historial.len(), 2);
 
-        let primero_actualizado = historial.iter().find(|p| p.id == primero.id).expect("primer precio");
+        let primero_actualizado = historial
+            .iter()
+            .find(|p| p.id == primero.id)
+            .expect("primer precio");
         assert_eq!(
             primero_actualizado.fecha_vigencia_hasta.as_deref(),
             Some("2026-06-01"),
@@ -315,7 +319,10 @@ mod tests {
             .await
             .expect("obtener vigente")
             .expect("debe haber un precio vigente");
-        assert_eq!(vigente.id, segundo.id, "el vigente debe ser el más reciente, no el cerrado");
+        assert_eq!(
+            vigente.id, segundo.id,
+            "el vigente debe ser el más reciente, no el cerrado"
+        );
 
         // Una moneda distinta es una vigencia independiente: no debe cerrar
         // el precio en MXN de la misma región.
@@ -337,7 +344,10 @@ mod tests {
         let historial = PrecioMaterialService::listar_por_material(&portafolio, &material.id)
             .await
             .expect("listar historial");
-        let segundo_actualizado = historial.iter().find(|p| p.id == segundo.id).expect("segundo precio");
+        let segundo_actualizado = historial
+            .iter()
+            .find(|p| p.id == segundo.id)
+            .expect("segundo precio");
         assert!(
             segundo_actualizado.fecha_vigencia_hasta.is_none(),
             "el precio vigente en MXN no debe cerrarse al registrar uno nuevo en USD"
@@ -390,6 +400,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -496,18 +507,23 @@ mod tests {
         .expect("crear lote");
         assert_eq!(creados.len(), 2);
 
-        let vigente_cemento = PrecioMaterialService::vigente_nacional(&portafolio, &cemento.id, "MXN")
-            .await
-            .expect("vigente cemento")
-            .expect("debe haber vigente");
+        let vigente_cemento =
+            PrecioMaterialService::vigente_nacional(&portafolio, &cemento.id, "MXN")
+                .await
+                .expect("vigente cemento")
+                .expect("debe haber vigente");
         assert_eq!(vigente_cemento.precio, Decimal::from_str("135.50").unwrap());
         assert!(vigente_cemento.fecha_vigencia_hasta.is_none());
 
-        let historial_cemento = PrecioMaterialService::listar_por_material(&portafolio, &cemento.id)
-            .await
-            .expect("historial cemento");
+        let historial_cemento =
+            PrecioMaterialService::listar_por_material(&portafolio, &cemento.id)
+                .await
+                .expect("historial cemento");
         assert_eq!(historial_cemento.len(), 2);
-        let cerrado = historial_cemento.iter().find(|p| p.id != vigente_cemento.id).expect("previo");
+        let cerrado = historial_cemento
+            .iter()
+            .find(|p| p.id != vigente_cemento.id)
+            .expect("previo");
         assert_eq!(cerrado.fecha_vigencia_hasta.as_deref(), Some("2026-08-15"));
 
         let vigente_arena = PrecioMaterialService::vigente_nacional(&portafolio, &arena.id, "MXN")

@@ -9,13 +9,15 @@
 //! sí dependen de la composición (`equipo_costo_horario_detalle`) y los
 //! administra `EquipoCostoHorarioDetalleService`.
 
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::equipo_costo_horario;
 use obrix_db::entities::insumo::{self, TipoInsumo};
-use obrix_db::PortafolioRepository;
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
+};
 
-use crate::{nuevo_id, ServiceError};
+use crate::{ServiceError, nuevo_id};
 
 #[derive(serde::Deserialize)]
 pub struct EquipoCostoHorarioData {
@@ -62,22 +64,31 @@ fn calcular_cargos_fijos(datos: &EquipoCostoHorarioData) -> Result<CargosFijos, 
             "las horas de uso anual deben ser mayores a 0".to_string(),
         ));
     }
-    let cf_valor_maquina = datos.cf_costo_maquina - datos.cf_valor_llantas - datos.cf_valor_piezas_especiales;
-    let cf_valor_rescate = cf_valor_maquina * datos.cf_valor_rescate_porcentaje / Decimal::ONE_HUNDRED;
+    let cf_valor_maquina =
+        datos.cf_costo_maquina - datos.cf_valor_llantas - datos.cf_valor_piezas_especiales;
+    let cf_valor_rescate =
+        cf_valor_maquina * datos.cf_valor_rescate_porcentaje / Decimal::ONE_HUNDRED;
     let cf_vida_util_horas = datos.cf_vida_economica_anios * datos.cf_horas_uso_anual;
     if cf_vida_util_horas <= Decimal::ZERO {
         return Err(ServiceError::Validacion(
-            "la vida útil en horas (vida económica × horas de uso anual) debe ser mayor a 0".to_string(),
+            "la vida útil en horas (vida económica × horas de uso anual) debe ser mayor a 0"
+                .to_string(),
         ));
     }
     let cf_depreciacion_hora = (cf_valor_maquina - cf_valor_rescate) / cf_vida_util_horas;
     let dos_horas_uso_anual = Decimal::TWO * datos.cf_horas_uso_anual;
-    let cf_inversion_hora =
-        (cf_valor_maquina + cf_valor_rescate) * datos.cf_tasa_interes_anual_porcentaje / Decimal::ONE_HUNDRED / dos_horas_uso_anual;
-    let cf_seguro_hora =
-        (cf_valor_maquina + cf_valor_rescate) * datos.cf_tasa_seguros_anual_porcentaje / Decimal::ONE_HUNDRED / dos_horas_uso_anual;
-    let cf_mantenimiento_hora = datos.cf_mantenimiento_porcentaje / Decimal::ONE_HUNDRED * cf_depreciacion_hora;
-    let cf_cargo_fijo_hora = cf_depreciacion_hora + cf_inversion_hora + cf_seguro_hora + cf_mantenimiento_hora;
+    let cf_inversion_hora = (cf_valor_maquina + cf_valor_rescate)
+        * datos.cf_tasa_interes_anual_porcentaje
+        / Decimal::ONE_HUNDRED
+        / dos_horas_uso_anual;
+    let cf_seguro_hora = (cf_valor_maquina + cf_valor_rescate)
+        * datos.cf_tasa_seguros_anual_porcentaje
+        / Decimal::ONE_HUNDRED
+        / dos_horas_uso_anual;
+    let cf_mantenimiento_hora =
+        datos.cf_mantenimiento_porcentaje / Decimal::ONE_HUNDRED * cf_depreciacion_hora;
+    let cf_cargo_fijo_hora =
+        cf_depreciacion_hora + cf_inversion_hora + cf_seguro_hora + cf_mantenimiento_hora;
 
     Ok(CargosFijos {
         cf_valor_maquina,
@@ -129,7 +140,10 @@ pub struct EquipoCostoHorarioCompleto {
     pub updated_by: Option<String>,
 }
 
-pub(crate) fn combinar(insumo: insumo::Model, equipo: equipo_costo_horario::Model) -> EquipoCostoHorarioCompleto {
+pub(crate) fn combinar(
+    insumo: insumo::Model,
+    equipo: equipo_costo_horario::Model,
+) -> EquipoCostoHorarioCompleto {
     EquipoCostoHorarioCompleto {
         id: insumo.id,
         clave: insumo.clave,
@@ -412,8 +426,12 @@ mod tests {
 
     #[test]
     fn validar_rechaza_clave_vacia_o_solo_espacios() {
-        assert!(EquipoCostoHorarioService::validar(&datos_validar("", "Excavadora"), false).is_err());
-        assert!(EquipoCostoHorarioService::validar(&datos_validar("   ", "Excavadora"), true).is_err());
+        assert!(
+            EquipoCostoHorarioService::validar(&datos_validar("", "Excavadora"), false).is_err()
+        );
+        assert!(
+            EquipoCostoHorarioService::validar(&datos_validar("   ", "Excavadora"), true).is_err()
+        );
     }
 
     #[test]
@@ -423,7 +441,10 @@ mod tests {
 
     #[test]
     fn validar_acepta_datos_completos() {
-        assert!(EquipoCostoHorarioService::validar(&datos_validar("ECH-1", "Excavadora"), false).is_ok());
+        assert!(
+            EquipoCostoHorarioService::validar(&datos_validar("ECH-1", "Excavadora"), false)
+                .is_ok()
+        );
     }
 
     #[test]
@@ -454,7 +475,8 @@ mod tests {
         assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
     }
 
-    async fn portafolio_con_unidad_familia_y_region() -> (PortafolioSqliteRepository, String, String, String) {
+    async fn portafolio_con_unidad_familia_y_region()
+    -> (PortafolioSqliteRepository, String, String, String) {
         use obrix_db::entities::{familia_insumo, region, unidad_medida, usuario};
         use sea_orm::ActiveModelTrait;
 
@@ -533,19 +555,32 @@ mod tests {
         .await
         .unwrap();
 
-        (portafolio, "um-1".to_string(), "fam-1".to_string(), "reg-1".to_string())
+        (
+            portafolio,
+            "um-1".to_string(),
+            "fam-1".to_string(),
+            "reg-1".to_string(),
+        )
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_acepta_unidad_existente() {
         let (portafolio, unidad_id, _, _) = portafolio_con_unidad_familia_y_region().await;
-        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, &unidad_id)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_rechaza_unidad_inexistente() {
         let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
-        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, "no-existe")
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -561,7 +596,11 @@ mod tests {
     #[tokio::test]
     async fn validar_region_existe_acepta_region_existente() {
         let (portafolio, _, _, region_id) = portafolio_con_unidad_familia_y_region().await;
-        assert!(crate::validar_region_existe(&portafolio, &Some(region_id)).await.is_ok());
+        assert!(
+            crate::validar_region_existe(&portafolio, &Some(region_id))
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -623,6 +662,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -673,9 +713,14 @@ mod tests {
             cf_mantenimiento_porcentaje: "60".parse().unwrap(),
         };
 
-        let creado = EquipoCostoHorarioService::crear(&portafolio, "org-1", datos("Excavadora CAT 320"), "usr-1".into())
-            .await
-            .expect("crear equipo_costo_horario");
+        let creado = EquipoCostoHorarioService::crear(
+            &portafolio,
+            "org-1",
+            datos("Excavadora CAT 320"),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear equipo_costo_horario");
         assert_eq!(creado.clave, "ECH-1");
         // Vm = 1,000,000; Vr = 100,000; Ve = 10,000 horas
         assert_eq!(creado.cf_valor_maquina, "1000000".parse().unwrap());
@@ -713,10 +758,11 @@ mod tests {
         assert!(insumo_restante.deleted);
         assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
 
-        let equipo_restante = obrix_db::entities::equipo_costo_horario::Entity::find_by_id(&creado.id)
-            .one(portafolio.conexion())
-            .await
-            .unwrap();
+        let equipo_restante =
+            obrix_db::entities::equipo_costo_horario::Entity::find_by_id(&creado.id)
+                .one(portafolio.conexion())
+                .await
+                .unwrap();
         assert!(
             equipo_restante.is_some(),
             "la extensión equipo_costo_horario no se borra; el listado la oculta con deleted"

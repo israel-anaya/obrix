@@ -30,7 +30,11 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(PerfilInactividadEquipo::Nombre).text().not_null())
+                    .col(
+                        ColumnDef::new(PerfilInactividadEquipo::Nombre)
+                            .text()
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(PerfilInactividadEquipo::EsperaDepreciacionPorcentaje)
                             .decimal()
@@ -153,23 +157,35 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(PerfilInactividadEquipo::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::OrganizacionId)
+                            .from(
+                                PerfilInactividadEquipo::Table,
+                                PerfilInactividadEquipo::OrganizacionId,
+                            )
                             .to(Organizacion::Table, Organizacion::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::CreatedBy)
+                            .from(
+                                PerfilInactividadEquipo::Table,
+                                PerfilInactividadEquipo::CreatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::UpdatedBy)
+                            .from(
+                                PerfilInactividadEquipo::Table,
+                                PerfilInactividadEquipo::UpdatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(PerfilInactividadEquipo::Table, PerfilInactividadEquipo::DeletedBy)
+                            .from(
+                                PerfilInactividadEquipo::Table,
+                                PerfilInactividadEquipo::DeletedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -179,7 +195,11 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(PerfilInactividadEquipo::Table).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(PerfilInactividadEquipo::Table)
+                    .to_owned(),
+            )
             .await
     }
 }

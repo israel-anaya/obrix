@@ -39,6 +39,7 @@ Auditoría append-only. No se actualiza ni se borra.
 | rfc | text | RFC de la persona moral u física titular del despacho/constructora |
 | tipo | enum | `despacho`, `constructora`, `gobierno` |
 | moneda_default_id | uuid | FK → moneda, requerido — moneda con la que arranca la UI al capturar precios (ej. `precio_material`); siempre sembrada con MXN al crear la organización |
+| horas_jornada | decimal | horas que componen una jornada laboral; default `8` (jornada diurna LFT). Decimal porque una jornada mixta puede ser `7.5`. Factor de conversión entre jornal (`JOR`) y hora (`HR`) |
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 

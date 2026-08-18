@@ -118,7 +118,9 @@ pub async fn validar_existe<M>(
     resultado: impl std::future::Future<Output = Result<Option<M>, sea_orm::DbErr>>,
     etiqueta: impl std::fmt::Display,
 ) -> Result<(), ServiceError> {
-    resultado.await?.ok_or_else(|| ServiceError::NoEncontrado(etiqueta.to_string()))?;
+    resultado
+        .await?
+        .ok_or_else(|| ServiceError::NoEncontrado(etiqueta.to_string()))?;
     Ok(())
 }
 
@@ -128,7 +130,9 @@ pub async fn validar_existe<M>(
 /// deben existir si se especifican" (la existencia en sí se valida aparte,
 /// contra la base, en un `validar_*_existe` async — ver p. ej.
 /// `cuadrilla::CuadrillaService::validar_familia_existe`).
-pub fn validar_opcionales_no_vacios(campos: &[(&Option<String>, &str)]) -> Result<(), ServiceError> {
+pub fn validar_opcionales_no_vacios(
+    campos: &[(&Option<String>, &str)],
+) -> Result<(), ServiceError> {
     for (id, etiqueta) in campos {
         if let Some(id) = id {
             if id.trim().is_empty() {

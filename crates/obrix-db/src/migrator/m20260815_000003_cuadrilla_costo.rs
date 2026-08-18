@@ -76,8 +76,16 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(false),
                     )
-                    .col(ColumnDef::new(CuadrillaDetalle::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(CuadrillaDetalle::CreatedBy).text().not_null())
+                    .col(
+                        ColumnDef::new(CuadrillaDetalle::CreatedAt)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(CuadrillaDetalle::CreatedBy)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(CuadrillaDetalle::UpdatedAt).text())
                     .col(ColumnDef::new(CuadrillaDetalle::UpdatedBy).text())
                     .col(ColumnDef::new(CuadrillaDetalle::DeletedAt).text())
@@ -128,7 +136,11 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(CuadrillaCosto::CuadrillaId).text().not_null())
+                    .col(
+                        ColumnDef::new(CuadrillaCosto::CuadrillaId)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(CuadrillaCosto::RegionId).text())
                     .col(
                         ColumnDef::new(CuadrillaCosto::SubTotalManoObra)
@@ -216,46 +228,81 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(CuadrillaCostoDetalle::Cantidad).decimal().not_null())
-                    .col(ColumnDef::new(CuadrillaCostoDetalle::Costo).decimal().not_null())
-                    .col(ColumnDef::new(CuadrillaCostoDetalle::Importe).decimal().not_null())
+                    .col(
+                        ColumnDef::new(CuadrillaCostoDetalle::Cantidad)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(CuadrillaCostoDetalle::Costo)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(CuadrillaCostoDetalle::Importe)
+                            .decimal()
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(CuadrillaCostoDetalle::Deleted)
                             .boolean()
                             .not_null()
                             .default(false),
                     )
-                    .col(ColumnDef::new(CuadrillaCostoDetalle::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(CuadrillaCostoDetalle::CreatedBy).text().not_null())
+                    .col(
+                        ColumnDef::new(CuadrillaCostoDetalle::CreatedAt)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(CuadrillaCostoDetalle::CreatedBy)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(CuadrillaCostoDetalle::UpdatedAt).text())
                     .col(ColumnDef::new(CuadrillaCostoDetalle::UpdatedBy).text())
                     .col(ColumnDef::new(CuadrillaCostoDetalle::DeletedAt).text())
                     .col(ColumnDef::new(CuadrillaCostoDetalle::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(CuadrillaCostoDetalle::Table, CuadrillaCostoDetalle::CuadrillaCostoId)
+                            .from(
+                                CuadrillaCostoDetalle::Table,
+                                CuadrillaCostoDetalle::CuadrillaCostoId,
+                            )
                             .to(CuadrillaCosto::Table, CuadrillaCosto::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(CuadrillaCostoDetalle::Table, CuadrillaCostoDetalle::CuadrillaDetalleId)
+                            .from(
+                                CuadrillaCostoDetalle::Table,
+                                CuadrillaCostoDetalle::CuadrillaDetalleId,
+                            )
                             .to(CuadrillaDetalle::Table, CuadrillaDetalle::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(CuadrillaCostoDetalle::Table, CuadrillaCostoDetalle::CreatedBy)
+                            .from(
+                                CuadrillaCostoDetalle::Table,
+                                CuadrillaCostoDetalle::CreatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(CuadrillaCostoDetalle::Table, CuadrillaCostoDetalle::UpdatedBy)
+                            .from(
+                                CuadrillaCostoDetalle::Table,
+                                CuadrillaCostoDetalle::UpdatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(CuadrillaCostoDetalle::Table, CuadrillaCostoDetalle::DeletedBy)
+                            .from(
+                                CuadrillaCostoDetalle::Table,
+                                CuadrillaCostoDetalle::DeletedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),

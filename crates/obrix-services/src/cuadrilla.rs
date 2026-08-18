@@ -8,17 +8,24 @@
 //! `costo_nacional` aquí es solo un reflejo de conveniencia de la valuación
 //! nacional, igual que `CategoriaFasar.salario_vigente`.
 
-use obrix_db::entities::insumo::{self, TipoInsumo};
-use obrix_db::entities::{categoria_fasar, cuadrilla, cuadrilla_costo, familia_insumo, herramienta, salario_categoria_fasar};
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::insumo::{self, TipoInsumo};
+use obrix_db::entities::{
+    categoria_fasar, cuadrilla, cuadrilla_costo, familia_insumo, herramienta,
+    salario_categoria_fasar,
+};
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
+};
 use std::collections::HashMap;
 
-use crate::cuadrilla_detalle::{CuadrillaDetalleData, CuadrillaDetalleEditarData, CuadrillaDetalleService};
+use crate::cuadrilla_detalle::{
+    CuadrillaDetalleData, CuadrillaDetalleEditarData, CuadrillaDetalleService,
+};
 use crate::material::ResultadoImportacion;
 use crate::unidad_medida::UnidadMedidaService;
-use crate::{clave_cruce, id_insumo_existente, nuevo_id, recordar_insumo, ServiceError};
+use crate::{ServiceError, clave_cruce, id_insumo_existente, nuevo_id, recordar_insumo};
 
 #[derive(serde::Deserialize)]
 pub struct CuadrillaData {
@@ -116,7 +123,10 @@ impl CuadrillaService {
         for ins in insumos {
             // `categoria_fasar` también es `tipo = mano_obra` — solo las que
             // tienen fila en `cuadrilla` pertenecen a este catálogo.
-            let Some(cua) = cuadrilla::Entity::find_by_id(&ins.id).one(repo.conexion()).await? else {
+            let Some(cua) = cuadrilla::Entity::find_by_id(&ins.id)
+                .one(repo.conexion())
+                .await?
+            else {
                 continue;
             };
             let costo_nacional = Self::buscar_costo_nacional(repo, &ins.id).await?;
@@ -180,7 +190,11 @@ impl CuadrillaService {
         .insert(&txn)
         .await?;
 
-        let cua = cuadrilla::ActiveModel { insumo_id: Set(id.clone()) }.insert(&txn).await?;
+        let cua = cuadrilla::ActiveModel {
+            insumo_id: Set(id.clone()),
+        }
+        .insert(&txn)
+        .await?;
 
         let costo_nacional = cuadrilla_costo::ActiveModel {
             id: Set(nuevo_id()),
@@ -277,7 +291,8 @@ impl CuadrillaService {
         contenido_csv: &str,
         creado_por: String,
     ) -> Result<ResultadoImportacion, ServiceError> {
-        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {}).await
+        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {})
+            .await
     }
 
     pub async fn importar_csv_con_progreso(
@@ -294,7 +309,11 @@ impl CuadrillaService {
             .from_reader(contenido.as_bytes());
         let headers = lector
             .headers()
-            .map_err(|e| ServiceError::Validacion(format!("no se pudieron leer los encabezados del CSV: {e}")))?
+            .map_err(|e| {
+                ServiceError::Validacion(format!(
+                    "no se pudieron leer los encabezados del CSV: {e}"
+                ))
+            })?
             .clone();
 
         let col_clave = buscar_columna(&headers, &["clave cuadrilla", "clave"]);
@@ -310,9 +329,10 @@ impl CuadrillaService {
         let col_seccion = buscar_columna(&headers, &["sección", "seccion"]).ok_or_else(|| {
             ServiceError::Validacion("el archivo debe tener la columna \"Sección\"".into())
         })?;
-        let col_descripcion = buscar_columna(&headers, &["descripción", "descripcion"]).ok_or_else(|| {
-            ServiceError::Validacion("el archivo debe tener la columna \"Descripción\"".into())
-        })?;
+        let col_descripcion = buscar_columna(&headers, &["descripción", "descripcion"])
+            .ok_or_else(|| {
+                ServiceError::Validacion("el archivo debe tener la columna \"Descripción\"".into())
+            })?;
         let col_cantidad = buscar_columna(&headers, &["cantidad"]).ok_or_else(|| {
             ServiceError::Validacion("el archivo debe tener la columna \"Cantidad\"".into())
         })?;
@@ -337,14 +357,15 @@ impl CuadrillaService {
             .into_iter()
             .map(|h| h.insumo_id)
             .collect();
-        let salarios_nacionales: std::collections::HashSet<String> = salario_categoria_fasar::Entity::find()
-            .filter(salario_categoria_fasar::Column::RegionId.is_null())
-            .filter(salario_categoria_fasar::Column::FechaVigenciaHasta.is_null())
-            .all(repo.conexion())
-            .await?
-            .into_iter()
-            .map(|s| s.insumo_id)
-            .collect();
+        let salarios_nacionales: std::collections::HashSet<String> =
+            salario_categoria_fasar::Entity::find()
+                .filter(salario_categoria_fasar::Column::RegionId.is_null())
+                .filter(salario_categoria_fasar::Column::FechaVigenciaHasta.is_null())
+                .all(repo.conexion())
+                .await?
+                .into_iter()
+                .map(|s| s.insumo_id)
+                .collect();
         let mut categoria_id_por_descripcion: HashMap<String, String> = HashMap::new();
         let mut herramienta_id_por_descripcion: HashMap<String, String> = HashMap::new();
         let cuadrillas_existentes: std::collections::HashSet<String> = cuadrilla::Entity::find()
@@ -366,7 +387,13 @@ impl CuadrillaService {
             }
             if cuadrillas_existentes.contains(&ins.id) {
                 clave_por_id.insert(ins.id.clone(), ins.clave.clone());
-                recordar_insumo(&mut por_clave, &mut por_descripcion, &ins.id, &ins.clave, &ins.descripcion);
+                recordar_insumo(
+                    &mut por_clave,
+                    &mut por_descripcion,
+                    &ins.id,
+                    &ins.clave,
+                    &ins.descripcion,
+                );
             }
         }
 
@@ -391,17 +418,24 @@ impl CuadrillaService {
                 }
             };
             let descripcion_cuadrilla = celda(&registro, col_descripcion_cuadrilla);
-            let clave_archivo = col_clave.map(|c| celda(&registro, c)).filter(|c| !c.is_empty());
+            let clave_archivo = col_clave
+                .map(|c| celda(&registro, c))
+                .filter(|c| !c.is_empty());
             let seccion = celda(&registro, col_seccion);
             let descripcion = celda(&registro, col_descripcion);
             let cantidad = celda(&registro, col_cantidad);
 
-            if descripcion_cuadrilla.is_empty() && clave_archivo.is_none() && seccion.is_empty() && descripcion.is_empty()
+            if descripcion_cuadrilla.is_empty()
+                && clave_archivo.is_none()
+                && seccion.is_empty()
+                && descripcion.is_empty()
             {
                 continue;
             }
             if descripcion_cuadrilla.is_empty() {
-                errores.push(format!("fila {fila}: descripción de cuadrilla vacía, se omitió"));
+                errores.push(format!(
+                    "fila {fila}: descripción de cuadrilla vacía, se omitió"
+                ));
                 continue;
             }
 
@@ -552,7 +586,12 @@ impl CuadrillaService {
             None
         };
 
-        Ok(ResultadoImportacion::nuevo(creados, actualizados, errores, aviso))
+        Ok(ResultadoImportacion::nuevo(
+            creados,
+            actualizados,
+            errores,
+            aviso,
+        ))
     }
 
     async fn aplicar_detalles_importados(
@@ -564,13 +603,14 @@ impl CuadrillaService {
         creado_por: &str,
         errores: &mut Vec<String>,
     ) {
-        let existentes = match CuadrillaDetalleService::listar_por_cuadrilla(repo, cuadrilla_id).await {
-            Ok(d) => d,
-            Err(e) => {
-                errores.push(format!("no se pudo leer el detalle de la cuadrilla ({e})"));
-                return;
-            }
-        };
+        let existentes =
+            match CuadrillaDetalleService::listar_por_cuadrilla(repo, cuadrilla_id).await {
+                Ok(d) => d,
+                Err(e) => {
+                    errores.push(format!("no se pudo leer el detalle de la cuadrilla ({e})"));
+                    return;
+                }
+            };
         let mut detalle_id_por_insumo: HashMap<String, String> = existentes
             .iter()
             .map(|d| (d.detalle_insumo_id.clone(), d.id.clone()))
@@ -593,17 +633,28 @@ impl CuadrillaService {
                 )
                 .await
                 {
-                    errores.push(format!("fila {fila}: no se pudo actualizar el detalle ({e})"));
+                    errores.push(format!(
+                        "fila {fila}: no se pudo actualizar el detalle ({e})"
+                    ));
                 }
                 continue;
             }
 
-            match CuadrillaDetalleService::crear(repo, cuadrilla_id, detalle, creado_por.to_string()).await {
+            match CuadrillaDetalleService::crear(
+                repo,
+                cuadrilla_id,
+                detalle,
+                creado_por.to_string(),
+            )
+            .await
+            {
                 Ok(_) => {
                     if es_alta && es_mano_obra && !salarios_nacionales.contains(&insumo_id) {
                         errores.push(format!("{descripcion} sin salario vigente, costo 0"));
                     }
-                    if let Ok(lista) = CuadrillaDetalleService::listar_por_cuadrilla(repo, cuadrilla_id).await {
+                    if let Ok(lista) =
+                        CuadrillaDetalleService::listar_por_cuadrilla(repo, cuadrilla_id).await
+                    {
                         if let Some(d) = lista.iter().find(|d| d.detalle_insumo_id == insumo_id) {
                             detalle_id_por_insumo.insert(insumo_id.clone(), d.id.clone());
                         }
@@ -660,19 +711,26 @@ fn formatear_clave_cua(n: u32) -> String {
 }
 
 fn parsear_decimal(texto: &str) -> Option<Decimal> {
-    let limpio: String = texto.chars().filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-').collect();
+    let limpio: String = texto
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .collect();
     if limpio.is_empty() {
         return None;
     }
     limpio.parse().ok()
 }
 
-fn parsear_seccion(seccion: &str) -> Option<obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle> {
+fn parsear_seccion(
+    seccion: &str,
+) -> Option<obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle> {
     use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
     let normalizada = seccion.trim().to_lowercase().replace('_', " ");
     match normalizada.as_str() {
         "mano de obra" => Some(TipoCuadrillaDetalle::CategoriaFasar),
-        "equipo y herramienta" | "equipo y herramientas" => Some(TipoCuadrillaDetalle::EquipoHerramienta),
+        "equipo y herramienta" | "equipo y herramientas" => {
+            Some(TipoCuadrillaDetalle::EquipoHerramienta)
+        }
         _ => None,
     }
 }
@@ -701,22 +759,28 @@ fn resolver_detalle_csv(
     };
     let clave_desc = clave_cruce(&fila.descripcion);
     let detalle_insumo_id = match tipo {
-        TipoCuadrillaDetalle::CategoriaFasar => categoria_id_por_descripcion.get(&clave_desc).cloned().ok_or_else(|| {
-            format!(
-                "fila {n}: categoría FASAR \"{}\" no encontrada, se omitió",
-                fila.descripcion
-            )
-        })?,
+        TipoCuadrillaDetalle::CategoriaFasar => categoria_id_por_descripcion
+            .get(&clave_desc)
+            .cloned()
+            .ok_or_else(|| {
+                format!(
+                    "fila {n}: categoría FASAR \"{}\" no encontrada, se omitió",
+                    fila.descripcion
+                )
+            })?,
         TipoCuadrillaDetalle::EquipoHerramienta => {
             if cantidad > Decimal::ZERO && cantidad <= Decimal::ONE {
                 cantidad *= Decimal::ONE_HUNDRED;
             }
-            herramienta_id_por_descripcion.get(&clave_desc).cloned().ok_or_else(|| {
-                format!(
-                    "fila {n}: herramienta \"{}\" no encontrada, se omitió",
-                    fila.descripcion
-                )
-            })?
+            herramienta_id_por_descripcion
+                .get(&clave_desc)
+                .cloned()
+                .ok_or_else(|| {
+                    format!(
+                        "fila {n}: herramienta \"{}\" no encontrada, se omitió",
+                        fila.descripcion
+                    )
+                })?
         }
     };
     Ok(CuadrillaDetalleData {
@@ -740,7 +804,9 @@ async fn unidad_medida_jor(repo: &dyn PortafolioRepository) -> Result<String, Se
     ))
 }
 
-async fn familia_mano_obra_id(repo: &dyn PortafolioRepository) -> Result<Option<String>, ServiceError> {
+async fn familia_mano_obra_id(
+    repo: &dyn PortafolioRepository,
+) -> Result<Option<String>, ServiceError> {
     let familias = familia_insumo::Entity::find()
         .filter(familia_insumo::Column::Deleted.eq(false))
         .filter(familia_insumo::Column::ParentId.is_null())
@@ -873,25 +939,41 @@ mod tests {
     #[tokio::test]
     async fn validar_unidad_existe_acepta_unidad_existente() {
         let (portafolio, unidad_id, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, &unidad_id)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_rechaza_unidad_inexistente() {
         let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, "no-existe")
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
     async fn validar_familia_existe_acepta_nulo() {
         let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_familia_existe(&portafolio, &None).await.is_ok());
+        assert!(
+            crate::validar_familia_existe(&portafolio, &None)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_familia_existe_acepta_familia_existente() {
         let (portafolio, _, familia_id) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_familia_existe(&portafolio, &Some(familia_id)).await.is_ok());
+        assert!(
+            crate::validar_familia_existe(&portafolio, &Some(familia_id))
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -953,6 +1035,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -1000,7 +1083,10 @@ mod tests {
         .await
         .expect("crear cuadrilla");
         assert_eq!(creada.clave, "CUA-1");
-        let costo_nacional = creada.costo_nacional.as_ref().expect("debe nacer con fila nacional");
+        let costo_nacional = creada
+            .costo_nacional
+            .as_ref()
+            .expect("debe nacer con fila nacional");
         assert!(costo_nacional.region_id.is_none());
         assert_eq!(costo_nacional.costo_total, Decimal::ZERO);
 
@@ -1024,7 +1110,10 @@ mod tests {
         )
         .await
         .expect("actualizar cuadrilla");
-        assert_eq!(actualizada.descripcion, "Cuadrilla de albañilería tipo A (2 ayudantes)");
+        assert_eq!(
+            actualizada.descripcion,
+            "Cuadrilla de albañilería tipo A (2 ayudantes)"
+        );
 
         CuadrillaService::eliminar(&portafolio, creada.id.clone(), "usr-1".into())
             .await
@@ -1132,7 +1221,10 @@ mod tests {
             .find(|c| c.clave == "00-M0001")
             .expect("cuadrilla 00-M0001");
         assert_eq!(ayudante.descripcion, "Cuadrilla 01 (Ayudante)");
-        assert!(ayudante.familia_id.is_some(), "familia default Mano de obra");
+        assert!(
+            ayudante.familia_id.is_some(),
+            "familia default Mano de obra"
+        );
 
         let familia = obrix_db::entities::familia_insumo::Entity::find_by_id(
             ayudante.familia_id.as_ref().unwrap(),
@@ -1162,7 +1254,10 @@ mod tests {
             2
         );
 
-        let nacional = ayudante.costo_nacional.as_ref().expect("valuación nacional");
+        let nacional = ayudante
+            .costo_nacional
+            .as_ref()
+            .expect("valuación nacional");
         assert!(nacional.costo_total > Decimal::ZERO);
         let mut cantidades_herramienta: Vec<_> = detalles
             .iter()
@@ -1172,18 +1267,16 @@ mod tests {
         cantidades_herramienta.sort();
         assert_eq!(
             cantidades_herramienta,
-            vec![Decimal::from_str("2").unwrap(), Decimal::from_str("3").unwrap()],
+            vec![
+                Decimal::from_str("2").unwrap(),
+                Decimal::from_str("3").unwrap()
+            ],
             "0.02 y 0.03 del CSV deben importarse como 2% y 3% (0–100), no como fracción"
         );
 
-        let reimportar = CuadrillaService::importar_csv(
-            &portafolio,
-            &org_id,
-            csv,
-            admin_id,
-        )
-        .await
-        .expect("reimportar el mismo CSV no debe duplicar cuadrillas");
+        let reimportar = CuadrillaService::importar_csv(&portafolio, &org_id, csv, admin_id)
+            .await
+            .expect("reimportar el mismo CSV no debe duplicar cuadrillas");
         assert_eq!(reimportar.creados, 0);
         assert_eq!(reimportar.actualizados, 29);
         let listado2 = CuadrillaService::listar(&portafolio, &org_id)
@@ -1205,7 +1298,10 @@ mod tests {
             .expect("importar sin clave");
         assert_eq!(resultado.importados, 2);
         assert!(
-            resultado.aviso.as_deref().is_some_and(|a| a.contains("CUA-")),
+            resultado
+                .aviso
+                .as_deref()
+                .is_some_and(|a| a.contains("CUA-")),
             "debe avisarse que se autogeneraron claves CUA-: {:?}",
             resultado.aviso
         );
@@ -1227,7 +1323,11 @@ mod tests {
             .expect("reimportar por descripción sin distinguir mayúsculas");
         assert_eq!(reimportar.creados, 0);
         assert_eq!(reimportar.actualizados, 2);
-        assert!(reimportar.aviso.is_none(), "no se autogeneraron claves: {:?}", reimportar.aviso);
+        assert!(
+            reimportar.aviso.is_none(),
+            "no se autogeneraron claves: {:?}",
+            reimportar.aviso
+        );
 
         let listado2 = CuadrillaService::listar(&portafolio, &org_id)
             .await
@@ -1254,9 +1354,22 @@ mod tests {
         let resultado = CuadrillaService::importar_csv(&portafolio, &org_id, csv, admin_id)
             .await
             .expect("importar con errores");
-        assert_eq!(resultado.importados, 1, "solo la cuadrilla con detalle resoluble");
-        assert!(resultado.errores.iter().any(|e| e.contains("Oficio inventado")));
-        assert!(resultado.errores.iter().any(|e| e.contains("SECCION INEXISTENTE")));
+        assert_eq!(
+            resultado.importados, 1,
+            "solo la cuadrilla con detalle resoluble"
+        );
+        assert!(
+            resultado
+                .errores
+                .iter()
+                .any(|e| e.contains("Oficio inventado"))
+        );
+        assert!(
+            resultado
+                .errores
+                .iter()
+                .any(|e| e.contains("SECCION INEXISTENTE"))
+        );
 
         let listado = CuadrillaService::listar(&portafolio, &org_id)
             .await
@@ -1302,7 +1415,10 @@ mod tests {
             .expect("importar con integrante sin salario");
         assert_eq!(resultado.importados, 1);
         assert!(
-            resultado.errores.iter().any(|e| e == "Ayudante oficial extra sin salario vigente, costo 0"),
+            resultado
+                .errores
+                .iter()
+                .any(|e| e == "Ayudante oficial extra sin salario vigente, costo 0"),
             "debe avisarse el costo en cero: {:?}",
             resultado.errores
         );
@@ -1310,13 +1426,19 @@ mod tests {
         let listado = CuadrillaService::listar(&portafolio, &org_id)
             .await
             .expect("listar");
-        let cuadrilla = listado.iter().find(|c| c.clave == "C-SIN").expect("cuadrilla importada");
+        let cuadrilla = listado
+            .iter()
+            .find(|c| c.clave == "C-SIN")
+            .expect("cuadrilla importada");
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
             .expect("listar detalles");
         assert_eq!(detalles.len(), 1, "el integrante debe quedar en la receta");
 
-        let nacional = cuadrilla.costo_nacional.as_ref().expect("valuación nacional");
+        let nacional = cuadrilla
+            .costo_nacional
+            .as_ref()
+            .expect("valuación nacional");
         assert_eq!(nacional.sub_total_mano_obra, Decimal::ZERO);
         assert_eq!(nacional.costo_total, Decimal::ZERO);
         let costos = CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)

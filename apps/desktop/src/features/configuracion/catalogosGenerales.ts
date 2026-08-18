@@ -94,7 +94,7 @@ const organizaciones: CatalogoGeneralDescriptor<Organizacion, OrganizacionData> 
     eliminar: api.deleteOrganizacion,
   },
   aFila: (m) => ({ _id: m.id, razon_social: m.razon_social, rfc: m.rfc, tipo: m.tipo, ...filaControl(m) }),
-  vacio: { razon_social: "Nueva organización", rfc: "", tipo: "despacho", moneda_default_id: "" },
+  vacio: { razon_social: "Nueva organización", rfc: "", tipo: "despacho", moneda_default_id: "", horas_jornada: "8" },
   filaANuevo: (f) => ({
     razon_social: String(f.razon_social),
     rfc: String(f.rfc),
@@ -102,6 +102,7 @@ const organizaciones: CatalogoGeneralDescriptor<Organizacion, OrganizacionData> 
     // valor siempre es uno de los válidos — el cast solo recupera el tipo literal.
     tipo: String(f.tipo) as TipoOrganizacion,
     moneda_default_id: "",
+    horas_jornada: String(f.horas_jornada ?? "8"),
   }),
 };
 

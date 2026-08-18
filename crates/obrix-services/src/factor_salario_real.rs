@@ -1,16 +1,17 @@
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::factor_salario_real::{ActiveModel, Column, Entity, Model};
 use obrix_db::entities::region;
-use obrix_db::PortafolioRepository;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Modelo de cálculo estándar (FSR, Art. 160 RLOPSRM) con el que se siembra un
 /// renglón nuevo cuando no se especifica uno propio — fuente de verdad en
 /// `data/initial/factor_salario_real.json`, embebido tal cual en el binario.
-const MODELO_ESTANDAR_VARIABLES_JSON: &str = include_str!("../../../data/initial/factor_salario_real.json");
+const MODELO_ESTANDAR_VARIABLES_JSON: &str =
+    include_str!("../../../data/initial/factor_salario_real.json");
 
 /// Valores `valor_default` de los parámetros `numero`/`booleano` de un
 /// modelo de cálculo, como `parametros_json` inicial de un renglón nuevo
@@ -22,7 +23,10 @@ fn parametros_json_default(modelo_calculo_json: &str) -> String {
     let Ok(modelo) = serde_json::from_str::<serde_json::Value>(modelo_calculo_json) else {
         return "{}".to_string();
     };
-    let Some(parametros) = modelo.get("parametros").and_then(serde_json::Value::as_array) else {
+    let Some(parametros) = modelo
+        .get("parametros")
+        .and_then(serde_json::Value::as_array)
+    else {
         return "{}".to_string();
     };
     let mut valores = serde_json::Map::new();
@@ -30,9 +34,10 @@ fn parametros_json_default(modelo_calculo_json: &str) -> String {
         if p.get("tipo").and_then(serde_json::Value::as_str) == Some("rango") {
             continue;
         }
-        if let (Some(id), Some(valor_default)) =
-            (p.get("id").and_then(serde_json::Value::as_str), p.get("valor_default"))
-        {
+        if let (Some(id), Some(valor_default)) = (
+            p.get("id").and_then(serde_json::Value::as_str),
+            p.get("valor_default"),
+        ) {
             valores.insert(id.to_string(), valor_default.clone());
         }
     }
@@ -60,7 +65,9 @@ impl FactorSalarioRealService {
     fn validar(datos: &FactorSalarioRealData, actualizando: bool) -> Result<(), ServiceError> {
         if datos.nombre.trim().is_empty() {
             let accion = crate::accion(actualizando);
-            return Err(ServiceError::Validacion(format!("No se puede {accion} un FSR sin nombre.")));
+            return Err(ServiceError::Validacion(format!(
+                "No se puede {accion} un FSR sin nombre."
+            )));
         }
         if let Some(region_id) = &datos.region_id {
             if region_id.trim().is_empty() {
@@ -100,7 +107,10 @@ impl FactorSalarioRealService {
         Ok(())
     }
 
-    pub async fn listar(repo: &dyn PortafolioRepository, organizacion_id: &str) -> Result<Vec<Model>, ServiceError> {
+    pub async fn listar(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+    ) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
             .filter(Column::OrganizacionId.eq(organizacion_id))
             .filter(Column::Deleted.eq(false))
@@ -108,7 +118,10 @@ impl FactorSalarioRealService {
             .await?)
     }
 
-    pub async fn obtener(repo: &dyn PortafolioRepository, id: String) -> Result<Model, ServiceError> {
+    pub async fn obtener(
+        repo: &dyn PortafolioRepository,
+        id: String,
+    ) -> Result<Model, ServiceError> {
         Entity::find_by_id(&id)
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
@@ -168,7 +181,13 @@ impl FactorSalarioRealService {
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("FSR {id}")))?;
-        Self::validar_region_unica(repo, &existente.organizacion_id, &datos.region_id, Some(&id)).await?;
+        Self::validar_region_unica(
+            repo,
+            &existente.organizacion_id,
+            &datos.region_id,
+            Some(&id),
+        )
+        .await?;
         let mut modelo: ActiveModel = existente.into();
         modelo.nombre = Set(datos.nombre);
         modelo.region_id = Set(datos.region_id);
@@ -247,6 +266,7 @@ impl DatosIniciales for FactorSalarioRealService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
 
     #[test]
     fn parametros_json_default_usa_valor_default_y_excluye_rango() {
@@ -258,10 +278,14 @@ mod tests {
             ],
             "calculados": []
         }"#;
-        let resultado: serde_json::Value = serde_json::from_str(&parametros_json_default(modelo)).unwrap();
+        let resultado: serde_json::Value =
+            serde_json::from_str(&parametros_json_default(modelo)).unwrap();
         assert_eq!(resultado["a"], 5);
         assert_eq!(resultado["b"], true);
-        assert!(resultado.get("c").is_none(), "los parámetros tipo rango no deben incluirse");
+        assert!(
+            resultado.get("c").is_none(),
+            "los parámetros tipo rango no deben incluirse"
+        );
     }
 
     #[test]
@@ -314,8 +338,8 @@ mod tests {
     }
 
     async fn portafolio_con_region() -> (obrix_db::PortafolioSqliteRepository, String) {
-        use obrix_db::entities::{region, usuario};
         use obrix_db::PortafolioSqliteRepository;
+        use obrix_db::entities::{region, usuario};
         use sea_orm::ActiveModelTrait;
         use std::path::Path;
 
@@ -358,7 +382,11 @@ mod tests {
     #[tokio::test]
     async fn validar_region_existe_acepta_nulo() {
         let (portafolio, _) = portafolio_con_region().await;
-        assert!(crate::validar_region_existe(&portafolio, &None).await.is_ok());
+        assert!(
+            crate::validar_region_existe(&portafolio, &None)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -392,7 +420,8 @@ mod tests {
 
     /// `crear`/`actualizar` sí exigen la FK `organizacion_id` — a diferencia
     /// de `portafolio_con_region`, aquí se siembra también la organización.
-    async fn portafolio_con_organizacion_y_region() -> (obrix_db::PortafolioSqliteRepository, String) {
+    async fn portafolio_con_organizacion_y_region() -> (obrix_db::PortafolioSqliteRepository, String)
+    {
         use obrix_db::entities::{moneda, organizacion};
 
         let (portafolio, region_id) = portafolio_con_region().await;
@@ -420,6 +449,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -460,9 +490,14 @@ mod tests {
     #[tokio::test]
     async fn crear_rechaza_nacional_duplicado() {
         let (portafolio, _) = portafolio_con_organizacion_y_region().await;
-        FactorSalarioRealService::crear(&portafolio, "org-1".into(), datos("FSR — Nacional", None), "usr-1".into())
-            .await
-            .expect("crear el primer FSR nacional");
+        FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            datos("FSR — Nacional", None),
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear el primer FSR nacional");
 
         let error = FactorSalarioRealService::crear(
             &portafolio,

@@ -88,13 +88,19 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(SalarioCategoriaFasar::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(SalarioCategoriaFasar::Table, SalarioCategoriaFasar::InsumoId)
+                            .from(
+                                SalarioCategoriaFasar::Table,
+                                SalarioCategoriaFasar::InsumoId,
+                            )
                             .to(CategoriaFasar::Table, CategoriaFasar::InsumoId)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(SalarioCategoriaFasar::Table, SalarioCategoriaFasar::RegionId)
+                            .from(
+                                SalarioCategoriaFasar::Table,
+                                SalarioCategoriaFasar::RegionId,
+                            )
                             .to(Region::Table, Region::Id),
                     )
                     .foreign_key(
@@ -107,12 +113,18 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(SalarioCategoriaFasar::Table, SalarioCategoriaFasar::CreatedBy)
+                            .from(
+                                SalarioCategoriaFasar::Table,
+                                SalarioCategoriaFasar::CreatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(SalarioCategoriaFasar::Table, SalarioCategoriaFasar::UpdatedBy)
+                            .from(
+                                SalarioCategoriaFasar::Table,
+                                SalarioCategoriaFasar::UpdatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),

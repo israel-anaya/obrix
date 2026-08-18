@@ -1,11 +1,9 @@
-use obrix_db::entities::unidad_medida::{ActiveModel, Column, Entity, Model, TipoMagnitud};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::unidad_medida::{ActiveModel, Column, Entity, Model, TipoMagnitud};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Catálogo de unidades de medida de referencia — fuente de verdad en
 /// `data/initial/unidad_medida.csv`, embebido tal cual en el binario.
@@ -258,7 +256,12 @@ mod tests {
         }
     }
 
-    fn datos(simbolo: &str, simbolo_impresion: &str, descripcion: &str, tipo_magnitud: &str) -> UnidadMedidaData {
+    fn datos(
+        simbolo: &str,
+        simbolo_impresion: &str,
+        descripcion: &str,
+        tipo_magnitud: &str,
+    ) -> UnidadMedidaData {
         UnidadMedidaData {
             simbolo: simbolo.to_string(),
             simbolo_impresion: simbolo_impresion.to_string(),
@@ -272,7 +275,9 @@ mod tests {
     #[test]
     fn validar_rechaza_simbolo_vacio_o_solo_espacios() {
         assert!(UnidadMedidaService::validar(&datos("", "m", "Metro", "longitud"), false).is_err());
-        assert!(UnidadMedidaService::validar(&datos("   ", "m", "Metro", "longitud"), true).is_err());
+        assert!(
+            UnidadMedidaService::validar(&datos("   ", "m", "Metro", "longitud"), true).is_err()
+        );
     }
 
     #[test]
@@ -302,8 +307,13 @@ mod tests {
 
     #[test]
     fn tipo_magnitud_desde_str_acepta_los_valores_validos() {
-        for valor in ["longitud", "area", "volumen", "masa", "pieza", "tiempo", "otro"] {
-            assert!(UnidadMedidaService::tipo_magnitud_desde_str(valor).is_ok(), "{valor}");
+        for valor in [
+            "longitud", "area", "volumen", "masa", "pieza", "tiempo", "otro",
+        ] {
+            assert!(
+                UnidadMedidaService::tipo_magnitud_desde_str(valor).is_ok(),
+                "{valor}"
+            );
         }
     }
 }

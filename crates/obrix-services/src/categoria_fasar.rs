@@ -2,19 +2,18 @@
 //! datos) — este servicio administra ambas tablas juntas como si fueran una
 //! sola entidad "Categoría FASAR", igual que `material` hace con `insumo`.
 
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::insumo::{self, TipoInsumo};
 use obrix_db::entities::{categoria_fasar, familia_insumo, salario_categoria_fasar, unidad_medida};
-use obrix_db::PortafolioRepository;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
 };
 
 use crate::organizacion::OrganizacionService;
 use crate::salario_categoria_fasar::SalarioCategoriaFasarService;
 use crate::unidad_medida::UnidadMedidaService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Catálogo de categorías FASAR de referencia — fuente de verdad en
 /// `data/initial/categoria_fasar.csv`, embebido tal cual en el binario (mismo
@@ -128,7 +127,8 @@ impl CategoriaFasarService {
                 // insumo) — se omite en vez de reventar el listado completo.
                 continue;
             }
-            let salario_vigente = SalarioCategoriaFasarService::vigente_nacional(repo, &ins.id).await?;
+            let salario_vigente =
+                SalarioCategoriaFasarService::vigente_nacional(repo, &ins.id).await?;
             resultado.push(combinar(ins, salario_vigente));
         }
         Ok(resultado)
@@ -238,7 +238,11 @@ impl DatosIniciales for CategoriaFasarService {
     /// nombre. Clave `MO-001`… en el orden del archivo. Sin salario: eso
     /// vive en `salario_categoria_fasar` y lo carga el usuario después.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
-        if categoria_fasar::Entity::find().one(repo.conexion()).await?.is_some() {
+        if categoria_fasar::Entity::find()
+            .one(repo.conexion())
+            .await?
+            .is_some()
+        {
             return Ok(());
         }
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
@@ -267,14 +271,15 @@ impl DatosIniciales for CategoriaFasarService {
             .filter(|f| f.parent_id.is_none())
             .map(|f| (f.nombre.to_lowercase(), f.id.clone()))
             .collect();
-        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> = familias
-            .iter()
-            .filter_map(|f| {
-                f.parent_id
-                    .as_ref()
-                    .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
-            })
-            .collect();
+        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> =
+            familias
+                .iter()
+                .filter_map(|f| {
+                    f.parent_id
+                        .as_ref()
+                        .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
+                })
+                .collect();
 
         let mut lector = csv::ReaderBuilder::new().from_reader(CATEGORIAS_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvCategoria>().enumerate() {
@@ -295,7 +300,10 @@ impl DatosIniciales for CategoriaFasarService {
                     "categoria_fasar.csv fila {fila}: unidad vacía"
                 )));
             }
-            let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto.to_lowercase()).cloned() else {
+            let Some(unidad_id) = unidad_id_por_texto
+                .get(&unidad_texto.to_lowercase())
+                .cloned()
+            else {
                 return Err(ServiceError::Validacion(format!(
                     "categoria_fasar.csv fila {fila}: unidad \"{unidad_texto}\" no encontrada"
                 )));
@@ -342,8 +350,9 @@ impl DatosIniciales for CategoriaFasarService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
     use obrix_db::PortafolioSqliteRepository;
+    use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
+    use rust_decimal::Decimal;
     use sea_orm::ActiveModelTrait;
     use std::path::Path;
 
@@ -446,13 +455,21 @@ mod tests {
     #[tokio::test]
     async fn validar_unidad_existe_acepta_unidad_existente() {
         let (portafolio, unidad_id) = portafolio_con_unidad().await;
-        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, &unidad_id)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_rechaza_unidad_inexistente() {
         let (portafolio, _) = portafolio_con_unidad().await;
-        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, "no-existe")
+                .await
+                .is_err()
+        );
     }
 
     async fn portafolio_con_familia() -> (PortafolioSqliteRepository, String) {
@@ -500,7 +517,11 @@ mod tests {
     #[tokio::test]
     async fn validar_familia_existe_acepta_nulo() {
         let (portafolio, _) = portafolio_con_familia().await;
-        assert!(crate::validar_familia_existe(&portafolio, &None).await.is_ok());
+        assert!(
+            crate::validar_familia_existe(&portafolio, &None)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -569,6 +590,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -652,10 +674,11 @@ mod tests {
         assert!(insumo_restante.deleted);
         assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
 
-        let categoria_restante = obrix_db::entities::categoria_fasar::Entity::find_by_id(&creado.id)
-            .one(portafolio.conexion())
-            .await
-            .unwrap();
+        let categoria_restante =
+            obrix_db::entities::categoria_fasar::Entity::find_by_id(&creado.id)
+                .one(portafolio.conexion())
+                .await
+                .unwrap();
         assert!(
             categoria_restante.is_some(),
             "la extensión categoria_fasar no se borra; el listado la oculta con deleted"
@@ -715,6 +738,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -766,6 +790,9 @@ mod tests {
             .all(portafolio.conexion())
             .await
             .unwrap();
-        assert!(creadas.is_empty(), "no debe quedar ninguna categoría a medias");
+        assert!(
+            creadas.is_empty(),
+            "no debe quedar ninguna categoría a medias"
+        );
     }
 }

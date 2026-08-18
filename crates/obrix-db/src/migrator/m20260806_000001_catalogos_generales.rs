@@ -113,20 +113,35 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(OrganizacionUsuario::UsuarioId).text().not_null())
+                    .col(
+                        ColumnDef::new(OrganizacionUsuario::UsuarioId)
+                            .text()
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(OrganizacionUsuario::Activo)
                             .boolean()
                             .not_null()
                             .default(true),
                     )
-                    .col(ColumnDef::new(OrganizacionUsuario::CreatedAt).text().not_null())
-                    .col(ColumnDef::new(OrganizacionUsuario::CreatedBy).text().not_null())
+                    .col(
+                        ColumnDef::new(OrganizacionUsuario::CreatedAt)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(OrganizacionUsuario::CreatedBy)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(OrganizacionUsuario::UpdatedAt).text())
                     .col(ColumnDef::new(OrganizacionUsuario::UpdatedBy).text())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(OrganizacionUsuario::Table, OrganizacionUsuario::OrganizacionId)
+                            .from(
+                                OrganizacionUsuario::Table,
+                                OrganizacionUsuario::OrganizacionId,
+                            )
                             .to(Organizacion::Table, Organizacion::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
@@ -220,7 +235,11 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(UnidadMedida::Simbolo).text().not_null())
-                    .col(ColumnDef::new(UnidadMedida::SimboloImpresion).text().not_null())
+                    .col(
+                        ColumnDef::new(UnidadMedida::SimboloImpresion)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(UnidadMedida::Variantes).text().not_null())
                     .col(ColumnDef::new(UnidadMedida::ClaveSat).text())
                     .col(ColumnDef::new(UnidadMedida::Descripcion).text().not_null())
@@ -412,7 +431,11 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(HistorialCambio::ProyectoId).text().not_null())
+                    .col(
+                        ColumnDef::new(HistorialCambio::ProyectoId)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(HistorialCambio::Entidad).text().not_null())
                     .col(ColumnDef::new(HistorialCambio::EntidadId).text().not_null())
                     .col(ColumnDef::new(HistorialCambio::Accion).text().not_null())

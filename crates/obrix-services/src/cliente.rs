@@ -1,12 +1,10 @@
-use obrix_db::entities::cliente::{ActiveModel, Column, Entity, Model, TipoCliente};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::cliente::{ActiveModel, Column, Entity, Model, TipoCliente};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 #[derive(serde::Deserialize)]
 pub struct ClienteData {
@@ -199,12 +197,17 @@ mod tests {
 
     #[test]
     fn validar_rechaza_tipo_vacio() {
-        assert!(ClienteService::validar(&datos("Cliente demo", "XAXX010101000", ""), false).is_err());
+        assert!(
+            ClienteService::validar(&datos("Cliente demo", "XAXX010101000", ""), false).is_err()
+        );
     }
 
     #[test]
     fn validar_acepta_datos_completos() {
-        assert!(ClienteService::validar(&datos("Cliente demo", "XAXX010101000", "privado"), false).is_ok());
+        assert!(
+            ClienteService::validar(&datos("Cliente demo", "XAXX010101000", "privado"), false)
+                .is_ok()
+        );
     }
 
     #[test]

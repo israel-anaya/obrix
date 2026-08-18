@@ -53,8 +53,14 @@ impl ActiveModelBehavior for ActiveModel {}
 
 /// Cada valor corresponde a una tabla de extensión 1:1 distinta —
 /// `material` es la única implementada por ahora (ver `entities::material`).
-#[derive(Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)", rename_all = "snake_case")]
+#[derive(
+    Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize,
+)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "String(StringLen::None)",
+    rename_all = "snake_case"
+)]
 #[serde(rename_all = "snake_case")]
 pub enum TipoInsumo {
     Material,

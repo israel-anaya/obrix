@@ -75,8 +75,14 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Denormalizado de qué extensión resuelve `detalle_insumo_id` — permite
 /// separar `cuadrilla_costo.sub_total_mano_obra` de `sub_total_herramienta`
 /// sin join.
-#[derive(Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)", rename_all = "snake_case")]
+#[derive(
+    Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize,
+)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "String(StringLen::None)",
+    rename_all = "snake_case"
+)]
 #[serde(rename_all = "snake_case")]
 pub enum TipoCuadrillaDetalle {
     CategoriaFasar,

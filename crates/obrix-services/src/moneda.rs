@@ -1,11 +1,9 @@
-use obrix_db::entities::moneda::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::moneda::{ActiveModel, Column, Entity, Model};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Catálogo de monedas de referencia — fuente de verdad en
 /// `data/initial/moneda.csv`, embebido tal cual en el binario.
@@ -130,9 +128,8 @@ impl DatosIniciales for MonedaService {
         let mut lector = csv::ReaderBuilder::new().from_reader(MONEDAS_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvMoneda>().enumerate() {
             let fila = i + 2;
-            let registro = registro.map_err(|e| {
-                ServiceError::Validacion(format!("moneda.csv fila {fila}: {e}"))
-            })?;
+            let registro = registro
+                .map_err(|e| ServiceError::Validacion(format!("moneda.csv fila {fila}: {e}")))?;
             let codigo = registro.codigo.trim().to_string();
             if codigo.is_empty() {
                 return Err(ServiceError::Validacion(format!(

@@ -5,15 +5,17 @@
 //! por default con el que esta herramienta entra a una cuadrilla (su costo
 //! ahí se resuelve como `porcentaje_mano_obra` × `cuadrilla.sub_total_mano_obra`).
 
+use obrix_db::PortafolioRepository;
 use obrix_db::entities::insumo::{self, TipoInsumo};
 use obrix_db::entities::{familia_insumo, herramienta, unidad_medida};
-use obrix_db::PortafolioRepository;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
+};
 
 use crate::organizacion::OrganizacionService;
 use crate::unidad_medida::UnidadMedidaService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Herramienta menor de referencia — fuente de verdad en
 /// `data/initial/herramienta.csv`, embebido tal cual en el binario (mismo
@@ -113,7 +115,10 @@ impl HerramientaService {
 
         let mut resultado = Vec::with_capacity(insumos.len());
         for ins in insumos {
-            let Some(her) = herramienta::Entity::find_by_id(&ins.id).one(repo.conexion()).await? else {
+            let Some(her) = herramienta::Entity::find_by_id(&ins.id)
+                .one(repo.conexion())
+                .await?
+            else {
                 // No debería pasar (la extensión se crea siempre junto con el
                 // insumo) — se omite en vez de reventar el listado completo.
                 continue;
@@ -243,7 +248,11 @@ impl DatosIniciales for HerramientaService {
     /// `familia_insumo` ya sembradas — ver orden en
     /// `seed::sembrar_catalogos_generales`. Clave `HER-001`… en el orden del archivo.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
-        if herramienta::Entity::find().one(repo.conexion()).await?.is_some() {
+        if herramienta::Entity::find()
+            .one(repo.conexion())
+            .await?
+            .is_some()
+        {
             return Ok(());
         }
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
@@ -271,14 +280,15 @@ impl DatosIniciales for HerramientaService {
             .filter(|f| f.parent_id.is_none())
             .map(|f| (f.nombre.to_lowercase(), f.id.clone()))
             .collect();
-        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> = familias
-            .iter()
-            .filter_map(|f| {
-                f.parent_id
-                    .as_ref()
-                    .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
-            })
-            .collect();
+        let hija_id_por_padre_y_nombre: std::collections::HashMap<(String, String), String> =
+            familias
+                .iter()
+                .filter_map(|f| {
+                    f.parent_id
+                        .as_ref()
+                        .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
+                })
+                .collect();
 
         let mut lector = csv::ReaderBuilder::new().from_reader(HERRAMIENTAS_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvHerramienta>().enumerate() {
@@ -299,7 +309,10 @@ impl DatosIniciales for HerramientaService {
                     "herramienta.csv fila {fila}: unidad vacía"
                 )));
             }
-            let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto.to_lowercase()).cloned() else {
+            let Some(unidad_id) = unidad_id_por_texto
+                .get(&unidad_texto.to_lowercase())
+                .cloned()
+            else {
                 return Err(ServiceError::Validacion(format!(
                     "herramienta.csv fila {fila}: unidad \"{unidad_texto}\" no encontrada"
                 )));
@@ -354,6 +367,7 @@ impl DatosIniciales for HerramientaService {
 mod tests {
     use super::*;
     use obrix_db::PortafolioSqliteRepository;
+    use rust_decimal::Decimal;
     use std::path::Path;
 
     #[tokio::test]
@@ -405,6 +419,7 @@ mod tests {
             rfc: Set("XAXX010101000".into()),
             tipo: Set(organizacion::TipoOrganizacion::Despacho),
             moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
             created_at: Set(now.clone()),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
@@ -622,19 +637,31 @@ mod tests {
     #[tokio::test]
     async fn validar_unidad_existe_acepta_unidad_existente() {
         let (portafolio, unidad_id, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_unidad_existe(&portafolio, &unidad_id).await.is_ok());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, &unidad_id)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn validar_unidad_existe_rechaza_unidad_inexistente() {
         let (portafolio, _, _) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_unidad_existe(&portafolio, "no-existe").await.is_err());
+        assert!(
+            crate::validar_unidad_existe(&portafolio, "no-existe")
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
     async fn validar_familia_existe_acepta_familia_existente() {
         let (portafolio, _, familia_id) = portafolio_con_unidad_y_familia().await;
-        assert!(crate::validar_familia_existe(&portafolio, &Some(familia_id)).await.is_ok());
+        assert!(
+            crate::validar_familia_existe(&portafolio, &Some(familia_id))
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -662,14 +689,19 @@ mod tests {
             .await
             .expect("sembrar catálogos generales");
 
-        let organizacion = crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
-            .await
-            .expect("organización sembrada");
+        let organizacion =
+            crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
+                .await
+                .expect("organización sembrada");
 
         let listado = HerramientaService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar herramientas");
-        assert_eq!(listado.len(), 2, "2 herramientas de data/initial/herramienta.csv");
+        assert_eq!(
+            listado.len(),
+            2,
+            "2 herramientas de data/initial/herramienta.csv"
+        );
 
         let mano = listado
             .iter()
@@ -677,7 +709,10 @@ mod tests {
             .expect("Herramienta de mano");
         assert_eq!(mano.clave, "HER-001");
         assert_eq!(mano.porcentaje_mano_obra, Some(3));
-        assert!(mano.sub_familia_id.is_some(), "Herramienta manual sí existe como subfamilia");
+        assert!(
+            mano.sub_familia_id.is_some(),
+            "Herramienta manual sí existe como subfamilia"
+        );
 
         let seguridad = listado
             .iter()
@@ -698,6 +733,10 @@ mod tests {
         let listado_repetido = HerramientaService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar herramientas de nuevo");
-        assert_eq!(listado_repetido.len(), 2, "no debe duplicar al sembrar dos veces");
+        assert_eq!(
+            listado_repetido.len(),
+            2,
+            "no debe duplicar al sembrar dos veces"
+        );
     }
 }

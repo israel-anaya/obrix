@@ -4,8 +4,8 @@
 //! junto con una valuación regional (`CuadrillaCostoService::crear_regional`/
 //! `eliminar_regional`). `cantidad` no vive aquí: es de `cuadrilla_detalle`.
 
-use obrix_db::entities::cuadrilla_costo_detalle;
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::cuadrilla_costo_detalle;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::ServiceError;

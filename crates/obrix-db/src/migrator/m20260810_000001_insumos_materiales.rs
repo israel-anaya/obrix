@@ -11,7 +11,12 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Proveedor::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Proveedor::Id).text().not_null().primary_key())
+                    .col(
+                        ColumnDef::new(Proveedor::Id)
+                            .text()
+                            .not_null()
+                            .primary_key(),
+                    )
                     .col(ColumnDef::new(Proveedor::OrganizacionId).text().not_null())
                     .col(ColumnDef::new(Proveedor::RazonSocial).text().not_null())
                     .col(ColumnDef::new(Proveedor::Rfc).text().not_null())

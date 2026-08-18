@@ -66,8 +66,14 @@ impl ActiveModelBehavior for ActiveModel {}
 
 /// Denormalizado de qué extensión resuelve `detalle_insumo_id` — permite
 /// separar consumo de operación sin join.
-#[derive(Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)", rename_all = "snake_case")]
+#[derive(
+    Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize,
+)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "String(StringLen::None)",
+    rename_all = "snake_case"
+)]
 #[serde(rename_all = "snake_case")]
 pub enum TipoEquipoCostoHorarioDetalle {
     Consumo,
@@ -75,8 +81,14 @@ pub enum TipoEquipoCostoHorarioDetalle {
 }
 
 /// Desglose CMIC/RLOPSRM de un renglón de consumo — ver diccionario de datos.
-#[derive(Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)", rename_all = "snake_case")]
+#[derive(
+    Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize,
+)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "String(StringLen::None)",
+    rename_all = "snake_case"
+)]
 #[serde(rename_all = "snake_case")]
 pub enum NaturalezaEquipoCostoHorarioDetalle {
     Combustible,

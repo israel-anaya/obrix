@@ -6,14 +6,14 @@
 //! (borrado lógico); el sembrado inicial es solo una receta de partida
 //! (frente/patio), no una norma.
 
-use obrix_db::entities::perfil_inactividad_equipo::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
+use obrix_db::entities::perfil_inactividad_equipo::{ActiveModel, Column, Entity, Model};
 use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Perfiles de referencia (CFE/GCDMX/CMIC/SICT) — fuente de verdad en
 /// `data/initial/perfil_inactividad_equipo.csv`, embebido tal cual en el
@@ -53,28 +53,58 @@ impl PerfilInactividadEquipoService {
     /// Validación de `PerfilInactividadEquipoData` común a `crear`/`actualizar`
     /// — `actualizando` distingue alta de edición (ver `crate::accion`). Cada
     /// porcentaje debe estar en 0–100 inclusive, igual que el diccionario.
-    fn validar(datos: &PerfilInactividadEquipoData, actualizando: bool) -> Result<(), ServiceError> {
+    fn validar(
+        datos: &PerfilInactividadEquipoData,
+        actualizando: bool,
+    ) -> Result<(), ServiceError> {
         let accion = crate::accion(actualizando);
         for (etiqueta, valor) in [
-            ("espera · depreciación", datos.espera_depreciacion_porcentaje),
+            (
+                "espera · depreciación",
+                datos.espera_depreciacion_porcentaje,
+            ),
             ("espera · inversión", datos.espera_inversion_porcentaje),
             ("espera · seguro", datos.espera_seguro_porcentaje),
-            ("espera · mantenimiento", datos.espera_mantenimiento_porcentaje),
+            (
+                "espera · mantenimiento",
+                datos.espera_mantenimiento_porcentaje,
+            ),
             ("espera · combustible", datos.espera_combustible_porcentaje),
             ("espera · lubricante", datos.espera_lubricante_porcentaje),
             ("espera · llantas", datos.espera_llantas_porcentaje),
-            ("espera · piezas especiales", datos.espera_piezas_especiales_porcentaje),
-            ("espera · otras fuentes", datos.espera_otras_fuentes_porcentaje),
+            (
+                "espera · piezas especiales",
+                datos.espera_piezas_especiales_porcentaje,
+            ),
+            (
+                "espera · otras fuentes",
+                datos.espera_otras_fuentes_porcentaje,
+            ),
             ("espera · operación", datos.espera_operacion_porcentaje),
-            ("reserva · depreciación", datos.reserva_depreciacion_porcentaje),
+            (
+                "reserva · depreciación",
+                datos.reserva_depreciacion_porcentaje,
+            ),
             ("reserva · inversión", datos.reserva_inversion_porcentaje),
             ("reserva · seguro", datos.reserva_seguro_porcentaje),
-            ("reserva · mantenimiento", datos.reserva_mantenimiento_porcentaje),
-            ("reserva · combustible", datos.reserva_combustible_porcentaje),
+            (
+                "reserva · mantenimiento",
+                datos.reserva_mantenimiento_porcentaje,
+            ),
+            (
+                "reserva · combustible",
+                datos.reserva_combustible_porcentaje,
+            ),
             ("reserva · lubricante", datos.reserva_lubricante_porcentaje),
             ("reserva · llantas", datos.reserva_llantas_porcentaje),
-            ("reserva · piezas especiales", datos.reserva_piezas_especiales_porcentaje),
-            ("reserva · otras fuentes", datos.reserva_otras_fuentes_porcentaje),
+            (
+                "reserva · piezas especiales",
+                datos.reserva_piezas_especiales_porcentaje,
+            ),
+            (
+                "reserva · otras fuentes",
+                datos.reserva_otras_fuentes_porcentaje,
+            ),
             ("reserva · operación", datos.reserva_operacion_porcentaje),
         ] {
             if valor < Decimal::ZERO || valor > Decimal::ONE_HUNDRED {
@@ -151,7 +181,9 @@ impl PerfilInactividadEquipoService {
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("perfil de inactividad de equipo {id}")))?
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("perfil de inactividad de equipo {id}"))
+            })?
             .into();
         modelo.nombre = Set(datos.nombre);
         modelo.espera_depreciacion_porcentaje = Set(datos.espera_depreciacion_porcentaje);
@@ -171,7 +203,8 @@ impl PerfilInactividadEquipoService {
         modelo.reserva_combustible_porcentaje = Set(datos.reserva_combustible_porcentaje);
         modelo.reserva_lubricante_porcentaje = Set(datos.reserva_lubricante_porcentaje);
         modelo.reserva_llantas_porcentaje = Set(datos.reserva_llantas_porcentaje);
-        modelo.reserva_piezas_especiales_porcentaje = Set(datos.reserva_piezas_especiales_porcentaje);
+        modelo.reserva_piezas_especiales_porcentaje =
+            Set(datos.reserva_piezas_especiales_porcentaje);
         modelo.reserva_otras_fuentes_porcentaje = Set(datos.reserva_otras_fuentes_porcentaje);
         modelo.reserva_operacion_porcentaje = Set(datos.reserva_operacion_porcentaje);
         modelo.updated_at = Set(Some(crate::ahora()));
@@ -188,7 +221,9 @@ impl PerfilInactividadEquipoService {
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
             .await?
-            .ok_or_else(|| ServiceError::NoEncontrado(format!("perfil de inactividad de equipo {id}")))?
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!("perfil de inactividad de equipo {id}"))
+            })?
             .into();
         modelo.deleted = Set(true);
         modelo.deleted_at = Set(Some(crate::ahora()));
@@ -303,8 +338,8 @@ mod tests {
     use obrix_db::PortafolioSqliteRepository;
     use rust_decimal::Decimal;
 
-    use crate::usuario::UsuarioService;
     use crate::DatosIniciales;
+    use crate::usuario::UsuarioService;
 
     use super::*;
 
@@ -368,22 +403,36 @@ mod tests {
         for setter in setters_porcentaje() {
             let mut datos = datos_prueba("CMIC");
             setter(&mut datos, bajo);
-            let err = PerfilInactividadEquipoService::validar(&datos, false).expect_err("rechaza < 0");
+            let err =
+                PerfilInactividadEquipoService::validar(&datos, false).expect_err("rechaza < 0");
             match err {
                 ServiceError::Validacion(mensaje) => {
-                    assert!(mensaje.contains("fuera del rango 0-100"), "mensaje inesperado: {mensaje}");
-                    assert!(mensaje.contains("crear"), "debe usar el verbo de alta: {mensaje}");
+                    assert!(
+                        mensaje.contains("fuera del rango 0-100"),
+                        "mensaje inesperado: {mensaje}"
+                    );
+                    assert!(
+                        mensaje.contains("crear"),
+                        "debe usar el verbo de alta: {mensaje}"
+                    );
                 }
                 otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
             }
 
             let mut datos = datos_prueba("CMIC");
             setter(&mut datos, alto);
-            let err = PerfilInactividadEquipoService::validar(&datos, true).expect_err("rechaza > 100");
+            let err =
+                PerfilInactividadEquipoService::validar(&datos, true).expect_err("rechaza > 100");
             match err {
                 ServiceError::Validacion(mensaje) => {
-                    assert!(mensaje.contains("fuera del rango 0-100"), "mensaje inesperado: {mensaje}");
-                    assert!(mensaje.contains("actualizar"), "debe usar el verbo de edición: {mensaje}");
+                    assert!(
+                        mensaje.contains("fuera del rango 0-100"),
+                        "mensaje inesperado: {mensaje}"
+                    );
+                    assert!(
+                        mensaje.contains("actualizar"),
+                        "debe usar el verbo de edición: {mensaje}"
+                    );
                 }
                 otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
             }
@@ -412,47 +461,108 @@ mod tests {
             .await
             .expect("sembrar catálogos generales");
 
-        let organizacion = crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
-            .await
-            .expect("organización sembrada");
+        let organizacion =
+            crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
+                .await
+                .expect("organización sembrada");
 
         let perfiles = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar");
-        assert_eq!(perfiles.len(), 4, "CFE, GCDMX, CMIC y SICT de data/initial/perfil_inactividad_equipo.csv");
+        assert_eq!(
+            perfiles.len(),
+            4,
+            "CFE, GCDMX, CMIC y SICT de data/initial/perfil_inactividad_equipo.csv"
+        );
 
         let cmic = perfiles.iter().find(|p| p.nombre == "CMIC").expect("CMIC");
-        assert_eq!(cmic.espera_mantenimiento_porcentaje, Decimal::from_str("50").unwrap());
-        assert_eq!(cmic.espera_combustible_porcentaje, Decimal::from_str("5").unwrap());
-        assert_eq!(cmic.espera_lubricante_porcentaje, Decimal::from_str("5").unwrap());
-        assert_eq!(cmic.espera_llantas_porcentaje, Decimal::from_str("10").unwrap());
-        assert_eq!(cmic.espera_piezas_especiales_porcentaje, Decimal::from_str("0").unwrap());
-        assert_eq!(cmic.espera_otras_fuentes_porcentaje, Decimal::from_str("0").unwrap());
-        assert_eq!(cmic.reserva_depreciacion_porcentaje, Decimal::from_str("15").unwrap());
-        assert_eq!(cmic.reserva_combustible_porcentaje, Decimal::from_str("3").unwrap());
-        assert_eq!(cmic.reserva_lubricante_porcentaje, Decimal::from_str("3").unwrap());
-        assert_eq!(cmic.reserva_llantas_porcentaje, Decimal::from_str("5").unwrap());
+        assert_eq!(
+            cmic.espera_mantenimiento_porcentaje,
+            Decimal::from_str("50").unwrap()
+        );
+        assert_eq!(
+            cmic.espera_combustible_porcentaje,
+            Decimal::from_str("5").unwrap()
+        );
+        assert_eq!(
+            cmic.espera_lubricante_porcentaje,
+            Decimal::from_str("5").unwrap()
+        );
+        assert_eq!(
+            cmic.espera_llantas_porcentaje,
+            Decimal::from_str("10").unwrap()
+        );
+        assert_eq!(
+            cmic.espera_piezas_especiales_porcentaje,
+            Decimal::from_str("0").unwrap()
+        );
+        assert_eq!(
+            cmic.espera_otras_fuentes_porcentaje,
+            Decimal::from_str("0").unwrap()
+        );
+        assert_eq!(
+            cmic.reserva_depreciacion_porcentaje,
+            Decimal::from_str("15").unwrap()
+        );
+        assert_eq!(
+            cmic.reserva_combustible_porcentaje,
+            Decimal::from_str("3").unwrap()
+        );
+        assert_eq!(
+            cmic.reserva_lubricante_porcentaje,
+            Decimal::from_str("3").unwrap()
+        );
+        assert_eq!(
+            cmic.reserva_llantas_porcentaje,
+            Decimal::from_str("5").unwrap()
+        );
 
         let cfe = perfiles.iter().find(|p| p.nombre == "CFE").expect("CFE");
-        assert_eq!(cfe.espera_mantenimiento_porcentaje, Decimal::from_str("0").unwrap());
-        assert_eq!(cfe.espera_llantas_porcentaje, Decimal::from_str("15").unwrap());
-        assert_eq!(cfe.reserva_combustible_porcentaje, Decimal::from_str("0").unwrap());
+        assert_eq!(
+            cfe.espera_mantenimiento_porcentaje,
+            Decimal::from_str("0").unwrap()
+        );
+        assert_eq!(
+            cfe.espera_llantas_porcentaje,
+            Decimal::from_str("15").unwrap()
+        );
+        assert_eq!(
+            cfe.reserva_combustible_porcentaje,
+            Decimal::from_str("0").unwrap()
+        );
 
         let sict = perfiles.iter().find(|p| p.nombre == "SICT").expect("SICT");
-        assert_eq!(sict.espera_mantenimiento_porcentaje, Decimal::from_str("15").unwrap());
-        assert_eq!(sict.espera_otras_fuentes_porcentaje, Decimal::from_str("5").unwrap());
-        assert_eq!(sict.espera_llantas_porcentaje, Decimal::from_str("15").unwrap());
-        assert_eq!(sict.reserva_operacion_porcentaje, Decimal::from_str("0").unwrap());
+        assert_eq!(
+            sict.espera_mantenimiento_porcentaje,
+            Decimal::from_str("15").unwrap()
+        );
+        assert_eq!(
+            sict.espera_otras_fuentes_porcentaje,
+            Decimal::from_str("5").unwrap()
+        );
+        assert_eq!(
+            sict.espera_llantas_porcentaje,
+            Decimal::from_str("15").unwrap()
+        );
+        assert_eq!(
+            sict.reserva_operacion_porcentaje,
+            Decimal::from_str("0").unwrap()
+        );
 
         // Sembrar de nuevo no debe duplicar — corta temprano si ya hay al
         // menos una fila en `perfil_inactividad_equipo`.
         PerfilInactividadEquipoService::sembrar(&portafolio)
             .await
             .expect("segundo sembrado (no debe duplicar)");
-        let perfiles_repetido = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
-            .await
-            .expect("listar de nuevo");
-        assert_eq!(perfiles_repetido.len(), 4, "no debe duplicar al sembrar dos veces");
+        let perfiles_repetido =
+            PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
+                .await
+                .expect("listar de nuevo");
+        assert_eq!(
+            perfiles_repetido.len(),
+            4,
+            "no debe duplicar al sembrar dos veces"
+        );
     }
 
     #[tokio::test]
@@ -463,10 +573,13 @@ mod tests {
         crate::seed::sembrar_catalogos_generales(&portafolio)
             .await
             .expect("sembrar catálogos generales");
-        let admin = UsuarioService::buscar_admin_obrix(&portafolio).await.expect("admin");
-        let organizacion = crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
+        let admin = UsuarioService::buscar_admin_obrix(&portafolio)
             .await
-            .expect("organización sembrada");
+            .expect("admin");
+        let organizacion =
+            crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
+                .await
+                .expect("organización sembrada");
 
         let creado = PerfilInactividadEquipoService::crear(
             &portafolio,
@@ -495,7 +608,10 @@ mod tests {
         .await
         .expect("actualizar perfil");
         assert_eq!(actualizado.nombre, "Estado de México, revisado");
-        assert_eq!(actualizado.espera_mantenimiento_porcentaje, Decimal::from_str("80").unwrap());
+        assert_eq!(
+            actualizado.espera_mantenimiento_porcentaje,
+            Decimal::from_str("80").unwrap()
+        );
         assert_eq!(actualizado.updated_by.as_deref(), Some(admin.id.as_str()));
 
         PerfilInactividadEquipoService::eliminar(&portafolio, creado.id.clone(), admin.id.clone())

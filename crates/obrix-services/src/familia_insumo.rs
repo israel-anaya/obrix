@@ -1,11 +1,9 @@
-use obrix_db::entities::familia_insumo::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::familia_insumo::{ActiveModel, Column, Entity, Model};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Árbol de familias de insumo de referencia — fuente de verdad en
 /// `data/initial/familia_insumo.csv`, embebido tal cual en el binario.

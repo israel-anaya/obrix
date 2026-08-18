@@ -1,11 +1,9 @@
-use obrix_db::entities::region::{ActiveModel, Column, Entity, Model};
 use obrix_db::PortafolioRepository;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter,
-};
+use obrix_db::entities::region::{ActiveModel, Column, Entity, Model};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::usuario::UsuarioService;
-use crate::{nuevo_id, DatosIniciales, ServiceError};
+use crate::{DatosIniciales, ServiceError, nuevo_id};
 
 /// Catálogo de regiones de referencia — fuente de verdad en
 /// `data/initial/region.csv`, embebido tal cual en el binario.
@@ -117,9 +115,8 @@ impl DatosIniciales for RegionService {
         let mut lector = csv::ReaderBuilder::new().from_reader(REGIONES_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvRegion>().enumerate() {
             let fila = i + 2;
-            let registro = registro.map_err(|e| {
-                ServiceError::Validacion(format!("region.csv fila {fila}: {e}"))
-            })?;
+            let registro = registro
+                .map_err(|e| ServiceError::Validacion(format!("region.csv fila {fila}: {e}")))?;
             let nombre = registro.nombre.trim().to_string();
             if nombre.is_empty() {
                 return Err(ServiceError::Validacion(format!(

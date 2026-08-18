@@ -183,15 +183,27 @@ impl MigrationTrait for Migration {
                             .text()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::Tipo).text().not_null())
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioDetalle::Tipo)
+                            .text()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(EquipoCostoHorarioDetalle::Naturaleza).text())
-                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::Orden).integer().not_null())
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioDetalle::Orden)
+                            .integer()
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(EquipoCostoHorarioDetalle::Cantidad)
                             .decimal()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::Costo).decimal().not_null())
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioDetalle::Costo)
+                            .decimal()
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(EquipoCostoHorarioDetalle::Importe)
                             .decimal()
@@ -220,18 +232,27 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(EquipoCostoHorarioDetalle::Table, EquipoCostoHorarioDetalle::DetalleInsumoId)
+                            .from(
+                                EquipoCostoHorarioDetalle::Table,
+                                EquipoCostoHorarioDetalle::DetalleInsumoId,
+                            )
                             .to(Insumo::Table, Insumo::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(EquipoCostoHorarioDetalle::Table, EquipoCostoHorarioDetalle::CreatedBy)
+                            .from(
+                                EquipoCostoHorarioDetalle::Table,
+                                EquipoCostoHorarioDetalle::CreatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(EquipoCostoHorarioDetalle::Table, EquipoCostoHorarioDetalle::UpdatedBy)
+                            .from(
+                                EquipoCostoHorarioDetalle::Table,
+                                EquipoCostoHorarioDetalle::UpdatedBy,
+                            )
                             .to(Usuario::Table, Usuario::Id),
                     )
                     .to_owned(),
@@ -243,7 +264,11 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(EquipoCostoHorarioDetalle::Table).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(EquipoCostoHorarioDetalle::Table)
+                    .to_owned(),
+            )
             .await?;
         manager
             .drop_table(Table::drop().table(EquipoCostoHorario::Table).to_owned())
