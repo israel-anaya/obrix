@@ -50,6 +50,42 @@ pub struct PerfilInactividadEquipoData {
 pub struct PerfilInactividadEquipoService;
 
 impl PerfilInactividadEquipoService {
+    /// Validación de `PerfilInactividadEquipoData` común a `crear`/`actualizar`
+    /// — `actualizando` distingue alta de edición (ver `crate::accion`). Cada
+    /// porcentaje debe estar en 0–100 inclusive, igual que el diccionario.
+    fn validar(datos: &PerfilInactividadEquipoData, actualizando: bool) -> Result<(), ServiceError> {
+        let accion = crate::accion(actualizando);
+        for (etiqueta, valor) in [
+            ("espera · depreciación", datos.espera_depreciacion_porcentaje),
+            ("espera · inversión", datos.espera_inversion_porcentaje),
+            ("espera · seguro", datos.espera_seguro_porcentaje),
+            ("espera · mantenimiento", datos.espera_mantenimiento_porcentaje),
+            ("espera · combustible", datos.espera_combustible_porcentaje),
+            ("espera · lubricante", datos.espera_lubricante_porcentaje),
+            ("espera · llantas", datos.espera_llantas_porcentaje),
+            ("espera · piezas especiales", datos.espera_piezas_especiales_porcentaje),
+            ("espera · otras fuentes", datos.espera_otras_fuentes_porcentaje),
+            ("espera · operación", datos.espera_operacion_porcentaje),
+            ("reserva · depreciación", datos.reserva_depreciacion_porcentaje),
+            ("reserva · inversión", datos.reserva_inversion_porcentaje),
+            ("reserva · seguro", datos.reserva_seguro_porcentaje),
+            ("reserva · mantenimiento", datos.reserva_mantenimiento_porcentaje),
+            ("reserva · combustible", datos.reserva_combustible_porcentaje),
+            ("reserva · lubricante", datos.reserva_lubricante_porcentaje),
+            ("reserva · llantas", datos.reserva_llantas_porcentaje),
+            ("reserva · piezas especiales", datos.reserva_piezas_especiales_porcentaje),
+            ("reserva · otras fuentes", datos.reserva_otras_fuentes_porcentaje),
+            ("reserva · operación", datos.reserva_operacion_porcentaje),
+        ] {
+            if valor < Decimal::ZERO || valor > Decimal::ONE_HUNDRED {
+                return Err(ServiceError::Validacion(format!(
+                    "No se puede {accion} un perfil de inactividad de equipo con {etiqueta} fuera del rango 0-100."
+                )));
+            }
+        }
+        Ok(())
+    }
+
     pub async fn listar(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -67,6 +103,7 @@ impl PerfilInactividadEquipoService {
         datos: PerfilInactividadEquipoData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, false)?;
         Ok(ActiveModel {
             id: Set(nuevo_id()),
             organizacion_id: Set(organizacion_id.to_string()),
@@ -109,6 +146,7 @@ impl PerfilInactividadEquipoService {
         datos: PerfilInactividadEquipoData,
         actualizado_por: String,
     ) -> Result<Model, ServiceError> {
+        Self::validar(&datos, true)?;
         let mut modelo: ActiveModel = Entity::find_by_id(&id)
             .filter(Column::Deleted.eq(false))
             .one(repo.conexion())
@@ -293,6 +331,75 @@ mod tests {
             reserva_piezas_especiales_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_otras_fuentes_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_operacion_porcentaje: Decimal::from_str("0").unwrap(),
+        }
+    }
+
+    /// Un setter por cada porcentaje — así el test de rango cubre los 20
+    /// campos sin copiar el arreglo de `validar`.
+    fn setters_porcentaje() -> Vec<fn(&mut PerfilInactividadEquipoData, Decimal)> {
+        vec![
+            |d, v| d.espera_depreciacion_porcentaje = v,
+            |d, v| d.espera_inversion_porcentaje = v,
+            |d, v| d.espera_seguro_porcentaje = v,
+            |d, v| d.espera_mantenimiento_porcentaje = v,
+            |d, v| d.espera_combustible_porcentaje = v,
+            |d, v| d.espera_lubricante_porcentaje = v,
+            |d, v| d.espera_llantas_porcentaje = v,
+            |d, v| d.espera_piezas_especiales_porcentaje = v,
+            |d, v| d.espera_otras_fuentes_porcentaje = v,
+            |d, v| d.espera_operacion_porcentaje = v,
+            |d, v| d.reserva_depreciacion_porcentaje = v,
+            |d, v| d.reserva_inversion_porcentaje = v,
+            |d, v| d.reserva_seguro_porcentaje = v,
+            |d, v| d.reserva_mantenimiento_porcentaje = v,
+            |d, v| d.reserva_combustible_porcentaje = v,
+            |d, v| d.reserva_lubricante_porcentaje = v,
+            |d, v| d.reserva_llantas_porcentaje = v,
+            |d, v| d.reserva_piezas_especiales_porcentaje = v,
+            |d, v| d.reserva_otras_fuentes_porcentaje = v,
+            |d, v| d.reserva_operacion_porcentaje = v,
+        ]
+    }
+
+    #[test]
+    fn validar_rechaza_cualquier_porcentaje_fuera_de_rango() {
+        let bajo = Decimal::from_str("-0.01").unwrap();
+        let alto = Decimal::from_str("100.01").unwrap();
+        for setter in setters_porcentaje() {
+            let mut datos = datos_prueba("CMIC");
+            setter(&mut datos, bajo);
+            let err = PerfilInactividadEquipoService::validar(&datos, false).expect_err("rechaza < 0");
+            match err {
+                ServiceError::Validacion(mensaje) => {
+                    assert!(mensaje.contains("fuera del rango 0-100"), "mensaje inesperado: {mensaje}");
+                    assert!(mensaje.contains("crear"), "debe usar el verbo de alta: {mensaje}");
+                }
+                otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
+            }
+
+            let mut datos = datos_prueba("CMIC");
+            setter(&mut datos, alto);
+            let err = PerfilInactividadEquipoService::validar(&datos, true).expect_err("rechaza > 100");
+            match err {
+                ServiceError::Validacion(mensaje) => {
+                    assert!(mensaje.contains("fuera del rango 0-100"), "mensaje inesperado: {mensaje}");
+                    assert!(mensaje.contains("actualizar"), "debe usar el verbo de edición: {mensaje}");
+                }
+                otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
+            }
+        }
+    }
+
+    #[test]
+    fn validar_acepta_porcentajes_en_los_extremos_del_rango() {
+        for setter in setters_porcentaje() {
+            let mut en_cero = datos_prueba("CMIC");
+            setter(&mut en_cero, Decimal::ZERO);
+            assert!(PerfilInactividadEquipoService::validar(&en_cero, false).is_ok());
+
+            let mut en_cien = datos_prueba("CMIC");
+            setter(&mut en_cien, Decimal::ONE_HUNDRED);
+            assert!(PerfilInactividadEquipoService::validar(&en_cien, true).is_ok());
         }
     }
 

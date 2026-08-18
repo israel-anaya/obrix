@@ -37,7 +37,7 @@ import { HerramientaSeccion } from "@/features/catalogos/HerramientaSeccion";
 import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/MaterialesCatalogoSeccion";
 import { MatrizOficioRegionSeccion } from "@/features/catalogos/MatrizOficioRegionSeccion";
 import { MesaEquivalentesSeccion } from "@/features/catalogos/MesaEquivalentesSeccion";
-import { PerfilInactividadEquipoSeccion } from "@/features/catalogos/PerfilInactividadEquipoSeccion";
+import { PerfilInactividadEquipoSeccion, type PerfilInactividadVista } from "@/features/catalogos/PerfilInactividadEquipoSeccion";
 import { PuenteBaseRealSeccion } from "@/features/catalogos/PuenteBaseRealSeccion";
 import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
@@ -141,6 +141,7 @@ export default function App() {
   const [equipoCostoHorarioVista, setEquipoCostoHorarioVista] = useState<EquipoCostoHorarioVista>("grid");
   const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("grid");
   const [tabuladoresSalarioVista, setTabuladoresSalarioVista] = useState<TabuladoresSalarioVista>("grid");
+  const [perfilInactividadVista, setPerfilInactividadVista] = useState<PerfilInactividadVista>("grid");
 
   const dataGridRef = useRef<DataGridHandle>(null);
   const [catalogoPuedeEliminar, setCatalogoPuedeEliminar] = useState(false);
@@ -452,7 +453,7 @@ export default function App() {
     }
     if (activeTab.id.startsWith(CATALOGO_PREFIX)) {
       const catalogoId = activeTab.id.slice(CATALOGO_PREFIX.length);
-      if (catalogoId === "perfiles-inactividad") return <PerfilInactividadEquipoSeccion />;
+      if (catalogoId === "perfiles-inactividad") return <PerfilInactividadEquipoSeccion vista={perfilInactividadVista} />;
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
       if (catalogoId === "clientes") return <ClientesSeccion />;
       if (catalogoId === "materiales-item") {
@@ -553,6 +554,11 @@ export default function App() {
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
     { id: "matriz", icon: Grid3x3, titulo: "Modo Matriz × región" },
   ];
+  const PERFILES_INACTIVIDAD_TAB_ID = `${CATALOGO_PREFIX}perfiles-inactividad`;
+  const PERFILES_INACTIVIDAD_VISTAS: { id: PerfilInactividadVista; icon: LucideIcon; titulo: string }[] = [
+    { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+    { id: "matriz", icon: Grid3x3, titulo: "Modo Matriz" },
+  ];
   const renderTabExtra = (tab: EditorTabInfo) => {
     if (tab.id === CUADRILLAS_TAB_ID) return renderVistaSwitcher(CUADRILLAS_VISTAS, cuadrillasVista, setCuadrillasVista);
     if (tab.id === MATERIALES_TAB_ID) return renderVistaSwitcher(MATERIALES_VISTAS, materialesVista, setMaterialesVista);
@@ -561,6 +567,9 @@ export default function App() {
     }
     if (tab.id === TABULADORES_SALARIO_TAB_ID) {
       return renderVistaSwitcher(TABULADORES_SALARIO_VISTAS, tabuladoresSalarioVista, setTabuladoresSalarioVista);
+    }
+    if (tab.id === PERFILES_INACTIVIDAD_TAB_ID) {
+      return renderVistaSwitcher(PERFILES_INACTIVIDAD_VISTAS, perfilInactividadVista, setPerfilInactividadVista);
     }
     return null;
   };

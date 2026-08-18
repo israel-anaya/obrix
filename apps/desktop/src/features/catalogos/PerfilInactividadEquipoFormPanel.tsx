@@ -70,9 +70,9 @@ function CampoPorcentaje({
 
 /**
  * Vista en forma del perfil seleccionado — los mismos 20 porcentajes que las
- * columnas, agrupados como en el `VerticalGrid` (espera / reserva, fijos /
+ * columnas, agrupados como en el Modo Matriz (espera / reserva, fijos /
  * consumo / operación) para revisar o editar un registro a la vez. En
- * `PerfilInactividadEquipoSeccion` se sincroniza con la fila. "Guardar" hace
+ * Vista Clásica se sincroniza con la fila. "Guardar" hace
  * `updatePerfilInactividadEquipo` y avisa al padre vía `onGuardado`.
  */
 export function PerfilInactividadEquipoFormPanel({
