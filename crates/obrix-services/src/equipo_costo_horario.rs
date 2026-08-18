@@ -477,7 +477,8 @@ mod tests {
 
     async fn portafolio_con_unidad_familia_y_region()
     -> (PortafolioSqliteRepository, String, String, String) {
-        use obrix_db::entities::{familia_insumo, region, unidad_medida, usuario};
+        use obrix_db::entities::{familia_insumo, moneda, organizacion, region, unidad_medida, usuario};
+        use rust_decimal::Decimal;
         use sea_orm::ActiveModelTrait;
 
         let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
@@ -495,6 +496,43 @@ mod tests {
             created_by: Set(None),
             updated_at: Set(None),
             updated_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        moneda::ActiveModel {
+            id: Set("mon-1".into()),
+            codigo: Set("MXN".into()),
+            nombre: Set("Peso mexicano".into()),
+            simbolo: Set("$".into()),
+            decimales: Set(2),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .unwrap();
+
+        organizacion::ActiveModel {
+            id: Set("org-1".into()),
+            razon_social: Set("Org".into()),
+            rfc: Set("XAXX010101000".into()),
+            tipo: Set(organizacion::TipoOrganizacion::Despacho),
+            moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
+            created_at: Set(now.clone()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(portafolio.conexion())
         .await
@@ -540,6 +578,7 @@ mod tests {
 
         region::ActiveModel {
             id: Set("reg-1".into()),
+            organizacion_id: Set("org-1".into()),
             nombre: Set("Centro".into()),
             estado: Set("CDMX".into()),
             factor_ajuste: Set(None),

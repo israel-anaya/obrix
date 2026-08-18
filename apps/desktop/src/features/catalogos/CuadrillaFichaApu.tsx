@@ -15,6 +15,7 @@ import { PercentageInput } from "@/components/PercentageInput";
 import { QuantityInput } from "@/components/QuantityInput";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createCuadrillaDetalle,
   deleteCuadrillaDetalle,
@@ -264,6 +265,7 @@ export function CuadrillaFichaApu({
   cuadrilla: Cuadrilla;
   onCambio: () => void;
 }) {
+  const { organizacionActivaId } = useOrganizacionActiva();
   const [detalles, setDetalles] = useState<CuadrillaDetalle[]>([]);
   const [costos, setCostos] = useState<CuadrillaCosto[]>([]);
   const [costoSeleccionadoId, setCostoSeleccionadoId] = useState<string | null>(null);
@@ -294,7 +296,7 @@ export function CuadrillaFichaApu({
     listHerramientas().then(setHerramientas).catch(() => {});
     listRegiones().then(setRegiones).catch(() => {});
     listUnidadesMedida().then(setUnidades).catch(() => {});
-  }, []);
+  }, [organizacionActivaId]);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });

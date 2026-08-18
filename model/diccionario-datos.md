@@ -74,21 +74,6 @@ ver vive en `organizacion_usuario`.
 
 Restricción: única `(organizacion_id, usuario_id)`.
 
-### `cliente`
-
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| organizacion_id | uuid | FK → organizacion |
-| razon_social | text | |
-| rfc | text | |
-| tipo | enum | `privado`, `gobierno` |
-| contacto_nombre | text | nullable |
-| contacto_correo | text | nullable |
-| contacto_telefono | text | nullable |
-| domicilio_fiscal | text | nullable |
-| deleted | bool | Indica si el elemento a sido eliminado
-| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
 
 ### `comentario`
@@ -110,7 +95,8 @@ Polimórfico, estilo colaboración Notion/Linear sobre cualquier entidad.
 
 ---
 
-## 2. Catálogos generales
+## 2. Configuración de Portafolio
+
 
 ### `unidad_medida`
 
@@ -161,13 +147,38 @@ premezclado").
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
+### `region`
 
----
+Zonificación geográfica para ajustar precios de bancos de referencia — el
+costo de insumos en México varía fuerte entre zona metropolitana, frontera
+norte y sureste. Cada región pertenece a una organización.
 
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| nombre | text | ej. "Metropolitana CDMX", "Frontera Norte", "Sureste" |
+| estado | text | entidad federativa |
+| factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
+| visible | bool | si es `false`, la región no aparece en tabuladores, precios ni Costo por región |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
+### `cliente`
 
-
-## 3. Otros Catalogos
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| organizacion_id | uuid | FK → organizacion |
+| razon_social | text | |
+| rfc | text | |
+| tipo | enum | `privado`, `gobierno` |
+| contacto_nombre | text | nullable |
+| contacto_correo | text | nullable |
+| contacto_telefono | text | nullable |
+| domicilio_fiscal | text | nullable |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
 ### `proveedor`
 
@@ -182,26 +193,11 @@ premezclado").
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
-### `region`
 
-Zonificación geográfica para ajustar precios de bancos de referencia — el
-costo de insumos en México varía fuerte entre zona metropolitana, frontera
-norte y sureste.
-
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| nombre | text | ej. "Metropolitana CDMX", "Frontera Norte", "Sureste" |
-| estado | text | entidad federativa |
-| factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
-| visible | bool | si es `false`, la región no aparece en tabuladores, precios ni Costo por región |
-| deleted | bool | Indica si el elemento a sido eliminado
-| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+---
 
 
 ## 3. Catálogo de insumos y precios
-
-
 
 ### `insumo`
 

@@ -58,12 +58,6 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
   { id: "conceptos", label: "Conceptos", icon: ClipboardList },
 ];
 
-/** Ítems fijos del grupo "Otros" — catálogos generales sin lugar propio en el árbol de costos directos. */
-export const NODOS_OTROS: NodoCatalogo[] = [
-  { id: "proveedores", label: "Proveedores" },
-  { id: "clientes", label: "Clientes" },
-];
-
 export const CATALOGO_GRID_CONFIG: Record<string, DataGridConfig> = {
   "factores-salario-real": {
     title: "Factores de Salario Real",

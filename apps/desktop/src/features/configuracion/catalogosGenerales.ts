@@ -77,7 +77,7 @@ function aBooleano(valor: string | number | boolean, fallback: boolean): boolean
 }
 
 /**
- * `grid`/`aFila`/`filaANuevo` no se usan para renderizar — `SettingsPage`
+ * `grid`/`aFila`/`filaANuevo` no se usan para renderizar — `App`
  * intercepta este id y muestra `OrganizacionSeccion` en su lugar, porque la
  * columna de moneda default necesita el catálogo de `Moneda` (dinámico) como
  * opciones, algo que este descriptor estático no puede resolver. Se dejan
@@ -115,7 +115,7 @@ const organizaciones: CatalogoGeneralDescriptor<Organizacion, OrganizacionData> 
 };
 
 /**
- * `grid`/`api`/`aFila`/`filaANuevo` no se usan para renderizar — `SettingsPage`
+ * `grid`/`api`/`aFila`/`filaANuevo` no se usan para renderizar — `App`
  * intercepta este id y muestra `UsuariosSeccion` en su lugar, con un detalle
  * (las organizaciones del usuario seleccionado) que este descriptor genérico
  * no puede expresar. Se dejan aquí solo para satisfacer

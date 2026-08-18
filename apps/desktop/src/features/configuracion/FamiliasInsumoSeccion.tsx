@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Download, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones, type AccionBarra } from "@/components/BarraAcciones";
 import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
@@ -7,6 +7,7 @@ import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from "@/hooks/use-toast";
 import { adaptadorExportFamilias, adaptadorImportFamilias } from "@/features/catalogos/csv/adaptadorFamilias";
+import { FamiliaInsumoFormPanel } from "@/features/configuracion/FamiliaInsumoFormPanel";
 import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo, listUsuarios, updateFamiliaInsumo } from "@/lib/tauri";
 import type { FamiliaInsumo } from "@/lib/types";
 
@@ -98,6 +99,8 @@ export function FamiliasInsumoSeccion() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [familiaSeleccionadaId, setFamiliaSeleccionadaId] = useState<string | null>(null);
+  const [fichaId, setFichaId] = useState<string | null>(null);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [puedeEliminarFamilia, setPuedeEliminarFamilia] = useState(false);
   const [puedeEliminarSubfamilia, setPuedeEliminarSubfamilia] = useState(false);
   const [busquedaFamilia, setBusquedaFamilia] = useState("");
@@ -130,6 +133,7 @@ export function FamiliasInsumoSeccion() {
 
   const recargar = () => cargarFamilias(true);
   const refrescar = () => cargarFamilias(false);
+  const familiaFicha = familias.find((f) => f.id === fichaId) ?? null;
 
   useEffect(() => {
     listUsuarios().then((usuarios) => {
@@ -156,8 +160,15 @@ export function FamiliasInsumoSeccion() {
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1">
-        <ResizablePanelGroup orientation="vertical" className="h-full">
-          <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="familias-grids"
+            defaultSize="65"
+            minSize="40"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            <ResizablePanelGroup orientation="vertical" className="h-full">
+              <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <PanelGrid
               titulo="Familias de insumo"
               busqueda={busquedaFamilia}
@@ -179,6 +190,11 @@ export function FamiliasInsumoSeccion() {
                   onClick: () => setCsvAdaptador(adaptadorExportFamilias(familias)),
                   disabled: csvAdaptador !== null || familias.length === 0,
                 },
+                {
+                  icono: FileText,
+                  titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                  onClick: () => setPanelFichaAbierto((v) => !v),
+                },
               ]}
             >
               <DataGrid
@@ -187,10 +203,14 @@ export function FamiliasInsumoSeccion() {
                 initialRows={filasFamilia}
                 loading={cargando}
                 selectionMode="single"
+                highlightSelection={panelFichaAbierto}
                 search={busquedaFamilia}
                 onSearchChange={setBusquedaFamilia}
                 onSelectionChange={setPuedeEliminarFamilia}
-                onRowSelected={(fila) => setFamiliaSeleccionadaId(fila?._id ?? null)}
+                onRowSelected={(fila) => {
+                  setFamiliaSeleccionadaId(fila?._id ?? null);
+                  setFichaId(fila?._id ?? null);
+                }}
                 onAddRow={(fila) =>
                   createFamiliaInsumo({
                     nombre: String(fila.nombre),
@@ -228,9 +248,11 @@ export function FamiliasInsumoSeccion() {
                   initialRows={filasSubfamilia}
                   loading={cargando}
                   selectionMode="single"
+                  highlightSelection={panelFichaAbierto}
                   search={busquedaSubfamilia}
                   onSearchChange={setBusquedaSubfamilia}
                   onSelectionChange={setPuedeEliminarSubfamilia}
+                  onRowSelected={(fila) => setFichaId(fila?._id ?? null)}
                   onAddRow={(fila) =>
                     createFamiliaInsumo({
                       nombre: String(fila.nombre),
@@ -259,6 +281,26 @@ export function FamiliasInsumoSeccion() {
               </div>
             )}
           </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+          {panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="familias-detalle"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <FamiliaInsumoFormPanel
+                  familia={familiaFicha}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={() => void refrescar()}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
         </ResizablePanelGroup>
       </div>
       <CsvOperacionDialog

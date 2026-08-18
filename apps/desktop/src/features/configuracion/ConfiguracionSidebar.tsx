@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
-import { BookOpen, Info, Palette, Server } from "lucide-react";
+import { Info, Palette, Server } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CATALOGOS_GENERALES } from "@/features/configuracion/catalogosGenerales";
 
 function SeccionBoton({
   id,
@@ -49,20 +48,6 @@ export function ConfiguracionSidebar({
     <div className="flex h-full flex-col gap-0.5 overflow-auto px-1 py-1">
       <SeccionBoton id="apariencia" label="Apariencia" icon={Palette} activa={activa} onSelect={onSelect} />
       <SeccionBoton id="acerca-de" label="Acerca de" icon={Info} activa={activa} onSelect={onSelect} />
-
-      <div className="mt-3 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Catálogos generales
-      </div>
-      {CATALOGOS_GENERALES.map((descriptor) => (
-        <SeccionBoton
-          key={descriptor.id}
-          id={descriptor.id}
-          label={descriptor.titulo}
-          icon={BookOpen}
-          activa={activa}
-          onSelect={onSelect}
-        />
-      ))}
 
       <div className="mt-3 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         Colaboración

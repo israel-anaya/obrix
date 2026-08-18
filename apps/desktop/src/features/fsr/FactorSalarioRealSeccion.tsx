@@ -61,9 +61,6 @@ export function FactorSalarioRealSeccion({
   const { items, error, cargando, crear, actualizar, eliminar, reload, limpiarError } = useCatalogoGeneral(FACTOR_SALARIO_REAL_API);
   const [busqueda, setBusqueda] = useState("");
   const { organizacionActivaId } = useOrganizacionActiva();
-  useEffect(() => {
-    reload();
-  }, [organizacionActivaId, reload]);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -78,11 +75,12 @@ export function FactorSalarioRealSeccion({
   const yendoAConfirmacion = useRef(false);
   const recargarRegiones = () => listRegiones().then(setRegiones).catch(() => {});
   useEffect(() => {
+    void reload();
     recargarRegiones();
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
-  }, []);
+  }, [organizacionActivaId, reload]);
 
   const recargarTodo = () => {
     void reload();

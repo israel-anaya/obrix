@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Globe2, History, MapPinned } from "lucide-react";
 import { BadgeEstadoVigencia } from "@/components/BadgeEstadoVigencia";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
 import type { Region, SalarioCategoriaFasar } from "@/lib/types";
 import { formatearFecha } from "@/lib/fecha";
@@ -26,6 +27,7 @@ export function SalarioHistorialGrid({
   /** Sube al pedir foco desde el resumen del panel lateral. */
   focoTicket?: number;
 }) {
+  const { organizacionActivaId } = useOrganizacionActiva();
   const rootRef = useRef<HTMLDivElement>(null);
   const [resaltado, setResaltado] = useState(false);
   const [salarios, setSalarios] = useState<SalarioCategoriaFasar[]>([]);
@@ -52,7 +54,7 @@ export function SalarioHistorialGrid({
 
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
-  }, []);
+  }, [organizacionActivaId]);
 
   useEffect(() => {
     if (!categoriaId) {

@@ -27,10 +27,11 @@ pub async fn sembrar_catalogos_generales(
     repo: &dyn PortafolioRepository,
 ) -> Result<(), ServiceError> {
     UsuarioService::sembrar(repo).await?;
-    RegionService::sembrar(repo).await?;
     MonedaService::sembrar(repo).await?;
     UnidadMedidaService::sembrar(repo).await?;
     OrganizacionService::sembrar(repo).await?;
+    // Depende de `organizacion` (cada región cuelga de una).
+    RegionService::sembrar(repo).await?;
     FamiliaInsumoService::sembrar(repo).await?;
     PerfilInactividadEquipoService::sembrar(repo).await?;
     ClienteService::sembrar(repo).await?;

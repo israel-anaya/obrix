@@ -2,12 +2,7 @@ import { useState } from "react";
 import { Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { CatalogoGeneralSeccion } from "@/features/configuracion/CatalogoGeneralSeccion";
-import { CATALOGOS_GENERALES } from "@/features/configuracion/catalogosGenerales";
 import { ConfiguracionSidebar } from "@/features/configuracion/ConfiguracionSidebar";
-import { FamiliasInsumoSeccion } from "@/features/configuracion/FamiliasInsumoSeccion";
-import { OrganizacionSeccion } from "@/features/configuracion/OrganizacionSeccion";
-import { UsuariosSeccion } from "@/features/configuracion/UsuariosSeccion";
 
 function AparienciaSeccion({
   theme,
@@ -94,8 +89,6 @@ export function SettingsPage({
 }) {
   const [seccionActiva, setSeccionActiva] = useState("apariencia");
 
-  const catalogo = CATALOGOS_GENERALES.find((d) => d.id === seccionActiva);
-
   const renderContenido = () => {
     if (seccionActiva === "apariencia") {
       return (
@@ -109,10 +102,6 @@ export function SettingsPage({
     }
     if (seccionActiva === "acerca-de") return <AcercaDeSeccion />;
     if (seccionActiva === "servidor") return <ServidorSeccion />;
-    if (seccionActiva === "familias-insumo") return <FamiliasInsumoSeccion />;
-    if (seccionActiva === "organizaciones") return <OrganizacionSeccion />;
-    if (seccionActiva === "usuarios") return <UsuariosSeccion />;
-    if (catalogo) return <CatalogoGeneralSeccion key={catalogo.id} descriptor={catalogo} />;
     return null;
   };
 

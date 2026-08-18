@@ -137,6 +137,7 @@ export interface UnidadMedidaData {
 
 export interface Region extends CamposControl, CamposBorradoLogico {
   id: string;
+  organizacion_id: string;
   nombre: string;
   estado: string;
   factor_ajuste: string | null;

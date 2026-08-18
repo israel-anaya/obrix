@@ -7,7 +7,7 @@ use crate::AppState;
 pub async fn list_regiones(state: tauri::State<'_, AppState>) -> Result<Vec<Model>, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    RegionService::listar(activo.portafolio.as_ref())
+    RegionService::listar(activo.portafolio.as_ref(), &activo.organizacion_id)
         .await
         .map_err(|e| e.to_string())
 }
@@ -21,6 +21,7 @@ pub async fn create_region(
     let activo = guard.as_ref().unwrap();
     RegionService::crear(
         activo.portafolio.as_ref(),
+        &activo.organizacion_id,
         region,
         activo.usuario_id_activo.clone(),
     )

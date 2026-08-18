@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, FilePlus2, FileText, Folder, Layers, type LucideIcon, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { COSTOS_DIRECTOS_TREE, NODOS_OTROS, type NodoCatalogo } from "@/features/catalogos/costosDirectosTree";
+import { COSTOS_DIRECTOS_TREE, type NodoCatalogo } from "@/features/catalogos/costosDirectosTree";
 
 interface ItemCatalogo {
   id: string;
@@ -21,7 +21,6 @@ interface GrupoDef {
 const GRUPOS: GrupoDef[] = [
   { id: "costos-directos", label: "Costos Directos", modo: "fijo", nombreBase: "", arbol: COSTOS_DIRECTOS_TREE },
   { id: "costos-indirectos", label: "Costos Indirectos", modo: "arbol", nombreBase: "Costo indirecto" },
-  { id: "otros", label: "Otros", modo: "fijo", nombreBase: "", arbol: NODOS_OTROS },
 ];
 
 function NodoArbolFijo({

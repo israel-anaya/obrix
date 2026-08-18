@@ -6,6 +6,7 @@ import { EnlaceHistorialCompleto } from "@/components/EnlaceHistorialCompleto";
 import { calcularSalarioConFsr } from "@/lib/calculoFsr";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
@@ -62,6 +63,7 @@ export function SalarioCategoriaFasarPanel({
   onVerHistorialCompleto?: () => void;
   historialAbierto?: boolean;
 }) {
+  const { organizacionActivaId } = useOrganizacionActiva();
   const [salarios, setSalarios] = useState<SalarioCategoriaFasar[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
   const [factores, setFactores] = useState<FactorSalarioReal[]>([]);
@@ -91,7 +93,7 @@ export function SalarioCategoriaFasarPanel({
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
     listFactoresSalarioReal().then(setFactores).catch(() => {});
-  }, []);
+  }, [organizacionActivaId]);
 
   // Igual que en PreciosMaterialPanel: se espera un momento a que la
   // selección se quede quieta antes de cargar, para que navegar con

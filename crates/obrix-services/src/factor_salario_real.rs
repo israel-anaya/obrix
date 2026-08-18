@@ -242,6 +242,7 @@ impl DatosIniciales for FactorSalarioRealService {
         )
         .await?;
         let regiones = region::Entity::find()
+            .filter(region::Column::OrganizacionId.eq(&organizacion.id))
             .filter(region::Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?;
@@ -339,7 +340,7 @@ mod tests {
 
     async fn portafolio_con_region() -> (obrix_db::PortafolioSqliteRepository, String) {
         use obrix_db::PortafolioSqliteRepository;
-        use obrix_db::entities::{region, usuario};
+        use obrix_db::entities::{moneda, organizacion, region, usuario};
         use sea_orm::ActiveModelTrait;
         use std::path::Path;
 
@@ -360,8 +361,44 @@ mod tests {
         .insert(portafolio.conexion())
         .await
         .expect("crear usuario");
+        moneda::ActiveModel {
+            id: Set("mon-1".into()),
+            codigo: Set("MXN".into()),
+            nombre: Set("Peso mexicano".into()),
+            simbolo: Set("$".into()),
+            decimales: Set(2),
+            created_at: Set(crate::ahora()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .expect("crear moneda");
+        organizacion::ActiveModel {
+            id: Set("org-1".into()),
+            razon_social: Set("Org".into()),
+            rfc: Set("XAXX010101000".into()),
+            tipo: Set(organizacion::TipoOrganizacion::Despacho),
+            moneda_default_id: Set("mon-1".into()),
+            horas_jornada: Set(Decimal::from(8)),
+            created_at: Set(crate::ahora()),
+            created_by: Set("usr-1".into()),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted: Set(false),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
+        }
+        .insert(portafolio.conexion())
+        .await
+        .expect("crear organización");
         let region = region::ActiveModel {
             id: Set("reg-1".into()),
+            organizacion_id: Set("org-1".into()),
             nombre: Set("Occidente".into()),
             estado: Set("Jalisco".into()),
             factor_ajuste: Set(None),
@@ -419,50 +456,11 @@ mod tests {
         }
     }
 
-    /// `crear`/`actualizar` sí exigen la FK `organizacion_id` — a diferencia
-    /// de `portafolio_con_region`, aquí se siembra también la organización.
+    /// `crear`/`actualizar` sí exigen la FK `organizacion_id` — `portafolio_con_region`
+    /// ya siembra moneda y organización para poder colgar la región.
     async fn portafolio_con_organizacion_y_region() -> (obrix_db::PortafolioSqliteRepository, String)
     {
-        use obrix_db::entities::{moneda, organizacion};
-
-        let (portafolio, region_id) = portafolio_con_region().await;
-        let now = crate::ahora();
-        moneda::ActiveModel {
-            id: Set("mon-1".into()),
-            codigo: Set("MXN".into()),
-            nombre: Set("Peso mexicano".into()),
-            simbolo: Set("$".into()),
-            decimales: Set(2),
-            created_at: Set(now.clone()),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted: Set(false),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .expect("crear moneda");
-        organizacion::ActiveModel {
-            id: Set("org-1".into()),
-            razon_social: Set("Org".into()),
-            rfc: Set("XAXX010101000".into()),
-            tipo: Set(organizacion::TipoOrganizacion::Despacho),
-            moneda_default_id: Set("mon-1".into()),
-            horas_jornada: Set(Decimal::from(8)),
-            created_at: Set(now.clone()),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted: Set(false),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .expect("crear organización");
-        (portafolio, region_id)
+        portafolio_con_region().await
     }
 
     #[tokio::test]

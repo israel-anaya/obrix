@@ -392,8 +392,12 @@ mod tests {
             .expect("listar regiones");
         assert_eq!(
             regiones.len(),
-            3,
-            "deben quedar las 3 regiones de data/initial/region.csv, sin duplicar"
+            9,
+            "deben quedar las 9 regiones de data/initial/region.csv, sin duplicar"
+        );
+        assert!(
+            regiones.iter().all(|r| !r.organizacion_id.is_empty()),
+            "cada región sembrada debe colgar de una organización"
         );
 
         let proveedores = obrix_db::entities::proveedor::Entity::find()
@@ -555,8 +559,8 @@ mod tests {
             .expect("listar factores de salario real");
         assert_eq!(
             factores.len(),
-            4,
-            "1 nacional + 3 regiones, sin duplicar"
+            10,
+            "1 nacional + 9 regiones, sin duplicar"
         );
         assert!(
             factores[0].region_id.is_none(),

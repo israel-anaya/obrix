@@ -90,6 +90,9 @@ export function PreciosMaterialPanel({
 
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
+  }, [organizacionActivaId]);
+
+  useEffect(() => {
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });

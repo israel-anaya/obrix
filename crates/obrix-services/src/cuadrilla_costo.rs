@@ -9,7 +9,8 @@
 use obrix_db::PortafolioRepository;
 use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
 use obrix_db::entities::{
-    cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, region, salario_categoria_fasar,
+    cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, insumo, region,
+    salario_categoria_fasar,
 };
 use rust_decimal::Decimal;
 use sea_orm::{
@@ -79,7 +80,13 @@ impl CuadrillaCostoService {
                 ))
             })?;
 
+        let org_id = insumo::Entity::find_by_id(cuadrilla_id)
+            .one(txn)
+            .await?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("insumo {cuadrilla_id}")))?
+            .organizacion_id;
         let regiones = region::Entity::find()
+            .filter(region::Column::OrganizacionId.eq(org_id))
             .filter(region::Column::Deleted.eq(false))
             .all(txn)
             .await?;
@@ -508,6 +515,7 @@ mod tests {
     async fn crear_region(portafolio: &PortafolioSqliteRepository, nombre: &str) -> String {
         RegionService::crear(
             portafolio,
+            "org-1",
             RegionData {
                 nombre: nombre.into(),
                 estado: "Nuevo León".into(),

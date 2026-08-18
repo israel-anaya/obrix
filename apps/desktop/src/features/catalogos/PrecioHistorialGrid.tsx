@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Globe2, History, MapPinned } from "lucide-react";
 import { BadgeEstadoVigencia } from "@/components/BadgeEstadoVigencia";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listPreciosMaterial, listRegiones } from "@/lib/tauri";
 import type { PrecioMaterial, Region } from "@/lib/types";
 import { formatearFecha } from "@/lib/fecha";
@@ -26,6 +27,7 @@ export function PrecioHistorialGrid({
   /** Sube al pedir foco desde el resumen del panel lateral. */
   focoTicket?: number;
 }) {
+  const { organizacionActivaId } = useOrganizacionActiva();
   const rootRef = useRef<HTMLDivElement>(null);
   const [resaltado, setResaltado] = useState(false);
   const [precios, setPrecios] = useState<PrecioMaterial[]>([]);
@@ -50,7 +52,7 @@ export function PrecioHistorialGrid({
 
   useEffect(() => {
     listRegiones().then(setRegiones).catch(() => {});
-  }, []);
+  }, [organizacionActivaId]);
 
   useEffect(() => {
     if (!materialId) {

@@ -932,6 +932,7 @@ mod tests {
 
         crate::region::RegionService::crear(
             &portafolio,
+            "org-1",
             crate::region::RegionData {
                 nombre: "Norte".into(),
                 estado: "Nuevo León".into(),
@@ -942,7 +943,7 @@ mod tests {
         )
         .await
         .expect("crear region");
-        let region_id = crate::region::RegionService::listar(&portafolio)
+        let region_id = crate::region::RegionService::listar(&portafolio, "org-1")
             .await
             .unwrap()[0]
             .id
@@ -1017,6 +1018,7 @@ mod tests {
 
         crate::region::RegionService::crear(
             &portafolio,
+            "org-1",
             crate::region::RegionData {
                 nombre: "Norte".into(),
                 estado: "Nuevo León".into(),
@@ -1027,7 +1029,7 @@ mod tests {
         )
         .await
         .expect("crear region");
-        let region_id = crate::region::RegionService::listar(&portafolio)
+        let region_id = crate::region::RegionService::listar(&portafolio, "org-1")
             .await
             .unwrap()[0]
             .id

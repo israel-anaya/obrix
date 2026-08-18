@@ -2,6 +2,7 @@ use obrix_db::PortafolioRepository;
 use obrix_db::entities::region::{ActiveModel, Column, Entity, Model};
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 
+use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
 use crate::{DatosIniciales, ServiceError, nuevo_id};
 
@@ -38,8 +39,12 @@ impl RegionService {
         Ok(())
     }
 
-    pub async fn listar(repo: &dyn PortafolioRepository) -> Result<Vec<Model>, ServiceError> {
+    pub async fn listar(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+    ) -> Result<Vec<Model>, ServiceError> {
         Ok(Entity::find()
+            .filter(Column::OrganizacionId.eq(organizacion_id))
             .filter(Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?)
@@ -47,12 +52,14 @@ impl RegionService {
 
     pub async fn crear(
         repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
         datos: RegionData,
         creado_por: String,
     ) -> Result<Model, ServiceError> {
         Self::validar(&datos, false)?;
         let modelo = ActiveModel {
             id: Set(nuevo_id()),
+            organizacion_id: Set(organizacion_id.to_string()),
             nombre: Set(datos.nombre),
             estado: Set(datos.estado),
             factor_ajuste: Set(datos.factor_ajuste),
@@ -109,11 +116,15 @@ impl RegionService {
 }
 
 impl DatosIniciales for RegionService {
-    /// Una región por cada fila de `data/initial/region.csv`.
+    /// Una región por cada fila de `data/initial/region.csv`, colgada de la
+    /// organización sembrada (`OrganizacionService::sembrar` corre antes).
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if Entity::find().one(repo.conexion()).await?.is_some() {
             return Ok(());
         }
+        let Ok(organizacion) = OrganizacionService::buscar_admin_obrix(repo).await else {
+            return Ok(());
+        };
         let admin = UsuarioService::buscar_admin_obrix(repo).await?;
         let mut lector = csv::ReaderBuilder::new().from_reader(REGIONES_CSV.as_bytes());
         for (i, registro) in lector.deserialize::<RegistroCsvRegion>().enumerate() {
@@ -128,6 +139,7 @@ impl DatosIniciales for RegionService {
             }
             Self::crear(
                 repo,
+                &organizacion.id,
                 RegionData {
                     nombre,
                     estado: registro.estado.trim().to_string(),

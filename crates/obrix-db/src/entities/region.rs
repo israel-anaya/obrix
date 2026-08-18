@@ -5,6 +5,7 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    pub organizacion_id: String,
     pub nombre: String,
     pub estado: String,
     pub factor_ajuste: Option<String>,
@@ -19,6 +20,19 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::organizacion::Entity",
+        from = "Column::OrganizacionId",
+        to = "super::organizacion::Column::Id"
+    )]
+    Organizacion,
+}
+
+impl Related<super::organizacion::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Organizacion.def()
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}

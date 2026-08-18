@@ -298,6 +298,7 @@ mod tests {
 
         let norte = RegionService::crear(
             &portafolio,
+            "org-1",
             RegionData {
                 nombre: "Norte".into(),
                 estado: "Nuevo León".into(),

@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createCuadrillaDetalle,
   deleteCuadrillaDetalle,
@@ -60,6 +61,7 @@ export function CuadrillaDetallePanel({
   onCerrar: () => void;
   onComposicionCambiada?: () => void;
 }) {
+  const { organizacionActivaId } = useOrganizacionActiva();
   const cuadrillaId = cuadrilla?.id ?? null;
   const integrantesRef = useRef<DataGridHandle>(null);
   const herramientaRef = useRef<DataGridHandle>(null);
@@ -87,7 +89,7 @@ export function CuadrillaDetallePanel({
     listHerramientas().then(setHerramientas).catch(() => {});
     listUnidadesMedida().then(setUnidades).catch(() => {});
     listRegiones().then(setRegiones).catch(() => {});
-  }, []);
+  }, [organizacionActivaId]);
 
   const cargarDetalles = (id: string) =>
     listCuadrillaDetalles(id)

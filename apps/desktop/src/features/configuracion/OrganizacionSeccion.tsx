@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from "@/hooks/use-toast";
+import { OrganizacionFormPanel } from "@/features/configuracion/OrganizacionFormPanel";
 import { useCatalogoGeneral } from "@/features/configuracion/useCatalogoGeneral";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -41,7 +43,9 @@ export function OrganizacionSeccion() {
   const gridRef = useRef<DataGridHandle>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const { items, error, cargando, crear, actualizar, eliminar, reload } = useCatalogoGeneral(ORGANIZACION_API);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
+  const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
+  const { items, error, cargando, crear, actualizar, eliminar, reload, refrescar } = useCatalogoGeneral(ORGANIZACION_API);
   // `useCatalogoGeneral` solo refresca su propia lista local (`items`) — el
   // resto de la app lee organizaciones de `OrganizacionContext`, que no se
   // entera de estos cambios por su cuenta (ver `App.recargarOrganizaciones`).
@@ -128,6 +132,29 @@ export function OrganizacionSeccion() {
     horas_jornada: String(fila.horas_jornada ?? 8),
   });
 
+  const itemSeleccionado = items.find((o) => o.id === seleccionadoId) ?? null;
+
+  const grid = (
+    <DataGrid
+      ref={gridRef}
+      config={config}
+      initialRows={filas}
+      loading={cargando}
+      selectionMode="single"
+      highlightSelection={panelFichaAbierto}
+      initialSelectedId={seleccionadoId}
+      search={busqueda}
+      onSearchChange={setBusqueda}
+      onSelectionChange={setPuedeEliminar}
+      onRowSelected={(fila) => setSeleccionadoId(fila?._id ?? null)}
+      onAddRow={(fila) => crear(filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())}
+      onDeleteRows={(ids) => eliminar(ids).then(() => recargarOrganizacionContext())}
+      onEditRow={(fila) =>
+        actualizar(fila._id, filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())
+      }
+    />
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
@@ -135,7 +162,14 @@ export function OrganizacionSeccion() {
         <div className="flex items-center gap-2">
           <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            acciones={[
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icono: FileText,
+                titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
+              },
+            ]}
             menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               {
@@ -150,21 +184,38 @@ export function OrganizacionSeccion() {
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <DataGrid
-          ref={gridRef}
-          config={config}
-          initialRows={filas}
-          loading={cargando}
-          selectionMode="single"
-          search={busqueda}
-          onSearchChange={setBusqueda}
-          onSelectionChange={setPuedeEliminar}
-          onAddRow={(fila) => crear(filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())}
-          onDeleteRows={(ids) => eliminar(ids).then(() => recargarOrganizacionContext())}
-          onEditRow={(fila) =>
-            actualizar(fila._id, filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())
-          }
-        />
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="organizaciones-grid"
+            defaultSize="65"
+            minSize="40"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            {grid}
+          </ResizablePanel>
+          {panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="organizaciones-detalle"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <OrganizacionFormPanel
+                  organizacion={itemSeleccionado}
+                  monedas={monedas}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={() => {
+                    void refrescar();
+                    void recargarOrganizacionContext();
+                  }}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ mod m20260817_000001_familia_insumo_icono;
 mod m20260818_000001_cuadrilla_detalle_cantidad;
 mod m20260818_000002_organizacion_horas_jornada;
 mod m20260818_000003_region_visible;
+mod m20260818_000004_region_organizacion;
 
 use sea_orm_migration::prelude::*;
 
@@ -41,6 +42,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260818_000001_cuadrilla_detalle_cantidad::Migration),
             Box::new(m20260818_000002_organizacion_horas_jornada::Migration),
             Box::new(m20260818_000003_region_visible::Migration),
+            Box::new(m20260818_000004_region_organizacion::Migration),
         ]
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FileText, FolderKanban, Grid3x3, LayoutGrid, type LucideIcon, Package, Plus, Table2, Trash2, Users } from "lucide-react";
+import { BookOpen, FileText, FolderKanban, Grid3x3, LayoutGrid, type LucideIcon, Package, Plus, Settings2, Table2, Trash2, Users } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { BarraAcciones } from "@/components/BarraAcciones";
@@ -44,6 +44,13 @@ import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSecc
 import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
 import { TabuladoresSalarioSeccion, type TabuladoresSalarioVista } from "@/features/catalogos/TabuladoresSalarioSeccion";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
+import { CatalogoGeneralSeccion } from "@/features/configuracion/CatalogoGeneralSeccion";
+import { CATALOGOS_GENERALES } from "@/features/configuracion/catalogosGenerales";
+import { FamiliasInsumoSeccion } from "@/features/configuracion/FamiliasInsumoSeccion";
+import { fichaCatalogoMaestro } from "@/features/configuracion/fichaCatalogoMaestro";
+import { OrganizacionSeccion } from "@/features/configuracion/OrganizacionSeccion";
+import { PortafolioConfigSidebar } from "@/features/configuracion/PortafolioConfigSidebar";
+import { UsuariosSeccion } from "@/features/configuracion/UsuariosSeccion";
 import { ArbolDemo } from "@/features/demo/ArbolDemo";
 import { HojaCalculoPage } from "@/features/hoja-calculo/HojaCalculoPage";
 import { CalcularFsrPage } from "@/features/fsr/CalcularFsrPage";
@@ -71,11 +78,12 @@ import {
 
 const FILTROS_PORTAFOLIO = [{ name: "Portafolio Obrix", extensions: ["obx"] }];
 
-type SeccionId = "proyectos" | "catalogos";
+type SeccionId = "proyectos" | "catalogos" | "configuracion-portafolio";
 
 const SECCIONES: ToolbarItem<SeccionId>[] = [
   { id: "proyectos", label: "Proyectos", icon: FolderKanban },
   { id: "catalogos", label: "Catálogos", icon: BookOpen },
+  { id: "configuracion-portafolio", label: "Configuración de portafolio", icon: Settings2 },
 ];
 
 const HOJA_PREFIX = "proyecto:hoja:";
@@ -508,6 +516,19 @@ export default function App() {
       }
       if (catalogoId === "herramienta") return <HerramientaSeccion />;
       if (catalogoId === "costos-horarios") return <EquipoCostoHorarioSeccion vista={equipoCostoHorarioVista} />;
+      if (catalogoId === "organizaciones") return <OrganizacionSeccion />;
+      if (catalogoId === "usuarios") return <UsuariosSeccion />;
+      if (catalogoId === "familias-insumo") return <FamiliasInsumoSeccion />;
+      const catalogoGeneral = CATALOGOS_GENERALES.find((d) => d.id === catalogoId);
+      if (catalogoGeneral) {
+        return (
+          <CatalogoGeneralSeccion
+            key={catalogoGeneral.id}
+            descriptor={catalogoGeneral}
+            ficha={fichaCatalogoMaestro(catalogoGeneral.id)}
+          />
+        );
+      }
       const config = CATALOGO_GRID_CONFIG[catalogoId];
       if (config) {
         return (
@@ -549,6 +570,7 @@ export default function App() {
     "cuadrillas-trabajo",
     "herramienta",
     "costos-horarios",
+    ...CATALOGOS_GENERALES.map((d) => d.id),
   ];
   const catalogoActivoConfig =
     catalogoIdActivo && !CATALOGOS_BESPOKE.includes(catalogoIdActivo)
@@ -624,6 +646,9 @@ export default function App() {
           onOpenPrograma={openProgramaTab}
         />
       );
+    }
+    if (seccion === "configuracion-portafolio") {
+      return <PortafolioConfigSidebar onOpenCatalogo={openCatalogoGridTab} />;
     }
     return <CatalogosSidebar onOpenGrupo={openCatalogoTab} onOpenCatalogo={openCatalogoGridTab} />;
   };
