@@ -59,6 +59,7 @@ export function CategoriaFasarSeccion() {
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
   const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
+  const [historialTicket, setHistorialTicket] = useState(0);
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
@@ -82,6 +83,7 @@ export function CategoriaFasarSeccion() {
       .catch((e) => setError(String(e)))
       .finally(() => {
         if (marcarCarga) setCargando(false);
+        setHistorialTicket((n) => n + 1);
       });
   };
 
@@ -360,6 +362,7 @@ export function CategoriaFasarSeccion() {
                 <SalarioHistorialGrid
                   categoriaId={categoriaSeleccionadaId}
                   nombresPorUsuarioId={nombresPorUsuarioId}
+                  revision={historialTicket}
                   focoTicket={historialFocoTicket}
                 />
               </ResizablePanel>

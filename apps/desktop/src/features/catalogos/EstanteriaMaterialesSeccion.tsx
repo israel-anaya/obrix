@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, DollarSign, Pencil, Plus, RefreshCcw } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
 import { CAMPO_INPUT_CLASE, Campo } from "@/components/Campo";
@@ -7,6 +7,7 @@ import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { PrecioHistorialGrid } from "@/features/catalogos/PrecioHistorialGrid";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
 import { iconoDeFamilia } from "@/icons/familias";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -52,12 +53,29 @@ function coincide(m: Material, q: string): boolean {
   return `${m.clave} ${m.descripcion} ${m.marca ?? ""}`.toLowerCase().includes(q);
 }
 
+function esCampoDeTexto(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (el.isContentEditable) return true;
+  return !!el.closest(
+    "input, textarea, select, [contenteditable='true'], [role='listbox'], [role='menu'], [data-radix-popper-content-wrapper]",
+  );
+}
+
+function columnasDeGrid(el: HTMLElement | null): number {
+  if (!el) return 2;
+  const n = getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length;
+  return n || 2;
+}
+
 /**
  * Catálogo visual de materiales: pasillos (familia/subfamilia) a la izquierda,
  * tarjetas al centro, precios a la derecha. No sustituye al grid — aquí se
  * recorre y se completa un material a la vez. Alta y edición abren un
- * `Sheet` (mismo patrón que `CuadrillasFicha`); seleccionar una tarjeta
- * solo la marca, no abre el panel.
+ * `Sheet` (mismo patrón que `CuadrillasFicha`). Siempre hay una tarjeta
+ * seleccionada si el anaquel no está vacío; elegir otra solo cambia la
+ * marca, no abre el panel. Sin tarjetas, precios queda deshabilitado.
  */
 export function EstanteriaMaterialesSeccion() {
   const [materiales, setMateriales] = useState<Material[]>([]);
@@ -70,7 +88,13 @@ export function EstanteriaMaterialesSeccion() {
   const [pasillo, setPasillo] = useState<Pasillo>({ tipo: "todo" });
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
+  const anaquelGridRef = useRef<HTMLDivElement>(null);
+  const tarjetaRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const enfocarTrasTeclado = useRef(false);
   const [panel, setPanel] = useState<PanelDetalle | null>(null);
+  const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
+  const [historialTicket, setHistorialTicket] = useState(0);
+  const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
   // Alta y edición viven en un `Sheet` (mismo patrón que `CuadrillasFicha`).
   // `editandoId` es `null` cuando se está creando.
   const [alta, setAlta] = useState<MaterialData | null>(null);
@@ -91,6 +115,12 @@ export function EstanteriaMaterialesSeccion() {
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
+    setHistorialTicket((n) => n + 1);
+  };
+
+  const cerrarPrecios = () => {
+    setPanel(null);
+    setPanelHistorialAbierto(false);
   };
 
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -128,6 +158,55 @@ export function EstanteriaMaterialesSeccion() {
       return true;
     });
   }, [materiales, q, pasillo]);
+
+  useEffect(() => {
+    if (visibles.length === 0) {
+      if (seleccionadoId !== null) setSeleccionadoId(null);
+      setPanel((v) => (v === "precios" ? null : v));
+      setPanelHistorialAbierto(false);
+      return;
+    }
+    if (!visibles.some((m) => m.id === seleccionadoId)) {
+      setSeleccionadoId(visibles[0].id);
+    }
+  }, [visibles, seleccionadoId]);
+
+  // Flechas entre tarjetas — ignoradas con el Sheet abierto, en campos de
+  // texto o en menús/selects. ←/→ recorren el anaquel; ↑/↓ saltan de fila
+  // según las columnas reales del grid.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (e.altKey || e.metaKey || e.ctrlKey) return;
+      if (alta) return;
+      if (esCampoDeTexto(document.activeElement) || esCampoDeTexto(e.target)) return;
+      if (document.activeElement instanceof HTMLElement && document.activeElement.closest("#estanteria-detalle")) {
+        return;
+      }
+      if (visibles.length === 0) return;
+      e.preventDefault();
+      const idxActual = visibles.findIndex((m) => m.id === seleccionadoId);
+      const cols = columnasDeGrid(anaquelGridRef.current);
+      const delta =
+        e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" ? -cols : cols;
+      const idxNuevo = idxActual < 0 ? 0 : idxActual + delta;
+      if (idxNuevo < 0 || idxNuevo >= visibles.length || idxNuevo === idxActual) return;
+      enfocarTrasTeclado.current = true;
+      setSeleccionadoId(visibles[idxNuevo].id);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [visibles, seleccionadoId, alta]);
+
+  useEffect(() => {
+    if (!seleccionadoId) return;
+    const el = tarjetaRefs.current.get(seleccionadoId);
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (enfocarTrasTeclado.current) {
+      enfocarTrasTeclado.current = false;
+      el?.focus({ preventScroll: true });
+    }
+  }, [seleccionadoId, visibles]);
 
   const conteoPorFamilia = useMemo(() => {
     const mapa: Record<string, number> = {};
@@ -294,10 +373,13 @@ export function EstanteriaMaterialesSeccion() {
                 titulo: panel === "precios" ? "Ocultar precios" : "Ver precios",
                 onClick: () =>
                   setPanel((v) => {
-                    if (v === "precios") return null;
+                    if (v === "precios") {
+                      setPanelHistorialAbierto(false);
+                      return null;
+                    }
                     return "precios";
                   }),
-                disabled: !seleccionadoId && panel !== "precios",
+                disabled: visibles.length === 0,
               },
             ]}
             menu={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]}
@@ -306,6 +388,13 @@ export function EstanteriaMaterialesSeccion() {
       </div>
 
       <div className="min-h-0 flex-1">
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel
+            id="estanteria-principal"
+            defaultSize="65"
+            minSize="35"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel id="estanteria-pasillos" defaultSize="20" minSize="14" className="flex min-h-0 flex-col">
             <div className="border-b border-border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -428,7 +517,10 @@ export function EstanteriaMaterialesSeccion() {
               </p>
             ) : (
               <div className="@container min-h-0 flex-1 overflow-auto p-2">
-                <div className="grid grid-cols-2 gap-2 @min-[28rem]:grid-cols-3 @min-[40rem]:grid-cols-4">
+                <div
+                  ref={anaquelGridRef}
+                  className="grid grid-cols-2 gap-2 @min-[28rem]:grid-cols-3 @min-[40rem]:grid-cols-4"
+                >
                   {visibles.map((m) => {
                     const sinPrecio = !m.precio_vigente;
                     const seleccionado = m.id === seleccionadoId;
@@ -436,9 +528,14 @@ export function EstanteriaMaterialesSeccion() {
                       <button
                         key={m.id}
                         type="button"
+                        tabIndex={seleccionado ? 0 : -1}
+                        ref={(el) => {
+                          if (el) tarjetaRefs.current.set(m.id, el);
+                          else tarjetaRefs.current.delete(m.id);
+                        }}
                         onClick={() => setSeleccionadoId(m.id)}
                         className={cn(
-                          "flex flex-col rounded-md border border-border bg-card p-2 text-left hover:border-foreground/25 hover:bg-muted/40",
+                          "flex flex-col rounded-md border border-border bg-card p-2 text-left outline-none hover:border-foreground/25 hover:bg-muted/40",
                           seleccionado && "border-primary ring-1 ring-primary",
                           sinPrecio && !seleccionado && "border-dashed",
                         )}
@@ -483,10 +580,35 @@ export function EstanteriaMaterialesSeccion() {
                     materialId={seleccionadoId}
                     materialClave={materialSeleccionado?.clave}
                     materialDescripcion={materialSeleccionado?.descripcion}
-                    onCerrar={() => setPanel(null)}
+                    onCerrar={cerrarPrecios}
                     onPrecioRegistrado={recargar}
+                    onVerHistorialCompleto={() => {
+                      if (!panelHistorialAbierto) setHistorialFocoTicket((n) => n + 1);
+                      setPanelHistorialAbierto((v) => !v);
+                    }}
+                    historialAbierto={panelHistorialAbierto}
                   />
                 ) : null}
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
+          </ResizablePanel>
+          {panelHistorialAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="estanteria-historial"
+                defaultSize="35"
+                minSize="20"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <PrecioHistorialGrid
+                  materialId={seleccionadoId}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  revision={historialTicket}
+                  focoTicket={historialFocoTicket}
+                />
               </ResizablePanel>
             </>
           ) : null}

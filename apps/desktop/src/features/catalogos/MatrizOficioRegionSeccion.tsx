@@ -4,8 +4,9 @@ import { BarraAcciones } from "@/components/BarraAcciones";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
+import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
-import { listCategoriasFasar, listFamiliasInsumo, listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
+import { listCategoriasFasar, listFamiliasInsumo, listRegiones, listSalariosCategoriaFasar, listUsuarios } from "@/lib/tauri";
 import type { CategoriaFasar, FamiliaInsumo, Region, SalarioCategoriaFasar } from "@/lib/types";
 import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,8 @@ function tonoCelda(valor: number, min: number, max: number): string | undefined 
  * Tabulador publicado a lo ancho: oficios en filas, Nacional + regiones en
  * columnas. Cada celda es el salario real vigente de esa región. Clic en un
  * hueco abre el alta ya apuntando a esa región; clic en una celda llena
- * solo selecciona el oficio. Es el "Modo Matriz × región" de Tabuladores
+ * selecciona el oficio. El panel de salario e historial es el mismo que
+ * `CategoriaFasarSeccion`. Es el "Modo Matriz × región" de Tabuladores
  * de Salario (ver `TabuladoresSalarioSeccion`); no sustituye al grid.
  */
 export function MatrizOficioRegionSeccion() {
@@ -68,6 +70,10 @@ export function MatrizOficioRegionSeccion() {
   const [pasillo, setPasillo] = useState<Pasillo>({ tipo: "todo" });
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
+  const [historialTicket, setHistorialTicket] = useState(0);
+  const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
+  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [captura, setCaptura] = useState<{ regionId: string | null; ticket: number; abrir: boolean } | null>(null);
 
   const cargarSalarios = (cats: CategoriaFasar[]) => {
@@ -90,6 +96,16 @@ export function MatrizOficioRegionSeccion() {
       .catch((e) => setError(String(e)));
     listFamiliasInsumo().then(setFamilias).catch((e) => setError(String(e)));
     listRegiones().then(setRegiones).catch((e) => setError(String(e)));
+    listUsuarios().then((usuarios) => {
+      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
+    }).catch((e) => setError(String(e)));
+    setHistorialTicket((n) => n + 1);
+  };
+
+  const cerrarSalario = () => {
+    setPanelAbierto(false);
+    setPanelHistorialAbierto(false);
+    setCaptura(null);
   };
 
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -118,6 +134,19 @@ export function MatrizOficioRegionSeccion() {
       })
       .sort((a, b) => a.descripcion.localeCompare(b.descripcion, "es"));
   }, [categorias, q, pasillo]);
+
+  useEffect(() => {
+    if (filas.length === 0) {
+      if (seleccionadaId !== null) setSeleccionadaId(null);
+      setPanelAbierto(false);
+      setPanelHistorialAbierto(false);
+      setCaptura(null);
+      return;
+    }
+    if (!filas.some((c) => c.id === seleccionadaId)) {
+      setSeleccionadaId(filas[0].id);
+    }
+  }, [filas, seleccionadaId]);
 
   const conteoPorSubfamilia = useMemo(() => {
     const mapa: Record<string, number> = {};
@@ -189,8 +218,15 @@ export function MatrizOficioRegionSeccion() {
               {
                 icono: DollarSign,
                 titulo: panelAbierto ? "Ocultar salario" : "Ver salario",
-                onClick: () => setPanelAbierto((v) => !v),
-                disabled: !seleccionadaId && !panelAbierto,
+                onClick: () =>
+                  setPanelAbierto((v) => {
+                    if (v) {
+                      setPanelHistorialAbierto(false);
+                      setCaptura(null);
+                    }
+                    return !v;
+                  }),
+                disabled: filas.length === 0,
               },
             ]}
             menu={[{ icono: RefreshCcw, titulo: "Recargar", onClick: recargar }]}
@@ -199,6 +235,13 @@ export function MatrizOficioRegionSeccion() {
       </div>
 
       <div className="min-h-0 flex-1">
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel
+            id="matriz-principal"
+            defaultSize="65"
+            minSize="35"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel id="matriz-gremios" defaultSize="10" minSize="7" className="flex min-h-0 flex-col">
             <div className="border-b border-border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -294,17 +337,26 @@ export function MatrizOficioRegionSeccion() {
                       <tr key={c.id}>
                         <th
                           className={cn(
-                            "sticky left-0 z-10 w-44 min-w-44 border-b border-r border-border px-2 py-1 text-left font-normal",
+                            "sticky left-0 z-10 w-44 min-w-44 border-b border-r border-border p-0 text-left font-normal",
                             seleccionadaId === c.id ? "bg-muted" : "bg-background",
                           )}
                         >
-                          <div className="truncate text-[12px]" title={c.descripcion}>
-                            {c.descripcion}
-                          </div>
-                          <div className="truncate font-mono text-[10px] text-muted-foreground">
-                            {c.clave}
-                            {c.sub_familia_id ? ` · ${nombrePorFamiliaId[c.sub_familia_id] ?? ""}` : ""}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSeleccionadaId(c.id);
+                              setCaptura(null);
+                            }}
+                            className="block w-full px-2 py-1 text-left"
+                          >
+                            <div className="truncate text-[12px]" title={c.descripcion}>
+                              {c.descripcion}
+                            </div>
+                            <div className="truncate font-mono text-[10px] text-muted-foreground">
+                              {c.clave}
+                              {c.sub_familia_id ? ` · ${nombrePorFamiliaId[c.sub_familia_id] ?? ""}` : ""}
+                            </div>
+                          </button>
                         </th>
                         {columnas.map((col) => {
                           const s = vigenteEn(salariosPorCategoria[c.id], col.id);
@@ -356,14 +408,36 @@ export function MatrizOficioRegionSeccion() {
                   categoriaClave={seleccionada?.clave}
                   categoriaDescripcion={seleccionada?.descripcion}
                   captura={captura}
-                  onCerrar={() => {
-                    setPanelAbierto(false);
-                    setCaptura(null);
-                  }}
+                  onCerrar={cerrarSalario}
                   onSalarioRegistrado={() => {
                     recargar();
                     setCaptura(null);
                   }}
+                  onVerHistorialCompleto={() => {
+                    if (!panelHistorialAbierto) setHistorialFocoTicket((n) => n + 1);
+                    setPanelHistorialAbierto((v) => !v);
+                  }}
+                  historialAbierto={panelHistorialAbierto}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
+          </ResizablePanel>
+          {panelHistorialAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="matriz-historial"
+                defaultSize="35"
+                minSize="20"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <SalarioHistorialGrid
+                  categoriaId={seleccionadaId}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  revision={historialTicket}
+                  focoTicket={historialFocoTicket}
                 />
               </ResizablePanel>
             </>

@@ -146,24 +146,6 @@ para insumos importados).
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
-
-### `region`
-
-Zonificación geográfica para ajustar precios de bancos de referencia — el
-costo de insumos en México varía fuerte entre zona metropolitana, frontera
-norte y sureste.
-
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid | PK |
-| nombre | text | ej. "Metropolitana CDMX", "Frontera Norte", "Sureste" |
-| estado | text | entidad federativa |
-| factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
-| visible | bool | si es `false`, la región no aparece en tabuladores, precios ni Costo por región |
-| deleted | bool | Indica si el elemento a sido eliminado
-| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
-
-
 ### `familia_insumo`
 
 Clasificación jerárquica de insumos (ej. "Cementos y concretos" → "Concreto
@@ -182,7 +164,10 @@ premezclado").
 
 ---
 
-## 3. Catálogo de insumos y precios
+
+
+
+## 3. Otros Catalogos
 
 ### `proveedor`
 
@@ -196,6 +181,26 @@ premezclado").
 | calificacion | decimal | nullable — rating interno de confiabilidad, 0–5 |
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+### `region`
+
+Zonificación geográfica para ajustar precios de bancos de referencia — el
+costo de insumos en México varía fuerte entre zona metropolitana, frontera
+norte y sureste.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| nombre | text | ej. "Metropolitana CDMX", "Frontera Norte", "Sureste" |
+| estado | text | entidad federativa |
+| factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
+| visible | bool | si es `false`, la región no aparece en tabuladores, precios ni Costo por región |
+| deleted | bool | Indica si el elemento a sido eliminado
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+
+## 3. Catálogo de insumos y precios
+
 
 
 ### `insumo`

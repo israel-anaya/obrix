@@ -16,10 +16,13 @@ const NACIONAL = "Nacional";
 export function SalarioHistorialGrid({
   categoriaId,
   nombresPorUsuarioId = {},
+  revision = 0,
   focoTicket = 0,
 }: {
   categoriaId: string | null;
   nombresPorUsuarioId?: Record<string, string>;
+  /** Sube cuando el padre recarga, para refrescar tras registrar un salario. */
+  revision?: number;
   /** Sube al pedir foco desde el resumen del panel lateral. */
   focoTicket?: number;
 }) {
@@ -72,7 +75,7 @@ export function SalarioHistorialGrid({
     return () => {
       cancelado = true;
     };
-  }, [categoriaId]);
+  }, [categoriaId, revision]);
 
   const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
 
