@@ -896,7 +896,27 @@ vigencias (igual que `salario`/`herramienta`).
 | vida_util | text | nullable |
 | propietario | text | nullable — nombre del propietario legal del equipo, si difiere del proveedor que lo renta |
 
-Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### `basico_auxiliar`
 
@@ -987,6 +1007,28 @@ editar el `precio_unitario` copiado.
 | created_at / created_by / updated_at / updated_by | | |
 
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 4. Estructura del presupuesto y APU
 

@@ -11,11 +11,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CAMPO_INPUT_CLASE, Campo } from "@/components/Campo";
 import { SearchInput } from "@/components/SearchInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import { EquipoCostoHorarioFichaApu } from "@/features/catalogos/EquipoCostoHorarioFichaApu";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
+import { formatearFecha } from "@/lib/fecha";
+import { ordenarPor } from "@/lib/ordenar";
 import {
   createEquipoCostoHorario,
   deleteEquipoCostoHorario,
@@ -23,9 +27,9 @@ import {
   listFamiliasInsumo,
   listRegiones,
   listUnidadesMedida,
+  listUsuarios,
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
-import { ordenarPor } from "@/lib/ordenar";
 import type { EquipoCostoHorario, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -49,9 +53,11 @@ function fmt(valor: string): string {
  * `EquipoCostoHorarioGridVista` (grid) — mismos datos y comandos de Tauri
  * por debajo.
  *
- * A diferencia de `CuadrillasFicha`, este formulario solo cubre los datos de
- * "identidad" del equipo (clave/descripción/unidad/familia/región) —
- * los 9 valores de captura de cargos fijos viven en la ficha de detalle, no
+ * Agregar/editar/eliminar/recargar viven todos juntos en la barra de
+ * acciones del encabezado, junto al buscador — un solo formulario (en un
+ * `Sheet`, igual que `CuadrillasFicha`) sirve tanto para crear como para
+ * editar la identidad del equipo (clave/descripción/unidad/familia/región).
+ * Los 9 valores de captura de cargos fijos viven en la ficha de detalle, no
  * aquí, para que se vea el desglose calculado mientras se ajustan.
  */
 export function EquipoCostoHorarioFicha() {
@@ -59,6 +65,7 @@ export function EquipoCostoHorarioFicha() {
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
+  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
@@ -87,9 +94,10 @@ export function EquipoCostoHorarioFicha() {
     return listEquiposCostoHorario()
       .then((r) => {
         setEquipos(r);
-        // Si nada está seleccionado (primera carga) arranca en el primero —
-        // una ficha vacía es menos útil que abrir directo en la primera hoja.
-        setSeleccionadaId((actual) => actual ?? r[0]?.id ?? null);
+        // Si nada está seleccionado (primera carga) arranca en el primero por
+        // clave — misma hoja que el tope de la lista ordenada. Una ficha
+        // vacía es menos útil que abrir directo.
+        setSeleccionadaId((actual) => actual ?? ordenarPor(r, (e) => e.clave)[0]?.id ?? null);
       })
       .catch((e) => setError(String(e)))
       .finally(() => setCargando(false));
@@ -100,6 +108,9 @@ export function EquipoCostoHorarioFicha() {
     listUnidadesMedida().then(setUnidades).catch((e) => setError(String(e)));
     listFamiliasInsumo().then(setFamilias).catch((e) => setError(String(e)));
     listRegiones().then(setRegiones).catch((e) => setError(String(e)));
+    listUsuarios().then((usuarios) => {
+      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
+    });
   };
 
   const raicesFamilia = useMemo(() => familias.filter((f) => f.parent_id === null), [familias]);
@@ -124,16 +135,19 @@ export function EquipoCostoHorarioFicha() {
 
   const equiposFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return equipos;
-    return equipos.filter((e) => e.clave.toLowerCase().includes(q) || e.descripcion.toLowerCase().includes(q));
+    const lista = ordenarPor(equipos, (e) => e.clave);
+    if (!q) return lista;
+    return lista.filter((e) => e.clave.toLowerCase().includes(q) || e.descripcion.toLowerCase().includes(q));
   }, [equipos, busqueda]);
 
-  // Navegación con ↑/↓ entre equipos — ignorada si el foco está en un campo
-  // de texto/select (el formulario de alta/edición también usa flechas para
-  // moverse dentro del valor).
+  // Navegación con ↑/↓ entre equipos — ignorada mientras el formulario de
+  // alta/edición está abierto (vive en un `Sheet` modal, y también usa
+  // flechas para moverse dentro de sus campos) o si el foco está en un campo
+  // de texto suelto en otro lado.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      if (creando || editandoId) return;
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (equiposFiltrados.length === 0) return;
@@ -145,12 +159,12 @@ export function EquipoCostoHorarioFicha() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [equiposFiltrados, seleccionadaId]);
+  }, [equiposFiltrados, seleccionadaId, creando, editandoId]);
 
   useEffect(() => {
     if (!seleccionadaId) return;
     itemRefs.current.get(seleccionadaId)?.scrollIntoView({ block: "nearest" });
-  }, [seleccionadaId]);
+  }, [seleccionadaId, equiposFiltrados]);
 
   const iniciarCreacion = () => {
     setEditandoId(null);
@@ -293,118 +307,25 @@ export function EquipoCostoHorarioFicha() {
               ]}
             />
           </div>
-          {(creando || editandoId) && (
-            <div className="border-b border-border p-2">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {editandoId ? "Editar equipo" : "Nuevo equipo"}
-                </span>
-                <input
-                  autoFocus
-                  placeholder="Clave"
-                  value={nuevaClave}
-                  onChange={(e) => setNuevaClave(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
-                />
-                <textarea
-                  placeholder="Descripción"
-                  value={nuevaDescripcion}
-                  onChange={(e) => setNuevaDescripcion(e.target.value)}
-                  rows={6}
-                  className="resize-none rounded border border-border bg-background px-2 py-1 text-xs"
-                />
-                <Select value={nuevaUnidadId} onValueChange={setNuevaUnidadId}>
-                  <SelectTrigger className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ordenarPor(unidades, (u) => u.simbolo).map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.simbolo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={nuevaFamiliaId ?? SIN_FAMILIA_VALOR}
-                  onValueChange={(v) => {
-                    setNuevaFamiliaId(v === SIN_FAMILIA_VALOR ? null : v);
-                    setNuevaSubfamiliaId(null);
-                  }}
-                >
-                  <SelectTrigger className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
-                    {ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={nuevaSubfamiliaId ?? SIN_SUBFAMILIA_VALOR}
-                  onValueChange={(v) => setNuevaSubfamiliaId(v === SIN_SUBFAMILIA_VALOR ? null : v)}
-                  disabled={hijasNueva.length === 0}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "w-full rounded border border-border bg-background px-2 py-1 text-xs",
-                      hijasNueva.length === 0 && "opacity-50",
-                    )}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
-                    {ordenarPor(hijasNueva, (h) => h.nombre).map((h) => (
-                      <SelectItem key={h.id} value={h.id}>
-                        {h.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={nuevaRegionId ?? NACIONAL_VALOR}
-                  onValueChange={(v) => setNuevaRegionId(v === NACIONAL_VALOR ? null : v)}
-                >
-                  <SelectTrigger className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NACIONAL_VALOR}>— Nacional —</SelectItem>
-                    {ordenarPor(regiones, (r) => r.nombre).map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={cancelarFormulario}
-                    className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void guardarEquipo()}
-                    disabled={guardandoNueva}
-                    className={cn(
-                      "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
-                      guardandoNueva && "opacity-50",
-                    )}
-                  >
-                    {guardandoNueva ? "Guardando…" : "Guardar"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <div
+            className="flex items-center gap-2 border-b border-border px-3 py-1 text-[10px] text-muted-foreground"
+            title="Proporción del costo: cargo fijo (azul), consumo (ámbar) y operación (violeta)"
+          >
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2 shrink-0 rounded-sm bg-blue-500" aria-hidden />
+              Fijo
+            </span>
+            <span aria-hidden>/</span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2 shrink-0 rounded-sm bg-amber-500" aria-hidden />
+              Consumo
+            </span>
+            <span aria-hidden>/</span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2 shrink-0 rounded-sm bg-violet-500" aria-hidden />
+              Operación
+            </span>
+          </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {cargando && equipos.length === 0 ? (
               <p className="p-3 text-xs text-muted-foreground">Cargando…</p>
@@ -419,6 +340,7 @@ export function EquipoCostoHorarioFicha() {
                 const pctFijo = costo > 0 ? (fijo / costo) * 100 : 0;
                 const pctConsumo = costo > 0 ? (consumo / costo) * 100 : 0;
                 const pctOperacion = costo > 0 ? (operacion / costo) * 100 : 0;
+                const activa = seleccionadaId === e.id;
                 return (
                   <button
                     key={e.id}
@@ -427,15 +349,28 @@ export function EquipoCostoHorarioFicha() {
                       else itemRefs.current.delete(e.id);
                     }}
                     type="button"
+                    aria-current={activa ? "true" : undefined}
                     onClick={() => setSeleccionadaId(e.id)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left hover:bg-muted/50",
-                      seleccionadaId === e.id && "bg-muted",
+                      "flex w-full flex-col items-start gap-0.5 border-b border-border/50 border-l-2 px-3 py-2 text-left hover:bg-muted/50",
+                      activa
+                        ? "border-l-primary bg-primary/10"
+                        : "border-l-transparent",
                     )}
                   >
-                    <span className="font-mono text-[10px] text-muted-foreground">{e.clave}</span>
-                    <span className="line-clamp-6 w-full text-xs font-medium">{e.descripcion}</span>
-                    <div className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="flex w-full items-start justify-between gap-2">
+                      <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
+                        {e.clave}
+                      </span>
+                      <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                        ${fmt(e.costo_horario_total)}
+                      </span>
+                    </div>
+                    <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{e.descripcion}</span>
+                    <div
+                      className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                      title={`Fijo ${pctFijo.toFixed(0)}% / Consumo ${pctConsumo.toFixed(0)}% / Operación ${pctOperacion.toFixed(0)}%`}
+                    >
                       <div className="bg-blue-500" style={{ width: `${pctFijo}%` }} />
                       <div className="bg-amber-500" style={{ width: `${pctConsumo}%` }} />
                       <div className="bg-violet-500" style={{ width: `${pctOperacion}%` }} />
@@ -451,7 +386,6 @@ export function EquipoCostoHorarioFicha() {
                         <HardHat size={16} className="text-violet-500" />${fmt(e.subtotal_operacion)}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium text-foreground">${fmt(e.costo_horario_total)}/hr</span>
                   </button>
                 );
               })
@@ -483,6 +417,144 @@ export function EquipoCostoHorarioFicha() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Sheet open={creando || !!editandoId} onOpenChange={(open) => !open && cancelarFormulario()}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{editandoId ? "Editar equipo" : "Nuevo equipo"}</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-3 px-4">
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <Campo label="Clave">
+              <input
+                autoFocus
+                value={nuevaClave}
+                onChange={(e) => setNuevaClave(e.target.value)}
+                className={CAMPO_INPUT_CLASE}
+              />
+            </Campo>
+            <Campo label="Descripción">
+              <textarea
+                value={nuevaDescripcion}
+                onChange={(e) => setNuevaDescripcion(e.target.value)}
+                rows={4}
+                className={cn(CAMPO_INPUT_CLASE, "resize-none")}
+              />
+            </Campo>
+            <Campo label="Unidad">
+              <Select value={nuevaUnidadId} onValueChange={setNuevaUnidadId}>
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ordenarPor(unidades, (u) => u.simbolo).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.simbolo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Campo>
+            <Campo label="Familia">
+              <Select
+                value={nuevaFamiliaId ?? SIN_FAMILIA_VALOR}
+                onValueChange={(v) => {
+                  setNuevaFamiliaId(v === SIN_FAMILIA_VALOR ? null : v);
+                  setNuevaSubfamiliaId(null);
+                }}
+              >
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_FAMILIA_VALOR}>— Sin familia —</SelectItem>
+                  {ordenarPor(raicesFamilia, (f) => f.nombre).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Campo>
+            <Campo label="Sub familia">
+              <Select
+                value={nuevaSubfamiliaId ?? SIN_SUBFAMILIA_VALOR}
+                onValueChange={(v) => setNuevaSubfamiliaId(v === SIN_SUBFAMILIA_VALOR ? null : v)}
+                disabled={hijasNueva.length === 0}
+              >
+                <SelectTrigger className={cn(CAMPO_INPUT_CLASE, hijasNueva.length === 0 && "opacity-50")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_SUBFAMILIA_VALOR}>— Sin sub familia —</SelectItem>
+                  {ordenarPor(hijasNueva, (h) => h.nombre).map((h) => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {h.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Campo>
+            <Campo label="Región">
+              <Select
+                value={nuevaRegionId ?? NACIONAL_VALOR}
+                onValueChange={(v) => setNuevaRegionId(v === NACIONAL_VALOR ? null : v)}
+              >
+                <SelectTrigger className={CAMPO_INPUT_CLASE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NACIONAL_VALOR}>— Nacional —</SelectItem>
+                  {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Campo>
+
+            {editandoId && seleccionada && (
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                <span>Creado</span>
+                <span className="text-right">{formatearFecha(seleccionada.created_at)}</span>
+                <span>Creado por</span>
+                <span className="truncate text-right">
+                  {nombresPorUsuarioId[seleccionada.created_by] ?? seleccionada.created_by}
+                </span>
+                <span>Actualizado</span>
+                <span className="text-right">
+                  {seleccionada.updated_at ? formatearFecha(seleccionada.updated_at) : "—"}
+                </span>
+                <span>Actualizado por</span>
+                <span className="truncate text-right">
+                  {seleccionada.updated_by ? (nombresPorUsuarioId[seleccionada.updated_by] ?? seleccionada.updated_by) : "—"}
+                </span>
+              </div>
+            )}
+          </div>
+          <SheetFooter className="flex-row justify-end gap-2 border-t border-border">
+            <button
+              type="button"
+              onClick={cancelarFormulario}
+              className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => void guardarEquipo()}
+              disabled={guardandoNueva}
+              className={cn(
+                "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
+                guardandoNueva && "opacity-50",
+              )}
+            >
+              {guardandoNueva ? "Guardando…" : "Guardar"}
+            </button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

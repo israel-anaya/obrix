@@ -34,6 +34,7 @@ import {
   listCuadrillaDetalles,
   listHerramientas,
   listRegiones,
+  listUnidadesMedida,
   moveCuadrillaDetalle,
   updateCuadrillaCostoDetalle,
 } from "@/lib/tauri";
@@ -47,6 +48,7 @@ import type {
   DireccionMovimiento,
   Herramienta,
   Region,
+  UnidadMedida,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +95,7 @@ export function CuadrillaDetallePanel({
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
   const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
+  const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [creandoRegion, setCreandoRegion] = useState(false);
@@ -109,6 +112,7 @@ export function CuadrillaDetallePanel({
     listCategoriasFasar().then(setCategorias).catch(() => {});
     listHerramientas().then(setHerramientas).catch(() => {});
     listRegiones().then(setRegiones).catch(() => {});
+    listUnidadesMedida().then(setUnidades).catch(() => {});
   }, []);
 
   const cargarDetalles = (id: string) =>
@@ -251,6 +255,12 @@ export function CuadrillaDetallePanel({
     () => Object.fromEntries(herramientas.map((h) => [`${h.clave} — ${h.descripcion}`, h.id])),
     [herramientas],
   );
+  const categoriaPorId = useMemo(() => Object.fromEntries(categorias.map((c) => [c.id, c])), [categorias]);
+  const herramientaPorId = useMemo(() => Object.fromEntries(herramientas.map((h) => [h.id, h])), [herramientas]);
+  const simboloPorUnidadId = useMemo(
+    () => Object.fromEntries(unidades.map((u) => [u.id, u.simbolo])),
+    [unidades],
+  );
 
   const costoDetallePorDetalleId = useMemo(
     () => Object.fromEntries(costoDetalles.map((cd) => [cd.cuadrilla_detalle_id, cd])),
@@ -272,6 +282,7 @@ export function CuadrillaDetallePanel({
           readOnlyOnEdit: true,
           options: [ELEGIR_INTEGRANTE, ...categorias.map((c) => `${c.clave} — ${c.descripcion}`)],
         },
+        { field: "unidad", header: "Unidad", width: 80, readOnly: true },
         { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6 },
         { field: "costo", header: "Salario real", width: 140, numeric: true, readOnly: true },
         { field: "fecha_precio", header: "Fecha precio", width: 126, readOnly: true, date: true, hiddenByDefault: true },
@@ -288,13 +299,14 @@ export function CuadrillaDetallePanel({
         return {
           _id: d.id,
           integrante: opcionPorCategoriaId[d.detalle_insumo_id] ?? ELEGIR_INTEGRANTE,
+          unidad: simboloPorUnidadId[categoriaPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? "",
           cantidad: Number(cd?.cantidad ?? 0),
           costo: `$${fmt(cd?.costo ?? "0")}`,
           fecha_precio: cd?.fecha_precio ?? "",
           importe: `$${fmt(cd?.importe ?? "0")}`,
         };
       }),
-    [integrantes, opcionPorCategoriaId, costoDetallePorDetalleId],
+    [integrantes, opcionPorCategoriaId, categoriaPorId, simboloPorUnidadId, costoDetallePorDetalleId],
   );
 
   const configHerramienta: DataGridConfig = useMemo(
@@ -309,6 +321,7 @@ export function CuadrillaDetallePanel({
           readOnlyOnEdit: true,
           options: [ELEGIR_HERRAMIENTA, ...herramientas.map((h) => `${h.clave} — ${h.descripcion}`)],
         },
+        { field: "unidad", header: "Unidad", width: 80, readOnly: true },
         { field: "cantidad", header: "% mano de obra", width: 110, numeric: true, suffix: "%" },
         { field: "costo", header: "Base (mano de obra)", width: 140, numeric: true, readOnly: true },
         { field: "importe", header: "Importe", width: 110, numeric: true, readOnly: true },
@@ -324,12 +337,13 @@ export function CuadrillaDetallePanel({
         return {
           _id: d.id,
           herramienta: opcionPorHerramientaId[d.detalle_insumo_id] ?? ELEGIR_HERRAMIENTA,
+          unidad: simboloPorUnidadId[herramientaPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? "",
           cantidad: Number(cd?.cantidad ?? 0),
           costo: `$${fmt(cd?.costo ?? "0")}`,
           importe: `$${fmt(cd?.importe ?? "0")}`,
         };
       }),
-    [herramientaDetalles, opcionPorHerramientaId, costoDetallePorDetalleId],
+    [herramientaDetalles, opcionPorHerramientaId, herramientaPorId, simboloPorUnidadId, costoDetallePorDetalleId],
   );
 
   // Una edición de celda puede tocar a qué insumo apunta la receta
