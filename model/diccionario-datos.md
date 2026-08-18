@@ -500,7 +500,7 @@ Orden al aplicar una o más condiciones vigentes sobre una
 3. × `salario_categoria_fasar.factor_salario_real` (el factor del catálogo
    FSR, intacto)
    → costo real por jornada
-4. × `cuadrilla_costo_detalle.cantidad` de esa categoría
+4. × `cuadrilla_detalle.cantidad` de esa categoría
    → costo de cuadrilla por jornada
 5. ÷ rendimiento base × Π `factor_rendimiento` de las condiciones con
    `afecta_rendimiento`
@@ -532,11 +532,11 @@ Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra`.
 Representa un **equipo de trabajo compuesto** (ej. "Cuadrilla de albañilería tipo A"
 = oficial + ayudantes; o una cuadrilla de topografía = topógrafo + cadenero
 + equipo de medición). Tabla delgada, igual que `categoria_fasar`: no guarda
-cantidades ni costos. La receta (quién integra el equipo) vive en
-`cuadrilla_detalle`; la valuación por región (cuánto de cada integrante,
-a qué costo, qué importe) vive en `cuadrilla_costo` /
-`cuadrilla_costo_detalle` — mismo corte que `material`/`precio_material` y
-`categoria_fasar`/`salario_categoria_fasar`.
+cantidades ni costos. La receta (quién integra el equipo y cuántos) vive en
+`cuadrilla_detalle`; la valuación por región (a qué costo, qué importe, con
+los salarios de esa zona) vive en `cuadrilla_costo` /
+`cuadrilla_costo_detalle`. La región no cambia la composición: cambia el
+salario con el que se valúa.
 
 No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
 región por insumo. Quien consume el costo de la cuadrilla
@@ -554,9 +554,16 @@ tabla.
 
 Composición **plana, no recursiva**, compartida entre regiones. Un equipo de
 trabajo es gente y equipo, nunca "un equipo que contiene otro equipo". La
-receta no se copia por región: si un integrante entra o sale, entra o sale
-en todas. `cantidad` / `costo` / `importe` no viven aquí — varían por
-región y cuelgan de `cuadrilla_costo_detalle`.
+receta no se copia por región: si un integrante entra o sale, o cambia su
+`cantidad`, entra, sale o cambia en todas. `costo` / `importe` no viven aquí —
+varían por región (salarios) y cuelgan de `cuadrilla_costo_detalle`.
+
+`cantidad` es el único campo numérico capturable de la receta. No varía por
+región: la valuación regional solo aplica los salarios de esa zona sobre
+esta misma composición. El rendimiento de la cuadrilla tampoco vive aquí —
+es el de la matriz que la consume (`concepto_componente.cantidad`,
+`basico_auxiliar_componente.cantidad`) o un `factor_rendimiento` de
+`condicion_trabajo`.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -565,6 +572,7 @@ región y cuelgan de `cuadrilla_costo_detalle`.
 | detalle_insumo_id | uuid | FK → insumo — debe ser `mano_obra` (con extensión `categoria_fasar`) o `equipo_herramienta` (con extensión `herramienta`) |
 | tipo | enum | `categoria_fasar`, `equipo_herramienta` — denormalizado de qué extensión resuelve `detalle_insumo_id`, para poder separar `cuadrilla_costo.sub_total_mano_obra` de `cuadrilla_costo.sub_total_herramienta` sin join |
 | orden | int | orden de visualización dentro de la cuadrilla |
+| cantidad | decimal | **capturable** — jornales/integrantes si el detalle es `categoria_fasar`; porcentaje 0–100 (no fracción 0–1) si es `equipo_herramienta`. Al dar de alta una herramienta en la receta, el default es `herramienta.porcentaje_mano_obra` |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
@@ -595,16 +603,17 @@ proyecto se resuelve con la misma prioridad descendente:
 2. `(cuadrilla, region_id = NULL)` — nacional por defecto, fallback final.
 
 Toda cuadrilla nace con la fila nacional (`region_id = NULL`). Una fila
-regional es opcional: se crea cuando esa zona necesita otras cantidades, o
-cuando se quiere el cache ya resuelto con los salarios de esa región. Al
-crearla se copian las `cantidad` desde la valuación nacional, se resuelve
-`costo` con los salarios vigentes de esa región y se recalcula.
+regional es opcional: se crea cuando se quiere el cache ya resuelto con los
+salarios de esa región. Al crearla se inserta un `cuadrilla_costo_detalle`
+por cada renglón de receta y se recalcula con los salarios vigentes de esa
+región. Las cantidades no se copian ni se editan aquí: se leen de
+`cuadrilla_detalle`.
 
 El cálculo se corre **dentro de un** `cuadrilla_costo` (una región), no
 sobre la receta entera:
 
 1. Mano de obra: cada `cuadrilla_costo_detalle` cuyo `cuadrilla_detalle.tipo`
-   = `categoria_fasar` toma `costo` =
+   = `categoria_fasar` toma `cantidad` de `cuadrilla_detalle` y `costo` =
    `salario_categoria_fasar.salario_real_diario` vigente de esa misma
    región (misma prioridad regional → nacional). Si no hay salario vigente
    (ni regional ni nacional), `costo` e `importe` quedan en 0 y
@@ -612,9 +621,9 @@ sobre la receta entera:
    rellena el cache cuando ya exista salario. Con eso se obtiene
    `sub_total_mano_obra`.
 2. Herramienta: cada detalle cuyo `cuadrilla_detalle.tipo` =
-   `equipo_herramienta` toma `costo` = el `sub_total_mano_obra` recién
-   calculado de **esta** valuación. Con eso se obtiene
-   `sub_total_herramienta`.
+   `equipo_herramienta` toma `cantidad` de `cuadrilla_detalle` (el %) y
+   `costo` = el `sub_total_mano_obra` recién calculado de **esta**
+   valuación. Con eso se obtiene `sub_total_herramienta`.
 3. `costo_total` = `sub_total_mano_obra` + `sub_total_herramienta`.
 
 Nota de implementación: igual que en `precio_material`, `NULL` no cuenta
@@ -637,24 +646,23 @@ aplicación.
 
 ### `cuadrilla_costo_detalle`
 
-Números de un renglón de receta **en una valuación**. `region_id` no se
+Cache valuado de un renglón de receta **en una valuación**. `region_id` no se
 repite aquí: se hereda de `cuadrilla_costo`, así un renglón no puede
 colgar de una valuación de otra región. Toda valuación tiene exactamente
-un renglón numérico por cada `cuadrilla_detalle` de esa cuadrilla —
-`cantidad = 0` si en esa región el integrante no aplica, sin borrar la
-receta.
+un renglón por cada `cuadrilla_detalle` de esa cuadrilla.
 
-`cantidad` es el único campo capturable. `costo` e `importe` son cache y
-los deriva el recálculo del `cuadrilla_costo` padre.
+No hay campos capturables. `cantidad` vive en `cuadrilla_detalle` (la
+receta). `costo` e `importe` son cache y los deriva el recálculo del
+`cuadrilla_costo` padre.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
 | cuadrilla_costo_id | uuid | FK → cuadrilla_costo |
 | cuadrilla_detalle_id | uuid | FK → cuadrilla_detalle — debe pertenecer a la misma cuadrilla que `cuadrilla_costo.cuadrilla_insumo_id` |
-| cantidad | decimal | **capturable** — jornales/integrantes si el detalle es `categoria_fasar`; porcentaje 0–100 (no fracción 0–1) si es `equipo_herramienta`. Al dar de alta una herramienta en la receta, el default es `herramienta.porcentaje_mano_obra` |
 | costo | decimal | cache: si tipo = categoria_fasar, `salario_categoria_fasar.salario_real_diario` vigente de la región de `cuadrilla_costo` (0 si no hay salario vigente); si tipo = equipo_herramienta, `cuadrilla_costo.sub_total_mano_obra` de esta misma valuación |
-| importe | decimal | cache = cantidad × costo |
+| importe | decimal | cache = `cuadrilla_detalle.cantidad` × costo (si herramienta: cantidad es % 0–100, importe = costo × cantidad / 100) |
+| fecha_precio | date | nullable — foto de `salario_categoria_fasar.fecha_vigencia_desde` al recalcular; solo mano de obra |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
@@ -704,7 +712,7 @@ Extensión 1:1 de `insumo` cuando `insumo.tipo = equipo_herramienta`
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| porcentaje_mano_obra | int | porcentaje por default — se copia a `cuadrilla_costo_detalle.cantidad` al integrar la herramienta en una cuadrilla; a partir de ahí la cantidad es de la valuación (puede diferir por región) |
+| porcentaje_mano_obra | int | porcentaje por default — se copia a `cuadrilla_detalle.cantidad` al integrar la herramienta en una cuadrilla; a partir de ahí la cantidad es de la receta (igual en todas las regiones) |
 
 
 ### `perfil_inactividad_equipo`

@@ -5,7 +5,7 @@ use obrix_db::entities::cuadrilla_detalle::Model as CuadrillaDetalleModel;
 use crate::{commands, AppState};
 use obrix_services::cuadrilla::{CuadrillaCompleto, CuadrillaData, CuadrillaService};
 use obrix_services::cuadrilla_costo::CuadrillaCostoService;
-use obrix_services::cuadrilla_costo_detalle::{CuadrillaCostoDetalleData, CuadrillaCostoDetalleService};
+use obrix_services::cuadrilla_costo_detalle::CuadrillaCostoDetalleService;
 use obrix_services::cuadrilla_detalle::{
     CuadrillaDetalleData, CuadrillaDetalleEditarData, CuadrillaDetalleService, DireccionMovimiento,
 };
@@ -203,24 +203,6 @@ pub async fn list_cuadrilla_costo_detalles(
     CuadrillaCostoDetalleService::listar_por_costo(activo.portafolio.as_ref(), &cuadrilla_costo_id)
         .await
         .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn update_cuadrilla_costo_detalle(
-    state: tauri::State<'_, AppState>,
-    id: String,
-    detalle: CuadrillaCostoDetalleData,
-) -> Result<CuadrillaCostoModel, String> {
-    let guard = state.requerir().await?;
-    let activo = guard.as_ref().unwrap();
-    CuadrillaCostoDetalleService::actualizar(
-        activo.portafolio.as_ref(),
-        id,
-        detalle,
-        Some(activo.usuario_id_activo.clone()),
-    )
-    .await
-    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

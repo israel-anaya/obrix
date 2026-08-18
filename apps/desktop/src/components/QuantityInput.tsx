@@ -12,11 +12,21 @@ export function QuantityInput({
   onCommit,
   decimals,
   className,
+  readOnly = false,
 }: {
   value: string;
   onCommit: (value: string) => void;
   decimals: number;
   className?: string;
+  readOnly?: boolean;
 }) {
-  return <FormattedNumberInput value={value} onCommit={onCommit} className={className} decimals={decimals} />;
+  return (
+    <FormattedNumberInput
+      value={value}
+      onCommit={onCommit}
+      className={className}
+      decimals={decimals}
+      readOnly={readOnly}
+    />
+  );
 }

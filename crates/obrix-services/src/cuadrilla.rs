@@ -15,8 +15,7 @@ use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait};
 use std::collections::HashMap;
 
-use crate::cuadrilla_costo_detalle::{CuadrillaCostoDetalleData, CuadrillaCostoDetalleService};
-use crate::cuadrilla_detalle::{CuadrillaDetalleData, CuadrillaDetalleService};
+use crate::cuadrilla_detalle::{CuadrillaDetalleData, CuadrillaDetalleEditarData, CuadrillaDetalleService};
 use crate::material::ResultadoImportacion;
 use crate::unidad_medida::UnidadMedidaService;
 use crate::{clave_cruce, id_insumo_existente, nuevo_id, recordar_insumo, ServiceError};
@@ -577,42 +576,26 @@ impl CuadrillaService {
             .map(|d| (d.detalle_insumo_id.clone(), d.id.clone()))
             .collect();
 
-        let costos_nacionales = match Self::buscar_costo_nacional(repo, cuadrilla_id).await {
-            Ok(Some(c)) => CuadrillaCostoDetalleService::listar_por_costo(repo, &c.id)
-                .await
-                .unwrap_or_default(),
-            Ok(None) => Vec::new(),
-            Err(e) => {
-                errores.push(format!("no se pudo leer la valuación nacional ({e})"));
-                return;
-            }
-        };
-        let mut costo_detalle_por_receta: HashMap<String, String> = costos_nacionales
-            .iter()
-            .map(|d| (d.cuadrilla_detalle_id.clone(), d.id.clone()))
-            .collect();
-
         for (fila, descripcion, detalle) in detalles_ok {
             let insumo_id = detalle.detalle_insumo_id.clone();
             let es_mano_obra = categorias.contains(&insumo_id);
             let es_alta = !detalle_id_por_insumo.contains_key(&insumo_id);
 
             if let Some(detalle_id) = detalle_id_por_insumo.get(&insumo_id).cloned() {
-                if let Some(costo_id) = costo_detalle_por_receta.get(&detalle_id).cloned() {
-                    if let Err(e) = CuadrillaCostoDetalleService::actualizar(
-                        repo,
-                        costo_id,
-                        CuadrillaCostoDetalleData {
-                            cantidad: detalle.cantidad_nacional,
-                        },
-                        Some(creado_por.to_string()),
-                    )
-                    .await
-                    {
-                        errores.push(format!("fila {fila}: no se pudo actualizar el detalle ({e})"));
-                    }
-                    continue;
+                if let Err(e) = CuadrillaDetalleService::actualizar(
+                    repo,
+                    detalle_id,
+                    CuadrillaDetalleEditarData {
+                        detalle_insumo_id: insumo_id.clone(),
+                        cantidad: detalle.cantidad,
+                    },
+                    Some(creado_por.to_string()),
+                )
+                .await
+                {
+                    errores.push(format!("fila {fila}: no se pudo actualizar el detalle ({e})"));
                 }
+                continue;
             }
 
             match CuadrillaDetalleService::crear(repo, cuadrilla_id, detalle, creado_por.to_string()).await {
@@ -623,13 +606,6 @@ impl CuadrillaService {
                     if let Ok(lista) = CuadrillaDetalleService::listar_por_cuadrilla(repo, cuadrilla_id).await {
                         if let Some(d) = lista.iter().find(|d| d.detalle_insumo_id == insumo_id) {
                             detalle_id_por_insumo.insert(insumo_id.clone(), d.id.clone());
-                            if let Ok(Some(c)) = Self::buscar_costo_nacional(repo, cuadrilla_id).await {
-                                if let Ok(costos) = CuadrillaCostoDetalleService::listar_por_costo(repo, &c.id).await {
-                                    if let Some(cd) = costos.iter().find(|cd| cd.cuadrilla_detalle_id == d.id) {
-                                        costo_detalle_por_receta.insert(d.id.clone(), cd.id.clone());
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -745,7 +721,7 @@ fn resolver_detalle_csv(
     };
     Ok(CuadrillaDetalleData {
         detalle_insumo_id,
-        cantidad_nacional: cantidad,
+        cantidad,
     })
 }
 
@@ -1128,7 +1104,6 @@ mod tests {
 
     #[tokio::test]
     async fn importar_csv_agrupa_detalle_resuelve_secciones_y_asigna_familia_mano_de_obra() {
-        use crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService;
         use crate::cuadrilla_detalle::CuadrillaDetalleService;
         use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
         use std::str::FromStr;
@@ -1188,17 +1163,10 @@ mod tests {
         );
 
         let nacional = ayudante.costo_nacional.as_ref().expect("valuación nacional");
-        let costos = CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &nacional.id)
-            .await
-            .expect("detalles de valuación");
-        let ids_herramienta: std::collections::HashSet<_> = detalles
+        assert!(nacional.costo_total > Decimal::ZERO);
+        let mut cantidades_herramienta: Vec<_> = detalles
             .iter()
             .filter(|d| d.tipo == TipoCuadrillaDetalle::EquipoHerramienta)
-            .map(|d| d.id.clone())
-            .collect();
-        let mut cantidades_herramienta: Vec<_> = costos
-            .iter()
-            .filter(|d| ids_herramienta.contains(&d.cuadrilla_detalle_id))
             .map(|d| d.cantidad)
             .collect();
         cantidades_herramienta.sort();
@@ -1355,7 +1323,7 @@ mod tests {
             .await
             .expect("detalles de valuación");
         assert_eq!(costos.len(), 1);
-        assert_eq!(costos[0].cantidad, Decimal::from(2));
+        assert_eq!(detalles[0].cantidad, Decimal::from(2));
         assert_eq!(costos[0].costo, Decimal::ZERO);
         assert_eq!(costos[0].importe, Decimal::ZERO);
     }

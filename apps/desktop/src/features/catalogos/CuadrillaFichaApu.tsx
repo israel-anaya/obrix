@@ -30,7 +30,7 @@ import {
   listUnidadesMedida,
   moveCuadrillaDetalle,
   recalculateCuadrillaCosto,
-  updateCuadrillaCostoDetalle,
+  updateCuadrillaDetalle,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
@@ -254,12 +254,11 @@ function MarcadorInsercion() {
  * unitario (APU) que cualquier ingeniero de costos mexicano reconoce de
  * memoria: encabezado con clave/descripción/unidad + selector de región, dos
  * tablas formales (mano de obra, herramienta) con su subtotal, y el costo
- * total como un renglón final destacado. La receta (integrantes/herramienta,
- * `cuadrilla_detalle`) es la misma en todas las regiones; los montos que se
- * ven (cantidad/costo/importe/subtotales) son los de la **valuación
- * seleccionada** (`cuadrilla_costo`) — agregar/quitar/mover renglones solo
- * está disponible en Nacional, que es donde nace la cantidad inicial de un
- * renglón nuevo (ver diccionario de datos). Enfoque alterno a
+ * total como un renglón final destacado. La receta (integrantes/herramienta
+ * y cantidades, `cuadrilla_detalle`) es la misma en todas las regiones; los
+ * montos que se ven (costo/importe/subtotales) son los de la **valuación
+ * seleccionada** (`cuadrilla_costo`) — agregar/quitar/mover renglones y
+ * editar cantidad solo está disponible en Nacional. Enfoque alterno a
  * `CuadrillaDetallePanel` (grid): mismos comandos de Tauri por debajo.
  *
  * Agregar/editar/eliminar la cuadrilla en sí (no su composición) vive en la
@@ -375,18 +374,20 @@ export function CuadrillaFichaApu({
 
   const trasMutarCantidad = async () => {
     onCambio();
-    await cargarCostos(cuadrilla.id);
+    await cargarDetalles(cuadrilla.id);
+    const costosR = await cargarCostos(cuadrilla.id);
     if (!costoSeleccionadoId) {
       setCostoDetalles([]);
-      return [] as CuadrillaCostoDetalle[];
+      return { costoDetalles: [] as CuadrillaCostoDetalle[], costoTotal: "0" };
     }
     try {
       const r = await listCuadrillaCostoDetalles(costoSeleccionadoId);
       setCostoDetalles(r);
-      return r;
+      const costoTotal = costosR.find((c) => c.id === costoSeleccionadoId)?.costo_total ?? "0";
+      return { costoDetalles: r, costoTotal };
     } catch (e) {
       setError(String(e));
-      return [] as CuadrillaCostoDetalle[];
+      return { costoDetalles: [] as CuadrillaCostoDetalle[], costoTotal: "0" };
     }
   };
 
@@ -483,7 +484,7 @@ export function CuadrillaFichaApu({
     if (!id) return;
     setError(null);
     try {
-      await createCuadrillaDetalle(cuadrilla.id, { detalle_insumo_id: id, cantidad_nacional: "1" });
+      await createCuadrillaDetalle(cuadrilla.id, { detalle_insumo_id: id, cantidad: "1" });
       await trasMutarReceta();
     } catch (e) {
       setError(String(e));
@@ -498,7 +499,7 @@ export function CuadrillaFichaApu({
     try {
       await createCuadrillaDetalle(cuadrilla.id, {
         detalle_insumo_id: id,
-        cantidad_nacional: String(herramienta?.porcentaje_mano_obra ?? 0),
+        cantidad: String(herramienta?.porcentaje_mano_obra ?? 0),
       });
       await trasMutarReceta();
     } catch (e) {
@@ -519,15 +520,18 @@ export function CuadrillaFichaApu({
     // decimales; herramienta es un porcentaje 0-100, con 2 basta.
     const decimales = detalle.tipo === "categoria_fasar" ? 6 : 2;
     const redondeada = Number(numero.toFixed(decimales));
-    if (redondeada === Number(cd.cantidad)) return;
+    if (redondeada === Number(detalle.cantidad)) return;
     setError(null);
     try {
       const totalAntes = Number(costoSeleccionado?.costo_total) || 0;
       const importeAntes = Number(cd.importe) || 0;
-      const actualizado = await updateCuadrillaCostoDetalle(cd.id, { cantidad: String(redondeada) });
+      await updateCuadrillaDetalle(detalle.id, {
+        detalle_insumo_id: detalle.detalle_insumo_id,
+        cantidad: String(redondeada),
+      });
       const nuevos = await trasMutarCantidad();
-      const importeDespues = Number(nuevos.find((n) => n.id === cd.id)?.importe) || 0;
-      const deltaTotal = centavos(Number(actualizado.costo_total) - totalAntes);
+      const importeDespues = Number(nuevos.costoDetalles.find((n) => n.cuadrilla_detalle_id === detalle.id)?.importe) || 0;
+      const deltaTotal = centavos(Number(nuevos.costoTotal) - totalAntes);
       const deltaFila = centavos(importeDespues - importeAntes);
       if (deltaTotal !== 0 || deltaFila !== 0) {
         setDestello({ ticket: Date.now(), total: deltaTotal, filaId: detalle.id, fila: deltaFila });
@@ -781,9 +785,10 @@ export function CuadrillaFichaApu({
                     </td>
                     <td className="py-1 pr-2 text-right">
                       <QuantityInput
-                        value={cd?.cantidad ?? "0"}
+                        value={d.cantidad}
                         onCommit={(v) => void guardarCantidad(d, v)}
                         decimals={6}
+                        readOnly={!esNacional}
                         className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                       />
                     </td>
@@ -911,9 +916,10 @@ export function CuadrillaFichaApu({
                     </td>
                     <td className="py-1 pr-2 text-right">
                       <PercentageInput
-                        value={cd?.cantidad ?? "0"}
+                        value={d.cantidad}
                         onCommit={(v) => void guardarCantidad(d, v)}
                         decimals={2}
+                        readOnly={!esNacional}
                         className="w-16 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                       />
                     </td>
@@ -1020,7 +1026,7 @@ export function CuadrillaFichaApu({
 
       {!esNacional && (
         <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800 dark:text-amber-300">
-          Agregar, quitar o mover integrantes solo está disponible en Nacional — aquí solo se edita la cantidad.
+          Agregar, quitar, mover o cambiar cantidades solo está disponible en Nacional — esta región aplica salarios sobre la misma composición.
         </p>
       )}
 

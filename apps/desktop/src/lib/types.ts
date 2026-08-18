@@ -390,8 +390,8 @@ export interface CuadrillaData {
  * Un renglón de la composición plana de una `cuadrilla` — un integrante
  * (`tipo: "categoria_fasar"`) o una herramienta (`tipo:
  * "equipo_herramienta"`), nunca otra cuadrilla. Compartido entre regiones:
- * `cantidad`/`costo`/`importe` no viven aquí, varían por región y cuelgan de
- * `CuadrillaCostoDetalle` (uno por cada valuación de la cuadrilla).
+ * `cantidad` es de la receta; `costo`/`importe` varían por región (salarios)
+ * y cuelgan de `CuadrillaCostoDetalle`.
  */
 export interface CuadrillaDetalle {
   id: string;
@@ -399,6 +399,8 @@ export interface CuadrillaDetalle {
   detalle_insumo_id: string;
   tipo: "categoria_fasar" | "equipo_herramienta";
   orden: number;
+  /** Jornales/integrantes o % 0-100 si es herramienta. Serializado como texto. */
+  cantidad: string;
   created_at: string;
   created_by: string;
   updated_at: string | null;
@@ -408,18 +410,17 @@ export interface CuadrillaDetalle {
 export interface CuadrillaDetalleData {
   detalle_insumo_id: string;
   /**
-   * Cantidad inicial capturada en la valuación nacional al dar de alta el
-   * renglón — las demás valuaciones existentes de la cuadrilla nacen con
-   * `cantidad = 0` para este renglón. Si `detalle_insumo_id` resuelve a
-   * `categoria_fasar`: número de integrantes. Si resuelve a `herramienta`:
-   * porcentaje 0-100, no una fracción.
+   * Jornales/integrantes si `detalle_insumo_id` resuelve a `categoria_fasar`;
+   * porcentaje 0-100 si resuelve a `herramienta`. Queda en la receta, igual
+   * en todas las regiones.
    */
-  cantidad_nacional: string;
+  cantidad: string;
 }
 
-/** Solo permite cambiar a qué insumo apunta el renglón de receta. */
+/** Cambia a qué insumo apunta el renglón y/o su cantidad de receta. */
 export interface CuadrillaDetalleEditarData {
   detalle_insumo_id: string;
+  cantidad: string;
 }
 
 /**
@@ -441,15 +442,13 @@ export interface CuadrillaCosto extends CamposControl {
 }
 
 /**
- * El renglón numérico de un `CuadrillaDetalle` **dentro de una valuación**
- * concreta — `cantidad` es el único campo capturable, `costo`/`importe` los
- * calcula el backend al recalcular la valuación.
+ * El renglón valuado de un `CuadrillaDetalle` **dentro de una valuación**
+ * concreta — cache de `costo`/`importe`; `cantidad` vive en la receta.
  */
 export interface CuadrillaCostoDetalle {
   id: string;
   cuadrilla_costo_id: string;
   cuadrilla_detalle_id: string;
-  cantidad: string;
   costo: string;
   importe: string;
   /** Foto de `fecha_vigencia_desde` del salario al recalcular. Solo MO. */
@@ -458,10 +457,6 @@ export interface CuadrillaCostoDetalle {
   created_by: string;
   updated_at: string | null;
   updated_by: string | null;
-}
-
-export interface CuadrillaCostoDetalleData {
-  cantidad: string;
 }
 
 export type DireccionMovimiento = "arriba" | "abajo";

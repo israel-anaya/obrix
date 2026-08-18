@@ -304,7 +304,6 @@ fn main() {
             commands::cuadrillas::delete_cuadrilla_costo,
             commands::cuadrillas::recalculate_cuadrilla_costo,
             commands::cuadrillas::list_cuadrilla_costo_detalles,
-            commands::cuadrillas::update_cuadrilla_costo_detalle,
             commands::equipos_costo_horario::list_equipos_costo_horario,
             commands::equipos_costo_horario::create_equipo_costo_horario,
             commands::equipos_costo_horario::update_equipo_costo_horario,

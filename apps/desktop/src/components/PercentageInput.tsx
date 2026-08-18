@@ -12,12 +12,14 @@ export function PercentageInput({
   className,
   decimals = 2,
   autoFocus = false,
+  readOnly = false,
 }: {
   value: string;
   onCommit: (value: string) => void;
   className?: string;
   decimals?: number;
   autoFocus?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <FormattedNumberInput
@@ -27,6 +29,7 @@ export function PercentageInput({
       suffix="%"
       decimals={decimals}
       autoFocus={autoFocus}
+      readOnly={readOnly}
     />
   );
 }

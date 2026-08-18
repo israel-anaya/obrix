@@ -34,6 +34,7 @@ export function FormattedNumberInput({
   suffix = "",
   decimals = 2,
   autoFocus = false,
+  readOnly = false,
 }: {
   value: string;
   onCommit: (value: string) => void;
@@ -42,6 +43,7 @@ export function FormattedNumberInput({
   suffix?: string;
   decimals?: number;
   autoFocus?: boolean;
+  readOnly?: boolean;
 }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState(value);
@@ -55,21 +57,26 @@ export function FormattedNumberInput({
       type="text"
       inputMode="decimal"
       autoFocus={autoFocus}
-      value={editando ? borrador : `${prefix}${formatear(value, decimals)}${suffix}`}
+      readOnly={readOnly}
+      tabIndex={readOnly ? -1 : undefined}
+      value={editando && !readOnly ? borrador : `${prefix}${formatear(value, decimals)}${suffix}`}
       onFocus={() => {
+        if (readOnly) return;
         setBorrador(value);
         setEditando(true);
       }}
       onChange={(e) => {
+        if (readOnly) return;
         const texto = e.target.value;
         if (PATRON_NUMERO_VALIDO.test(texto)) setBorrador(texto);
       }}
       onBlur={() => {
+        if (readOnly) return;
         setEditando(false);
         onCommit(borrador);
       }}
       onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-      className={cn(FORMATTED_NUMBER_INPUT_CLASE, className)}
+      className={cn(FORMATTED_NUMBER_INPUT_CLASE, readOnly && "pointer-events-none", className)}
     />
   );
 }

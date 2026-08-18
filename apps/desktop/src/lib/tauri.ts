@@ -7,7 +7,6 @@ import type {
   Cuadrilla,
   CuadrillaCosto,
   CuadrillaCostoDetalle,
-  CuadrillaCostoDetalleData,
   CuadrillaData,
   CuadrillaDetalle,
   CuadrillaDetalleData,
@@ -337,9 +336,6 @@ export function recalculateCuadrillaCosto(cuadrillaCostoId: string): Promise<Cua
 }
 export function listCuadrillaCostoDetalles(cuadrillaCostoId: string): Promise<CuadrillaCostoDetalle[]> {
   return invoke("list_cuadrilla_costo_detalles", { cuadrillaCostoId });
-}
-export function updateCuadrillaCostoDetalle(id: string, detalle: CuadrillaCostoDetalleData): Promise<CuadrillaCosto> {
-  return invoke("update_cuadrilla_costo_detalle", { id, detalle });
 }
 
 export function listEquiposCostoHorario(): Promise<EquipoCostoHorario[]> {

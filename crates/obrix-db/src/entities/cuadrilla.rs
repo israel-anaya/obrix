@@ -3,11 +3,10 @@ use sea_orm::entity::prelude::*;
 /// Extensión 1:1 de `insumo` cuando `insumo.tipo = mano_obra` y representa un
 /// **equipo de trabajo compuesto** (ej. "Cuadrilla de albañilería tipo A"),
 /// a diferencia de `categoria_fasar` que es un trabajador atómico. Tabla
-/// delgada, sin cache: la receta (quién integra el equipo) vive en
-/// `cuadrilla_detalle`, la valuación por región (cuánto de cada integrante,
-/// a qué costo, qué importe) vive en `cuadrilla_costo`/
-/// `cuadrilla_costo_detalle` — mismo corte que `material`/`precio_material`
-/// y `categoria_fasar`/`salario_categoria_fasar`. Sin columnas de auditoría
+/// delgada, sin cache: la receta (quién integra el equipo y cuántos) vive en
+/// `cuadrilla_detalle`; la valuación por región (a qué costo, qué importe,
+/// con los salarios de esa zona) vive en `cuadrilla_costo`/
+/// `cuadrilla_costo_detalle`. Sin columnas de auditoría
 /// propias: comparte el ciclo de vida de su `insumo`.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "cuadrilla")]

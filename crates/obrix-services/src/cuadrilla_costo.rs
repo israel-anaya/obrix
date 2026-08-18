@@ -1,10 +1,11 @@
 //! Valuación por región de una `cuadrilla` (ver diccionario de datos). Toda
 //! cuadrilla nace con su fila nacional (`region_id = NULL`, ver
 //! `CuadrillaService::crear`); una fila regional es opcional y se crea aquí,
-//! copiando las cantidades desde la nacional. El recálculo (`recalcular_valuacion`)
-//! corre **dentro de una sola valuación**, nunca sobre la receta entera —
-//! quien cambia la receta (`CuadrillaDetalleService`) es quien decide cuáles
-//! valuaciones recalcular tras el cambio.
+//! con un renglón de cache por cada `cuadrilla_detalle` de la receta. El
+//! recálculo (`recalcular_valuacion`) corre **dentro de una sola valuación**,
+//! leyendo `cantidad` de la receta — quien cambia la receta
+//! (`CuadrillaDetalleService`) es quien decide cuáles valuaciones recalcular
+//! tras el cambio.
 
 use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
 use obrix_db::entities::{cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, region, salario_categoria_fasar};
@@ -33,10 +34,9 @@ impl CuadrillaCostoService {
             .await?)
     }
 
-    /// Crea una valuación regional: copia las `cantidad` de la valuación
-    /// nacional (una fila de `cuadrilla_costo_detalle` por cada
-    /// `cuadrilla_detalle` de la receta) y resuelve con los salarios
-    /// vigentes de esa región.
+    /// Crea una valuación regional: un `cuadrilla_costo_detalle` por cada
+    /// renglón de receta, resuelto con los salarios vigentes de esa región.
+    /// Las cantidades se leen de `cuadrilla_detalle`, no se copian.
     pub async fn crear_regional(
         repo: &dyn PortafolioRepository,
         cuadrilla_id: &str,
@@ -59,16 +59,16 @@ impl CuadrillaCostoService {
                 "ya existe una valuación para esa región".to_string(),
             ));
         }
-        let nacional = cuadrilla_costo::Entity::find()
+        let _nacional = cuadrilla_costo::Entity::find()
             .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
             .filter(cuadrilla_costo::Column::RegionId.is_null())
             .filter(cuadrilla_costo::Column::Deleted.eq(false))
             .one(&txn)
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("valuación nacional de cuadrilla {cuadrilla_id}")))?;
-        let detalles_nacional = cuadrilla_costo_detalle::Entity::find()
-            .filter(cuadrilla_costo_detalle::Column::CuadrillaCostoId.eq(nacional.id.clone()))
-            .filter(cuadrilla_costo_detalle::Column::Deleted.eq(false))
+        let recetas = cuadrilla_detalle::Entity::find()
+            .filter(cuadrilla_detalle::Column::CuadrillaInsumoId.eq(cuadrilla_id))
+            .filter(cuadrilla_detalle::Column::Deleted.eq(false))
             .all(&txn)
             .await?;
 
@@ -92,12 +92,11 @@ impl CuadrillaCostoService {
         .insert(&txn)
         .await?;
 
-        for d in &detalles_nacional {
+        for receta in &recetas {
             cuadrilla_costo_detalle::ActiveModel {
                 id: Set(nuevo_id()),
                 cuadrilla_costo_id: Set(nuevo.id.clone()),
-                cuadrilla_detalle_id: Set(d.cuadrilla_detalle_id.clone()),
-                cantidad: Set(d.cantidad),
+                cuadrilla_detalle_id: Set(receta.id.clone()),
                 costo: Set(Decimal::ZERO),
                 importe: Set(Decimal::ZERO),
                 fecha_precio: Set(None),
@@ -164,7 +163,7 @@ impl CuadrillaCostoService {
     /// Fuerza un recálculo manual de una valuación, sin que haya cambiado su
     /// composición — trae de nueva cuenta el salario vigente de cada
     /// integrante. Útil cuando los salarios de los insumos referenciados se
-    /// actualizaron después del último cambio a la receta o a las cantidades.
+    /// actualizaron después del último cambio a la receta.
     /// Marca `sincronizado_en` para que la ficha muestre cuándo se jalaron
     /// los insumos vigentes (no usa `updated_at`).
     pub async fn recalcular_costos(
@@ -227,15 +226,16 @@ impl CuadrillaCostoService {
                 Some(salario) => (salario.salario_real_diario, Some(salario.fecha_vigencia_desde)),
                 None => (Decimal::ZERO, None),
             };
-            let importe = d.cantidad * costo;
+            let importe = receta.cantidad * costo;
             sub_total_mano_obra += importe;
             pendientes.push((d.id.clone(), costo, importe, fecha_precio));
         }
 
         let mut sub_total_herramienta = Decimal::ZERO;
         for d in detalles.iter().filter(|d| recetas[&d.cuadrilla_detalle_id].tipo == TipoCuadrillaDetalle::EquipoHerramienta) {
+            let receta = &recetas[&d.cuadrilla_detalle_id];
             let costo = sub_total_mano_obra;
-            let importe = costo * d.cantidad / Decimal::ONE_HUNDRED;
+            let importe = costo * receta.cantidad / Decimal::ONE_HUNDRED;
             sub_total_herramienta += importe;
             pendientes.push((d.id.clone(), costo, importe, None));
         }
@@ -510,7 +510,7 @@ mod tests {
         CuadrillaDetalleService::crear(
             portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: insumo_id.to_string(), cantidad_nacional: cantidad },
+            CuadrillaDetalleData { detalle_insumo_id: insumo_id.to_string(), cantidad },
             "usr-1".into(),
         )
         .await
@@ -519,7 +519,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn crear_regional_copia_cantidad_y_usa_salario_nacional_si_no_hay_regional() {
+    async fn crear_regional_usa_cantidad_de_la_receta_y_salario_nacional_si_no_hay_regional() {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
@@ -538,8 +538,11 @@ mod tests {
         let detalles = crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(&portafolio, &regional.id)
             .await
             .expect("listar cuadrilla_costo_detalle");
+        let receta = crate::cuadrilla_detalle::CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
+            .await
+            .expect("listar receta");
+        assert_eq!(receta[0].cantidad, Decimal::from(2), "la cantidad es de la receta, no de la valuación");
         assert_eq!(detalles.len(), 1);
-        assert_eq!(detalles[0].cantidad, Decimal::from(2), "copia la cantidad de la valuación nacional");
         assert_eq!(
             detalles[0].fecha_precio.as_deref(),
             Some("2026-01-01"),

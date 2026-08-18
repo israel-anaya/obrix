@@ -36,7 +36,7 @@ import {
   listRegiones,
   listUnidadesMedida,
   moveCuadrillaDetalle,
-  updateCuadrillaCostoDetalle,
+  updateCuadrillaDetalle,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type {
@@ -66,14 +66,13 @@ function fmt(valor: string, decimales = 2): string {
  * Panel: composición de una `cuadrilla` — dos matrices planas (integrantes de
  * `categoria_fasar` y herramienta de `herramienta`, ver diccionario de
  * datos) más los tres subtotales de la **valuación seleccionada**
- * (`cuadrilla_costo`, ver selector de región). La receta (qué integra el
- * equipo) es la misma en todas las regiones — agregar/quitar/mover renglones
- * solo está disponible viendo la valuación Nacional, que es donde nace la
- * cantidad inicial de un renglón nuevo; el resto de las valuaciones solo
- * editan `cantidad` de renglones que ya existen. Cada mutación recalcula en
- * el backend, este panel solo refleja lo que vuelve de ahí. Pensado para
- * vivir junto al grid de cuadrillas, mismo patrón que
- * `SalarioCategoriaFasarPanel`.
+ * (`cuadrilla_costo`, ver selector de región). La receta (quién integra el
+ * equipo y cuántos) es la misma en todas las regiones — agregar/quitar/mover
+ * renglones y editar `cantidad` solo está disponible viendo la valuación
+ * Nacional. El resto de las valuaciones aplica los salarios de esa región
+ * sobre esa misma composición. Cada mutación recalcula en el backend, este
+ * panel solo refleja lo que vuelve de ahí. Pensado para vivir junto al grid
+ * de cuadrillas, mismo patrón que `SalarioCategoriaFasarPanel`.
  */
 export function CuadrillaDetallePanel({
   cuadrilla,
@@ -195,15 +194,6 @@ export function CuadrillaDetallePanel({
     }
   };
 
-  const trasMutarCantidad = async () => {
-    onComposicionCambiada?.();
-    if (!cuadrillaId) return;
-    await cargarCostos(cuadrillaId);
-    if (costoSeleccionadoId) {
-      await listCuadrillaCostoDetalles(costoSeleccionadoId).then(setCostoDetalles).catch(() => {});
-    }
-  };
-
   const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
   const costoSeleccionado = costos.find((c) => c.id === costoSeleccionadoId) ?? null;
   const esNacional = costoSeleccionado ? costoSeleccionado.region_id === null : true;
@@ -283,13 +273,13 @@ export function CuadrillaDetallePanel({
           options: [ELEGIR_INTEGRANTE, ...categorias.map((c) => `${c.clave} — ${c.descripcion}`)],
         },
         { field: "unidad", header: "Unidad", width: 80, readOnly: true },
-        { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6 },
+        { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6, readOnly: !esNacional },
         { field: "costo", header: "Salario real", width: 140, numeric: true, readOnly: true },
         { field: "fecha_precio", header: "Fecha precio", width: 126, readOnly: true, date: true, hiddenByDefault: true },
         { field: "importe", header: "Importe", width: 110, numeric: true, readOnly: true },
       ],
     }),
-    [categorias],
+    [categorias, esNacional],
   );
 
   const filasIntegrantes: Row[] = useMemo(
@@ -300,7 +290,7 @@ export function CuadrillaDetallePanel({
           _id: d.id,
           integrante: opcionPorCategoriaId[d.detalle_insumo_id] ?? ELEGIR_INTEGRANTE,
           unidad: simboloPorUnidadId[categoriaPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? "",
-          cantidad: Number(cd?.cantidad ?? 0),
+          cantidad: Number(d.cantidad),
           costo: `$${fmt(cd?.costo ?? "0")}`,
           fecha_precio: cd?.fecha_precio ?? "",
           importe: `$${fmt(cd?.importe ?? "0")}`,
@@ -322,12 +312,12 @@ export function CuadrillaDetallePanel({
           options: [ELEGIR_HERRAMIENTA, ...herramientas.map((h) => `${h.clave} — ${h.descripcion}`)],
         },
         { field: "unidad", header: "Unidad", width: 80, readOnly: true },
-        { field: "cantidad", header: "% mano de obra", width: 110, numeric: true, suffix: "%" },
+        { field: "cantidad", header: "% mano de obra", width: 110, numeric: true, suffix: "%", readOnly: !esNacional },
         { field: "costo", header: "Base (mano de obra)", width: 140, numeric: true, readOnly: true },
         { field: "importe", header: "Importe", width: 110, numeric: true, readOnly: true },
       ],
     }),
-    [herramientas],
+    [herramientas, esNacional],
   );
 
   const filasHerramienta: Row[] = useMemo(
@@ -338,7 +328,7 @@ export function CuadrillaDetallePanel({
           _id: d.id,
           herramienta: opcionPorHerramientaId[d.detalle_insumo_id] ?? ELEGIR_HERRAMIENTA,
           unidad: simboloPorUnidadId[herramientaPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? "",
-          cantidad: Number(cd?.cantidad ?? 0),
+          cantidad: Number(d.cantidad),
           costo: `$${fmt(cd?.costo ?? "0")}`,
           importe: `$${fmt(cd?.importe ?? "0")}`,
         };
@@ -346,14 +336,14 @@ export function CuadrillaDetallePanel({
     [herramientaDetalles, opcionPorHerramientaId, herramientaPorId, simboloPorUnidadId, costoDetallePorDetalleId],
   );
 
-  // Una edición de celda puede tocar a qué insumo apunta la receta
-  // (compartido entre regiones), la cantidad de la valuación en pantalla, o
-  // ambas — cada una es una llamada distinta al backend.
-  const editarCantidad = async (detalleId: string, cantidad: number) => {
-    const cd = costoDetallePorDetalleId[detalleId];
-    if (!cd) return;
-    if (Number(cd.cantidad) === cantidad) return;
-    await updateCuadrillaCostoDetalle(cd.id, { cantidad: String(cantidad) }).then(trasMutarCantidad);
+  // Una edición de celda puede tocar a qué insumo apunta la receta o su
+  // cantidad (compartidos entre regiones). Cada una va al mismo comando.
+  const editarCantidad = async (detalle: CuadrillaDetalle, cantidad: number) => {
+    if (Number(detalle.cantidad) === cantidad) return;
+    await updateCuadrillaDetalle(detalle.id, {
+      detalle_insumo_id: detalle.detalle_insumo_id,
+      cantidad: String(cantidad),
+    }).then(trasMutarReceta);
   };
 
   // `integrantes`/`herramientaDetalles` ya vienen en orden de `orden`
@@ -519,13 +509,13 @@ export function CuadrillaDetallePanel({
                     if (!detalleInsumoId) throw new Error("Elige un integrante válido.");
                     return createCuadrillaDetalle(cuadrillaId, {
                       detalle_insumo_id: detalleInsumoId,
-                      cantidad_nacional: String(fila.cantidad),
+                      cantidad: String(fila.cantidad),
                     }).then(trasMutarReceta);
                   }}
                   onEditRow={async (fila) => {
                     const detalle = integrantes.find((d) => d.id === fila._id);
                     if (!detalle) return;
-                    await editarCantidad(detalle.id, Number(fila.cantidad));
+                    await editarCantidad(detalle, Number(fila.cantidad));
                   }}
                   onDeleteRows={async (ids) => {
                     for (const id of ids) await deleteCuadrillaDetalle(id);
@@ -602,13 +592,13 @@ export function CuadrillaDetallePanel({
                     if (!detalleInsumoId) throw new Error("Elige una herramienta válida.");
                     return createCuadrillaDetalle(cuadrillaId, {
                       detalle_insumo_id: detalleInsumoId,
-                      cantidad_nacional: String(fila.cantidad),
+                      cantidad: String(fila.cantidad),
                     }).then(trasMutarReceta);
                   }}
                   onEditRow={async (fila) => {
                     const detalle = herramientaDetalles.find((d) => d.id === fila._id);
                     if (!detalle) return;
-                    await editarCantidad(detalle.id, Number(fila.cantidad));
+                    await editarCantidad(detalle, Number(fila.cantidad));
                   }}
                   onDeleteRows={async (ids) => {
                     for (const id of ids) await deleteCuadrillaDetalle(id);
@@ -640,7 +630,7 @@ export function CuadrillaDetallePanel({
 
             {!esNacional && (
               <p className="mx-3 mb-3 shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800 dark:text-amber-300">
-                Agregar, quitar o mover integrantes solo está disponible en Nacional — aquí solo se edita la cantidad.
+                Agregar, quitar, mover o cambiar cantidades solo está disponible en Nacional — esta región aplica salarios sobre la misma composición.
               </p>
             )}
           </div>
@@ -674,10 +664,9 @@ export function CuadrillaDetallePanel({
           <DialogHeader>
             <DialogTitle>Nueva valuación regional</DialogTitle>
             <DialogDescription>
-              Crea una valuación independiente para esta cuadrilla en la región elegida, copiando las cantidades
-              actuales de la valuación Nacional. Desde ahí podrás editar las cantidades solo para esa región, sin
-              afectar a las demás — agregar, quitar o mover integrantes/herramienta seguirá haciéndose desde
-              Nacional.
+              Crea una valuación independiente para esta cuadrilla en la región elegida, aplicando los salarios
+              de esa zona sobre las cantidades de la receta. No se pueden cambiar cantidades ni integrantes
+              desde una valuación regional: eso se hace en Nacional.
             </DialogDescription>
           </DialogHeader>
           <Select value={regionNueva} onValueChange={setRegionNueva}>

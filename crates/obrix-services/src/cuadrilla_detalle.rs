@@ -1,11 +1,10 @@
 //! Administra la composición (`cuadrilla_detalle`) de una `cuadrilla` —
 //! integrantes (`categoria_fasar`) y herramienta (`herramienta`), en una
 //! matriz plana no recursiva **compartida entre regiones** (ver diccionario
-//! de datos). `cantidad`/`costo`/`importe` no viven aquí — varían por región
-//! y los administra `CuadrillaCostoDetalleService` dentro de cada
-//! `cuadrilla_costo`. Cada alta/baja de un renglón de receta crea/borra su
-//! fila espejo en **cada** valuación existente de la cuadrilla (nacional y
-//! regionales) y dispara su recálculo — ver diccionario de datos.
+//! de datos). `cantidad` vive aquí (definición del equipo); `costo`/`importe`
+//! los administra el recálculo de cada `cuadrilla_costo`. Cada alta/baja o
+//! cambio de cantidad crea/borra/recalcula la fila espejo en **cada**
+//! valuación existente de la cuadrilla (nacional y regionales).
 
 use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
 use obrix_db::entities::{categoria_fasar, cuadrilla, cuadrilla_costo, cuadrilla_costo_detalle, cuadrilla_detalle, herramienta, insumo};
@@ -30,18 +29,16 @@ pub enum DireccionMovimiento {
 #[derive(serde::Deserialize)]
 pub struct CuadrillaDetalleData {
     pub detalle_insumo_id: String,
-    /// Cantidad inicial capturada en la valuación nacional al dar de alta el
-    /// renglón — las demás valuaciones existentes de la cuadrilla nacen con
-    /// `cantidad = 0` para este renglón (el integrante "no aplica" ahí hasta
-    /// que alguien lo edite, ver diccionario de datos). Si `detalle_insumo_id`
-    /// resuelve a `categoria_fasar`: número de integrantes. Si resuelve a
-    /// `herramienta`: porcentaje 0-100, no una fracción.
-    pub cantidad_nacional: Decimal,
+    /// Jornales/integrantes si `detalle_insumo_id` resuelve a `categoria_fasar`;
+    /// porcentaje 0-100 (no fracción) si resuelve a `herramienta`. Queda en
+    /// la receta, igual en todas las regiones.
+    pub cantidad: Decimal,
 }
 
 #[derive(serde::Deserialize)]
 pub struct CuadrillaDetalleEditarData {
     pub detalle_insumo_id: String,
+    pub cantidad: Decimal,
 }
 
 pub struct CuadrillaDetalleService;
@@ -78,6 +75,7 @@ impl CuadrillaDetalleService {
             detalle_insumo_id: Set(datos.detalle_insumo_id),
             tipo: Set(tipo),
             orden: Set(orden),
+            cantidad: Set(datos.cantidad),
             deleted: Set(false),
             created_at: Set(ahora.clone()),
             created_by: Set(creado_por.clone()),
@@ -91,12 +89,10 @@ impl CuadrillaDetalleService {
 
         let valuaciones = Self::valuaciones_activas(&txn, cuadrilla_insumo_id).await?;
         for v in &valuaciones {
-            let cantidad = if v.region_id.is_none() { datos.cantidad_nacional } else { Decimal::ZERO };
             cuadrilla_costo_detalle::ActiveModel {
                 id: Set(nuevo_id()),
                 cuadrilla_costo_id: Set(v.id.clone()),
                 cuadrilla_detalle_id: Set(nuevo_detalle.id.clone()),
-                cantidad: Set(cantidad),
                 costo: Set(Decimal::ZERO),
                 importe: Set(Decimal::ZERO),
                 fecha_precio: Set(None),
@@ -120,10 +116,8 @@ impl CuadrillaDetalleService {
         Ok(resultado)
     }
 
-    /// Solo permite cambiar a qué insumo apunta la fila de receta — la
-    /// cantidad por región vive en `CuadrillaCostoDetalleService`. Recalcula
-    /// todas las valuaciones porque el insumo referenciado (y por tanto su
-    /// costo) cambió.
+    /// Cambia a qué insumo apunta el renglón y/o su `cantidad` (de la receta,
+    /// no de una valuación). Recalcula todas las valuaciones.
     pub async fn actualizar(
         repo: &dyn PortafolioRepository,
         id: String,
@@ -145,6 +139,7 @@ impl CuadrillaDetalleService {
         let mut am: cuadrilla_detalle::ActiveModel = existente.into();
         am.detalle_insumo_id = Set(datos.detalle_insumo_id);
         am.tipo = Set(tipo);
+        am.cantidad = Set(datos.cantidad);
         am.updated_at = Set(Some(crate::ahora()));
         am.updated_by = Set(actualizado_por);
         am.update(&txn).await?;
@@ -577,7 +572,7 @@ mod tests {
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad_nacional: Decimal::ONE },
+            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::ONE },
             "usr-1".into(),
         )
         .await
@@ -586,7 +581,7 @@ mod tests {
         let tras_ayudante = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: ayudante.clone(), cantidad_nacional: Decimal::from(2) },
+            CuadrillaDetalleData { detalle_insumo_id: ayudante.clone(), cantidad: Decimal::from(2) },
             "usr-1".into(),
         )
         .await
@@ -600,7 +595,7 @@ mod tests {
         let detalle_herramienta = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: herramienta.id.clone(), cantidad_nacional: Decimal::from(3) },
+            CuadrillaDetalleData { detalle_insumo_id: herramienta.id.clone(), cantidad: Decimal::from(3) },
             "usr-1".into(),
         )
         .await
@@ -658,7 +653,7 @@ mod tests {
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad_nacional: Decimal::ONE },
+            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::ONE },
             "usr-1".into(),
         )
         .await
@@ -666,7 +661,7 @@ mod tests {
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: ayudante.clone(), cantidad_nacional: Decimal::from(2) },
+            CuadrillaDetalleData { detalle_insumo_id: ayudante.clone(), cantidad: Decimal::from(2) },
             "usr-1".into(),
         )
         .await
@@ -698,7 +693,7 @@ mod tests {
         let err = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: otra_cuadrilla.id, cantidad_nacional: Decimal::ONE },
+            CuadrillaDetalleData { detalle_insumo_id: otra_cuadrilla.id, cantidad: Decimal::ONE },
             "usr-1".into(),
         )
         .await
@@ -739,7 +734,7 @@ mod tests {
         let err = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: categoria_ajena.id, cantidad_nacional: Decimal::ONE },
+            CuadrillaDetalleData { detalle_insumo_id: categoria_ajena.id, cantidad: Decimal::ONE },
             "usr-1".into(),
         )
         .await
@@ -776,7 +771,7 @@ mod tests {
         let resultado = CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: sin_salario.id, cantidad_nacional: Decimal::ONE },
+            CuadrillaDetalleData { detalle_insumo_id: sin_salario.id, cantidad: Decimal::ONE },
             "usr-1".into(),
         )
         .await
@@ -795,7 +790,7 @@ mod tests {
             .await
             .expect("detalles de valuación");
         assert_eq!(costos.len(), 1);
-        assert_eq!(costos[0].cantidad, Decimal::ONE);
+        assert_eq!(detalles[0].cantidad, Decimal::ONE);
         assert_eq!(costos[0].costo, Decimal::ZERO);
         assert_eq!(costos[0].importe, Decimal::ZERO);
         assert!(costos[0].fecha_precio.is_none());
@@ -820,7 +815,7 @@ mod tests {
         CuadrillaDetalleService::crear(
             &portafolio,
             &cuadrilla.id,
-            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad_nacional: Decimal::from(2) },
+            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::from(2) },
             "usr-1".into(),
         )
         .await
@@ -829,7 +824,7 @@ mod tests {
         let regional = CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla.id, region_id, "usr-1".into())
             .await
             .expect("crear valuación regional");
-        assert_eq!(regional.sub_total_mano_obra, Decimal::from(1400), "copia cantidad nacional y usa salario nacional");
+        assert_eq!(regional.sub_total_mano_obra, Decimal::from(1400), "usa la cantidad de la receta y el salario nacional");
 
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id).await.unwrap();
         let fila_oficial = detalles.iter().find(|d| d.detalle_insumo_id == oficial).unwrap().clone();
@@ -851,5 +846,71 @@ mod tests {
             .find(|c| c.id == regional.id)
             .unwrap();
         assert_eq!(regional_recalculada.costo_total, Decimal::ZERO);
+    }
+
+    #[tokio::test]
+    async fn actualizar_cantidad_recalcula_todas_las_valuaciones() {
+        let portafolio = portafolio_con_fixtures().await;
+        let fsr = crear_fsr_nacional(&portafolio).await;
+        let oficial = crear_categoria_con_salario(&portafolio, &fsr, "CAT-1", "Oficial albañil", "700").await;
+        let cuadrilla = crear_cuadrilla(&portafolio, "CUA-1").await;
+
+        crate::region::RegionService::crear(
+            &portafolio,
+            crate::region::RegionData { nombre: "Norte".into(), estado: "Nuevo León".into(), factor_ajuste: None },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear region");
+        let region_id = crate::region::RegionService::listar(&portafolio).await.unwrap()[0].id.clone();
+
+        let tras_crear = CuadrillaDetalleService::crear(
+            &portafolio,
+            &cuadrilla.id,
+            CuadrillaDetalleData { detalle_insumo_id: oficial.clone(), cantidad: Decimal::ONE },
+            "usr-1".into(),
+        )
+        .await
+        .expect("agregar oficial");
+        assert_eq!(tras_crear.costo_nacional.as_ref().unwrap().sub_total_mano_obra, Decimal::from(700));
+
+        let regional = CuadrillaCostoService::crear_regional(&portafolio, &cuadrilla.id, region_id, "usr-1".into())
+            .await
+            .expect("crear valuación regional");
+        assert_eq!(regional.sub_total_mano_obra, Decimal::from(700));
+
+        let fila = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap();
+        assert_eq!(fila.cantidad, Decimal::ONE);
+
+        let actualizada = CuadrillaDetalleService::actualizar(
+            &portafolio,
+            fila.id.clone(),
+            CuadrillaDetalleEditarData { detalle_insumo_id: oficial, cantidad: Decimal::from(3) },
+            Some("usr-1".into()),
+        )
+        .await
+        .expect("actualizar cantidad");
+        // 3 × 700 = 2100 en nacional y en regional (mismo salario).
+        assert_eq!(actualizada.costo_nacional.as_ref().unwrap().sub_total_mano_obra, Decimal::from(2100));
+        let regional_recalculada = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|c| c.id == regional.id)
+            .unwrap();
+        assert_eq!(regional_recalculada.sub_total_mano_obra, Decimal::from(2100));
+
+        let fila = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap();
+        assert_eq!(fila.cantidad, Decimal::from(3));
     }
 }

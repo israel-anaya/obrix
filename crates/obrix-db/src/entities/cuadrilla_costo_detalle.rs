@@ -1,14 +1,12 @@
 use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
 
-/// Números de un renglón de receta (`cuadrilla_detalle`) **en una
+/// Cache valuado de un renglón de receta (`cuadrilla_detalle`) **en una
 /// valuación** (`cuadrilla_costo`) — `region_id` no se repite aquí, se
 /// hereda de `cuadrilla_costo`. Toda valuación tiene exactamente un renglón
-/// numérico por cada `cuadrilla_detalle` de esa cuadrilla — `cantidad = 0`
-/// si en esa región el integrante no aplica, sin borrar la receta (ver
-/// diccionario de datos). `cantidad` es el único campo capturable; `costo`
-/// e `importe` son cache y los deriva el recálculo del `cuadrilla_costo`
-/// padre.
+/// por cada `cuadrilla_detalle` de esa cuadrilla. No hay campos capturables:
+/// `cantidad` vive en la receta; `costo` e `importe` los deriva el recálculo
+/// del `cuadrilla_costo` padre (ver diccionario de datos).
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "cuadrilla_costo_detalle")]
 pub struct Model {
@@ -16,10 +14,6 @@ pub struct Model {
     pub id: String,
     pub cuadrilla_costo_id: String,
     pub cuadrilla_detalle_id: String,
-    /// Si el `cuadrilla_detalle` referenciado es `categoria_fasar`: número de
-    /// integrantes. Si es `equipo_herramienta`: porcentaje 0-100 (mismo
-    /// convenio que `herramienta.porcentaje_mano_obra`), no una fracción 0-1.
-    pub cantidad: Decimal,
     /// Si tipo = categoria_fasar: `salario_categoria_fasar.salario_real_diario`
     /// vigente de la región de `cuadrilla_costo`, o 0 si no hay salario
     /// vigente. Si tipo = equipo_herramienta: `cuadrilla_costo.sub_total_mano_obra`
