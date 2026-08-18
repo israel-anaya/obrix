@@ -31,6 +31,7 @@ import {
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
 import type { EquipoCostoHorario, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
@@ -307,25 +308,6 @@ export function EquipoCostoHorarioFicha() {
               ]}
             />
           </div>
-          <div
-            className="flex items-center gap-2 border-b border-border px-3 py-1 text-[10px] text-muted-foreground"
-            title="Proporción del costo: cargo fijo (azul), consumo (ámbar) y operación (violeta)"
-          >
-            <span className="flex items-center gap-1">
-              <span className="inline-block size-2 shrink-0 rounded-sm bg-blue-500" aria-hidden />
-              Fijo
-            </span>
-            <span aria-hidden>/</span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block size-2 shrink-0 rounded-sm bg-amber-500" aria-hidden />
-              Consumo
-            </span>
-            <span aria-hidden>/</span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block size-2 shrink-0 rounded-sm bg-violet-500" aria-hidden />
-              Operación
-            </span>
-          </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {cargando && equipos.length === 0 ? (
               <p className="p-3 text-xs text-muted-foreground">Cargando…</p>
@@ -333,13 +315,6 @@ export function EquipoCostoHorarioFicha() {
               <p className="p-3 text-xs text-muted-foreground">Sin equipos todavía.</p>
             ) : (
               equiposFiltrados.map((e) => {
-                const costo = Number(e.costo_horario_total) || 0;
-                const fijo = Number(e.cf_cargo_fijo_hora) || 0;
-                const consumo = Number(e.subtotal_consumo) || 0;
-                const operacion = Number(e.subtotal_operacion) || 0;
-                const pctFijo = costo > 0 ? (fijo / costo) * 100 : 0;
-                const pctConsumo = costo > 0 ? (consumo / costo) * 100 : 0;
-                const pctOperacion = costo > 0 ? (operacion / costo) * 100 : 0;
                 const activa = seleccionadaId === e.id;
                 return (
                   <button
@@ -352,12 +327,15 @@ export function EquipoCostoHorarioFicha() {
                     aria-current={activa ? "true" : undefined}
                     onClick={() => setSeleccionadaId(e.id)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-0.5 border-b border-border/50 border-l-2 px-3 py-2 text-left hover:bg-muted/50",
+                      "relative flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left outline-none hover:bg-muted/50",
                       activa
-                        ? "border-l-primary bg-primary/10"
-                        : "border-l-transparent",
+                        ? "bg-primary/10"
+                        : undefined,
                     )}
                   >
+                    {activa ? (
+                      <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
+                    ) : null}
                     <div className="flex w-full items-start justify-between gap-2">
                       <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
                         {e.clave}
@@ -367,14 +345,6 @@ export function EquipoCostoHorarioFicha() {
                       </span>
                     </div>
                     <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{e.descripcion}</span>
-                    <div
-                      className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted"
-                      title={`Fijo ${pctFijo.toFixed(0)}% / Consumo ${pctConsumo.toFixed(0)}% / Operación ${pctOperacion.toFixed(0)}%`}
-                    >
-                      <div className="bg-blue-500" style={{ width: `${pctFijo}%` }} />
-                      <div className="bg-amber-500" style={{ width: `${pctConsumo}%` }} />
-                      <div className="bg-violet-500" style={{ width: `${pctOperacion}%` }} />
-                    </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Timer size={16} className="text-blue-500" />${fmt(e.cf_cargo_fijo_hora)}
@@ -505,7 +475,7 @@ export function EquipoCostoHorarioFicha() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NACIONAL_VALOR}>— Nacional —</SelectItem>
-                  {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+                  {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.nombre}
                     </SelectItem>

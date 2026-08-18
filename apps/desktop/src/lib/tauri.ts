@@ -331,8 +331,8 @@ export function createCuadrillaCostoRegional(cuadrillaId: string, regionId: stri
 export function deleteCuadrillaCosto(id: string): Promise<void> {
   return invoke("delete_cuadrilla_costo", { id });
 }
-export function recalculateCuadrillaCosto(cuadrillaCostoId: string): Promise<CuadrillaCosto> {
-  return invoke("recalculate_cuadrilla_costo", { cuadrillaCostoId });
+export function recalculateCuadrillaZonas(cuadrillaId: string): Promise<CuadrillaCosto[]> {
+  return invoke("recalculate_cuadrilla_zonas", { cuadrillaId });
 }
 export function listCuadrillaCostoDetalles(cuadrillaCostoId: string): Promise<CuadrillaCostoDetalle[]> {
   return invoke("list_cuadrilla_costo_detalles", { cuadrillaCostoId });

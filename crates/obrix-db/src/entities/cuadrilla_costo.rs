@@ -5,11 +5,11 @@ use sea_orm::entity::prelude::*;
 /// en la extensión 1:1 (`sub_total_mano_obra`, `sub_total_herramienta`,
 /// `costo_total`). Sin vigencias: el costo de la cuadrilla se deriva de
 /// `salario_categoria_fasar`, que ya historiza por fecha (ver diccionario de
-/// datos). `region_id` nullable, igual que `precio_material`/
-/// `salario_categoria_fasar` — toda cuadrilla nace con la fila nacional
-/// (`region_id = NULL`); una fila regional es opcional. A diferencia de esas
-/// dos (histórico append-only), aquí sí hay `deleted`: una valuación
-/// regional se puede borrar sin tocar la nacional.
+/// datos). `region_id` nullable — toda cuadrilla nace con la fila nacional
+/// (`region_id = NULL`); el resto de regiones del catálogo se materializa como
+/// cache al mutar la receta o al sincronizar. A diferencia de
+/// `precio_material`/`salario_categoria_fasar` (histórico append-only), aquí
+/// sí hay `deleted`.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "cuadrilla_costo")]
 pub struct Model {
@@ -22,7 +22,7 @@ pub struct Model {
     pub sub_total_herramienta: Decimal,
     pub costo_total: Decimal,
     /// Última vez que se recalcularon los costos desde los insumos vigentes
-    /// (el ⟳ de la ficha). No es `updated_at`: editar clave/descripción o
+    /// (el ⟳ de Costo por región). No es `updated_at`: editar clave/descripción o
     /// la receta no cuenta como sincronización.
     pub sincronizado_en: Option<String>,
     pub deleted: bool,

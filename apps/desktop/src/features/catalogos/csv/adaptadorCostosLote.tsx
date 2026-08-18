@@ -7,6 +7,7 @@ import { plantillaCsv } from "@/lib/csv";
 import { createPreciosMaterialLote, listMonedas, listRegiones } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { Material, Moneda, PrecioLoteItem, Region } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 
 const NACIONAL = "Nacional";
 const MONEDA_FALLBACK = "MXN";
@@ -68,7 +69,7 @@ function ExtraCamposCostosLote({ extra, setExtra }: CsvExtraCamposProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NACIONAL_VALOR}>{NACIONAL} (default)</SelectItem>
-            {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+            {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
               <SelectItem key={r.id} value={r.id}>
                 {r.nombre}
               </SelectItem>

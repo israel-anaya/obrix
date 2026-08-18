@@ -29,6 +29,7 @@ import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionConte
 import { createFactorSalarioReal, deleteFactorSalarioReal, listFactoresSalarioReal, listRegiones, listUsuarios, updateFactorSalarioReal } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioRealData, Region } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 
 const NACIONAL = "Nacional (sin región)";
 /** Valor del Select para un FSR sin región — Radix no admite cadena vacía. */
@@ -101,7 +102,7 @@ export function FactorSalarioRealSeccion({
           header: "Región",
           width: 180,
           readOnlyOnEdit: true,
-          options: [NACIONAL, ...ordenarPor(regiones, (r) => r.nombre).map((r) => r.nombre)],
+          options: [NACIONAL, ...ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => r.nombre)],
         },
         ...COLUMNAS_CONTROL,
       ],
@@ -252,7 +253,7 @@ export function FactorSalarioRealSeccion({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={REGION_NACIONAL}>{NACIONAL}</SelectItem>
-              {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+              {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.nombre}
                 </SelectItem>

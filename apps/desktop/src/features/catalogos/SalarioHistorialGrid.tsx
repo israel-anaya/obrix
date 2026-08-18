@@ -140,7 +140,7 @@ export function SalarioHistorialGrid({
                 <td className="py-1 pr-2">
                   <span className="inline-flex items-center gap-1.5">
                     {s.region_id ? (
-                      <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                      <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                     ) : (
                       <Globe2 size={16} className="shrink-0 text-primary" />
                     )}

@@ -156,9 +156,10 @@ norte y sureste.
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| nombre | text | ej. "Zona Metropolitana CDMX", "Frontera Norte", "Sureste" |
+| nombre | text | ej. "Metropolitana CDMX", "Frontera Norte", "Sureste" |
 | estado | text | entidad federativa |
 | factor_ajuste | decimal | nullable — factor multiplicador sobre precio base nacional |
+| visible | bool | si es `false`, la región no aparece en tabuladores, precios ni Costo por región |
 | deleted | bool | Indica si el elemento a sido eliminado
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
@@ -535,7 +536,7 @@ Representa un **equipo de trabajo compuesto** (ej. "Cuadrilla de albañilería t
 + equipo de medición). Tabla delgada, igual que `categoria_fasar`: no guarda
 cantidades ni costos. La receta (quién integra el equipo y cuántos) vive en
 `cuadrilla_detalle`; la valuación por región (a qué costo, qué importe, con
-los salarios de esa zona) vive en `cuadrilla_costo` /
+los salarios de esa región) vive en `cuadrilla_costo` /
 `cuadrilla_costo_detalle`. La región no cambia la composición: cambia el
 salario con el que se valúa.
 
@@ -560,7 +561,7 @@ receta no se copia por región: si un integrante entra o sale, o cambia su
 varían por región (salarios) y cuelgan de `cuadrilla_costo_detalle`.
 
 `cantidad` es el único campo numérico capturable de la receta. No varía por
-región: la valuación regional solo aplica los salarios de esa zona sobre
+región: la valuación regional solo aplica los salarios de esa región sobre
 esta misma composición. El rendimiento de la cuadrilla tampoco vive aquí —
 es el de la matriz que la consume (`concepto_componente.cantidad`,
 `basico_auxiliar_componente.cantidad`) o un `factor_rendimiento` de
@@ -581,9 +582,9 @@ es el de la matriz que la consume (`concepto_componente.cantidad`,
 Restricción: única `(cuadrilla_insumo_id, detalle_insumo_id)`.
 
 Al insertar un renglón de receta hay que insertar también un
-`cuadrilla_costo_detalle` en **cada** `cuadrilla_costo` existente de esa
-cuadrilla (nacional y regionales). Al borrar el renglón, se borran esos
-detalles de valuación.
+`cuadrilla_costo_detalle` en **cada** `cuadrilla_costo` de esa cuadrilla
+(nacional y una por región del catálogo; las que falten se materializan
+antes). Al borrar el renglón, se borran esos detalles de valuación.
 
 ### `cuadrilla_costo`
 
@@ -597,30 +598,35 @@ cerrar una vigencia de salario se recalcula el `cuadrilla_costo` de esa
 región (y el nacional si el salario tocado es nacional).
 
 `region_id` es **nullable**, igual que en `precio_material` y
-`salario_categoria_fasar`. El costo vigente de una cuadrilla en un
-proyecto se resuelve con la misma prioridad descendente:
+`salario_categoria_fasar`, pero **no comparte su prioridad de resolución**.
+Esas dos tablas son cotizaciones capturadas: si no hay precio/salario de la
+región del proyecto, se usa el nacional. `cuadrilla_costo` es **cache
+derivado** de receta × tabulador de **esa** región:
 
-1. `(cuadrilla, region_id = región del proyecto)` — valuación regional.
-2. `(cuadrilla, region_id = NULL)` — nacional por defecto, fallback final.
+- Toda cuadrilla nace con la fila nacional (`region_id = NULL`).
+- Al agregar, quitar o cambiar `cantidad` de un renglón de receta — y al
+  pulsar sincronizar en Costo por región — se materializa una fila de cache
+  por cada `region` del catálogo y se recalculan todas.
+- El salario de cada integrante es el vigente **de esa misma región**. Si el
+  tabulador no tiene el oficio ahí, `costo` e `importe` quedan en 0 y
+  `fecha_precio` en NULL (no se hereda el salario nacional).
+- Quien consume el costo pide la región concreta; no se sustituye el
+  `costo_total` nacional porque falte la fila de cache de esa región.
 
-Toda cuadrilla nace con la fila nacional (`region_id = NULL`). Una fila
-regional es opcional: se crea cuando se quiere el cache ya resuelto con los
-salarios de esa región. Al crearla se inserta un `cuadrilla_costo_detalle`
-por cada renglón de receta y se recalcula con los salarios vigentes de esa
-región. Las cantidades no se copian ni se editan aquí: se leen de
-`cuadrilla_detalle`.
+Al crearla se inserta un `cuadrilla_costo_detalle` por cada renglón de receta
+y se recalcula con los salarios vigentes de esa región. Las cantidades no se
+copian ni se editan aquí: se leen de `cuadrilla_detalle`.
 
 El cálculo se corre **dentro de un** `cuadrilla_costo` (una región), no
 sobre la receta entera:
 
 1. Mano de obra: cada `cuadrilla_costo_detalle` cuyo `cuadrilla_detalle.tipo`
    = `categoria_fasar` toma `cantidad` de `cuadrilla_detalle` y `costo` =
-   `salario_categoria_fasar.salario_real_diario` vigente de esa misma
-   región (misma prioridad regional → nacional). Si no hay salario vigente
-   (ni regional ni nacional), `costo` e `importe` quedan en 0 y
-   `fecha_precio` en NULL — el renglón se conserva; un recálculo posterior
-   rellena el cache cuando ya exista salario. Con eso se obtiene
-   `sub_total_mano_obra`.
+   `salario_categoria_fasar.salario_real_diario` vigente **de esa misma
+   región** (sin caer al nacional). Si no hay salario vigente de esa región,
+   `costo` e `importe` quedan en 0 y `fecha_precio` en NULL — el renglón se
+   conserva; un recálculo posterior rellena el cache cuando ya exista
+   salario. Con eso se obtiene `sub_total_mano_obra`.
 2. Herramienta: cada detalle cuyo `cuadrilla_detalle.tipo` =
    `equipo_herramienta` toma `cantidad` de `cuadrilla_detalle` (el %) y
    `costo` = el `sub_total_mano_obra` recién calculado de **esta**

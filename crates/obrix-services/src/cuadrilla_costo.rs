@@ -1,11 +1,10 @@
-//! Valuación por región de una `cuadrilla` (ver diccionario de datos). Toda
+//! Cache por zona de una `cuadrilla` (ver diccionario de datos). Toda
 //! cuadrilla nace con su fila nacional (`region_id = NULL`, ver
-//! `CuadrillaService::crear`); una fila regional es opcional y se crea aquí,
-//! con un renglón de cache por cada `cuadrilla_detalle` de la receta. El
-//! recálculo (`recalcular_valuacion`) corre **dentro de una sola valuación**,
-//! leyendo `cantidad` de la receta — quien cambia la receta
-//! (`CuadrillaDetalleService`) es quien decide cuáles valuaciones recalcular
-//! tras el cambio.
+//! `CuadrillaService::crear`). Las filas regionales no se cotizan: son
+//! cache de receta × tabulador de esa zona. Al mutar la receta o al
+//! sincronizar, se materializa una fila por cada `region` del catálogo.
+//! El recálculo (`recalcular_valuacion`) corre **dentro de una sola zona**,
+//! leyendo `cantidad` de la receta — sin fallback al total nacional.
 
 use obrix_db::PortafolioRepository;
 use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
@@ -23,8 +22,8 @@ use crate::{ServiceError, nuevo_id};
 pub struct CuadrillaCostoService;
 
 impl CuadrillaCostoService {
-    /// Todas las valuaciones no borradas de una cuadrilla (nacional +
-    /// regionales) — el frontend decide cuál mostrar/editar.
+    /// Todas las filas de cache no borradas de una cuadrilla (nacional +
+    /// una por región del catálogo, cuando ya se materializaron).
     pub async fn listar_por_cuadrilla(
         repo: &dyn PortafolioRepository,
         cuadrilla_id: &str,
@@ -36,9 +35,8 @@ impl CuadrillaCostoService {
             .await?)
     }
 
-    /// Crea una valuación regional: un `cuadrilla_costo_detalle` por cada
-    /// renglón de receta, resuelto con los salarios vigentes de esa región.
-    /// Las cantidades se leen de `cuadrilla_detalle`, no se copian.
+    /// Inserta el cache de una región si aún no existe y lo recalcula.
+    /// Quien muta la receta prefiere `asegurar_zonas` (todas las del catálogo).
     pub async fn crear_regional(
         repo: &dyn PortafolioRepository,
         cuadrilla_id: &str,
@@ -46,9 +44,102 @@ impl CuadrillaCostoService {
         creado_por: String,
     ) -> Result<cuadrilla_costo::Model, ServiceError> {
         let txn = repo.conexion().begin().await?;
+        let recetas = Self::recetas_activas(&txn, cuadrilla_id).await?;
+        let nuevo = Self::insertar_cache_regional(
+            &txn,
+            cuadrilla_id,
+            &region_id,
+            &recetas,
+            &creado_por,
+            &crate::ahora(),
+        )
+        .await?;
+        let resultado = Self::recalcular_valuacion(&txn, &nuevo.id).await?;
+        txn.commit().await?;
+        Ok(resultado)
+    }
 
-        if region::Entity::find_by_id(&region_id)
-            .one(&txn)
+    /// Garantiza una fila de cache por cada región del catálogo (más la
+    /// nacional, que ya existía). No recalcula: el caller recorre el
+    /// resultado y llama `recalcular_valuacion`. Corre contra `txn` abierta.
+    pub(crate) async fn asegurar_zonas(
+        txn: &DatabaseTransaction,
+        cuadrilla_id: &str,
+        creado_por: &str,
+    ) -> Result<Vec<cuadrilla_costo::Model>, ServiceError> {
+        let _nacional = cuadrilla_costo::Entity::find()
+            .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
+            .filter(cuadrilla_costo::Column::RegionId.is_null())
+            .filter(cuadrilla_costo::Column::Deleted.eq(false))
+            .one(txn)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::NoEncontrado(format!(
+                    "valuación nacional de cuadrilla {cuadrilla_id}"
+                ))
+            })?;
+
+        let regiones = region::Entity::find()
+            .filter(region::Column::Deleted.eq(false))
+            .all(txn)
+            .await?;
+        let existentes = Self::valuaciones_activas(txn, cuadrilla_id).await?;
+        let cubiertas: std::collections::HashSet<String> = existentes
+            .iter()
+            .filter_map(|c| c.region_id.clone())
+            .collect();
+        let recetas = Self::recetas_activas(txn, cuadrilla_id).await?;
+        let ahora = crate::ahora();
+
+        for r in regiones {
+            if !r.visible || cubiertas.contains(&r.id) {
+                continue;
+            }
+            Self::insertar_cache_regional(
+                txn,
+                cuadrilla_id,
+                &r.id,
+                &recetas,
+                creado_por,
+                &ahora,
+            )
+            .await?;
+        }
+        Self::valuaciones_activas(txn, cuadrilla_id).await
+    }
+
+    async fn recetas_activas(
+        txn: &DatabaseTransaction,
+        cuadrilla_id: &str,
+    ) -> Result<Vec<cuadrilla_detalle::Model>, ServiceError> {
+        Ok(cuadrilla_detalle::Entity::find()
+            .filter(cuadrilla_detalle::Column::CuadrillaInsumoId.eq(cuadrilla_id))
+            .filter(cuadrilla_detalle::Column::Deleted.eq(false))
+            .all(txn)
+            .await?)
+    }
+
+    async fn valuaciones_activas(
+        txn: &DatabaseTransaction,
+        cuadrilla_id: &str,
+    ) -> Result<Vec<cuadrilla_costo::Model>, ServiceError> {
+        Ok(cuadrilla_costo::Entity::find()
+            .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
+            .filter(cuadrilla_costo::Column::Deleted.eq(false))
+            .all(txn)
+            .await?)
+    }
+
+    async fn insertar_cache_regional(
+        txn: &DatabaseTransaction,
+        cuadrilla_id: &str,
+        region_id: &str,
+        recetas: &[cuadrilla_detalle::Model],
+        creado_por: &str,
+        ahora: &str,
+    ) -> Result<cuadrilla_costo::Model, ServiceError> {
+        if region::Entity::find_by_id(region_id)
+            .one(txn)
             .await?
             .is_none()
         {
@@ -56,53 +147,36 @@ impl CuadrillaCostoService {
         }
         let existente = cuadrilla_costo::Entity::find()
             .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
-            .filter(cuadrilla_costo::Column::RegionId.eq(region_id.clone()))
+            .filter(cuadrilla_costo::Column::RegionId.eq(region_id))
             .filter(cuadrilla_costo::Column::Deleted.eq(false))
-            .one(&txn)
+            .one(txn)
             .await?;
         if existente.is_some() {
             return Err(ServiceError::Validacion(
                 "ya existe una valuación para esa región".to_string(),
             ));
         }
-        let _nacional = cuadrilla_costo::Entity::find()
-            .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
-            .filter(cuadrilla_costo::Column::RegionId.is_null())
-            .filter(cuadrilla_costo::Column::Deleted.eq(false))
-            .one(&txn)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::NoEncontrado(format!(
-                    "valuación nacional de cuadrilla {cuadrilla_id}"
-                ))
-            })?;
-        let recetas = cuadrilla_detalle::Entity::find()
-            .filter(cuadrilla_detalle::Column::CuadrillaInsumoId.eq(cuadrilla_id))
-            .filter(cuadrilla_detalle::Column::Deleted.eq(false))
-            .all(&txn)
-            .await?;
 
-        let ahora = crate::ahora();
         let nuevo = cuadrilla_costo::ActiveModel {
             id: Set(nuevo_id()),
             cuadrilla_id: Set(cuadrilla_id.to_string()),
-            region_id: Set(Some(region_id)),
+            region_id: Set(Some(region_id.to_string())),
             sub_total_mano_obra: Set(Decimal::ZERO),
             sub_total_herramienta: Set(Decimal::ZERO),
             costo_total: Set(Decimal::ZERO),
             sincronizado_en: Set(None),
             deleted: Set(false),
-            created_at: Set(ahora.clone()),
-            created_by: Set(creado_por.clone()),
+            created_at: Set(ahora.to_string()),
+            created_by: Set(creado_por.to_string()),
             updated_at: Set(None),
             updated_by: Set(None),
             deleted_at: Set(None),
             deleted_by: Set(None),
         }
-        .insert(&txn)
+        .insert(txn)
         .await?;
 
-        for receta in &recetas {
+        for receta in recetas {
             cuadrilla_costo_detalle::ActiveModel {
                 id: Set(nuevo_id()),
                 cuadrilla_costo_id: Set(nuevo.id.clone()),
@@ -111,24 +185,20 @@ impl CuadrillaCostoService {
                 importe: Set(Decimal::ZERO),
                 fecha_precio: Set(None),
                 deleted: Set(false),
-                created_at: Set(ahora.clone()),
-                created_by: Set(creado_por.clone()),
+                created_at: Set(ahora.to_string()),
+                created_by: Set(creado_por.to_string()),
                 updated_at: Set(None),
                 updated_by: Set(None),
                 deleted_at: Set(None),
                 deleted_by: Set(None),
             }
-            .insert(&txn)
+            .insert(txn)
             .await?;
         }
-
-        let resultado = Self::recalcular_valuacion(&txn, &nuevo.id).await?;
-        txn.commit().await?;
-        Ok(resultado)
+        Ok(nuevo)
     }
 
-    /// Borrado lógico de una valuación regional — nunca de la nacional, que
-    /// siempre debe existir como fallback final.
+    /// Borrado lógico de una fila de cache regional — nunca de la nacional.
     pub async fn eliminar_regional(
         repo: &dyn PortafolioRepository,
         id: String,
@@ -170,21 +240,24 @@ impl CuadrillaCostoService {
         Ok(())
     }
 
-    /// Fuerza un recálculo manual de una valuación, sin que haya cambiado su
-    /// composición — trae de nueva cuenta el salario vigente de cada
-    /// integrante. Útil cuando los salarios de los insumos referenciados se
-    /// actualizaron después del último cambio a la receta.
-    /// Marca `sincronizado_en` para que la ficha muestre cuándo se jalaron
-    /// los insumos vigentes (no usa `updated_at`).
-    pub async fn recalcular_costos(
+    /// Recálculo de **todas** las zonas (Nacional + catálogo de regiones)
+    /// contra el tabulador vigente. Materializa el cache de regiones nuevas.
+    /// Marca `sincronizado_en` en cada columna — el ⟳ de Costo por región.
+    pub async fn recalcular_zonas(
         repo: &dyn PortafolioRepository,
-        cuadrilla_costo_id: String,
-    ) -> Result<cuadrilla_costo::Model, ServiceError> {
+        cuadrilla_id: &str,
+        actualizado_por: &str,
+    ) -> Result<Vec<cuadrilla_costo::Model>, ServiceError> {
         let txn = repo.conexion().begin().await?;
-        let resultado = Self::recalcular_valuacion(&txn, &cuadrilla_costo_id).await?;
-        let mut am: cuadrilla_costo::ActiveModel = resultado.into();
-        am.sincronizado_en = Set(Some(crate::ahora()));
-        let resultado = am.update(&txn).await?;
+        let valuaciones = Self::asegurar_zonas(&txn, cuadrilla_id, actualizado_por).await?;
+        let ahora = crate::ahora();
+        let mut resultado = Vec::with_capacity(valuaciones.len());
+        for v in valuaciones {
+            let recalculada = Self::recalcular_valuacion(&txn, &v.id).await?;
+            let mut am: cuadrilla_costo::ActiveModel = recalculada.into();
+            am.sincronizado_en = Set(Some(ahora.clone()));
+            resultado.push(am.update(&txn).await?);
+        }
         txn.commit().await?;
         Ok(resultado)
     }
@@ -193,13 +266,12 @@ impl CuadrillaCostoService {
     /// mismo motivo que en `CuadrillaDetalleService`/
     /// `EquipoCostoHorarioDetalleService`: pedir una conexión aparte se
     /// quedaría esperando a que la transacción abierta la libere. El
-    /// algoritmo corre **dentro de una sola valuación** (ver diccionario de
-    /// datos):
-    /// 1. mano de obra: costo = salario vigente de esa misma región
-    ///    (regional → nacional, prioridad descendente). Si no hay salario
-    ///    vigente, costo/importe quedan en 0 y `fecha_precio` en `None`.
+    /// algoritmo corre **dentro de una sola zona**:
+    /// 1. mano de obra: costo = salario vigente **de esa misma** `region_id`
+    ///    (Nacional si es NULL). Sin fallback a otra zona: si no hay
+    ///    salario, costo/importe quedan en 0 y `fecha_precio` en `None`.
     /// 2. herramienta: costo = `sub_total_mano_obra` recién calculado de
-    ///    esta misma valuación.
+    ///    esta misma zona.
     /// 3. `costo_total` = suma de ambos subtotales.
     pub(crate) async fn recalcular_valuacion(
         txn: &DatabaseTransaction,
@@ -290,43 +362,30 @@ impl CuadrillaCostoService {
         Ok(am.update(txn).await?)
     }
 
-    /// Salario vigente de un integrante con prioridad regional → nacional —
-    /// no reutiliza `SalarioCategoriaFasarService::vigente_nacional` porque
-    /// esta función corre dentro de una transacción abierta (mismo problema
-    /// de "candado consigo misma" que documentan `CuadrillaDetalleService`/
-    /// `EquipoCostoHorarioDetalleService`).
+    /// Salario vigente **de esa zona** (Nacional si `region_id` es `None`).
+    /// Sin fallback a otra zona: si el tabulador no tiene el oficio ahí,
+    /// el renglón de la cuadrilla queda en cero. Corre dentro de una
+    /// transacción abierta (no reutiliza `vigente_nacional`).
     async fn salario_vigente(
         txn: &DatabaseTransaction,
         insumo_id: &str,
         region_id: Option<&str>,
     ) -> Result<Option<salario_categoria_fasar::Model>, ServiceError> {
-        if let Some(region_id) = region_id {
-            let regional = salario_categoria_fasar::Entity::find()
-                .filter(salario_categoria_fasar::Column::InsumoId.eq(insumo_id))
-                .filter(salario_categoria_fasar::Column::RegionId.eq(region_id))
-                .filter(salario_categoria_fasar::Column::FechaVigenciaHasta.is_null())
-                .order_by_desc(salario_categoria_fasar::Column::FechaVigenciaDesde)
-                .one(txn)
-                .await?;
-            if let Some(regional) = regional {
-                return Ok(Some(regional));
-            }
-        }
-        let nacional = salario_categoria_fasar::Entity::find()
+        let mut consulta = salario_categoria_fasar::Entity::find()
             .filter(salario_categoria_fasar::Column::InsumoId.eq(insumo_id))
-            .filter(salario_categoria_fasar::Column::RegionId.is_null())
             .filter(salario_categoria_fasar::Column::FechaVigenciaHasta.is_null())
-            .order_by_desc(salario_categoria_fasar::Column::FechaVigenciaDesde)
-            .one(txn)
-            .await?;
-        Ok(nacional)
+            .order_by_desc(salario_categoria_fasar::Column::FechaVigenciaDesde);
+        consulta = match region_id {
+            Some(region_id) => {
+                consulta.filter(salario_categoria_fasar::Column::RegionId.eq(region_id))
+            }
+            None => consulta.filter(salario_categoria_fasar::Column::RegionId.is_null()),
+        };
+        Ok(consulta.one(txn).await?)
     }
 
-    /// Costo vigente de una cuadrilla para el consumidor externo
-    /// (`equipo_costo_horario_detalle`, y más adelante `concepto_componente`)
-    /// — misma prioridad descendente que `salario_vigente`: `(cuadrilla,
-    /// region_id)` si existe una valuación no borrada, si no `(cuadrilla,
-    /// region_id = NULL)`. Genérica sobre `ConnectionTrait` para poder
+    /// Cache de la zona pedida, sin sustituir el total nacional si la fila
+    /// regional aún no existe. Genérica sobre `ConnectionTrait` para poder
     /// llamarse tanto con `repo.conexion()` como desde dentro de una
     /// transacción abierta.
     pub async fn resolver_costo_total(
@@ -334,24 +393,14 @@ impl CuadrillaCostoService {
         cuadrilla_id: &str,
         region_id: Option<&str>,
     ) -> Result<Option<Decimal>, ServiceError> {
-        if let Some(region_id) = region_id {
-            let regional = cuadrilla_costo::Entity::find()
-                .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
-                .filter(cuadrilla_costo::Column::RegionId.eq(region_id))
-                .filter(cuadrilla_costo::Column::Deleted.eq(false))
-                .one(conn)
-                .await?;
-            if let Some(regional) = regional {
-                return Ok(Some(regional.costo_total));
-            }
-        }
-        let nacional = cuadrilla_costo::Entity::find()
+        let mut consulta = cuadrilla_costo::Entity::find()
             .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
-            .filter(cuadrilla_costo::Column::RegionId.is_null())
-            .filter(cuadrilla_costo::Column::Deleted.eq(false))
-            .one(conn)
-            .await?;
-        Ok(nacional.map(|c| c.costo_total))
+            .filter(cuadrilla_costo::Column::Deleted.eq(false));
+        consulta = match region_id {
+            Some(region_id) => consulta.filter(cuadrilla_costo::Column::RegionId.eq(region_id)),
+            None => consulta.filter(cuadrilla_costo::Column::RegionId.is_null()),
+        };
+        Ok(consulta.one(conn).await?.map(|c| c.costo_total))
     }
 }
 
@@ -463,6 +512,7 @@ mod tests {
                 nombre: nombre.into(),
                 estado: "Nuevo León".into(),
                 factor_ajuste: None,
+                visible: true,
             },
             "usr-1".into(),
         )
@@ -572,7 +622,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn crear_regional_usa_cantidad_de_la_receta_y_salario_nacional_si_no_hay_regional() {
+    async fn crear_regional_sin_salario_de_esa_zona_queda_en_cero() {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
@@ -590,9 +640,12 @@ mod tests {
         .await
         .expect("crear valuación regional");
         assert_eq!(regional.region_id.as_deref(), Some(region_id.as_str()));
-        // Sin salario regional propio: cae al nacional (700) × 2 = 1400.
-        assert_eq!(regional.sub_total_mano_obra, Decimal::from(1400));
-        assert_eq!(regional.costo_total, Decimal::from(1400));
+        assert_eq!(
+            regional.sub_total_mano_obra,
+            Decimal::ZERO,
+            "sin tabulador de esa zona el renglón queda en cero, no hereda Nacional"
+        );
+        assert_eq!(regional.costo_total, Decimal::ZERO);
 
         let detalles =
             crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
@@ -613,10 +666,9 @@ mod tests {
             "la cantidad es de la receta, no de la valuación"
         );
         assert_eq!(detalles.len(), 1);
-        assert_eq!(
-            detalles[0].fecha_precio.as_deref(),
-            Some("2026-01-01"),
-            "el recálculo de valuación copia fecha_vigencia_desde del salario"
+        assert!(
+            detalles[0].fecha_precio.is_none(),
+            "sin salario de esa zona no hay fecha_precio"
         );
         assert_eq!(
             regional.sincronizado_en, None,
@@ -625,7 +677,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn recalculo_manual_marca_sincronizado_en_sin_confundirlo_con_updated_at() {
+    async fn recalculo_de_zonas_marca_sincronizado_en() {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
@@ -652,12 +704,12 @@ mod tests {
             .expect("listar cuadrilla_costo_detalle");
         assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
 
-        let tras = CuadrillaCostoService::recalcular_costos(&portafolio, nacional.id.clone())
+        let tras = CuadrillaCostoService::recalcular_zonas(&portafolio, &cuadrilla_id, "usr-1")
             .await
-            .expect("recalcular costos");
+            .expect("recalcular zonas");
         assert!(
-            tras.sincronizado_en.is_some(),
-            "el ⟳ debe marcar sincronizado_en"
+            tras.iter().all(|c| c.sincronizado_en.is_some()),
+            "el ⟳ de Costo por zona debe marcar sincronizado_en en todas las columnas"
         );
         let detalles =
             crate::cuadrilla_costo_detalle::CuadrillaCostoDetalleService::listar_por_costo(
@@ -731,7 +783,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn resolver_costo_total_prioriza_region_luego_nacional() {
+    async fn resolver_costo_total_de_la_zona_sin_caer_a_nacional() {
         let portafolio = portafolio_con_fixtures().await;
         let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
         let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
@@ -755,22 +807,66 @@ mod tests {
         )
         .await
         .expect("resolver costo con region")
+        .expect("debe existir el cache de Norte");
+        assert_eq!(
+            costo_region,
+            Decimal::ZERO,
+            "Norte no tiene tabulador propio"
+        );
+
+        let costo_nacional = CuadrillaCostoService::resolver_costo_total(
+            portafolio.conexion(),
+            &cuadrilla_id,
+            None,
+        )
+        .await
+        .expect("resolver nacional")
         .expect("debe existir");
-        assert_eq!(costo_region, Decimal::from(700));
+        assert_eq!(costo_nacional, Decimal::from(700));
 
         let otra_region_id = crear_region(&portafolio, "Sur").await;
-        let costo_fallback = CuadrillaCostoService::resolver_costo_total(
+        let costo_sur = CuadrillaCostoService::resolver_costo_total(
             portafolio.conexion(),
             &cuadrilla_id,
             Some(otra_region_id.as_str()),
         )
         .await
-        .expect("resolver costo con fallback")
-        .expect("debe existir");
+        .expect("resolver costo de Sur");
         assert_eq!(
-            costo_fallback,
-            Decimal::from(700),
-            "sin valuación en Sur, cae a la nacional"
+            costo_sur, None,
+            "sin fila de cache en Sur no se toma el total nacional"
         );
+    }
+
+    #[tokio::test]
+    async fn agregar_integrante_materializa_cache_de_regiones_del_catalogo() {
+        let portafolio = portafolio_con_fixtures().await;
+        let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
+        let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
+        registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
+        let region_id = crear_region(&portafolio, "Norte").await;
+        let fsr_norte = crear_fsr(&portafolio, "FSR Norte", Some(region_id.clone())).await;
+        registrar_salario(
+            &portafolio,
+            &oficial,
+            &fsr_norte,
+            Some(region_id.clone()),
+            "900",
+        )
+        .await;
+
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::from(2)).await;
+        let costos = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
+            .await
+            .expect("listar costos");
+        assert_eq!(costos.len(), 2, "Nacional + Norte del catálogo");
+        let nacional = costos.iter().find(|c| c.region_id.is_none()).unwrap();
+        let norte = costos
+            .iter()
+            .find(|c| c.region_id.as_deref() == Some(region_id.as_str()))
+            .unwrap();
+        assert_eq!(nacional.sub_total_mano_obra, Decimal::from(1400));
+        assert_eq!(norte.sub_total_mano_obra, Decimal::from(1800));
     }
 }

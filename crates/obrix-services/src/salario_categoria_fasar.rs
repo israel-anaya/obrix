@@ -302,6 +302,7 @@ mod tests {
                 nombre: "Norte".into(),
                 estado: "Nuevo León".into(),
                 factor_ajuste: None,
+                visible: true,
             },
             "usr-1".into(),
         )

@@ -1,8 +1,8 @@
 //! Cache valuado de un renglón de receta dentro de una `cuadrilla_costo` —
 //! `costo`/`importe` los deriva `CuadrillaCostoService::recalcular_valuacion`.
 //! Las filas nacen/mueren junto con la receta (`CuadrillaDetalleService`) o
-//! junto con una valuación regional (`CuadrillaCostoService::crear_regional`/
-//! `eliminar_regional`). `cantidad` no vive aquí: es de `cuadrilla_detalle`.
+//! al materializar el cache de una zona (`CuadrillaCostoService::asegurar_zonas`).
+//! `cantidad` no vive aquí: es de `cuadrilla_detalle`.
 
 use obrix_db::PortafolioRepository;
 use obrix_db::entities::cuadrilla_costo_detalle;

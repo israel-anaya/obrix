@@ -7,6 +7,7 @@ import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategori
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listCategoriasFasar, listFamiliasInsumo, listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
 import type { CategoriaFasar, FamiliaInsumo, Region, SalarioCategoriaFasar } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SIN_SUBFAMILIA_ID = "";
@@ -52,7 +53,7 @@ function tonoCelda(valor: number, min: number, max: number): string | undefined 
 
 /**
  * Tabulador publicado a lo ancho: oficios en filas, Nacional + regiones en
- * columnas. Cada celda es el salario real vigente de esa zona. Clic en un
+ * columnas. Cada celda es el salario real vigente de esa región. Clic en un
  * hueco abre el alta ya apuntando a esa región; clic en una celda llena
  * solo selecciona el oficio. Es el "Modo Matriz × región" de Tabuladores
  * de Salario (ver `TabuladoresSalarioSeccion`); no sustituye al grid.
@@ -103,7 +104,7 @@ export function MatrizOficioRegionSeccion() {
   );
 
   const columnas = useMemo(
-    () => [{ id: NACIONAL_ID, nombre: "Nacional" }, ...regiones.map((r) => ({ id: r.id, nombre: r.nombre }))],
+    () => [{ id: NACIONAL_ID, nombre: "Nacional" }, ...regionesVisibles(regiones).map((r) => ({ id: r.id, nombre: r.nombre }))],
     [regiones],
   );
 
@@ -175,10 +176,10 @@ export function MatrizOficioRegionSeccion() {
           <h2 className="shrink-0 text-sm font-semibold">Matriz oficio × región</h2>
           <p
             className={cn("truncate text-xs", error ? "font-medium text-destructive" : "text-muted-foreground")}
-            title={error ? undefined : "Clic en un hueco para capturar esa zona"}
+            title={error ? undefined : "Clic en un hueco para capturar esa región"}
           >
             {error ??
-              `${filas.length} ${filas.length === 1 ? "oficio" : "oficios"} · ${columnas.length} ${columnas.length === 1 ? "zona" : "zonas"} · ${llenas}/${celdas || 0} vigentes`}
+              `${filas.length} ${filas.length === 1 ? "oficio" : "oficios"} · ${columnas.length} ${columnas.length === 1 ? "región" : "regiones"} · ${llenas}/${celdas || 0} vigentes`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -248,9 +249,9 @@ export function MatrizOficioRegionSeccion() {
               </p>
             ) : (
               <div className="min-h-0 flex-1 overflow-auto">
-                {regiones.length === 0 && (
+                {regionesVisibles(regiones).length === 0 && (
                   <p className="border-b border-border px-3 py-1.5 text-[11px] text-muted-foreground">
-                    Solo se muestra Nacional. Agrega regiones en Configuración para zonificar el tabulador.
+                    Solo se muestra Nacional. Agrega regiones en Configuración para tabular por región.
                   </p>
                 )}
                 <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
@@ -269,7 +270,7 @@ export function MatrizOficioRegionSeccion() {
                           title={col.nombre}
                         >
                           {col.id ? (
-                            <MapPinned size={16} className="mx-auto text-amber-600 dark:text-amber-400" />
+                            <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
                           ) : (
                             <Globe2 size={16} className="mx-auto text-primary" />
                           )}

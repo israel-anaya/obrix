@@ -19,6 +19,7 @@ import {
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { EquipoCostoHorario, EquipoCostoHorarioData, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
@@ -152,7 +153,7 @@ export function EquipoCostoHorarioGridVista() {
           field: "region",
           header: "Región",
           width: 140,
-          options: [SIN_REGION, ...ordenarPor(regiones, (r) => r.nombre).map((r) => r.nombre)],
+          options: [SIN_REGION, ...ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => r.nombre)],
         },
         { field: "cf_costo_maquina", header: "Costo máquina", width: 130, numeric: true },
         { field: "cf_valor_llantas", header: "Valor llantas", width: 120, numeric: true },

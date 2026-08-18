@@ -543,6 +543,7 @@ mod tests {
             nombre: Set("Centro".into()),
             estado: Set("CDMX".into()),
             factor_ajuste: Set(None),
+            visible: Set(true),
             deleted: Set(false),
             created_at: Set(now),
             created_by: Set("usr-1".into()),

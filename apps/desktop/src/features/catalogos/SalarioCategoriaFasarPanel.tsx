@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { createSalarioCategoriaFasar, listFactoresSalarioReal, listRegiones, listSalariosCategoriaFasar } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { FactorSalarioReal, Region, SalarioCategoriaFasar } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
@@ -124,7 +125,7 @@ export function SalarioCategoriaFasarPanel({
   }, [categoriaId]);
 
   // La matriz manda `captura` al clic de una celda vacía: abre el alta ya
-  // apuntando a esa zona, sin pasar por "Nuevo salario".
+  // apuntando a esa región, sin pasar por "Nuevo salario".
   useEffect(() => {
     if (!captura || !categoriaId) return;
     if (captura.abrir) {
@@ -317,10 +318,10 @@ export function SalarioCategoriaFasarPanel({
                           {NACIONAL} (default)
                         </span>
                       </SelectItem>
-                      {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+                      {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           <span className="flex items-center gap-1.5">
-                            <MapPinned size={16} className="text-amber-600 dark:text-amber-400" />
+                            <MapPinned size={16} className="text-teal-600 dark:text-teal-400" />
                             {r.nombre}
                           </span>
                         </SelectItem>
@@ -397,7 +398,7 @@ export function SalarioCategoriaFasarPanel({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-medium">
                         {s.region_id ? (
-                          <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                          <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                         ) : (
                           <Globe2 size={16} className="shrink-0 text-primary" />
                         )}
@@ -453,7 +454,7 @@ export function SalarioCategoriaFasarPanel({
                           <td className="py-1 pr-2">
                             <span className="inline-flex items-center gap-1.5">
                               {s.region_id ? (
-                                <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                                <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                               ) : (
                                 <Globe2 size={16} className="shrink-0 text-primary" />
                               )}

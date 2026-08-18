@@ -68,6 +68,14 @@ function filaControl(m: {
   };
 }
 
+function aBooleano(valor: string | number | boolean, fallback: boolean): boolean {
+  if (typeof valor === "boolean") return valor;
+  const t = String(valor).trim().toLowerCase();
+  if (["sí", "si", "true", "1", "yes"].includes(t)) return true;
+  if (["no", "false", "0"].includes(t)) return false;
+  return fallback;
+}
+
 /**
  * `grid`/`aFila`/`filaANuevo` no se usan para renderizar — `SettingsPage`
  * intercepta este id y muestra `OrganizacionSeccion` en su lugar, porque la
@@ -225,6 +233,7 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
       { field: "nombre", header: "Nombre", width: 240 },
       { field: "estado", header: "Estado", width: 160 },
       { field: "factor_ajuste", header: "Factor de ajuste", numeric: true, width: 150 },
+      { field: "visible", header: "Visible", width: 90, boolean: true, default: true },
       ...COLUMNAS_CONTROL,
     ],
   },
@@ -239,13 +248,15 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
     nombre: m.nombre,
     estado: m.estado,
     factor_ajuste: m.factor_ajuste ?? "",
+    visible: m.visible,
     ...filaControl(m),
   }),
-  vacio: { nombre: "Nueva región", estado: "", factor_ajuste: null },
+  vacio: { nombre: "Nueva región", estado: "", factor_ajuste: null, visible: true },
   filaANuevo: (f) => ({
     nombre: String(f.nombre),
     estado: String(f.estado),
     factor_ajuste: String(f.factor_ajuste) || null,
+    visible: aBooleano(f.visible, true),
   }),
   csv: {
     archivoDefault: "regiones.csv",
@@ -255,6 +266,7 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
       { field: "nombre", encabezado: "Nombre", obligatorio: true },
       { field: "estado", encabezado: "Estado" },
       { field: "factor_ajuste", encabezado: "Factor de ajuste" },
+      { field: "visible", encabezado: "Visible" },
     ],
   },
 };

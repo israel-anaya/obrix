@@ -1,32 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2, Users, X } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowDown, ArrowUp, Globe2, HardHat, MapPinned, Plus, Trash2, Users, Wrench, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
 import {
-  createCuadrillaCostoRegional,
   createCuadrillaDetalle,
-  deleteCuadrillaCosto,
   deleteCuadrillaDetalle,
   listCategoriasFasar,
   listCuadrillaCostoDetalles,
@@ -50,11 +29,13 @@ import type {
   Region,
   UnidadMedida,
 } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const ELEGIR_INTEGRANTE = "— Elige un integrante —";
 const ELEGIR_HERRAMIENTA = "— Elige una herramienta —";
 const NACIONAL = "Nacional";
+const NACIONAL_VALOR = "__nacional__";
 
 function fmt(valor: string, decimales = 2): string {
   const numero = Number(valor);
@@ -65,14 +46,10 @@ function fmt(valor: string, decimales = 2): string {
 /**
  * Panel: composición de una `cuadrilla` — dos matrices planas (integrantes de
  * `categoria_fasar` y herramienta de `herramienta`, ver diccionario de
- * datos) más los tres subtotales de la **valuación seleccionada**
- * (`cuadrilla_costo`, ver selector de región). La receta (quién integra el
- * equipo y cuántos) es la misma en todas las regiones — agregar/quitar/mover
- * renglones y editar `cantidad` solo está disponible viendo la valuación
- * Nacional. El resto de las valuaciones aplica los salarios de esa región
- * sobre esa misma composición. Cada mutación recalcula en el backend, este
- * panel solo refleja lo que vuelve de ahí. Pensado para vivir junto al grid
- * de cuadrillas, mismo patrón que `SalarioCategoriaFasarPanel`.
+ * datos) más los tres subtotales de la región elegida. La receta es la
+ * misma en todas las regiones; al cambiar la región se muestran costo e
+ * importe del cache de esa valuación. Cada mutación recalcula en el backend, este panel solo
+ * refleja lo que vuelve de ahí.
  */
 export function CuadrillaDetallePanel({
   cuadrilla,
@@ -97,9 +74,7 @@ export function CuadrillaDetallePanel({
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
-  const [creandoRegion, setCreandoRegion] = useState(false);
-  const [regionNueva, setRegionNueva] = useState("");
-  const [confirmandoEliminarValuacion, setConfirmandoEliminarValuacion] = useState(false);
+  const [regionVistaId, setRegionVistaId] = useState<string | null>(null);
   const [integranteSeleccionadoId, setIntegranteSeleccionadoId] = useState<string | null>(null);
   const [herramientaSeleccionadaId, setHerramientaSeleccionadaId] = useState<string | null>(null);
 
@@ -110,8 +85,8 @@ export function CuadrillaDetallePanel({
   useEffect(() => {
     listCategoriasFasar().then(setCategorias).catch(() => {});
     listHerramientas().then(setHerramientas).catch(() => {});
-    listRegiones().then(setRegiones).catch(() => {});
     listUnidadesMedida().then(setUnidades).catch(() => {});
+    listRegiones().then(setRegiones).catch(() => {});
   }, []);
 
   const cargarDetalles = (id: string) =>
@@ -139,6 +114,7 @@ export function CuadrillaDetallePanel({
       setCostos([]);
       setCostoSeleccionadoId(null);
       setCostoDetalles([]);
+      setRegionVistaId(null);
       setError(null);
       return;
     }
@@ -146,6 +122,7 @@ export function CuadrillaDetallePanel({
     setCargando(true);
     setError(null);
     setCostoSeleccionadoId(null);
+    setRegionVistaId(null);
     setIntegranteSeleccionadoId(null);
     setHerramientaSeleccionadaId(null);
     const espera = setTimeout(() => {
@@ -188,45 +165,30 @@ export function CuadrillaDetallePanel({
     onComposicionCambiada?.();
     if (!cuadrillaId) return;
     await cargarDetalles(cuadrillaId);
-    await cargarCostos(cuadrillaId);
-    if (costoSeleccionadoId) {
-      await listCuadrillaCostoDetalles(costoSeleccionadoId).then(setCostoDetalles).catch(() => {});
+    const costosR = await cargarCostos(cuadrillaId);
+    const id =
+      costosR.find((c) => (c.region_id ?? null) === regionVistaId)?.id ??
+      costosR.find((c) => c.region_id === null)?.id ??
+      costosR[0]?.id ??
+      null;
+    setCostoSeleccionadoId(id);
+    if (id) {
+      await listCuadrillaCostoDetalles(id).then(setCostoDetalles).catch(() => {});
+    } else {
+      setCostoDetalles([]);
     }
   };
 
-  const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
   const costoSeleccionado = costos.find((c) => c.id === costoSeleccionadoId) ?? null;
-  const esNacional = costoSeleccionado ? costoSeleccionado.region_id === null : true;
-  const regionesSinValuacion = useMemo(
-    () => regiones.filter((r) => !costos.some((c) => c.region_id === r.id)),
-    [regiones, costos],
-  );
+  const costoTotalNum = Number(costoSeleccionado?.costo_total) || 0;
+  const pctMo = costoTotalNum > 0 ? ((Number(costoSeleccionado?.sub_total_mano_obra) || 0) / costoTotalNum) * 100 : 0;
+  const pctHe = costoTotalNum > 0 ? ((Number(costoSeleccionado?.sub_total_herramienta) || 0) / costoTotalNum) * 100 : 0;
 
-  const crearValuacionRegional = async () => {
-    if (!cuadrillaId || !regionNueva) return;
-    setError(null);
-    try {
-      const creada = await createCuadrillaCostoRegional(cuadrillaId, regionNueva);
-      await cargarCostos(cuadrillaId);
-      setCostoSeleccionadoId(creada.id);
-      setCreandoRegion(false);
-      setRegionNueva("");
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  const confirmarEliminarValuacionRegional = async () => {
-    setConfirmandoEliminarValuacion(false);
-    if (!cuadrillaId || !costoSeleccionado || costoSeleccionado.region_id === null) return;
-    setError(null);
-    try {
-      await deleteCuadrillaCosto(costoSeleccionado.id);
-      const restantes = await cargarCostos(cuadrillaId);
-      setCostoSeleccionadoId(restantes.find((c) => c.region_id === null)?.id ?? null);
-    } catch (e) {
-      setError(String(e));
-    }
+  const elegirRegion = (valor: string) => {
+    const regionId = valor === NACIONAL_VALOR ? null : valor;
+    setRegionVistaId(regionId);
+    const id = costos.find((c) => (c.region_id ?? null) === regionId)?.id ?? null;
+    setCostoSeleccionadoId(id);
   };
 
   const opcionPorCategoriaId = useMemo(
@@ -273,13 +235,13 @@ export function CuadrillaDetallePanel({
           options: [ELEGIR_INTEGRANTE, ...categorias.map((c) => `${c.clave} — ${c.descripcion}`)],
         },
         { field: "unidad", header: "Unidad", width: 80, readOnly: true },
-        { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6, readOnly: !esNacional },
+        { field: "cantidad", header: "Cantidad", width: 110, numeric: true, decimals: 6 },
         { field: "costo", header: "Salario real", width: 140, numeric: true, readOnly: true },
         { field: "fecha_precio", header: "Fecha precio", width: 126, readOnly: true, date: true, hiddenByDefault: true },
         { field: "importe", header: "Importe", width: 110, numeric: true, readOnly: true },
       ],
     }),
-    [categorias, esNacional],
+    [categorias],
   );
 
   const filasIntegrantes: Row[] = useMemo(
@@ -312,12 +274,12 @@ export function CuadrillaDetallePanel({
           options: [ELEGIR_HERRAMIENTA, ...herramientas.map((h) => `${h.clave} — ${h.descripcion}`)],
         },
         { field: "unidad", header: "Unidad", width: 80, readOnly: true },
-        { field: "cantidad", header: "% mano de obra", width: 110, numeric: true, suffix: "%", readOnly: !esNacional },
+        { field: "cantidad", header: "% mano de obra", width: 110, numeric: true, suffix: "%" },
         { field: "costo", header: "Base (mano de obra)", width: 140, numeric: true, readOnly: true },
         { field: "importe", header: "Importe", width: 110, numeric: true, readOnly: true },
       ],
     }),
-    [herramientas, esNacional],
+    [herramientas],
   );
 
   const filasHerramienta: Row[] = useMemo(
@@ -382,60 +344,65 @@ export function CuadrillaDetallePanel({
             <Users size={16} className="text-emerald-500" />
             Composición
           </span>
-          <button
-            type="button"
-            title="Cerrar"
-            onClick={onCerrar}
-            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Select value={regionVistaId ?? NACIONAL_VALOR} onValueChange={elegirRegion}>
+              <SelectTrigger className="h-7 w-[9.5rem] border-border bg-background px-2 text-[11px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NACIONAL_VALOR}>
+                  <span className="flex items-center gap-1.5">
+                    <Globe2 size={14} className="text-primary" />
+                    {NACIONAL}
+                  </span>
+                </SelectItem>
+                {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="flex items-center gap-1.5">
+                      <MapPinned size={14} className="text-teal-600 dark:text-teal-400" />
+                      {r.nombre}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <button
+              type="button"
+              title="Cerrar"
+              onClick={onCerrar}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
         {cuadrilla ? (
           <>
             <div className="mt-1 flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-mono text-base font-bold tracking-tight">{cuadrilla.clave}</span>
-              {cuadrillaId ? (
-                <div className="ml-auto flex shrink-0 items-center gap-1">
-                  <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
-                    <SelectTrigger size="sm" className="w-48 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {costos.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!esNacional && (
-                    <button
-                      type="button"
-                      title="Eliminar valuación regional"
-                      onClick={() => setConfirmandoEliminarValuacion(true)}
-                      className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                  {regionesSinValuacion.length > 0 && (
-                    <button
-                      type="button"
-                      title="Crear valuación regional"
-                      onClick={() => setCreandoRegion(true)}
-                      className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                      <Plus size={16} />
-                      <span className="text-[11px]">Región</span>
-                    </button>
-                  )}
-                </div>
-              ) : null}
             </div>
             <p className="mt-0.5 truncate text-xs text-foreground" title={cuadrilla.descripcion}>
               {cuadrilla.descripcion}
             </p>
+            <div className="mt-2 flex items-center gap-3">
+              <div
+                className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+                title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
+              >
+                <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
+                <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
+              </div>
+              <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <HardHat size={16} className="text-blue-500" />
+                  {pctMo.toFixed(0)}%
+                </span>
+                <span className="flex items-center gap-1">
+                  <Wrench size={16} className="text-amber-500" />
+                  {pctHe.toFixed(0)}%
+                </span>
+              </span>
+            </div>
           </>
         ) : null}
       </div>
@@ -450,8 +417,7 @@ export function CuadrillaDetallePanel({
                 <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Integrantes (mano de obra)
                 </h4>
-                {esNacional && (
-                  <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5">
                     <button
                       type="button"
                       title="Agregar integrante"
@@ -491,7 +457,6 @@ export function CuadrillaDetallePanel({
                       <Trash2 size={16} />
                     </button>
                   </div>
-                )}
               </div>
               <div className="min-h-0 flex-1">
                 <DataGrid
@@ -530,8 +495,7 @@ export function CuadrillaDetallePanel({
             <section className="flex min-h-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
                 <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Herramienta</h4>
-                {esNacional && (
-                  <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5">
                     <button
                       type="button"
                       title="Agregar herramienta"
@@ -574,7 +538,6 @@ export function CuadrillaDetallePanel({
                       <Trash2 size={16} />
                     </button>
                   </div>
-                )}
               </div>
               <div className="min-h-0 flex-1">
                 <DataGrid
@@ -627,70 +590,9 @@ export function CuadrillaDetallePanel({
                 </div>
               </dl>
             </section>
-
-            {!esNacional && (
-              <p className="mx-3 mb-3 shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800 dark:text-amber-300">
-                Agregar, quitar, mover o cambiar cantidades solo está disponible en Nacional — esta región aplica salarios sobre la misma composición.
-              </p>
-            )}
           </div>
         </>
       )}
-
-      <AlertDialog open={confirmandoEliminarValuacion} onOpenChange={setConfirmandoEliminarValuacion}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta valuación regional?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {costoSeleccionado?.region_id &&
-                `Se eliminará la valuación de "${nombrePorRegionId[costoSeleccionado.region_id] ?? costoSeleccionado.region_id}". Esta acción no se puede deshacer.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel />
-            <AlertDialogAction onClick={() => void confirmarEliminarValuacionRegional()}>Eliminar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog
-        open={creandoRegion}
-        onOpenChange={(open) => {
-          setCreandoRegion(open);
-          if (!open) setRegionNueva("");
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Nueva valuación regional</DialogTitle>
-            <DialogDescription>
-              Crea una valuación independiente para esta cuadrilla en la región elegida, aplicando los salarios
-              de esa zona sobre las cantidades de la receta. No se pueden cambiar cantidades ni integrantes
-              desde una valuación regional: eso se hace en Nacional.
-            </DialogDescription>
-          </DialogHeader>
-          <Select value={regionNueva} onValueChange={setRegionNueva}>
-            <SelectTrigger autoFocus size="sm" className="w-full text-xs">
-              <SelectValue placeholder="— Región —" />
-            </SelectTrigger>
-            <SelectContent>
-              {ordenarPor(regionesSinValuacion, (r) => r.nombre).map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  {r.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setCreandoRegion(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" onClick={() => void crearValuacionRegional()} disabled={!regionNueva}>
-              Crear
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

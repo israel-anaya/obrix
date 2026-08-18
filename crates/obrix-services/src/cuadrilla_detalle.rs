@@ -3,8 +3,8 @@
 //! matriz plana no recursiva **compartida entre regiones** (ver diccionario
 //! de datos). `cantidad` vive aquí (definición del equipo); `costo`/`importe`
 //! los administra el recálculo de cada `cuadrilla_costo`. Cada alta/baja o
-//! cambio de cantidad crea/borra/recalcula la fila espejo en **cada**
-//! valuación existente de la cuadrilla (nacional y regionales).
+//! cambio de cantidad materializa el cache de **todas** las regiones del
+//! catálogo y las recalcula.
 
 use obrix_db::PortafolioRepository;
 use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
@@ -72,6 +72,9 @@ impl CuadrillaDetalleService {
         let orden = Self::siguiente_orden(&txn, cuadrilla_insumo_id, &tipo).await?;
         let ahora = crate::ahora();
 
+        let valuaciones =
+            CuadrillaCostoService::asegurar_zonas(&txn, cuadrilla_insumo_id, &creado_por).await?;
+
         let nuevo_detalle = cuadrilla_detalle::ActiveModel {
             id: Set(nuevo_id()),
             cuadrilla_insumo_id: Set(cuadrilla_insumo_id.to_string()),
@@ -90,7 +93,6 @@ impl CuadrillaDetalleService {
         .insert(&txn)
         .await?;
 
-        let valuaciones = Self::valuaciones_activas(&txn, cuadrilla_insumo_id).await?;
         for v in &valuaciones {
             cuadrilla_costo_detalle::ActiveModel {
                 id: Set(nuevo_id()),
@@ -135,6 +137,9 @@ impl CuadrillaDetalleService {
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("cuadrilla_detalle {id}")))?;
         let cuadrilla_insumo_id = existente.cuadrilla_insumo_id.clone();
+        let autor = actualizado_por
+            .clone()
+            .unwrap_or_else(|| existente.created_by.clone());
 
         let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
         Self::validar_referencia(&txn, &cuadrilla_insumo_id, &datos.detalle_insumo_id).await?;
@@ -147,7 +152,8 @@ impl CuadrillaDetalleService {
         am.updated_by = Set(actualizado_por);
         am.update(&txn).await?;
 
-        let valuaciones = Self::valuaciones_activas(&txn, &cuadrilla_insumo_id).await?;
+        let valuaciones =
+            CuadrillaCostoService::asegurar_zonas(&txn, &cuadrilla_insumo_id, &autor).await?;
         for v in &valuaciones {
             CuadrillaCostoService::recalcular_valuacion(&txn, &v.id).await?;
         }
@@ -181,10 +187,6 @@ impl CuadrillaDetalleService {
             .filter(cuadrilla_costo_detalle::Column::Deleted.eq(false))
             .all(&txn)
             .await?;
-        let cuadrilla_costo_ids: Vec<String> = detalles_costo
-            .iter()
-            .map(|d| d.cuadrilla_costo_id.clone())
-            .collect();
         for d in detalles_costo {
             let mut am: cuadrilla_costo_detalle::ActiveModel = d.into();
             am.deleted = Set(true);
@@ -196,11 +198,14 @@ impl CuadrillaDetalleService {
         let mut am: cuadrilla_detalle::ActiveModel = existente.into();
         am.deleted = Set(true);
         am.deleted_at = Set(Some(ahora));
-        am.deleted_by = Set(Some(eliminado_por));
+        am.deleted_by = Set(Some(eliminado_por.clone()));
         am.update(&txn).await?;
 
-        for cuadrilla_costo_id in cuadrilla_costo_ids {
-            CuadrillaCostoService::recalcular_valuacion(&txn, &cuadrilla_costo_id).await?;
+        let valuaciones =
+            CuadrillaCostoService::asegurar_zonas(&txn, &cuadrilla_insumo_id, &eliminado_por)
+                .await?;
+        for v in &valuaciones {
+            CuadrillaCostoService::recalcular_valuacion(&txn, &v.id).await?;
         }
 
         let resultado = Self::cargar_completo(&txn, &cuadrilla_insumo_id).await?;
@@ -332,17 +337,6 @@ impl CuadrillaDetalleService {
             .one(txn)
             .await?;
         Ok(maximo.map(|d| d.orden + 1).unwrap_or(0))
-    }
-
-    async fn valuaciones_activas(
-        txn: &DatabaseTransaction,
-        cuadrilla_insumo_id: &str,
-    ) -> Result<Vec<cuadrilla_costo::Model>, ServiceError> {
-        Ok(cuadrilla_costo::Entity::find()
-            .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_insumo_id))
-            .filter(cuadrilla_costo::Column::Deleted.eq(false))
-            .all(txn)
-            .await?)
     }
 
     async fn cargar_completo(
@@ -942,6 +936,7 @@ mod tests {
                 nombre: "Norte".into(),
                 estado: "Nuevo León".into(),
                 factor_ajuste: None,
+                visible: true,
             },
             "usr-1".into(),
         )
@@ -965,18 +960,16 @@ mod tests {
         .await
         .expect("agregar oficial");
 
-        let regional = CuadrillaCostoService::crear_regional(
-            &portafolio,
-            &cuadrilla.id,
-            region_id,
-            "usr-1".into(),
-        )
-        .await
-        .expect("crear valuación regional");
+        let regional = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|c| c.region_id.as_deref() == Some(region_id.as_str()))
+            .expect("el alta materializa el cache de Norte");
         assert_eq!(
             regional.sub_total_mano_obra,
-            Decimal::from(1400),
-            "usa la cantidad de la receta y el salario nacional"
+            Decimal::ZERO,
+            "Norte no tiene tabulador propio: el cache queda en cero"
         );
 
         let detalles = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
@@ -1028,6 +1021,7 @@ mod tests {
                 nombre: "Norte".into(),
                 estado: "Nuevo León".into(),
                 factor_ajuste: None,
+                visible: true,
             },
             "usr-1".into(),
         )
@@ -1038,6 +1032,35 @@ mod tests {
             .unwrap()[0]
             .id
             .clone();
+        let fsr_norte = FactorSalarioRealService::crear(
+            &portafolio,
+            "org-1".into(),
+            FactorSalarioRealData {
+                nombre: "FSR Norte".into(),
+                region_id: Some(region_id.clone()),
+                modelo_calculo_json: String::new(),
+                parametros_json: String::new(),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear FSR Norte")
+        .id;
+        SalarioCategoriaFasarService::crear(
+            &portafolio,
+            &oficial,
+            SalarioCategoriaFasarData {
+                salario_base_diario: Decimal::from_str("900").unwrap(),
+                factor_salario_real_id: fsr_norte,
+                factor_salario_real: Decimal::ONE,
+                salario_real_diario: Decimal::from_str("900").unwrap(),
+                region_id: Some(region_id.clone()),
+                fecha_vigencia_desde: "2026-01-01".into(),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("registrar salario Norte");
 
         let tras_crear = CuadrillaDetalleService::crear(
             &portafolio,
@@ -1059,15 +1082,13 @@ mod tests {
             Decimal::from(700)
         );
 
-        let regional = CuadrillaCostoService::crear_regional(
-            &portafolio,
-            &cuadrilla.id,
-            region_id,
-            "usr-1".into(),
-        )
-        .await
-        .expect("crear valuación regional");
-        assert_eq!(regional.sub_total_mano_obra, Decimal::from(700));
+        let regional = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|c| c.region_id.as_deref() == Some(region_id.as_str()))
+            .expect("el alta materializa el cache de Norte");
+        assert_eq!(regional.sub_total_mano_obra, Decimal::from(900));
 
         let fila = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)
             .await
@@ -1088,7 +1109,7 @@ mod tests {
         )
         .await
         .expect("actualizar cantidad");
-        // 3 × 700 = 2100 en nacional y en regional (mismo salario).
+        // 3 × 700 = 2100 nacional; 3 × 900 = 2700 Norte.
         assert_eq!(
             actualizada
                 .costo_nacional
@@ -1106,7 +1127,7 @@ mod tests {
                 .unwrap();
         assert_eq!(
             regional_recalculada.sub_total_mano_obra,
-            Decimal::from(2100)
+            Decimal::from(2700)
         );
 
         let fila = CuadrillaDetalleService::listar_por_cuadrilla(&portafolio, &cuadrilla.id)

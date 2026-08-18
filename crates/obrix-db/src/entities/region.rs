@@ -8,6 +8,7 @@ pub struct Model {
     pub nombre: String,
     pub estado: String,
     pub factor_ajuste: Option<String>,
+    pub visible: bool,
     pub deleted: bool,
     pub created_at: String,
     pub created_by: String,

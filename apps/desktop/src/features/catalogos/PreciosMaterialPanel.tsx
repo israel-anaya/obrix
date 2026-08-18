@@ -9,6 +9,7 @@ import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionConte
 import { createPrecioMaterial, listMonedas, listPreciosMaterial, listRegiones, listUsuarios } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import type { Moneda, PrecioMaterial, Region } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
@@ -316,10 +317,10 @@ export function PreciosMaterialPanel({
                           {NACIONAL} (default)
                         </span>
                       </SelectItem>
-                      {ordenarPor(regiones, (r) => r.nombre).map((r) => (
+                      {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           <span className="flex items-center gap-1.5">
-                            <MapPinned size={16} className="text-amber-600 dark:text-amber-400" />
+                            <MapPinned size={16} className="text-teal-600 dark:text-teal-400" />
                             {r.nombre}
                           </span>
                         </SelectItem>
@@ -364,7 +365,7 @@ export function PreciosMaterialPanel({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-medium">
                         {p.region_id ? (
-                          <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                          <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                         ) : (
                           <Globe2 size={16} className="shrink-0 text-primary" />
                         )}
@@ -418,7 +419,7 @@ export function PreciosMaterialPanel({
                           <td className="py-1 pr-2">
                             <span className="inline-flex items-center gap-1.5">
                               {p.region_id ? (
-                                <MapPinned size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                                <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                               ) : (
                                 <Globe2 size={16} className="shrink-0 text-primary" />
                               )}

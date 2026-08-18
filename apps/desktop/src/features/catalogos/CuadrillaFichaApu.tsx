@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { AlertTriangle, CalendarDays, Globe2, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, Globe2, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Users, Wrench, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,13 +13,10 @@ import {
 import { ComboboxFiltrable } from "@/components/ComboboxFiltrable";
 import { PercentageInput } from "@/components/PercentageInput";
 import { QuantityInput } from "@/components/QuantityInput";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import {
-  createCuadrillaCostoRegional,
   createCuadrillaDetalle,
-  deleteCuadrillaCosto,
   deleteCuadrillaDetalle,
   listCategoriasFasar,
   listCuadrillaCostoDetalles,
@@ -29,7 +26,7 @@ import {
   listRegiones,
   listUnidadesMedida,
   moveCuadrillaDetalle,
-  recalculateCuadrillaCosto,
+  recalculateCuadrillaZonas,
   updateCuadrillaDetalle,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
@@ -45,6 +42,7 @@ import type {
   Region,
   UnidadMedida,
 } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NACIONAL = "Nacional";
@@ -252,18 +250,12 @@ function MarcadorInsercion() {
 /**
  * "Ficha" de una cuadrilla — reproduce la tarjeta de análisis de precio
  * unitario (APU) que cualquier ingeniero de costos mexicano reconoce de
- * memoria: encabezado con clave/descripción/unidad + selector de región, dos
- * tablas formales (mano de obra, herramienta) con su subtotal, y el costo
- * total como un renglón final destacado. La receta (integrantes/herramienta
- * y cantidades, `cuadrilla_detalle`) es la misma en todas las regiones; los
- * montos que se ven (costo/importe/subtotales) son los de la **valuación
- * seleccionada** (`cuadrilla_costo`) — agregar/quitar/mover renglones y
- * editar cantidad solo está disponible en Nacional. Enfoque alterno a
- * `CuadrillaDetallePanel` (grid): mismos comandos de Tauri por debajo.
- *
- * Agregar/editar/eliminar la cuadrilla en sí (no su composición) vive en la
- * barra de acciones de `CuadrillasFicha`, junto al buscador — este
- * componente solo la muestra y administra su composición/valuaciones.
+ * memoria: encabezado con clave/descripción/unidad, dos tablas formales
+ * (mano de obra, herramienta) con su subtotal, y el costo total como un
+ * renglón final destacado. La receta (integrantes/herramienta y cantidades,
+ * `cuadrilla_detalle`) es la misma en todas las regiones; los montos del
+ * análisis son los de la región elegida en Costo por región (Nacional al
+ * abrir). Ese cuadro es cache de receta × tabulador de cada región.
  */
 export function CuadrillaFichaApu({
   cuadrilla,
@@ -276,6 +268,7 @@ export function CuadrillaFichaApu({
   const [costos, setCostos] = useState<CuadrillaCosto[]>([]);
   const [costoSeleccionadoId, setCostoSeleccionadoId] = useState<string | null>(null);
   const [costoDetalles, setCostoDetalles] = useState<CuadrillaCostoDetalle[]>([]);
+  const [costoDetallesPorCostoId, setCostoDetallesPorCostoId] = useState<Record<string, CuadrillaCostoDetalle[]>>({});
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
   const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
   const [regiones, setRegiones] = useState<Region[]>([]);
@@ -284,11 +277,11 @@ export function CuadrillaFichaApu({
   const [cargando, setCargando] = useState(false);
   const [agregandoIntegrante, setAgregandoIntegrante] = useState(false);
   const [agregandoHerramienta, setAgregandoHerramienta] = useState(false);
-  const [creandoRegion, setCreandoRegion] = useState(false);
-  const [confirmandoEliminarValuacion, setConfirmandoEliminarValuacion] = useState(false);
   const [pendingQuitar, setPendingQuitar] = useState<CuadrillaDetalle | null>(null);
   const [recalculando, setRecalculando] = useState(false);
   const [mostrarFechaPrecio, setMostrarFechaPrecio] = useState(false);
+  /** `null` = Nacional. No se persiste: solo elige qué cache ve el análisis. */
+  const [regionVistaId, setRegionVistaId] = useState<string | null>(null);
   const [destello, setDestello] = useState<{
     ticket: number;
     total: number;
@@ -310,13 +303,8 @@ export function CuadrillaFichaApu({
   useEffect(() => {
     setAgregandoIntegrante(false);
     setAgregandoHerramienta(false);
-    setCreandoRegion(false);
     setDestello(null);
   }, [cuadrilla.id]);
-
-  useEffect(() => {
-    setDestello(null);
-  }, [costoSeleccionadoId]);
 
   useEffect(() => {
     if (!destello) return;
@@ -324,79 +312,70 @@ export function CuadrillaFichaApu({
     return () => window.clearTimeout(t);
   }, [destello]);
 
-  const cargarDetalles = (id: string) =>
-    listCuadrillaDetalles(id)
-      .then(setDetalles)
-      .catch((e) => setError(String(e)));
+  const aplicarCostos = async (costosR: CuadrillaCosto[], vistaId: string | null) => {
+    setCostos(costosR);
+    const pares = await Promise.all(
+      costosR.map(async (c) => {
+        const dets = await listCuadrillaCostoDetalles(c.id).catch(() => [] as CuadrillaCostoDetalle[]);
+        return [c.id, dets] as const;
+      }),
+    );
+    const porCosto = Object.fromEntries(pares);
+    setCostoDetallesPorCostoId(porCosto);
+    const nacionalId = costosR.find((c) => c.region_id === null)?.id ?? costosR[0]?.id ?? null;
+    const elegido = costosR.find((c) => (c.region_id ?? null) === vistaId) ?? null;
+    const seleccionadoId = elegido?.id ?? (vistaId === null ? nacionalId : null);
+    setCostoSeleccionadoId(seleccionadoId);
+    setCostoDetalles(seleccionadoId ? (porCosto[seleccionadoId] ?? []) : []);
+    return { costosR, seleccionadoId, porCosto };
+  };
 
-  const cargarCostos = (id: string) =>
+  const cargarCostos = (id: string, vistaId: string | null = regionVistaId) =>
     listCuadrillaCostos(id)
-      .then((r) => {
-        setCostos(r);
-        return r;
-      })
+      .then((costosR) => aplicarCostos(costosR, vistaId))
       .catch((e) => {
         setError(String(e));
-        return [] as CuadrillaCosto[];
+        setCostos([]);
+        setCostoDetalles([]);
+        setCostoDetallesPorCostoId({});
+        return { costosR: [] as CuadrillaCosto[], seleccionadoId: null as string | null, porCosto: {} as Record<string, CuadrillaCostoDetalle[]> };
       });
 
   useEffect(() => {
     setCargando(true);
     setError(null);
     setCostoSeleccionadoId(null);
+    setRegionVistaId(null);
     Promise.all([listCuadrillaDetalles(cuadrilla.id), listCuadrillaCostos(cuadrilla.id)])
-      .then(([detallesR, costosR]) => {
+      .then(async ([detallesR, costosR]) => {
         setDetalles(detallesR);
-        setCostos(costosR);
-        setCostoSeleccionadoId(costosR.find((c) => c.region_id === null)?.id ?? costosR[0]?.id ?? null);
+        await aplicarCostos(costosR, null);
       })
       .catch((e) => setError(String(e)))
       .finally(() => setCargando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuadrilla.id]);
 
-  useEffect(() => {
-    if (!costoSeleccionadoId) {
-      setCostoDetalles([]);
-      return;
-    }
-    listCuadrillaCostoDetalles(costoSeleccionadoId)
-      .then(setCostoDetalles)
-      .catch((e) => setError(String(e)));
-  }, [costoSeleccionadoId]);
-
   const trasMutarReceta = async () => {
     onCambio();
-    await cargarDetalles(cuadrilla.id);
+    await listCuadrillaDetalles(cuadrilla.id).then(setDetalles).catch((e) => setError(String(e)));
     await cargarCostos(cuadrilla.id);
-    if (costoSeleccionadoId) await listCuadrillaCostoDetalles(costoSeleccionadoId).then(setCostoDetalles).catch(() => {});
   };
 
   const trasMutarCantidad = async () => {
     onCambio();
-    await cargarDetalles(cuadrilla.id);
-    const costosR = await cargarCostos(cuadrilla.id);
-    if (!costoSeleccionadoId) {
-      setCostoDetalles([]);
-      return { costoDetalles: [] as CuadrillaCostoDetalle[], costoTotal: "0" };
-    }
-    try {
-      const r = await listCuadrillaCostoDetalles(costoSeleccionadoId);
-      setCostoDetalles(r);
-      const costoTotal = costosR.find((c) => c.id === costoSeleccionadoId)?.costo_total ?? "0";
-      return { costoDetalles: r, costoTotal };
-    } catch (e) {
-      setError(String(e));
-      return { costoDetalles: [] as CuadrillaCostoDetalle[], costoTotal: "0" };
-    }
+    await listCuadrillaDetalles(cuadrilla.id).then(setDetalles).catch((e) => setError(String(e)));
+    const { costosR, seleccionadoId, porCosto } = await cargarCostos(cuadrilla.id);
+    const r = seleccionadoId ? (porCosto[seleccionadoId] ?? []) : [];
+    const costoTotal = costosR.find((c) => c.id === seleccionadoId)?.costo_total ?? "0";
+    return { costoDetalles: r, costoTotal };
   };
 
-  const recalcular = async () => {
-    if (!costoSeleccionadoId) return;
+  const recalcularZonas = async () => {
     setRecalculando(true);
     setError(null);
     try {
-      await recalculateCuadrillaCosto(costoSeleccionadoId);
+      await recalculateCuadrillaZonas(cuadrilla.id);
       await trasMutarCantidad();
     } catch (e) {
       setError(String(e));
@@ -405,39 +384,10 @@ export function CuadrillaFichaApu({
     }
   };
 
-  const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
   const costoSeleccionado = costos.find((c) => c.id === costoSeleccionadoId) ?? null;
-  const esNacional = costoSeleccionado ? costoSeleccionado.region_id === null : true;
-  const regionesSinValuacion = useMemo(
-    () => regiones.filter((r) => !costos.some((c) => c.region_id === r.id)),
-    [regiones, costos],
-  );
-
-  const crearValuacionRegional = async (regionId: string) => {
-    setCreandoRegion(false);
-    if (!regionId) return;
-    setError(null);
-    try {
-      const creada = await createCuadrillaCostoRegional(cuadrilla.id, regionId);
-      await cargarCostos(cuadrilla.id);
-      setCostoSeleccionadoId(creada.id);
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  const confirmarEliminarValuacionRegional = async () => {
-    setConfirmandoEliminarValuacion(false);
-    if (!costoSeleccionado || costoSeleccionado.region_id === null) return;
-    setError(null);
-    try {
-      await deleteCuadrillaCosto(costoSeleccionado.id);
-      const restantes = await cargarCostos(cuadrilla.id);
-      setCostoSeleccionadoId(restantes.find((c) => c.region_id === null)?.id ?? null);
-    } catch (e) {
-      setError(String(e));
-    }
-  };
+  const costoTotalNum = Number(costoSeleccionado?.costo_total) || 0;
+  const pctMo = costoTotalNum > 0 ? ((Number(costoSeleccionado?.sub_total_mano_obra) || 0) / costoTotalNum) * 100 : 0;
+  const pctHe = costoTotalNum > 0 ? ((Number(costoSeleccionado?.sub_total_herramienta) || 0) / costoTotalNum) * 100 : 0;
 
   const simboloUnidad = useMemo(
     () => unidades.find((u) => u.id === cuadrilla.unidad_id)?.simbolo ?? cuadrilla.unidad_id,
@@ -478,6 +428,45 @@ export function CuadrillaFichaApu({
     () => detalles.filter((d) => d.tipo === "equipo_herramienta").sort((a, b) => a.orden - b.orden),
     [detalles],
   );
+
+  const zonas = useMemo(() => {
+    const nacional = costos.find((c) => c.region_id === null) ?? null;
+    const regionales = ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => ({
+      key: r.id,
+      regionId: r.id as string | null,
+      nombre: r.nombre,
+      costo: costos.find((c) => c.region_id === r.id) ?? null,
+      esNac: false,
+    }));
+    return [
+      { key: "nacional", regionId: null as string | null, nombre: NACIONAL, costo: nacional, esNac: true },
+      ...regionales,
+    ];
+  }, [costos, regiones]);
+
+  const coberturaPorCostoId = useMemo(() => {
+    const idsMo = new Set(integrantes.map((d) => d.id));
+    return Object.fromEntries(
+      Object.entries(costoDetallesPorCostoId).map(([costoId, dets]) => {
+        const mo = dets.filter((d) => idsMo.has(d.cuadrilla_detalle_id));
+        const sin = mo.filter((d) => !d.fecha_precio).length;
+        return [costoId, { total: idsMo.size, sin }];
+      }),
+    );
+  }, [costoDetallesPorCostoId, integrantes]);
+
+  const sincronizadoEn = useMemo(() => {
+    const fechas = costos.map((c) => c.sincronizado_en).filter((f): f is string => !!f);
+    if (fechas.length === 0) return null;
+    return fechas.sort().at(-1) ?? null;
+  }, [costos]);
+
+  const verRegion = (regionId: string | null) => {
+    setRegionVistaId(regionId);
+    const elegido = costos.find((c) => (c.region_id ?? null) === regionId) ?? null;
+    setCostoSeleccionadoId(elegido?.id ?? null);
+    setCostoDetalles(elegido ? (costoDetallesPorCostoId[elegido.id] ?? []) : []);
+  };
 
   const agregarIntegrante = async (id: string) => {
     setAgregandoIntegrante(false);
@@ -559,12 +548,12 @@ export function CuadrillaFichaApu({
 
   const dragIntegrantes = useFilaDrag({
     ids: integrantes.map((d) => d.id),
-    enabled: esNacional,
+    enabled: true,
     onMove: (id, dest) => void reordenar(integrantes, id, dest),
   });
   const dragHerramienta = useFilaDrag({
     ids: herramientaDetalles.map((d) => d.id),
-    enabled: esNacional,
+    enabled: true,
     onMove: (id, dest) => void reordenar(herramientaDetalles, id, dest),
   });
 
@@ -607,111 +596,36 @@ export function CuadrillaFichaApu({
             <span className="font-mono text-base font-bold tracking-tight">{cuadrilla.clave}</span>
             <span className="shrink-0 text-xs text-muted-foreground">
               Unidad: <span className="font-medium text-foreground">{simboloUnidad}</span>
+              <span aria-hidden className="px-1.5 text-border">·</span>
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                {regionVistaId ? (
+                  <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
+                ) : (
+                  <Globe2 size={12} className="text-primary" />
+                )}
+                {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
+              </span>
             </span>
           </div>
           <p className="mt-0.5 text-xs text-foreground">{cuadrilla.descripcion}</p>
-
-          <Separator className="my-2" />
-
-          <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 px-2.5 py-2">
-            <span
-              className={cn(
-                "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md",
-                esNacional ? "bg-primary/10 text-primary" : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-              )}
-              title={esNacional ? "Valuación nacional" : "Valuación regional"}
+          <div className="mt-2 flex items-center gap-3">
+            <div
+              className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
             >
-              {esNacional ? <Globe2 size={16} /> : <MapPinned size={16} />}
+              <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
+              <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
+            </div>
+            <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <HardHat size={16} className="text-blue-500" />
+                {pctMo.toFixed(0)}%
+              </span>
+              <span className="flex items-center gap-1">
+                <Wrench size={16} className="text-amber-500" />
+                {pctHe.toFixed(0)}%
+              </span>
             </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex min-h-6 items-center gap-1">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Zona de precios
-                </p>
-                {!esNacional && (
-                  <button
-                    type="button"
-                    title="Eliminar valuación regional"
-                    onClick={() => setConfirmandoEliminarValuacion(true)}
-                    className="rounded p-0.5 text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-                {!creandoRegion ? (
-                  regionesSinValuacion.length > 0 && (
-                    <button
-                      type="button"
-                      title="Crear valuación regional"
-                      onClick={() => setCreandoRegion(true)}
-                      className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  )
-                ) : (
-                  <ComboboxFiltrable
-                    opciones={ordenarPor(regionesSinValuacion, (r) => r.nombre).map((r) => ({ id: r.id, etiqueta: r.nombre }))}
-                    placeholder="Buscar región…"
-                    onElegir={(id) => void crearValuacionRegional(id)}
-                    onCancelar={() => setCreandoRegion(false)}
-                    className="w-40"
-                  />
-                )}
-              </div>
-              <Select value={costoSeleccionadoId ?? ""} onValueChange={(v) => setCostoSeleccionadoId(v || null)}>
-                <SelectTrigger
-                  size="sm"
-                  className="h-7 w-full max-w-[260px] border-0 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-0"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {costos.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="flex items-center gap-1.5">
-                        {c.region_id ? <MapPinned size={16} /> : <Globe2 size={16} />}
-                        {c.region_id ? (nombrePorRegionId[c.region_id] ?? c.region_id) : NACIONAL}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <button
-                type="button"
-                title={
-                  recalculando
-                    ? "Recalculando costos…"
-                    : [
-                        "Recalcular costos de esta zona de precios con los salarios y la herramienta vigentes.",
-                        costoSeleccionado?.sincronizado_en
-                          ? `Última sincronización: ${formatearFecha(costoSeleccionado.sincronizado_en)}`
-                          : "Aún no se ha sincronizado con los insumos vigentes.",
-                      ].join("\n")
-                }
-                onClick={() => void recalcular()}
-                disabled={recalculando}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted",
-                  recalculando && "opacity-50",
-                )}
-              >
-                <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
-                {recalculando ? "Sincronizando…" : "Sincronizar"}
-              </button>
-              {costoSeleccionado?.sincronizado_en ? (
-                <span className="max-w-[8.5rem] text-right text-[9px] leading-tight text-muted-foreground tabular-nums">
-                  {formatearFecha(costoSeleccionado.sincronizado_en)}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
-                  <AlertTriangle size={16} className="shrink-0" />
-                  Sin sincronizar
-                </span>
-              )}
-            </div>
           </div>
         </div>
 
@@ -788,7 +702,6 @@ export function CuadrillaFichaApu({
                         value={d.cantidad}
                         onCommit={(v) => void guardarCantidad(d, v)}
                         decimals={6}
-                        readOnly={!esNacional}
                         className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                       />
                     </td>
@@ -798,9 +711,7 @@ export function CuadrillaFichaApu({
                         <FechaPrecioFrescura
                           fecha={cd.fecha_precio}
                           fechaSalarioVigente={
-                            esNacional
-                              ? categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
-                              : null
+                            categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
                           }
                         />
                       ) : null}
@@ -820,8 +731,7 @@ export function CuadrillaFichaApu({
                       </span>
                     </td>
                     <td className="py-1 text-right">
-                      {esNacional && (
-                        <div className="flex items-center justify-end gap-0.5">
+                      <div className="flex items-center justify-end gap-0.5">
                           <span
                             title="Arrastra para reordenar"
                             className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
@@ -839,7 +749,6 @@ export function CuadrillaFichaApu({
                             <X size={16} />
                           </button>
                         </div>
-                      )}
                     </td>
                   </tr>
                   {dragIntegrantes.hueco === integrantes.length && i === integrantes.length - 1 && (
@@ -848,8 +757,7 @@ export function CuadrillaFichaApu({
                   </Fragment>
                 );
               })}
-              {esNacional && (
-                <tr>
+              <tr>
                   <td colSpan={7} className="pt-1.5">
                     {agregandoIntegrante ? (
                       <ComboboxFiltrable
@@ -871,7 +779,6 @@ export function CuadrillaFichaApu({
                     )}
                   </td>
                 </tr>
-              )}
               <tr className="border-t-2 border-foreground/30 font-semibold">
                 <td colSpan={5} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal mano de obra
@@ -919,7 +826,6 @@ export function CuadrillaFichaApu({
                         value={d.cantidad}
                         onCommit={(v) => void guardarCantidad(d, v)}
                         decimals={2}
-                        readOnly={!esNacional}
                         className="w-16 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                       />
                     </td>
@@ -939,8 +845,7 @@ export function CuadrillaFichaApu({
                       </span>
                     </td>
                     <td className="py-1 text-right">
-                      {esNacional && (
-                        <div className="flex items-center justify-end gap-0.5">
+                      <div className="flex items-center justify-end gap-0.5">
                           <span
                             title="Arrastra para reordenar"
                             className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
@@ -958,7 +863,6 @@ export function CuadrillaFichaApu({
                             <X size={16} />
                           </button>
                         </div>
-                      )}
                     </td>
                   </tr>
                   {dragHerramienta.hueco === herramientaDetalles.length &&
@@ -966,8 +870,7 @@ export function CuadrillaFichaApu({
                   </Fragment>
                 );
               })}
-              {esNacional && (
-                <tr>
+              <tr>
                   <td colSpan={7} className="pt-1.5">
                     {agregandoHerramienta ? (
                       <ComboboxFiltrable
@@ -991,7 +894,6 @@ export function CuadrillaFichaApu({
                     )}
                   </td>
                 </tr>
-              )}
               <tr className="border-t-2 border-foreground/30 font-semibold">
                 <td colSpan={5} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal herramienta
@@ -1024,27 +926,204 @@ export function CuadrillaFichaApu({
         </div>
       </div>
 
-      {!esNacional && (
-        <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800 dark:text-amber-300">
-          Agregar, quitar, mover o cambiar cantidades solo está disponible en Nacional — esta región aplica salarios sobre la misma composición.
-        </p>
-      )}
-
-      <AlertDialog open={confirmandoEliminarValuacion} onOpenChange={setConfirmandoEliminarValuacion}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta valuación regional?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {costoSeleccionado?.region_id &&
-                `Se eliminará la valuación de "${nombrePorRegionId[costoSeleccionado.region_id] ?? costoSeleccionado.region_id}". Esta acción no se puede deshacer.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel />
-            <AlertDialogAction onClick={() => void confirmarEliminarValuacionRegional()}>Eliminar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <div className="mt-3 rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Costo por región
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Calculado desde el Tabulador de Salario vigente. Clic en una región para ver su costo en el análisis.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              title={
+                recalculando
+                  ? "Recalculando costos de todas las regiones…"
+                  : [
+                      "Recalcular todas las regiones con los salarios y la herramienta vigentes.",
+                      sincronizadoEn
+                        ? `Última sincronización: ${formatearFecha(sincronizadoEn)}`
+                        : "Aún no se ha sincronizado con los tabuladores vigentes.",
+                    ].join("\n")
+              }
+              onClick={() => void recalcularZonas()}
+              disabled={recalculando}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted",
+                recalculando && "opacity-50",
+              )}
+            >
+              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
+              {recalculando ? "Sincronizando…" : "Sincronizar"}
+            </button>
+            {sincronizadoEn ? (
+              <span className="text-right text-[9px] leading-tight text-muted-foreground tabular-nums">
+                {formatearFecha(sincronizadoEn)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
+                <AlertTriangle size={16} className="shrink-0" />
+                Sin sincronizar
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="overflow-x-auto px-4 py-3">
+          <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
+            <thead>
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="sticky left-0 top-0 z-30 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  Concepto
+                </th>
+                {zonas.map((z) => {
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                  <th
+                    key={`${z.key}-grupo`}
+                    className={cn(
+                      "h-7 w-14 max-w-14 cursor-pointer border-b border-r border-border text-center hover:bg-muted/60",
+                      activa ? "bg-primary/10" : "bg-background",
+                    )}
+                    title={`Ver análisis en ${z.nombre}`}
+                    aria-pressed={activa}
+                    onClick={() => verRegion(z.regionId)}
+                  >
+                    {z.esNac ? (
+                      <Globe2 size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                    ) : (
+                      <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
+                    )}
+                  </th>
+                  );
+                })}
+              </tr>
+              <tr>
+                {zonas.map((z) => {
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                  <th
+                    key={`${z.key}-nombre`}
+                    className={cn(
+                      "w-14 max-w-14 cursor-pointer border-b border-r border-border px-1 py-1 text-center text-[11px] font-semibold leading-tight hover:bg-muted/60",
+                      activa ? "bg-primary/10 text-foreground" : "bg-background text-muted-foreground",
+                    )}
+                    title={`Ver análisis en ${z.nombre}`}
+                    onClick={() => verRegion(z.regionId)}
+                  >
+                    <span className="line-clamp-2 break-words">{z.nombre}</span>
+                  </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-normal text-muted-foreground">
+                  Mano de obra
+                </th>
+                {zonas.map((z) => {
+                  const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
+                  const incompleta = !z.costo || (cob?.sin ?? 0) > 0;
+                  const monto = incompleta ? "—" : `$${fmt(z.costo?.sub_total_mano_obra ?? "0")}`;
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                    <td
+                      key={z.key}
+                      className={cn(
+                        "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
+                        activa && "bg-primary/10",
+                      )}
+                      onClick={() => verRegion(z.regionId)}
+                    >
+                      <span className="num block truncate" title={incompleta ? undefined : monto}>
+                        {monto}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-normal text-muted-foreground">
+                  Herramienta
+                </th>
+                {zonas.map((z) => {
+                  const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
+                  const incompleta = !z.costo || (cob?.sin ?? 0) > 0;
+                  const monto = incompleta ? "—" : `$${fmt(z.costo?.sub_total_herramienta ?? "0")}`;
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                    <td
+                      key={z.key}
+                      className={cn(
+                        "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
+                        activa && "bg-primary/10",
+                      )}
+                      onClick={() => verRegion(z.regionId)}
+                    >
+                      <span className="num block truncate" title={incompleta ? undefined : monto}>
+                        {monto}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-semibold">
+                  Costo Total
+                </th>
+                {zonas.map((z) => {
+                  const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
+                  const sin = cob?.sin ?? (integrantes.length > 0 && !z.costo ? integrantes.length : 0);
+                  const total = cob?.total ?? integrantes.length;
+                  const monto = z.costo ? `$${fmt(z.costo.costo_total)}` : undefined;
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                    <td
+                      key={z.key}
+                      className={cn(
+                        "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
+                        activa && "bg-primary/10",
+                      )}
+                      onClick={() => verRegion(z.regionId)}
+                    >
+                      {!z.costo || sin > 0 ? (
+                        total > 0 ? (
+                          <span
+                            title="sin precio"
+                            className="inline-flex items-center justify-end text-amber-800 dark:text-amber-300"
+                          >
+                            <AlertTriangle size={12} className="shrink-0" />
+                          </span>
+                        ) : (
+                          "—"
+                        )
+                      ) : (
+                        <span className="num block truncate font-semibold text-primary" title={monto}>
+                          {monto}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            {regionVistaId ? (
+              <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
+            ) : (
+              <Globe2 size={12} className="shrink-0 text-primary" />
+            )}
+            El análisis usa los salarios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
+          </p>
+        </div>
+      </div>
 
       <AlertDialog open={pendingQuitar !== null} onOpenChange={(open) => !open && setPendingQuitar(null)}>
         <AlertDialogContent>

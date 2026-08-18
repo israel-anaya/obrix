@@ -14,6 +14,7 @@ pub struct RegionData {
     pub nombre: String,
     pub estado: String,
     pub factor_ajuste: Option<String>,
+    pub visible: bool,
 }
 
 pub struct RegionService;
@@ -55,6 +56,7 @@ impl RegionService {
             nombre: Set(datos.nombre),
             estado: Set(datos.estado),
             factor_ajuste: Set(datos.factor_ajuste),
+            visible: Set(datos.visible),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set(creado_por),
@@ -81,6 +83,7 @@ impl RegionService {
         modelo.nombre = Set(datos.nombre);
         modelo.estado = Set(datos.estado);
         modelo.factor_ajuste = Set(datos.factor_ajuste);
+        modelo.visible = Set(datos.visible);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(actualizado_por);
         Ok(modelo.update(repo.conexion()).await?)
@@ -129,6 +132,7 @@ impl DatosIniciales for RegionService {
                     nombre,
                     estado: registro.estado.trim().to_string(),
                     factor_ajuste: None,
+                    visible: registro.visible,
                 },
                 admin.id.clone(),
             )
@@ -144,6 +148,8 @@ struct RegistroCsvRegion {
     nombre: String,
     #[serde(rename = "Estado")]
     estado: String,
+    #[serde(rename = "Visible")]
+    visible: bool,
 }
 
 #[cfg(test)]
@@ -155,6 +161,7 @@ mod tests {
             nombre: nombre.to_string(),
             estado: estado.to_string(),
             factor_ajuste: None,
+            visible: true,
         }
     }
 
@@ -172,5 +179,12 @@ mod tests {
     #[test]
     fn validar_acepta_datos_completos() {
         assert!(RegionService::validar(&datos("Occidente", "Jalisco"), false).is_ok());
+    }
+
+    #[test]
+    fn validar_acepta_region_oculta() {
+        let mut oculta = datos("Occidente", "Jalisco");
+        oculta.visible = false;
+        assert!(RegionService::validar(&oculta, false).is_ok());
     }
 }

@@ -140,12 +140,18 @@ export interface Region extends CamposControl, CamposBorradoLogico {
   nombre: string;
   estado: string;
   factor_ajuste: string | null;
+  visible: boolean;
 }
 
 export interface RegionData {
   nombre: string;
   estado: string;
   factor_ajuste: string | null;
+  visible: boolean;
+}
+
+export function regionesVisibles(regiones: Region[]): Region[] {
+  return regiones.filter((r) => r.visible);
 }
 
 export interface FamiliaInsumo extends CamposControl, CamposBorradoLogico {
@@ -430,7 +436,8 @@ export interface CuadrillaDetalleEditarData {
  * Valuación por región de una `cuadrilla` — reemplaza los tres caches que
  * antes vivían en la extensión 1:1 (ver diccionario de datos).
  * `region_id = null` es la valuación nacional, que toda cuadrilla tiene
- * desde que se crea; una fila regional es opcional.
+ * desde que se crea. El resto de regiones del catálogo se materializa como
+ * cache al mutar la receta o al sincronizar.
  */
 export interface CuadrillaCosto extends CamposControl {
   id: string;
@@ -440,7 +447,7 @@ export interface CuadrillaCosto extends CamposControl {
   sub_total_mano_obra: string;
   sub_total_herramienta: string;
   costo_total: string;
-  /** Última vez que se pulsó ⟳ en esta valuación. No es `updated_at`. */
+  /** Última vez que se pulsó ⟳ en Costo por región. No es `updated_at`. */
   sincronizado_en: string | null;
 }
 

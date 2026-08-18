@@ -182,15 +182,19 @@ pub async fn delete_cuadrilla_costo(state: tauri::State<'_, AppState>, id: Strin
 }
 
 #[tauri::command]
-pub async fn recalculate_cuadrilla_costo(
+pub async fn recalculate_cuadrilla_zonas(
     state: tauri::State<'_, AppState>,
-    cuadrilla_costo_id: String,
-) -> Result<CuadrillaCostoModel, String> {
+    cuadrilla_id: String,
+) -> Result<Vec<CuadrillaCostoModel>, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CuadrillaCostoService::recalcular_costos(activo.portafolio.as_ref(), cuadrilla_costo_id)
-        .await
-        .map_err(|e| e.to_string())
+    CuadrillaCostoService::recalcular_zonas(
+        activo.portafolio.as_ref(),
+        &cuadrilla_id,
+        &activo.usuario_id_activo,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

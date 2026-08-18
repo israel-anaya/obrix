@@ -365,6 +365,7 @@ mod tests {
             nombre: Set("Occidente".into()),
             estado: Set("Jalisco".into()),
             factor_ajuste: Set(None),
+            visible: Set(true),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
             created_by: Set("usr-1".into()),

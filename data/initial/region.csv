@@ -1,4 +1,10 @@
-Nombre,Estado
-Zona Metropolitana CDMX,Ciudad de México
-Frontera Norte,Baja California
-Sureste,Quintana Roo
+Nombre,Estado,Visible
+CDMX,Ciudad de México,true
+BC ZLFN,Baja California,true
+MEX, Estado de México,true
+COAH Sureste, Coahuila,false
+DGO Urbana, Durango,false
+DGO Rural, Durango,false
+VER Centro, Veracruz,false
+ZAC Urbana, Zacatecas,false
+QROO Sureste,Quintana Roo,false

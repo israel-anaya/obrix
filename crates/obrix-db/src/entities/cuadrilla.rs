@@ -5,7 +5,7 @@ use sea_orm::entity::prelude::*;
 /// a diferencia de `categoria_fasar` que es un trabajador atómico. Tabla
 /// delgada, sin cache: la receta (quién integra el equipo y cuántos) vive en
 /// `cuadrilla_detalle`; la valuación por región (a qué costo, qué importe,
-/// con los salarios de esa zona) vive en `cuadrilla_costo`/
+/// con los salarios de esa región) vive en `cuadrilla_costo`/
 /// `cuadrilla_costo_detalle`. Sin columnas de auditoría
 /// propias: comparte el ciclo de vida de su `insumo`.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]

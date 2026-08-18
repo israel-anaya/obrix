@@ -302,7 +302,7 @@ fn main() {
             commands::cuadrillas::list_cuadrilla_costos,
             commands::cuadrillas::create_cuadrilla_costo_regional,
             commands::cuadrillas::delete_cuadrilla_costo,
-            commands::cuadrillas::recalculate_cuadrilla_costo,
+            commands::cuadrillas::recalculate_cuadrilla_zonas,
             commands::cuadrillas::list_cuadrilla_costo_detalles,
             commands::equipos_costo_horario::list_equipos_costo_horario,
             commands::equipos_costo_horario::create_equipo_costo_horario,

@@ -388,6 +388,11 @@ export function EquipoCostoHorarioFichaApu({
     }
   };
 
+  const costoTotalNum = Number(totales.costo_horario_total) || 0;
+  const pctFijo = costoTotalNum > 0 ? ((Number(totales.cf_cargo_fijo_hora) || 0) / costoTotalNum) * 100 : 0;
+  const pctConsumo = costoTotalNum > 0 ? ((Number(totales.subtotal_consumo) || 0) / costoTotalNum) * 100 : 0;
+  const pctOperacion = costoTotalNum > 0 ? ((Number(totales.subtotal_operacion) || 0) / costoTotalNum) * 100 : 0;
+
   return (
     <div className="w-full">
       <div className="rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
@@ -426,6 +431,30 @@ export function EquipoCostoHorarioFichaApu({
             </span>
           </div>
           <p className="mt-0.5 text-xs text-foreground">{totales.descripcion}</p>
+          <div className="mt-2 flex items-center gap-3">
+            <div
+              className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              title={`Fijo ${pctFijo.toFixed(0)}% / Consumo ${pctConsumo.toFixed(0)}% / Operación ${pctOperacion.toFixed(0)}%`}
+            >
+              <div className="bg-blue-500" style={{ width: `${pctFijo}%` }} />
+              <div className="bg-amber-500" style={{ width: `${pctConsumo}%` }} />
+              <div className="bg-violet-500" style={{ width: `${pctOperacion}%` }} />
+            </div>
+            <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Timer size={16} className="text-blue-500" />
+                {pctFijo.toFixed(0)}%
+              </span>
+              <span className="flex items-center gap-1">
+                <Fuel size={16} className="text-amber-500" />
+                {pctConsumo.toFixed(0)}%
+              </span>
+              <span className="flex items-center gap-1">
+                <HardHat size={16} className="text-violet-500" />
+                {pctOperacion.toFixed(0)}%
+              </span>
+            </span>
+          </div>
         </div>
 
         {/* Cargos fijos */}

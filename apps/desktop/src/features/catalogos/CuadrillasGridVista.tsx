@@ -43,8 +43,8 @@ const COLUMNAS_CONTROL = [
  * `CategoriaFasarSeccion`/`SalarioCategoriaFasarPanel`/`CategoriaFasarFormPanel`. Los tres subtotales
  * que se ven en el grid son los de la valuación **nacional**
  * (`cuadrilla.costo_nacional`) — cache que recalcula el backend a partir de
- * la composición, no son editables aquí; las valuaciones regionales se ven
- * en el panel lateral. Alternativa a `CuadrillasFicha`
+ * la composición, no son editables aquí. El cache por región se ve en modo
+ * ficha (Costo por región). Alternativa a `CuadrillasFicha`
  * (ver `CuadrillasSeccion`, que alterna entre las dos).
  */
 export function CuadrillasGridVista() {

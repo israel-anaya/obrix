@@ -279,20 +279,6 @@ export function CuadrillasFicha() {
               ]}
             />
           </div>
-          <div
-            className="flex items-center gap-2 border-b border-border px-3 py-1 text-[10px] text-muted-foreground"
-            title="Proporción del costo: mano de obra (azul) vs. herramienta (ámbar)"
-          >
-            <span className="flex items-center gap-1">
-              <span className="inline-block size-2 shrink-0 rounded-sm bg-blue-500" aria-hidden />
-              MO
-            </span>
-            <span aria-hidden>/</span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block size-2 shrink-0 rounded-sm bg-amber-500" aria-hidden />
-              Herramienta
-            </span>
-          </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {cargando && cuadrillas.length === 0 ? (
               <p className="p-3 text-xs text-muted-foreground">Cargando…</p>
@@ -300,11 +286,6 @@ export function CuadrillasFicha() {
               <p className="p-3 text-xs text-muted-foreground">Sin cuadrillas todavía.</p>
             ) : (
               cuadrillasFiltradas.map((c) => {
-                const costo = Number(c.costo_nacional?.costo_total) || 0;
-                const mo = Number(c.costo_nacional?.sub_total_mano_obra) || 0;
-                const he = Number(c.costo_nacional?.sub_total_herramienta) || 0;
-                const pctMo = costo > 0 ? (mo / costo) * 100 : 0;
-                const pctHe = costo > 0 ? (he / costo) * 100 : 0;
                 const activa = seleccionadaId === c.id;
                 return (
                   <button
@@ -317,12 +298,15 @@ export function CuadrillasFicha() {
                     aria-current={activa ? "true" : undefined}
                     onClick={() => setSeleccionadaId(c.id)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-0.5 border-b border-border/50 border-l-2 px-3 py-2 text-left hover:bg-muted/50",
+                      "relative flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left outline-none hover:bg-muted/50",
                       activa
-                        ? "border-l-primary bg-primary/10"
-                        : "border-l-transparent",
+                        ? "bg-primary/10"
+                        : undefined,
                     )}
                   >
+                    {activa ? (
+                      <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
+                    ) : null}
                     <div className="flex w-full items-start justify-between gap-2">
                       <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
                         {c.clave}
@@ -332,13 +316,6 @@ export function CuadrillasFicha() {
                       </span>
                     </div>
                     <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{c.descripcion}</span>
-                    <div
-                      className="mt-0.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted"
-                      title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
-                    >
-                      <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
-                      <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
-                    </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <HardHat size={16} className="text-blue-500" />${fmt(c.costo_nacional?.sub_total_mano_obra ?? "0")}
