@@ -7,12 +7,12 @@ import { CuentaFooter } from "@/components/CuentaFooter";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
 import { LoginGate } from "@/components/LoginGate";
 import { MenuBar, type MenuDef } from "@/components/MenuBar";
+import { OperacionProgresoDialog } from "@/components/OperacionProgresoDialog";
 import { SidebarHeader } from "@/components/SidebarHeader";
 import { WindowFrame } from "@/components/WindowFrame";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
 import { EditorEmptyState } from "@/components/EditorEmptyState";
 import { StartScreen } from "@/components/StartScreen";
-import { StatusBar } from "@/components/StatusBar";
 import { Toolbar, type ToolbarItem } from "@/components/Toolbar";
 import { Toaster } from "@/components/ui/toaster";
 import {
@@ -124,9 +124,11 @@ export default function App() {
   const [portafolioError, setPortafolioError] = useState<string | null>(null);
   const [confirmacionPendiente, setConfirmacionPendiente] = useState<{ path: string } | null>(null);
   const [recientes, setRecientes] = useState<PortafolioReciente[]>([]);
-  // Mensaje de la operación en curso mostrado en la barra de estado inferior
-  // (crear portafolio, importar materiales, …) — solo una a la vez.
-  const [progreso, setProgreso] = useState<string | null>(null);
+  const [operacionPortafolio, setOperacionPortafolio] = useState<{
+    titulo: string;
+    mensaje: string;
+    error: string | null;
+  } | null>(null);
   const portafolioAbierto = portafolio !== null;
 
   const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([]);
@@ -241,29 +243,31 @@ export default function App() {
   };
 
   const abrirPortafolioEnRuta = async (path: string) => {
+    setOperacionPortafolio({ titulo: "Abrir portafolio", mensaje: "Abriendo portafolio…", error: null });
     try {
       const resultado = await abrirPortafolio(path);
       if (resultado.estado === "RequiereConfirmacion") {
+        setOperacionPortafolio(null);
         setConfirmacionPendiente({ path: resultado.path });
         return;
       }
+      setOperacionPortafolio(null);
       activarPortafolio(resultado.path);
     } catch (e) {
-      setPortafolioError(String(e));
+      setOperacionPortafolio({ titulo: "Abrir portafolio", mensaje: "Abriendo portafolio…", error: String(e) });
     }
   };
 
   const handleCrearPortafolio = async () => {
     const path = await save({ filters: FILTROS_PORTAFOLIO, defaultPath: "portafolio.obx" });
     if (!path) return;
-    setProgreso("Creando portafolio…");
+    setOperacionPortafolio({ titulo: "Crear portafolio", mensaje: "Creando portafolio…", error: null });
     try {
       const creado = await crearPortafolio(path);
+      setOperacionPortafolio(null);
       activarPortafolio(creado);
     } catch (e) {
-      setPortafolioError(String(e));
-    } finally {
-      setProgreso(null);
+      setOperacionPortafolio({ titulo: "Crear portafolio", mensaje: "Creando portafolio…", error: String(e) });
     }
   };
 
@@ -339,15 +343,24 @@ export default function App() {
 
   const handleConfirmarAperturaAjena = async (confirmar: boolean) => {
     if (!confirmacionPendiente) return;
+    setConfirmacionPendiente(null);
+    if (confirmar) {
+      setOperacionPortafolio({ titulo: "Abrir portafolio", mensaje: "Abriendo portafolio…", error: null });
+    }
     try {
       const path = await confirmarAperturaPortafolioAjeno(confirmar);
       if (path) {
+        setOperacionPortafolio(null);
         activarPortafolio(path);
+      } else {
+        setOperacionPortafolio(null);
       }
     } catch (e) {
-      setPortafolioError(String(e));
-    } finally {
-      setConfirmacionPendiente(null);
+      if (confirmar) {
+        setOperacionPortafolio({ titulo: "Abrir portafolio", mensaje: "Abriendo portafolio…", error: String(e) });
+      } else {
+        setPortafolioError(String(e));
+      }
     }
   };
 
@@ -722,10 +735,13 @@ export default function App() {
             <main className="flex-1 overflow-hidden">{renderTabContent()}</main>
           </ResizablePanel>
         </ResizablePanelGroup>
-        <StatusBar
-          proyecto="Boceto de interfaz · sin datos"
-          conteo={`${proyectos.length} proyectos`}
-          progreso={progreso}
+
+        <OperacionProgresoDialog
+          abierto={operacionPortafolio !== null}
+          titulo={operacionPortafolio?.titulo ?? ""}
+          mensaje={operacionPortafolio?.mensaje ?? ""}
+          error={operacionPortafolio?.error}
+          onCerrar={() => setOperacionPortafolio(null)}
         />
 
         <AlertDialog
