@@ -155,7 +155,7 @@ export function PerfilInactividadEquipoGridVista() {
         <ResizablePanelGroup orientation="horizontal" className="h-full">
           <ResizablePanel
             id="perfiles-inactividad-grid"
-            defaultSize="65"
+            defaultSize="75"
             minSize="40"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden"
           >
@@ -181,8 +181,8 @@ export function PerfilInactividadEquipoGridVista() {
               <ResizableHandle withHandle />
               <ResizablePanel
                 id="perfiles-inactividad-ficha"
-                defaultSize="35"
-                minSize="22"
+                defaultSize="25"
+                minSize="18"
                 className="flex min-h-0 min-w-0 flex-col overflow-hidden"
               >
                 <PerfilInactividadEquipoFormPanel

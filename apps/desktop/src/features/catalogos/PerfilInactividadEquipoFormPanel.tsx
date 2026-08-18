@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { CAMPO_INPUT_CLASE, Campo } from "@/components/Campo";
+import { CAMPO_INPUT_CLASE } from "@/components/Campo";
 import { PercentageInput } from "@/components/PercentageInput";
 import { toast } from "@/hooks/use-toast";
 import { formatearFecha } from "@/lib/fecha";
@@ -46,9 +46,23 @@ function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) 
 function Subseccion({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{titulo}</p>
+      <p className="border-b border-border pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+      </p>
       {children}
     </div>
+  );
+}
+
+const CAMPO_CAPTURA_CLASE = cn(CAMPO_INPUT_CLASE, "mt-0 w-24 shrink-0");
+const CAMPO_NOMBRE_CLASE = cn(CAMPO_INPUT_CLASE, "mt-0 w-40 shrink-0");
+
+function CampoEnLinea({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className="min-w-0 flex-1 truncate">{label}:</span>
+      {children}
+    </label>
   );
 }
 
@@ -62,9 +76,13 @@ function CampoPorcentaje({
   onCommit: (value: string) => void;
 }) {
   return (
-    <Campo label={label}>
-      <PercentageInput value={value} onCommit={onCommit} className={CAMPO_INPUT_CLASE} />
-    </Campo>
+    <CampoEnLinea label={label}>
+      <PercentageInput
+        value={value}
+        onCommit={onCommit}
+        className={CAMPO_CAPTURA_CLASE}
+      />
+    </CampoEnLinea>
   );
 }
 
@@ -147,17 +165,17 @@ export function PerfilInactividadEquipoFormPanel({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
           <div className="flex flex-col gap-4">
-            <Campo label="Nombre">
+            <CampoEnLinea label="Nombre">
               <input
                 value={datos.nombre}
                 onChange={(e) => setDatos({ ...datos, nombre: e.target.value })}
-                className={CAMPO_INPUT_CLASE}
+                className={CAMPO_NOMBRE_CLASE}
               />
-            </Campo>
+            </CampoEnLinea>
 
             <Seccion titulo="Maquinaria y equipo en espera">
               <Subseccion titulo="Costos fijos">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1.5">
                   <CampoPorcentaje
                     label="Depreciación"
                     value={datos.espera_depreciacion_porcentaje}
@@ -181,7 +199,7 @@ export function PerfilInactividadEquipoFormPanel({
                 </div>
               </Subseccion>
               <Subseccion titulo="Costos por consumo">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1.5">
                   <CampoPorcentaje
                     label="Combustible"
                     value={datos.espera_combustible_porcentaje}
@@ -220,7 +238,7 @@ export function PerfilInactividadEquipoFormPanel({
 
             <Seccion titulo="Maquinaria y equipo en reserva">
               <Subseccion titulo="Costos fijos">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1.5">
                   <CampoPorcentaje
                     label="Depreciación"
                     value={datos.reserva_depreciacion_porcentaje}
@@ -244,7 +262,7 @@ export function PerfilInactividadEquipoFormPanel({
                 </div>
               </Subseccion>
               <Subseccion titulo="Costos por consumo">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1.5">
                   <CampoPorcentaje
                     label="Combustible"
                     value={datos.reserva_combustible_porcentaje}
