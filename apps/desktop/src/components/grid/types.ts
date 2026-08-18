@@ -18,6 +18,11 @@ export interface DataGridColumn {
   /** Text appended to the value for display only (e.g. "%") — it does not affect the real value when editing. */
   suffix?: string;
   /**
+   * When the numeric value is zero, show this instead of `0` plus `suffix`
+   * (e.g. "—"). Display only: the stored value stays 0 and the editor opens on 0.
+   */
+  zeroDisplay?: string;
+  /**
    * When given, the cell is edited with a picker instead of free text — for
    * columns whose value is an enum. As a function, the options depend on
    * another field of the same row (e.g. subfamily based on the chosen family).

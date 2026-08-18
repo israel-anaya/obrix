@@ -104,6 +104,7 @@ export function displayValue(row: Row, column: DataGridColumn): string {
   const value = row[column.field];
   if (column.boolean) return value ? "Sí" : "No";
   if (column.date) return formatearFecha(value as string);
+  if (column.numeric && column.zeroDisplay != null && Number(value) === 0) return column.zeroDisplay;
   const formatted =
     column.numeric && column.decimals != null && typeof value === "number"
       ? value.toFixed(column.decimals)

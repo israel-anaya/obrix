@@ -1237,6 +1237,7 @@ cotizaciones en PDF de un proveedor.
 | organizacion_id | uuid | FK → organizacion |
 | cliente_id | uuid | FK → cliente, nullable |
 | region_id | uuid | FK → region, nullable |
+| perfil_inactividad_equipo_id | uuid | FK → perfil_inactividad_equipo, nullable — receta de espera/reserva de equipo propio que usa el proyecto (CFE, GCDMX, CMIC, SICT…); si es nulo no se cotiza inactividad |
 | folio | text | |
 | nombre | text | |
 | descripcion | text | nullable |

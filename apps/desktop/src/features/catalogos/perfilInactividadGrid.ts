@@ -1,6 +1,13 @@
-import type { DataGridConfig, Row } from "@/components/grid/DataGrid";
+import type { DataGridColumn, DataGridConfig, Row } from "@/components/grid/DataGrid";
 import type { VerticalGridGroup } from "@/components/grid/VerticalGrid";
 import type { PerfilInactividadEquipo, PerfilInactividadEquipoData } from "@/lib/types";
+
+const PCT: Pick<DataGridColumn, "numeric" | "suffix"> = { numeric: true, suffix: "%" };
+/** 0 se pinta como —; el valor sigue siendo 0 y el editor abre en 0. */
+const PCT_CONSUMO: Pick<DataGridColumn, "numeric" | "suffix" | "zeroDisplay"> = {
+  ...PCT,
+  zeroDisplay: "—",
+};
 
 export const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -13,26 +20,26 @@ export const CONFIG: DataGridConfig = {
   title: "Perfiles de inactividad de equipo",
   columns: [
     { field: "nombre", header: "Nombre", width: 220 },
-    { field: "espera_depreciacion_porcentaje", header: "Espera · Depreciación %", width: 140, numeric: true, suffix: "%" },
-    { field: "espera_inversion_porcentaje", header: "Espera · Inversión %", width: 140, numeric: true, suffix: "%" },
-    { field: "espera_seguro_porcentaje", header: "Espera · Seguro %", width: 130, numeric: true, suffix: "%" },
-    { field: "espera_mantenimiento_porcentaje", header: "Espera · Mantenimiento %", width: 150, numeric: true, suffix: "%" },
-    { field: "espera_combustible_porcentaje", header: "Espera · Combustible %", width: 155, numeric: true, suffix: "%" },
-    { field: "espera_lubricante_porcentaje", header: "Espera · Lubricante %", width: 150, numeric: true, suffix: "%" },
-    { field: "espera_llantas_porcentaje", header: "Espera · Llantas %", width: 135, numeric: true, suffix: "%" },
-    { field: "espera_piezas_especiales_porcentaje", header: "Espera · Piezas especiales %", width: 185, numeric: true, suffix: "%" },
-    { field: "espera_otras_fuentes_porcentaje", header: "Espera · Otras fuentes %", width: 165, numeric: true, suffix: "%" },
-    { field: "espera_operacion_porcentaje", header: "Espera · Operación %", width: 140, numeric: true, suffix: "%" },
-    { field: "reserva_depreciacion_porcentaje", header: "Reserva · Depreciación %", width: 150, numeric: true, suffix: "%" },
-    { field: "reserva_inversion_porcentaje", header: "Reserva · Inversión %", width: 150, numeric: true, suffix: "%" },
-    { field: "reserva_seguro_porcentaje", header: "Reserva · Seguro %", width: 140, numeric: true, suffix: "%" },
-    { field: "reserva_mantenimiento_porcentaje", header: "Reserva · Mantenimiento %", width: 160, numeric: true, suffix: "%" },
-    { field: "reserva_combustible_porcentaje", header: "Reserva · Combustible %", width: 165, numeric: true, suffix: "%" },
-    { field: "reserva_lubricante_porcentaje", header: "Reserva · Lubricante %", width: 160, numeric: true, suffix: "%" },
-    { field: "reserva_llantas_porcentaje", header: "Reserva · Llantas %", width: 145, numeric: true, suffix: "%" },
-    { field: "reserva_piezas_especiales_porcentaje", header: "Reserva · Piezas especiales %", width: 195, numeric: true, suffix: "%" },
-    { field: "reserva_otras_fuentes_porcentaje", header: "Reserva · Otras fuentes %", width: 175, numeric: true, suffix: "%" },
-    { field: "reserva_operacion_porcentaje", header: "Reserva · Operación %", width: 150, numeric: true, suffix: "%" },
+    { field: "espera_depreciacion_porcentaje", header: "Espera · Depreciación %", width: 140, ...PCT },
+    { field: "espera_inversion_porcentaje", header: "Espera · Inversión %", width: 140, ...PCT },
+    { field: "espera_seguro_porcentaje", header: "Espera · Seguro %", width: 130, ...PCT },
+    { field: "espera_mantenimiento_porcentaje", header: "Espera · Mantenimiento %", width: 150, ...PCT },
+    { field: "espera_combustible_porcentaje", header: "Espera · Combustible %", width: 155, ...PCT_CONSUMO },
+    { field: "espera_lubricante_porcentaje", header: "Espera · Lubricante %", width: 150, ...PCT_CONSUMO },
+    { field: "espera_llantas_porcentaje", header: "Espera · Llantas %", width: 135, ...PCT_CONSUMO },
+    { field: "espera_piezas_especiales_porcentaje", header: "Espera · Piezas especiales %", width: 185, ...PCT_CONSUMO },
+    { field: "espera_otras_fuentes_porcentaje", header: "Espera · Otras fuentes %", width: 165, ...PCT_CONSUMO },
+    { field: "espera_operacion_porcentaje", header: "Espera · Operación %", width: 140, ...PCT },
+    { field: "reserva_depreciacion_porcentaje", header: "Reserva · Depreciación %", width: 150, ...PCT },
+    { field: "reserva_inversion_porcentaje", header: "Reserva · Inversión %", width: 150, ...PCT },
+    { field: "reserva_seguro_porcentaje", header: "Reserva · Seguro %", width: 140, ...PCT },
+    { field: "reserva_mantenimiento_porcentaje", header: "Reserva · Mantenimiento %", width: 160, ...PCT },
+    { field: "reserva_combustible_porcentaje", header: "Reserva · Combustible %", width: 165, ...PCT_CONSUMO },
+    { field: "reserva_lubricante_porcentaje", header: "Reserva · Lubricante %", width: 160, ...PCT_CONSUMO },
+    { field: "reserva_llantas_porcentaje", header: "Reserva · Llantas %", width: 145, ...PCT_CONSUMO },
+    { field: "reserva_piezas_especiales_porcentaje", header: "Reserva · Piezas especiales %", width: 195, ...PCT_CONSUMO },
+    { field: "reserva_otras_fuentes_porcentaje", header: "Reserva · Otras fuentes %", width: 175, ...PCT_CONSUMO },
+    { field: "reserva_operacion_porcentaje", header: "Reserva · Operación %", width: 150, ...PCT },
     ...COLUMNAS_CONTROL,
   ],
 };
