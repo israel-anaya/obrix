@@ -167,7 +167,8 @@ export interface FamiliaInsumoData {
  * el diccionario de datos. Cada porcentaje (0-100, como texto para no
  * perder precisión al viajar por IPC) se aplica al rubro activo que ya
  * cachea `equipo_costo_horario` — cargos fijos, operación, y consumo
- * partido por naturaleza (combustible, lubricante, llantas).
+ * partido por naturaleza (combustible, lubricante, llantas, piezas
+ * especiales, otras fuentes).
  */
 export interface PerfilInactividadEquipo extends CamposControl, CamposBorradoLogico {
   id: string;
@@ -180,6 +181,8 @@ export interface PerfilInactividadEquipo extends CamposControl, CamposBorradoLog
   espera_combustible_porcentaje: string;
   espera_lubricante_porcentaje: string;
   espera_llantas_porcentaje: string;
+  espera_piezas_especiales_porcentaje: string;
+  espera_otras_fuentes_porcentaje: string;
   espera_operacion_porcentaje: string;
   reserva_depreciacion_porcentaje: string;
   reserva_inversion_porcentaje: string;
@@ -188,6 +191,8 @@ export interface PerfilInactividadEquipo extends CamposControl, CamposBorradoLog
   reserva_combustible_porcentaje: string;
   reserva_lubricante_porcentaje: string;
   reserva_llantas_porcentaje: string;
+  reserva_piezas_especiales_porcentaje: string;
+  reserva_otras_fuentes_porcentaje: string;
   reserva_operacion_porcentaje: string;
 }
 
@@ -200,6 +205,8 @@ export interface PerfilInactividadEquipoData {
   espera_combustible_porcentaje: string;
   espera_lubricante_porcentaje: string;
   espera_llantas_porcentaje: string;
+  espera_piezas_especiales_porcentaje: string;
+  espera_otras_fuentes_porcentaje: string;
   espera_operacion_porcentaje: string;
   reserva_depreciacion_porcentaje: string;
   reserva_inversion_porcentaje: string;
@@ -208,6 +215,8 @@ export interface PerfilInactividadEquipoData {
   reserva_combustible_porcentaje: string;
   reserva_lubricante_porcentaje: string;
   reserva_llantas_porcentaje: string;
+  reserva_piezas_especiales_porcentaje: string;
+  reserva_otras_fuentes_porcentaje: string;
   reserva_operacion_porcentaje: string;
 }
 
@@ -245,6 +254,8 @@ export interface Material extends CamposControl {
 
 export interface ResultadoImportacion {
   importados: number;
+  creados: number;
+  actualizados: number;
   errores: string[];
   aviso: string | null;
 }
@@ -520,14 +531,23 @@ export interface EquipoCostoHorarioData {
  * Un renglón de la composición plana de un `equipo_costo_horario` — un
  * consumo (`tipo: "consumo"`, material) o una operación (`tipo:
  * "operacion"`, categoría FASAR o cuadrilla), nunca otro equipo de costo
- * horario. `costo`/`importe` los calcula el backend, no son editables
+ * horario. `naturaleza` clasifica el consumo para el perfil de inactividad.
+ * `costo`/`importe` los calcula el backend, no son editables
  * directamente.
  */
+export type NaturalezaEquipoCostoHorarioDetalle =
+  | "combustible"
+  | "lubricante"
+  | "llantas"
+  | "piezas_especiales"
+  | "otras_fuentes";
+
 export interface EquipoCostoHorarioDetalle {
   id: string;
   equipo_costo_horario_insumo_id: string;
   detalle_insumo_id: string;
   tipo: "consumo" | "operacion";
+  naturaleza: NaturalezaEquipoCostoHorarioDetalle | null;
   orden: number;
   /** Cantidad consumida (o jornales/horas de operador) por hora de máquina. */
   cantidad: string;
@@ -542,6 +562,7 @@ export interface EquipoCostoHorarioDetalle {
 export interface EquipoCostoHorarioDetalleData {
   detalle_insumo_id: string;
   cantidad: string;
+  naturaleza?: NaturalezaEquipoCostoHorarioDetalle | null;
 }
 
 /**

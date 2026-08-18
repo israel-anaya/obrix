@@ -20,6 +20,7 @@ import type {
 } from "@/lib/types";
 import { ROLES_USUARIO, TIPOS_MAGNITUD, TIPOS_ORGANIZACION } from "@/lib/types";
 import type { CatalogoGeneralApi } from "@/features/configuracion/useCatalogoGeneral";
+import type { CsvCampoCatalogo } from "@/components/csv/adaptadorCatalogoGeneral";
 
 export interface CatalogoGeneralDescriptor<T extends { id: string }, Nuevo> {
   id: string;
@@ -31,6 +32,12 @@ export interface CatalogoGeneralDescriptor<T extends { id: string }, Nuevo> {
   aFilas?: (modelos: T[]) => Row[];
   vacio: Nuevo;
   filaANuevo: (fila: Row) => Nuevo;
+  csv?: {
+    archivoDefault: string;
+    claveNaturalModelo: (item: T) => string;
+    claveNaturalFila: (valores: Record<string, string>) => string;
+    campos: CsvCampoCatalogo[];
+  };
 }
 
 /** Columnas de auditoría comunes a (casi) toda entidad — visibles, nunca editables.
@@ -193,6 +200,19 @@ const unidadesMedida: CatalogoGeneralDescriptor<UnidadMedida, UnidadMedidaData> 
     // siempre es uno de los válidos — el cast solo recupera el tipo literal.
     tipo_magnitud: String(f.tipo_magnitud) as TipoMagnitud,
   }),
+  csv: {
+    archivoDefault: "unidades-medida.csv",
+    claveNaturalModelo: (m) => m.simbolo,
+    claveNaturalFila: (v) => v.simbolo ?? "",
+    campos: [
+      { field: "simbolo", encabezado: "Símbolo", obligatorio: true },
+      { field: "simbolo_impresion", encabezado: "Símbolo de impresión" },
+      { field: "variantes", encabezado: "Variantes" },
+      { field: "clave_sat", encabezado: "Clave SAT" },
+      { field: "descripcion", encabezado: "Descripción", obligatorio: true },
+      { field: "tipo_magnitud", encabezado: "Tipo de magnitud" },
+    ],
+  },
 };
 
 const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
@@ -226,6 +246,16 @@ const regiones: CatalogoGeneralDescriptor<Region, RegionData> = {
     estado: String(f.estado),
     factor_ajuste: String(f.factor_ajuste) || null,
   }),
+  csv: {
+    archivoDefault: "regiones.csv",
+    claveNaturalModelo: (m) => m.nombre,
+    claveNaturalFila: (v) => v.nombre ?? "",
+    campos: [
+      { field: "nombre", encabezado: "Nombre", obligatorio: true },
+      { field: "estado", encabezado: "Estado" },
+      { field: "factor_ajuste", encabezado: "Factor de ajuste" },
+    ],
+  },
 };
 
 const familiasInsumo: CatalogoGeneralDescriptor<FamiliaInsumo, FamiliaInsumoData> = {
@@ -284,6 +314,17 @@ const monedas: CatalogoGeneralDescriptor<Moneda, MonedaData> = {
     simbolo: String(f.simbolo),
     decimales: Number(f.decimales) || 0,
   }),
+  csv: {
+    archivoDefault: "monedas.csv",
+    claveNaturalModelo: (m) => m.codigo,
+    claveNaturalFila: (v) => v.codigo ?? "",
+    campos: [
+      { field: "codigo", encabezado: "Código", obligatorio: true },
+      { field: "nombre", encabezado: "Nombre", obligatorio: true },
+      { field: "simbolo", encabezado: "Símbolo" },
+      { field: "decimales", encabezado: "Decimales" },
+    ],
+  },
 };
 
 export const CATALOGOS_GENERALES = [

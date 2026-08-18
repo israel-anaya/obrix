@@ -456,7 +456,7 @@ export default function App() {
       if (catalogoId === "proveedores") return <ProveedoresSeccion />;
       if (catalogoId === "clientes") return <ClientesSeccion />;
       if (catalogoId === "materiales-item") {
-        return <MaterialesCatalogoSeccion vista={materialesVista} onProgreso={setProgreso} />;
+        return <MaterialesCatalogoSeccion vista={materialesVista} />;
       }
       if (catalogoId === "materiales-mesa") return <MesaEquivalentesSeccion />;
       if (catalogoId === "materiales-radar") return <RadarMaterialesSeccion />;
@@ -468,7 +468,7 @@ export default function App() {
       if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
       if (catalogoId === "cuadrillas-trabajo") {
-        return <CuadrillasSeccion vista={cuadrillasVista} onProgreso={setProgreso} />;
+        return <CuadrillasSeccion vista={cuadrillasVista} />;
       }
       if (catalogoId === "herramienta") return <HerramientaSeccion />;
       if (catalogoId === "costos-horarios") return <EquipoCostoHorarioSeccion vista={equipoCostoHorarioVista} />;

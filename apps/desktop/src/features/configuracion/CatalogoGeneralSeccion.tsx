@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
+import { adaptadorExportCatalogo, adaptadorImportCatalogo } from "@/components/csv/adaptadorCatalogoGeneral";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
@@ -33,6 +35,7 @@ export function CatalogoGeneralSeccion({
   const [busqueda, setBusqueda] = useState("");
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -70,6 +73,7 @@ export function CatalogoGeneralSeccion({
 
   const itemSeleccionado = items.find((i) => i.id === seleccionadoId) ?? null;
   const conFicha = !!ficha;
+  const csv = descriptor.csv;
 
   const grid = (
     <DataGrid
@@ -99,6 +103,51 @@ export function CatalogoGeneralSeccion({
           <BarraAcciones
             acciones={[
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              ...(csv
+                ? [
+                    {
+                      icono: Upload,
+                      titulo: "Importar desde CSV",
+                      onClick: () =>
+                        setCsvAdaptador(
+                          adaptadorImportCatalogo(
+                            {
+                              titulo: descriptor.titulo,
+                              archivoDefault: csv.archivoDefault,
+                              campos: csv.campos,
+                              claveNaturalModelo: csv.claveNaturalModelo,
+                              claveNaturalFila: csv.claveNaturalFila,
+                              filaANuevo: descriptor.filaANuevo,
+                              aFila: descriptor.aFila,
+                            },
+                            items,
+                            descriptor.api,
+                          ),
+                        ),
+                      disabled: csvAdaptador !== null,
+                    },
+                    {
+                      icono: Download,
+                      titulo: "Exportar a CSV",
+                      onClick: () =>
+                        setCsvAdaptador(
+                          adaptadorExportCatalogo(
+                            {
+                              titulo: descriptor.titulo,
+                              archivoDefault: csv.archivoDefault,
+                              campos: csv.campos,
+                              claveNaturalModelo: csv.claveNaturalModelo,
+                              claveNaturalFila: csv.claveNaturalFila,
+                              filaANuevo: descriptor.filaANuevo,
+                              aFila: descriptor.aFila,
+                            },
+                            items,
+                          ),
+                        ),
+                      disabled: csvAdaptador !== null || items.length === 0,
+                    },
+                  ]
+                : []),
               ...(conFicha
                 ? [
                     {
@@ -156,6 +205,11 @@ export function CatalogoGeneralSeccion({
           grid
         )}
       </div>
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescar()}
+      />
     </div>
   );
 }

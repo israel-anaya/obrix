@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Download, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
+import { adaptadorExportEquipoCostoHorario, adaptadorImportEquipoCostoHorario } from "@/features/catalogos/csv/adaptadorInsumos";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createEquipoCostoHorario,
@@ -54,6 +56,7 @@ export function EquipoCostoHorarioGridVista() {
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -249,7 +252,23 @@ export function EquipoCostoHorarioGridVista() {
         <div className="flex items-center gap-2">
           <SearchInput value={busqueda} onChange={setBusqueda} />
           <BarraAcciones
-            acciones={[{ icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() }]}
+            acciones={[
+              { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icono: Upload,
+                titulo: "Importar desde CSV",
+                onClick: () =>
+                  setCsvAdaptador(adaptadorImportEquipoCostoHorario(equipos, unidades, familias, regiones)),
+                disabled: csvAdaptador !== null,
+              },
+              {
+                icono: Download,
+                titulo: "Exportar a CSV",
+                onClick: () =>
+                  setCsvAdaptador(adaptadorExportEquipoCostoHorario(equipos, unidades, familias, regiones)),
+                disabled: csvAdaptador !== null || equipos.length === 0,
+              },
+            ]}
             menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: recargarTodo },
               {
@@ -278,6 +297,11 @@ export function EquipoCostoHorarioGridVista() {
           onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteEquipoCostoHorario(id))).then(refrescarEquipos)}
         />
       </div>
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescarEquipos()}
+      />
     </div>
   );
 }

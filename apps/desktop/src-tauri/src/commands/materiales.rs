@@ -1,5 +1,6 @@
-use crate::AppState;
+use crate::{commands, AppState};
 use obrix_services::material::{MaterialCompleto, MaterialData, MaterialService, ResultadoImportacion};
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn list_materiales(state: tauri::State<'_, AppState>) -> Result<Vec<MaterialCompleto>, String> {
@@ -60,17 +61,24 @@ pub async fn delete_material(state: tauri::State<'_, AppState>, id: String) -> R
 
 #[tauri::command]
 pub async fn importar_materiales_csv(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     path: String,
 ) -> Result<ResultadoImportacion, String> {
     let contenido = std::fs::read_to_string(&path).map_err(|e| format!("no se pudo leer el archivo: {e}"))?;
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    MaterialService::importar_csv(
+    MaterialService::importar_csv_con_progreso(
         activo.portafolio.as_ref(),
         &activo.organizacion_id,
         &contenido,
         activo.usuario_id_activo.clone(),
+        move |actual, total| {
+            let _ = app.emit(
+                commands::EVENTO_CSV_PROGRESO,
+                commands::CsvProgresoPayload { actual, total },
+            );
+        },
     )
     .await
     .map_err(|e| e.to_string())

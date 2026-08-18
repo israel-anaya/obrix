@@ -35,6 +35,7 @@ import type {
   EquipoCostoHorario,
   EquipoCostoHorarioDetalle,
   Material,
+  NaturalezaEquipoCostoHorarioDetalle,
   UnidadMedida,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,14 @@ function fmt(valor: string): string {
   if (!Number.isFinite(numero)) return valor;
   return numero.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+const NATURALEZAS_CONSUMO: { id: NaturalezaEquipoCostoHorarioDetalle; etiqueta: string }[] = [
+  { id: "combustible", etiqueta: "Combustible" },
+  { id: "lubricante", etiqueta: "Lubricante" },
+  { id: "llantas", etiqueta: "Llantas" },
+  { id: "piezas_especiales", etiqueta: "Piezas especiales" },
+  { id: "otras_fuentes", etiqueta: "Otras fuentes" },
+];
 
 interface CamposCf {
   cf_costo_maquina: string;
@@ -253,7 +262,11 @@ export function EquipoCostoHorarioFichaApu({
     if (!id) return;
     setError(null);
     try {
-      const actualizado = await createEquipoCostoHorarioDetalle(equipo.id, { detalle_insumo_id: id, cantidad: "1" });
+      const actualizado = await createEquipoCostoHorarioDetalle(equipo.id, {
+        detalle_insumo_id: id,
+        cantidad: "1",
+        naturaleza: "combustible",
+      });
       await trasMutar(actualizado);
     } catch (e) {
       setError(String(e));
@@ -284,6 +297,25 @@ export function EquipoCostoHorarioFichaApu({
       const actualizado = await updateEquipoCostoHorarioDetalle(detalle.id, {
         detalle_insumo_id: detalle.detalle_insumo_id,
         cantidad: String(redondeada),
+        naturaleza: detalle.naturaleza,
+      });
+      await trasMutar(actualizado);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const guardarNaturaleza = async (
+    detalle: EquipoCostoHorarioDetalle,
+    naturaleza: NaturalezaEquipoCostoHorarioDetalle,
+  ) => {
+    if (detalle.naturaleza === naturaleza) return;
+    setError(null);
+    try {
+      const actualizado = await updateEquipoCostoHorarioDetalle(detalle.id, {
+        detalle_insumo_id: detalle.detalle_insumo_id,
+        cantidad: detalle.cantidad,
+        naturaleza,
       });
       await trasMutar(actualizado);
     } catch (e) {
@@ -525,6 +557,7 @@ export function EquipoCostoHorarioFichaApu({
               <tr className="border-b border-foreground/30 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
                 <th className="w-20 py-1 pr-2 font-semibold">Código</th>
                 <th className="py-1 pr-2 font-semibold">Descripción</th>
+                <th className="w-36 py-1 pr-2 font-semibold">Naturaleza</th>
                 <th className="w-16 py-1 pr-2 font-semibold">Unidad</th>
                 <th className="w-20 py-1 pr-2 text-right font-semibold">Cantidad</th>
                 <th className="w-24 py-1 pr-2 text-right font-semibold">Costo</th>
@@ -536,7 +569,7 @@ export function EquipoCostoHorarioFichaApu({
             {/* CONSUMO */}
             <tbody>
               <tr>
-                <td colSpan={7} className="pt-2 pb-1">
+                <td colSpan={8} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     <Fuel size={16} className="text-amber-500" />
                     Consumo
@@ -545,7 +578,7 @@ export function EquipoCostoHorarioFichaApu({
               </tr>
               {consumos.length === 0 && !agregandoConsumo && (
                 <tr>
-                  <td colSpan={7} className="py-1.5 text-muted-foreground">
+                  <td colSpan={8} className="py-1.5 text-muted-foreground">
                     Sin consumos todavía.
                   </td>
                 </tr>
@@ -556,6 +589,21 @@ export function EquipoCostoHorarioFichaApu({
                     {materialPorId[d.detalle_insumo_id]?.clave ?? d.detalle_insumo_id}
                   </td>
                   <td className="py-1 pr-2">{materialPorId[d.detalle_insumo_id]?.descripcion ?? ""}</td>
+                  <td className="py-1 pr-2">
+                    <select
+                      value={d.naturaleza ?? "combustible"}
+                      onChange={(e) =>
+                        void guardarNaturaleza(d, e.target.value as NaturalezaEquipoCostoHorarioDetalle)
+                      }
+                      className="w-full rounded border border-transparent bg-transparent py-0.5 text-[11px] hover:border-border focus:border-border focus:bg-background"
+                    >
+                      {NATURALEZAS_CONSUMO.map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.etiqueta}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="py-1 pr-2 text-muted-foreground">
                     {simboloPorUnidadId[materialPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? ""}
                   </td>
@@ -610,7 +658,7 @@ export function EquipoCostoHorarioFichaApu({
                 </tr>
               ))}
               <tr>
-                <td colSpan={7} className="pt-1.5">
+                <td colSpan={8} className="pt-1.5">
                   {agregandoConsumo ? (
                     <ComboboxFiltrable
                       opciones={materialesDisponibles.map((m) => ({
@@ -632,7 +680,7 @@ export function EquipoCostoHorarioFichaApu({
                 </td>
               </tr>
               <tr className="border-t-2 border-foreground/30 font-semibold">
-                <td colSpan={5} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
+                <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal consumo
                 </td>
                 <td className="py-1.5 text-right tabular-nums">${fmt(String(subtotalConsumo))}</td>
@@ -643,7 +691,7 @@ export function EquipoCostoHorarioFichaApu({
             {/* OPERACIÓN */}
             <tbody>
               <tr>
-                <td colSpan={7} className="pt-3 pb-1">
+                <td colSpan={8} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     <HardHat size={16} className="text-violet-500" />
                     Operación
@@ -652,7 +700,7 @@ export function EquipoCostoHorarioFichaApu({
               </tr>
               {operaciones.length === 0 && !agregandoOperacion && (
                 <tr>
-                  <td colSpan={7} className="py-1.5 text-muted-foreground">
+                  <td colSpan={8} className="py-1.5 text-muted-foreground">
                     Sin operación todavía.
                   </td>
                 </tr>
@@ -666,6 +714,7 @@ export function EquipoCostoHorarioFichaApu({
                   <td className="py-1 pr-2">
                     {(categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id])?.descripcion ?? ""}
                   </td>
+                  <td className="py-1 pr-2 text-muted-foreground">—</td>
                   <td className="py-1 pr-2 text-muted-foreground">
                     {simboloPorUnidadId[unidadDeOperacion(d.detalle_insumo_id)] ?? ""}
                   </td>
@@ -720,7 +769,7 @@ export function EquipoCostoHorarioFichaApu({
                 </tr>
               ))}
               <tr>
-                <td colSpan={7} className="pt-1.5">
+                <td colSpan={8} className="pt-1.5">
                   {agregandoOperacion ? (
                     <ComboboxFiltrable
                       opciones={operacionesDisponibles}
@@ -739,7 +788,7 @@ export function EquipoCostoHorarioFichaApu({
                 </td>
               </tr>
               <tr className="border-t-2 border-foreground/30 font-semibold">
-                <td colSpan={5} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
+                <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal operación
                 </td>
                 <td className="py-1.5 text-right tabular-nums">${fmt(String(subtotalOperacion))}</td>

@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { FileText, Plus, RefreshCcw, Trash2, Upload, Users, X } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload, Users } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { CuadrillaDetallePanel } from "@/features/catalogos/CuadrillaDetallePanel";
 import { CuadrillaFormPanel } from "@/features/catalogos/CuadrillaFormPanel";
+import { adaptadorExportCuadrillas, adaptadorImportCuadrillas } from "@/features/catalogos/csv/adaptadorCuadrillas";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createCuadrilla,
   deleteCuadrilla,
-  importarCuadrillasCsv,
   listCuadrillas,
   listFamiliasInsumo,
   listUnidadesMedida,
@@ -20,13 +20,12 @@ import {
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
-import type { Cuadrilla, CuadrillaData, FamiliaInsumo, ResultadoImportacion, UnidadMedida } from "@/lib/types";
+import type { Cuadrilla, CuadrillaData, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
 const NOMBRE_FAMILIA_MANO_OBRA = "Mano de obra";
 const SIMBOLO_UNIDAD_JORNAL = "jor";
-const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -48,7 +47,7 @@ const COLUMNAS_CONTROL = [
  * en el panel lateral. Alternativa a `CuadrillasFicha`
  * (ver `CuadrillasSeccion`, que alterna entre las dos).
  */
-export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: string | null) => void }) {
+export function CuadrillasGridVista() {
   const gridRef = useRef<DataGridHandle>(null);
   const [cuadrillas, setCuadrillas] = useState<Cuadrilla[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
@@ -56,8 +55,7 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
-  const [importando, setImportando] = useState(false);
-  const [resultadoImportacion, setResultadoImportacion] = useState<ResultadoImportacion | null>(null);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
   const [panelComposicionAbierto, setPanelComposicionAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [cuadrillaSeleccionadaId, setCuadrillaSeleccionadaId] = useState<string | null>(null);
@@ -98,24 +96,6 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
-  };
-
-  const importarCsv = async () => {
-    const path = await open({ filters: FILTRO_CSV, multiple: false });
-    if (!path || Array.isArray(path)) return;
-    setImportando(true);
-    setResultadoImportacion(null);
-    onProgreso?.("Importando cuadrillas…");
-    try {
-      const resultado = await importarCuadrillasCsv(path);
-      setResultadoImportacion(resultado);
-      await refrescarCuadrillas();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setImportando(false);
-      onProgreso?.(null);
-    }
   };
 
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -257,9 +237,15 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Upload,
-                titulo: importando ? "Importando…" : "Importar desde CSV",
-                onClick: () => void importarCsv(),
-                disabled: importando,
+                titulo: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportCuadrillas()),
+                disabled: csvAdaptador !== null,
+              },
+              {
+                icono: Download,
+                titulo: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportCuadrillas(cuadrillas, unidades, familias)),
+                disabled: csvAdaptador !== null || cuadrillas.length === 0,
               },
               {
                 icono: Users,
@@ -286,34 +272,6 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
           />
         </div>
       </div>
-      {resultadoImportacion && (
-        <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium">
-              Importación completa: {resultadoImportacion.importados} cuadrilla
-              {resultadoImportacion.importados === 1 ? "" : "s"} importada
-              {resultadoImportacion.importados === 1 ? "" : "s"}
-              {resultadoImportacion.errores.length > 0 && `, ${resultadoImportacion.errores.length} con problemas`}.
-            </p>
-            <button
-              type="button"
-              title="Cerrar"
-              onClick={() => setResultadoImportacion(null)}
-              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          {resultadoImportacion.aviso && <p className="mt-1 text-muted-foreground">{resultadoImportacion.aviso}</p>}
-          {resultadoImportacion.errores.length > 0 && (
-            <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-auto pl-4 text-muted-foreground">
-              {resultadoImportacion.errores.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
       <div className="min-h-0 flex-1">
         {/* Los grupos viven siempre: si el grid pasa de hijo directo a panel
             (o al revés) React lo desmonta y el virtualizador vuelve a scroll 0. */}
@@ -374,6 +332,11 @@ export function CuadrillasGridVista({ onProgreso }: { onProgreso?: (mensaje: str
           ) : null}
         </ResizablePanelGroup>
       </div>
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescarCuadrillas()}
+      />
     </div>
   );
 }

@@ -1,0 +1,48 @@
+Símbolo,Símbolo de impresión,Variantes,Clave SAT,Descripción,Tipo de magnitud
+m,m,"m, metro, mts",MTR,Metro,longitud
+ml,ml,"ml, ML, metro lineal",MTR,Metro lineal,longitud
+cm,cm,"cm, cms, centimetro",CMT,Centímetro,longitud
+mm,mm,"mm, milimetro",MMT,Milímetro,longitud
+km,km,"km, kilometro",KTM,Kilómetro,longitud
+m2,m²,"m2, m², m^2",MTK,Metro cuadrado,area
+ha,ha,"ha, hectarea, hectárea",HAR,Hectárea,area
+m3,m³,"m3, m³, m^3",MTQ,Metro cúbico,volumen
+dm3,dm³,"dm3, dm³",DMQ,Decímetro cúbico,volumen
+m3/Est,m³/Est,"m3/Est, m³/Est, m3/est",,Metro cúbico por estación de 20 metros,volumen
+m3/hm,m³/hm,"m3/hm, m³/hm",,Metro cúbico por hectómetro,volumen
+m3/km,m³/km,"m3/km, m³/km",,Metro cúbico por kilómetro,volumen
+litro,l,"litro, l, lt, lts",LTR,Litro,volumen
+galon,galon,"galon, gal, galón",,Galón,volumen
+pt,pt,"pt, polin, tablon, barrote, PT, pie tablón",,Pie tablar,volumen
+kg,kg,"kg, kgs, kilogramo",KGM,Kilogramo,masa
+ton,t,"ton, t, tonelada",TNE,Tonelada,masa
+pieza,pza,"pieza, pza, Pza",H87,Pieza,pieza
+millar,millar,"millar, mill, mil",MIL,Millar,pieza
+juego,juego,"juego, jgo, jgos",SET,Juego,pieza
+lote,lote,"lote, Lot, lotes",XLT,Lote,pieza
+saco,saco,"saco, sac, sco",XSA,Saco,pieza
+cubeta,cubeta,"cubeta, cb, cub",XBJ,Cubeta,pieza
+bulto,bulto,"bulto, bultos",XUN,Bulto,pieza
+caja,caja,"caja, caj, cajas",XBX,Caja,pieza
+rollo,rollo,"rollo, roll, rollos",XRO,Rollo,pieza
+hoja,hoja,"hoja, hojas",XSH,Hoja,pieza
+tambor,tambor,"tambor, tmb, tambo",XDR,Tambor,pieza
+viaje,viaje,"viaje, viajes",XUN,Viaje,pieza
+tubo,tubo,"tubo, tmo, tubos",,Tubo,pieza
+carrete,carrete,"carrete, carrt",,Carrete,pieza
+tarima,tarima,"tarima, tor, pallet",,Tarima,pieza
+camion,camion,"camion, Camion, camión",,Camión,pieza
+pipa,pipa,"pipa, pipas",,Pipa,pieza
+flete,flete,"flete, Flete",E48,Flete,otro
+cuota,cuota,"cuota, cuo",,Cuota,otro
+kw/hr,kw/hr,"kw/hr, kWh, kwh",,Kilowatt-hora,otro
+jor,jor,"jor, jornal, jornada, jorn",DAY,Jornal,tiempo
+hr,h,"hr, h, hrs, hora",HUR,Hora,tiempo
+dia,dia,"dia, día, dias",DAY,Día,tiempo
+sem,sem,"sem, semana, semanas",WEE,Semana,tiempo
+mes,mes,"mes, meses",MON,Mes,tiempo
+rent/d,rent/d,"rent/d, renta/día, renta/dia",,Renta por día,tiempo
+global,global,global,ACT,Global,otro
+%,%,"%, porcentaje",,Porcentaje,otro
+%mo,%mo,"%mo, %MO, % de MO",,Porcentaje de mano de obra,otro
+%ma,%ma,"%ma, %MA, % de MA",,Porcentaje de materiales,otro

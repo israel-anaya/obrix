@@ -3,10 +3,12 @@ use sea_orm::entity::prelude::*;
 
 /// Composición **plana, no recursiva** de un `equipo_costo_horario` — cada
 /// fila es un consumo (`detalle_insumo_id` con extensión `material`: diesel,
-/// aceites, llantas) o una operación (`detalle_insumo_id` con extensión
-/// `categoria_fasar` o `cuadrilla`: el operador, con su cantidad en jornales
-/// u horas consumidos por hora de máquina). `costo`/`importe` son cache: los
-/// recalcula `EquipoCostoHorarioDetalleService::recalcular` cada vez que la
+/// aceites, llantas, piezas especiales, otras fuentes) o una operación
+/// (`detalle_insumo_id` con extensión `categoria_fasar` o `cuadrilla`: el
+/// operador, con su cantidad en jornales u horas consumidos por hora de
+/// máquina). `naturaleza` clasifica el consumo para
+/// `perfil_inactividad_equipo`. `costo`/`importe` son cache: los recalcula
+/// `EquipoCostoHorarioDetalleService::recalcular` cada vez que la
 /// composición cambia (ver diccionario de datos).
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "equipo_costo_horario_detalle")]
@@ -19,6 +21,8 @@ pub struct Model {
     /// `categoria_fasar`/`cuadrilla` (operación).
     pub detalle_insumo_id: String,
     pub tipo: TipoEquipoCostoHorarioDetalle,
+    /// Obligatorio si `tipo = consumo`; `None` si `tipo = operacion`.
+    pub naturaleza: Option<NaturalezaEquipoCostoHorarioDetalle>,
     pub orden: i32,
     /// Cantidad consumida (o jornales/horas de operador) por hora de máquina.
     pub cantidad: Decimal,
@@ -68,4 +72,16 @@ impl ActiveModelBehavior for ActiveModel {}
 pub enum TipoEquipoCostoHorarioDetalle {
     Consumo,
     Operacion,
+}
+
+/// Desglose CMIC/RLOPSRM de un renglón de consumo — ver diccionario de datos.
+#[derive(Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum NaturalezaEquipoCostoHorarioDetalle {
+    Combustible,
+    Lubricante,
+    Llantas,
+    PiezasEspeciales,
+    OtrasFuentes,
 }

@@ -7,7 +7,8 @@ use sea_orm::entity::prelude::*;
 /// porcentaje (0-100) se aplica al rubro activo que ya cachea
 /// `equipo_costo_horario` — los cuatro cargos fijos por separado,
 /// `subtotal_operacion`, y el consumo partido por naturaleza (combustible,
-/// lubricante, llantas), no sobre `subtotal_consumo` entero. Varios equipos
+/// lubricante, llantas, piezas especiales, otras fuentes), no sobre
+/// `subtotal_consumo` entero. Varios equipos
 /// pueden compartir el mismo perfil; el borrado es lógico (`deleted`) y no
 /// rompe el vínculo de equipos que ya lo usan.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
@@ -27,6 +28,10 @@ pub struct Model {
     pub espera_lubricante_porcentaje: Decimal,
     /// Sobre Σ importe de detalle `naturaleza = llantas`.
     pub espera_llantas_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = piezas_especiales`.
+    pub espera_piezas_especiales_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = otras_fuentes`.
+    pub espera_otras_fuentes_porcentaje: Decimal,
     pub espera_operacion_porcentaje: Decimal,
     pub reserva_depreciacion_porcentaje: Decimal,
     pub reserva_inversion_porcentaje: Decimal,
@@ -38,6 +43,10 @@ pub struct Model {
     pub reserva_lubricante_porcentaje: Decimal,
     /// Sobre Σ importe de detalle `naturaleza = llantas`.
     pub reserva_llantas_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = piezas_especiales`.
+    pub reserva_piezas_especiales_porcentaje: Decimal,
+    /// Sobre Σ importe de detalle `naturaleza = otras_fuentes`.
+    pub reserva_otras_fuentes_porcentaje: Decimal,
     pub reserva_operacion_porcentaje: Decimal,
     pub deleted: bool,
     pub created_at: String,

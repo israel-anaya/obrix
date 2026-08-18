@@ -16,14 +16,12 @@ export type MaterialesVista = "grid" | "estanteria";
  */
 export function MaterialesCatalogoSeccion({
   vista,
-  onProgreso,
 }: {
   vista: MaterialesVista;
-  onProgreso?: (mensaje: string | null) => void;
 }) {
   return (
     <div className="h-full">
-      {vista === "estanteria" ? <EstanteriaMaterialesSeccion /> : <MaterialesSeccion onProgreso={onProgreso} />}
+      {vista === "estanteria" ? <EstanteriaMaterialesSeccion /> : <MaterialesSeccion />}
     </div>
   );
 }

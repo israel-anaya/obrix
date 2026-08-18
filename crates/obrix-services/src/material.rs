@@ -15,7 +15,8 @@ use sea_orm::{
 
 use crate::precio_material::{PrecioMaterialData, PrecioMaterialService};
 use crate::unidad_medida::UnidadMedidaService;
-use crate::{nuevo_id, ServiceError};
+use crate::{id_insumo_existente, nuevo_id, recordar_insumo, ServiceError};
+use std::collections::HashMap;
 
 #[derive(serde::Deserialize)]
 pub struct MaterialData {
@@ -264,16 +265,30 @@ impl MaterialService {
 
     /// Importa materiales desde un CSV con columnas
     /// `Clave,Descripción,Unidad,Costo,Familia,Subfamilia` (Clave/Familia/Subfamilia
-    /// opcionales). Si la fila trae `Clave`, se usa tal cual; si no, se genera
-    /// una consecutiva `MAT-<n>` continuando desde la clave `MAT-` más alta ya
-    /// registrada para la organización. No falla la operación completa por una
-    /// fila mala — cada fila se procesa de forma independiente y los problemas
-    /// se acumulan en `errores` en vez de abortar el resto del archivo.
+    /// opcionales). Si la fila coincide con un material ya registrado (por
+    /// clave o, si no hay match, por descripción; ambas sin distinguir
+    /// mayúsculas) se actualiza; si no, se crea. Si la fila trae `Clave` y no
+    /// hay match, se usa tal cual; si no trae clave y es alta, se genera una
+    /// consecutiva `MAT-<n>` continuando desde la clave `MAT-` más alta ya
+    /// registrada para la organización. El costo abre una vigencia nueva de
+    /// `precio_material`. No falla la operación completa por una fila mala —
+    /// cada fila se procesa de forma independiente y los problemas se
+    /// acumulan en `errores` en vez de abortar el resto del archivo.
     pub async fn importar_csv(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
         contenido_csv: &str,
         creado_por: String,
+    ) -> Result<ResultadoImportacion, ServiceError> {
+        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {}).await
+    }
+
+    pub async fn importar_csv_con_progreso(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+        contenido_csv: &str,
+        creado_por: String,
+        mut on_progreso: impl FnMut(u32, u32) + Send,
     ) -> Result<ResultadoImportacion, ServiceError> {
         let mut siguiente_consecutivo_mat = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
@@ -315,26 +330,42 @@ impl MaterialService {
             .filter_map(|f| f.parent_id.as_ref().map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone())))
             .collect();
 
+        let insumos_material = insumo::Entity::find()
+            .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
+            .filter(insumo::Column::Tipo.eq(TipoInsumo::Material))
+            .filter(insumo::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let extras: HashMap<String, material::Model> = material::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|m| (m.insumo_id.clone(), m))
+            .collect();
+        let mut clave_por_id: HashMap<String, String> = HashMap::new();
+        let mut por_clave: HashMap<String, String> = HashMap::new();
+        let mut por_descripcion: HashMap<String, String> = HashMap::new();
+        for ins in &insumos_material {
+            clave_por_id.insert(ins.id.clone(), ins.clave.clone());
+            recordar_insumo(&mut por_clave, &mut por_descripcion, &ins.id, &ins.clave, &ins.descripcion);
+        }
+
         let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
-        let mut importados = 0u32;
+        let mut creados = 0u32;
+        let mut actualizados = 0u32;
+        let mut se_autogenero_clave = false;
         let mut errores = Vec::new();
 
-        // Si el archivo no trae columna `Clave`, se avisa una sola vez de que
-        // todas las filas recibirán una consecutiva `MAT-<n>` autogenerada.
         let tiene_columna_clave = lector
             .headers()
             .map(|h| h.iter().any(|columna| columna.trim().eq_ignore_ascii_case("clave")))
             .unwrap_or(false);
-        let aviso = if tiene_columna_clave {
-            None
-        } else {
-            Some(
-                "El archivo no tiene columna \"Clave\"; se generarán claves automáticas con el prefijo MAT-."
-                    .to_string(),
-            )
-        };
 
-        for (i, registro) in lector.deserialize::<RegistroCsvMaterial>().enumerate() {
+        let registros: Vec<Result<RegistroCsvMaterial, csv::Error>> =
+            lector.deserialize::<RegistroCsvMaterial>().collect();
+        let total = registros.len() as u32;
+        for (i, registro) in registros.into_iter().enumerate() {
+            on_progreso(i as u32 + 1, total);
             let fila = i + 2; // +1 por índice 0-based, +1 por la fila de encabezados
             let registro = match registro {
                 Ok(r) => r,
@@ -397,38 +428,66 @@ impl MaterialService {
                 None
             };
 
-            let clave = match registro.clave.as_deref().map(str::trim) {
-                Some(clave_archivo) if !clave_archivo.is_empty() => clave_archivo.to_string(),
-                _ => {
+            let clave_archivo = registro.clave.as_deref().map(str::trim).filter(|c| !c.is_empty());
+            let existente_id = id_insumo_existente(clave_archivo, &descripcion, &por_clave, &por_descripcion);
+            let clave = match (clave_archivo, existente_id.as_deref()) {
+                (Some(clave_archivo), _) => clave_archivo.to_string(),
+                (None, Some(id)) => clave_por_id
+                    .get(id)
+                    .cloned()
+                    .unwrap_or_else(|| id.to_string()),
+                (None, None) => {
                     let clave = format!("MAT-{siguiente_consecutivo_mat}");
                     siguiente_consecutivo_mat += 1;
+                    se_autogenero_clave = true;
                     clave
                 }
             };
-            let creacion = Self::crear(
-                repo,
-                organizacion_id,
-                MaterialData {
-                    clave,
-                    descripcion,
-                    unidad_id,
-                    familia_id,
-                    sub_familia_id,
-                    proveedor_id: None,
-                    merma_porcentaje: None,
-                    marca: None,
-                },
-                creado_por.clone(),
-            )
-            .await;
 
-            let material = match creacion {
-                Ok(m) => m,
-                Err(e) => {
-                    errores.push(format!("fila {fila}: no se pudo crear el material ({e})"));
-                    continue;
+            let extra = existente_id.as_ref().and_then(|id| extras.get(id));
+            let datos = MaterialData {
+                clave: clave.clone(),
+                descripcion: descripcion.clone(),
+                unidad_id,
+                familia_id,
+                sub_familia_id,
+                proveedor_id: extra.and_then(|e| e.proveedor_id.clone()),
+                merma_porcentaje: extra.and_then(|e| e.merma_porcentaje),
+                marca: extra.and_then(|e| e.marca.clone()),
+            };
+
+            let material = if let Some(id) = existente_id {
+                match Self::actualizar(repo, id, datos, Some(creado_por.clone())).await {
+                    Ok(m) => {
+                        actualizados += 1;
+                        m
+                    }
+                    Err(e) => {
+                        errores.push(format!("fila {fila}: no se pudo actualizar el material ({e})"));
+                        continue;
+                    }
+                }
+            } else {
+                match Self::crear(repo, organizacion_id, datos, creado_por.clone()).await {
+                    Ok(m) => {
+                        creados += 1;
+                        m
+                    }
+                    Err(e) => {
+                        errores.push(format!("fila {fila}: no se pudo crear el material ({e})"));
+                        continue;
+                    }
                 }
             };
+
+            clave_por_id.insert(material.id.clone(), material.clave.clone());
+            recordar_insumo(
+                &mut por_clave,
+                &mut por_descripcion,
+                &material.id,
+                &material.clave,
+                &material.descripcion,
+            );
 
             if let Err(e) = PrecioMaterialService::crear(
                 repo,
@@ -443,25 +502,47 @@ impl MaterialService {
             )
             .await
             {
+                let verbo = if extra.is_some() { "actualizado" } else { "creado" };
                 errores.push(format!(
-                    "fila {fila}: material creado pero no se pudo registrar el costo ({e})"
+                    "fila {fila}: material {verbo} pero no se pudo registrar el costo ({e})"
                 ));
             }
-
-            importados += 1;
         }
 
-        Ok(ResultadoImportacion { importados, errores, aviso })
+        let aviso = if !tiene_columna_clave && se_autogenero_clave {
+            Some(
+                "El archivo no tiene columna \"Clave\"; se generarán claves automáticas con el prefijo MAT-."
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+
+        Ok(ResultadoImportacion::nuevo(creados, actualizados, errores, aviso))
     }
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct ResultadoImportacion {
     pub importados: u32,
+    pub creados: u32,
+    pub actualizados: u32,
     pub errores: Vec<String>,
-    /// Aviso informativo (no error) — hoy solo se usa cuando el archivo no
-    /// trae columna `Clave` y las claves se autogeneraron con prefijo `MAT-`.
+    /// Aviso informativo (no error) — hoy se usa cuando el archivo no trae
+    /// columna `Clave` y se autogeneraron claves con prefijo `MAT-`/`CUA-`.
     pub aviso: Option<String>,
+}
+
+impl ResultadoImportacion {
+    pub fn nuevo(creados: u32, actualizados: u32, errores: Vec<String>, aviso: Option<String>) -> Self {
+        Self {
+            importados: creados + actualizados,
+            creados,
+            actualizados,
+            errores,
+            aviso,
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -1039,6 +1120,8 @@ mod tests {
             .expect("importar csv");
 
         assert_eq!(resultado.importados, 2, "solo las 2 filas válidas deben importarse");
+        assert_eq!(resultado.creados, 2);
+        assert_eq!(resultado.actualizados, 0);
         assert_eq!(resultado.errores.len(), 2, "las 2 filas inválidas deben reportarse como error");
         assert!(
             resultado.aviso.is_some_and(|a| a.contains("MAT-")),
@@ -1096,5 +1179,48 @@ mod tests {
             .find(|m| m.descripcion == "Yeso")
             .expect("yeso importado");
         assert_eq!(yeso.clave, "MAT-3");
+
+        // Reimportar por descripción (sin distinguir mayúsculas) actualiza, no duplica.
+        let csv3 = "Descripción,Unidad,Costo\n\
+                    CEMENTO PORTLAND,m2,200\n\
+                    yeso,m2,70\n";
+        let resultado3 = MaterialService::importar_csv(&portafolio, "org-1", csv3, "usr-1".into())
+            .await
+            .expect("reimportar por descripción");
+        assert_eq!(resultado3.creados, 0);
+        assert_eq!(resultado3.actualizados, 2);
+        assert!(
+            resultado3.aviso.is_none(),
+            "reimportar sin generar claves no debe avisar MAT-: {:?}",
+            resultado3.aviso
+        );
+
+        let materiales3 = MaterialService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar tras reimportar");
+        assert_eq!(materiales3.len(), 4, "no deben nacer materiales nuevos");
+        let cemento3 = materiales3
+            .iter()
+            .find(|m| m.clave == "MAT-1")
+            .expect("cemento actualizado");
+        assert_eq!(cemento3.descripcion, "CEMENTO PORTLAND");
+        assert_eq!(cemento3.precio_vigente, Some("200".parse().unwrap()));
+
+        // Reimportar por clave (sin distinguir mayúsculas) también actualiza.
+        let csv4 = "Clave,Descripción,Unidad,Costo\n\
+                    mat-1,Cemento Portland extra,m2,210\n";
+        let resultado4 = MaterialService::importar_csv(&portafolio, "org-1", csv4, "usr-1".into())
+            .await
+            .expect("reimportar por clave");
+        assert_eq!(resultado4.creados, 0);
+        assert_eq!(resultado4.actualizados, 1);
+        let cemento4 = MaterialService::listar(&portafolio, "org-1")
+            .await
+            .expect("listar tras clave")
+            .into_iter()
+            .find(|m| m.id == cemento3.id)
+            .expect("mismo material");
+        assert_eq!(cemento4.descripcion, "Cemento Portland extra");
+        assert_eq!(cemento4.precio_vigente, Some("210".parse().unwrap()));
     }
 }

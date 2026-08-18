@@ -159,7 +159,9 @@ impl MigrationTrait for Migration {
         // Composición plana de un equipo_costo_horario — cada fila es un
         // consumo (material) o una operación (categoria_fasar/cuadrilla),
         // nunca otro equipo_costo_horario (misma nota "no recursiva" que
-        // `cuadrilla_detalle`).
+        // `cuadrilla_detalle`). `naturaleza` clasifica el consumo
+        // (combustible, lubricante, llantas, piezas_especiales,
+        // otras_fuentes); nula en operación.
         manager
             .create_table(
                 Table::create()
@@ -182,6 +184,7 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(ColumnDef::new(EquipoCostoHorarioDetalle::Tipo).text().not_null())
+                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::Naturaleza).text())
                     .col(ColumnDef::new(EquipoCostoHorarioDetalle::Orden).integer().not_null())
                     .col(
                         ColumnDef::new(EquipoCostoHorarioDetalle::Cantidad)
@@ -300,6 +303,7 @@ enum EquipoCostoHorarioDetalle {
     EquipoCostoHorarioInsumoId,
     DetalleInsumoId,
     Tipo,
+    Naturaleza,
     Orden,
     Cantidad,
     Costo,

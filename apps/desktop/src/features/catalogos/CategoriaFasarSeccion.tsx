@@ -1,25 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { DollarSign, Download, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
-import {
-  ActualizarSalariosLoteDialog,
-  type EstadoActualizacionLote,
-} from "@/features/catalogos/ActualizarSalariosLoteDialog";
 import { CategoriaFasarFormPanel } from "@/features/catalogos/CategoriaFasarFormPanel";
+import { adaptadorExportCategoriasFasar, adaptadorImportCategoriasFasar } from "@/features/catalogos/csv/adaptadorInsumos";
+import { adaptadorSalariosLote } from "@/features/catalogos/csv/adaptadorSalariosLote";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/SalarioCategoriaFasarPanel";
 import { SalarioHistorialGrid } from "@/features/catalogos/SalarioHistorialGrid";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
-import { validarCsvSalarioNominal } from "@/lib/csvSalarioNominal";
 import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
 import {
   createCategoriaFasar,
   deleteCategoriaFasar,
-  leerArchivoTexto,
   listCategoriasFasar,
   listFamiliasInsumo,
   listUnidadesMedida,
@@ -27,8 +23,6 @@ import {
   updateCategoriaFasar,
 } from "@/lib/tauri";
 import type { CategoriaFasar, CategoriaFasarData, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-
-const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
@@ -67,8 +61,7 @@ export function CategoriaFasarSeccion() {
   const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
-  const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLote | null>(null);
-  const [importandoLote, setImportandoLote] = useState(false);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -102,30 +95,6 @@ export function CategoriaFasarSeccion() {
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     }).catch((e) => setError(String(e)));
-  };
-
-  const actualizarSalariosLote = async () => {
-    const path = await open({ filters: FILTRO_CSV, multiple: false });
-    if (!path || Array.isArray(path)) return;
-    setImportandoLote(true);
-    setError(null);
-    try {
-      const contenido = await leerArchivoTexto(path);
-      const resultado = validarCsvSalarioNominal(contenido, categorias);
-      if (resultado.ok) {
-        setEstadoLote({ tipo: "listo", filas: resultado.filas });
-      } else {
-        setEstadoLote({
-          tipo: "invalido",
-          categoriasNoRegistradas: resultado.categoriasNoRegistradas,
-          errores: resultado.errores,
-        });
-      }
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setImportandoLote(false);
-    }
   };
 
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -165,7 +134,7 @@ export function CategoriaFasarSeccion() {
       title: "Tabuladores de Salario",
       columns: [
         { field: "clave", header: "Clave", width: 110 },
-        { field: "descripcion", header: "Descripción", width: 320 },
+        { field: "descripcion", header: "Categoría", width: 320 },
         {
           field: "unidad",
           header: "Unidad",
@@ -266,10 +235,22 @@ export function CategoriaFasarSeccion() {
             acciones={[
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
+                icono: Upload,
+                titulo: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportCategoriasFasar(categorias, unidades, familias)),
+                disabled: csvAdaptador !== null,
+              },
+              {
+                icono: Download,
+                titulo: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportCategoriasFasar(categorias, unidades, familias)),
+                disabled: csvAdaptador !== null || categorias.length === 0,
+              },
+              {
                 icono: FileSpreadsheet,
-                titulo: importandoLote ? "Leyendo CSV…" : "Actualizar salarios en lote",
-                onClick: () => void actualizarSalariosLote(),
-                disabled: importandoLote || categorias.length === 0,
+                titulo: "Actualizar salarios en lote",
+                onClick: () => setCsvAdaptador(adaptadorSalariosLote(categorias)),
+                disabled: csvAdaptador !== null || categorias.length === 0,
               },
               {
                 icono: DollarSign,
@@ -386,13 +367,10 @@ export function CategoriaFasarSeccion() {
           ) : null}
         </ResizablePanelGroup>
       </div>
-      <ActualizarSalariosLoteDialog
-        estado={estadoLote}
-        onCerrar={() => setEstadoLote(null)}
-        onAplicado={(mensaje) => {
-          toast({ description: mensaje, variant: "success" });
-          void refrescarCategorias();
-        }}
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescarCategorias()}
       />
     </div>
   );

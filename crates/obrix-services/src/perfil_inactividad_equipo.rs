@@ -15,11 +15,11 @@ use crate::organizacion::OrganizacionService;
 use crate::usuario::UsuarioService;
 use crate::{nuevo_id, DatosIniciales, ServiceError};
 
-/// Perfiles de referencia (CFE/GCDMX/CMIC) — fuente de verdad en
+/// Perfiles de referencia (CFE/GCDMX/CMIC/SICT) — fuente de verdad en
 /// `data/initial/perfil_inactividad_equipo.csv`, embebido tal cual en el
 /// binario (mismo patrón que `categoria_fasar.csv`). El consumo va partido
-/// por naturaleza (combustible, lubricante, llantas), no un % único sobre
-/// `subtotal_consumo`.
+/// por naturaleza (combustible, lubricante, llantas, piezas especiales,
+/// otras fuentes), no un % único sobre `subtotal_consumo`.
 const PERFILES_CSV: &str = include_str!("../../../data/initial/perfil_inactividad_equipo.csv");
 
 #[derive(serde::Deserialize)]
@@ -32,6 +32,8 @@ pub struct PerfilInactividadEquipoData {
     pub espera_combustible_porcentaje: Decimal,
     pub espera_lubricante_porcentaje: Decimal,
     pub espera_llantas_porcentaje: Decimal,
+    pub espera_piezas_especiales_porcentaje: Decimal,
+    pub espera_otras_fuentes_porcentaje: Decimal,
     pub espera_operacion_porcentaje: Decimal,
     pub reserva_depreciacion_porcentaje: Decimal,
     pub reserva_inversion_porcentaje: Decimal,
@@ -40,6 +42,8 @@ pub struct PerfilInactividadEquipoData {
     pub reserva_combustible_porcentaje: Decimal,
     pub reserva_lubricante_porcentaje: Decimal,
     pub reserva_llantas_porcentaje: Decimal,
+    pub reserva_piezas_especiales_porcentaje: Decimal,
+    pub reserva_otras_fuentes_porcentaje: Decimal,
     pub reserva_operacion_porcentaje: Decimal,
 }
 
@@ -74,6 +78,8 @@ impl PerfilInactividadEquipoService {
             espera_combustible_porcentaje: Set(datos.espera_combustible_porcentaje),
             espera_lubricante_porcentaje: Set(datos.espera_lubricante_porcentaje),
             espera_llantas_porcentaje: Set(datos.espera_llantas_porcentaje),
+            espera_piezas_especiales_porcentaje: Set(datos.espera_piezas_especiales_porcentaje),
+            espera_otras_fuentes_porcentaje: Set(datos.espera_otras_fuentes_porcentaje),
             espera_operacion_porcentaje: Set(datos.espera_operacion_porcentaje),
             reserva_depreciacion_porcentaje: Set(datos.reserva_depreciacion_porcentaje),
             reserva_inversion_porcentaje: Set(datos.reserva_inversion_porcentaje),
@@ -82,6 +88,8 @@ impl PerfilInactividadEquipoService {
             reserva_combustible_porcentaje: Set(datos.reserva_combustible_porcentaje),
             reserva_lubricante_porcentaje: Set(datos.reserva_lubricante_porcentaje),
             reserva_llantas_porcentaje: Set(datos.reserva_llantas_porcentaje),
+            reserva_piezas_especiales_porcentaje: Set(datos.reserva_piezas_especiales_porcentaje),
+            reserva_otras_fuentes_porcentaje: Set(datos.reserva_otras_fuentes_porcentaje),
             reserva_operacion_porcentaje: Set(datos.reserva_operacion_porcentaje),
             deleted: Set(false),
             created_at: Set(crate::ahora()),
@@ -115,6 +123,8 @@ impl PerfilInactividadEquipoService {
         modelo.espera_combustible_porcentaje = Set(datos.espera_combustible_porcentaje);
         modelo.espera_lubricante_porcentaje = Set(datos.espera_lubricante_porcentaje);
         modelo.espera_llantas_porcentaje = Set(datos.espera_llantas_porcentaje);
+        modelo.espera_piezas_especiales_porcentaje = Set(datos.espera_piezas_especiales_porcentaje);
+        modelo.espera_otras_fuentes_porcentaje = Set(datos.espera_otras_fuentes_porcentaje);
         modelo.espera_operacion_porcentaje = Set(datos.espera_operacion_porcentaje);
         modelo.reserva_depreciacion_porcentaje = Set(datos.reserva_depreciacion_porcentaje);
         modelo.reserva_inversion_porcentaje = Set(datos.reserva_inversion_porcentaje);
@@ -123,6 +133,8 @@ impl PerfilInactividadEquipoService {
         modelo.reserva_combustible_porcentaje = Set(datos.reserva_combustible_porcentaje);
         modelo.reserva_lubricante_porcentaje = Set(datos.reserva_lubricante_porcentaje);
         modelo.reserva_llantas_porcentaje = Set(datos.reserva_llantas_porcentaje);
+        modelo.reserva_piezas_especiales_porcentaje = Set(datos.reserva_piezas_especiales_porcentaje);
+        modelo.reserva_otras_fuentes_porcentaje = Set(datos.reserva_otras_fuentes_porcentaje);
         modelo.reserva_operacion_porcentaje = Set(datos.reserva_operacion_porcentaje);
         modelo.updated_at = Set(Some(crate::ahora()));
         modelo.updated_by = Set(Some(actualizado_por));
@@ -150,7 +162,7 @@ impl PerfilInactividadEquipoService {
 
 impl DatosIniciales for PerfilInactividadEquipoService {
     /// Un perfil por cada fila de `data/initial/perfil_inactividad_equipo.csv`
-    /// (CFE, GCDMX, CMIC) — recetas de partida (frente/patio) publicadas por
+    /// (CFE, GCDMX, CMIC, SICT) — recetas de partida (frente/patio) publicadas por
     /// cada criterio, no una norma: el despacho las edita.
     async fn sembrar(repo: &dyn PortafolioRepository) -> Result<(), ServiceError> {
         if Entity::find().one(repo.conexion()).await?.is_some() {
@@ -177,6 +189,8 @@ impl DatosIniciales for PerfilInactividadEquipoService {
                     espera_combustible_porcentaje: registro.espera_combustible,
                     espera_lubricante_porcentaje: registro.espera_lubricante,
                     espera_llantas_porcentaje: registro.espera_llantas,
+                    espera_piezas_especiales_porcentaje: registro.espera_piezas_especiales,
+                    espera_otras_fuentes_porcentaje: registro.espera_otras_fuentes,
                     espera_operacion_porcentaje: registro.espera_operacion,
                     reserva_depreciacion_porcentaje: registro.reserva_depreciacion,
                     reserva_inversion_porcentaje: registro.reserva_inversion,
@@ -185,6 +199,8 @@ impl DatosIniciales for PerfilInactividadEquipoService {
                     reserva_combustible_porcentaje: registro.reserva_combustible,
                     reserva_lubricante_porcentaje: registro.reserva_lubricante,
                     reserva_llantas_porcentaje: registro.reserva_llantas,
+                    reserva_piezas_especiales_porcentaje: registro.reserva_piezas_especiales,
+                    reserva_otras_fuentes_porcentaje: registro.reserva_otras_fuentes,
                     reserva_operacion_porcentaje: registro.reserva_operacion,
                 },
                 admin.id.clone(),
@@ -213,6 +229,10 @@ struct RegistroCsvPerfil {
     espera_lubricante: Decimal,
     #[serde(rename = "EsperaLlantas")]
     espera_llantas: Decimal,
+    #[serde(rename = "EsperaPiezasEspeciales")]
+    espera_piezas_especiales: Decimal,
+    #[serde(rename = "EsperaOtrasFuentes")]
+    espera_otras_fuentes: Decimal,
     #[serde(rename = "EsperaOperacion")]
     espera_operacion: Decimal,
     #[serde(rename = "ReservaDepreciacion")]
@@ -229,6 +249,10 @@ struct RegistroCsvPerfil {
     reserva_lubricante: Decimal,
     #[serde(rename = "ReservaLlantas")]
     reserva_llantas: Decimal,
+    #[serde(rename = "ReservaPiezasEspeciales")]
+    reserva_piezas_especiales: Decimal,
+    #[serde(rename = "ReservaOtrasFuentes")]
+    reserva_otras_fuentes: Decimal,
     #[serde(rename = "ReservaOperacion")]
     reserva_operacion: Decimal,
 }
@@ -256,6 +280,8 @@ mod tests {
             espera_combustible_porcentaje: Decimal::from_str("0").unwrap(),
             espera_lubricante_porcentaje: Decimal::from_str("0").unwrap(),
             espera_llantas_porcentaje: Decimal::from_str("0").unwrap(),
+            espera_piezas_especiales_porcentaje: Decimal::from_str("0").unwrap(),
+            espera_otras_fuentes_porcentaje: Decimal::from_str("0").unwrap(),
             espera_operacion_porcentaje: Decimal::from_str("100").unwrap(),
             reserva_depreciacion_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_inversion_porcentaje: Decimal::from_str("100").unwrap(),
@@ -264,6 +290,8 @@ mod tests {
             reserva_combustible_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_lubricante_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_llantas_porcentaje: Decimal::from_str("0").unwrap(),
+            reserva_piezas_especiales_porcentaje: Decimal::from_str("0").unwrap(),
+            reserva_otras_fuentes_porcentaje: Decimal::from_str("0").unwrap(),
             reserva_operacion_porcentaje: Decimal::from_str("0").unwrap(),
         }
     }
@@ -284,13 +312,15 @@ mod tests {
         let perfiles = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar");
-        assert_eq!(perfiles.len(), 3, "CFE, GCDMX y CMIC de data/initial/perfil_inactividad_equipo.csv");
+        assert_eq!(perfiles.len(), 4, "CFE, GCDMX, CMIC y SICT de data/initial/perfil_inactividad_equipo.csv");
 
         let cmic = perfiles.iter().find(|p| p.nombre == "CMIC").expect("CMIC");
         assert_eq!(cmic.espera_mantenimiento_porcentaje, Decimal::from_str("50").unwrap());
         assert_eq!(cmic.espera_combustible_porcentaje, Decimal::from_str("5").unwrap());
         assert_eq!(cmic.espera_lubricante_porcentaje, Decimal::from_str("5").unwrap());
         assert_eq!(cmic.espera_llantas_porcentaje, Decimal::from_str("10").unwrap());
+        assert_eq!(cmic.espera_piezas_especiales_porcentaje, Decimal::from_str("0").unwrap());
+        assert_eq!(cmic.espera_otras_fuentes_porcentaje, Decimal::from_str("0").unwrap());
         assert_eq!(cmic.reserva_depreciacion_porcentaje, Decimal::from_str("15").unwrap());
         assert_eq!(cmic.reserva_combustible_porcentaje, Decimal::from_str("3").unwrap());
         assert_eq!(cmic.reserva_lubricante_porcentaje, Decimal::from_str("3").unwrap());
@@ -301,6 +331,12 @@ mod tests {
         assert_eq!(cfe.espera_llantas_porcentaje, Decimal::from_str("15").unwrap());
         assert_eq!(cfe.reserva_combustible_porcentaje, Decimal::from_str("0").unwrap());
 
+        let sict = perfiles.iter().find(|p| p.nombre == "SICT").expect("SICT");
+        assert_eq!(sict.espera_mantenimiento_porcentaje, Decimal::from_str("15").unwrap());
+        assert_eq!(sict.espera_otras_fuentes_porcentaje, Decimal::from_str("5").unwrap());
+        assert_eq!(sict.espera_llantas_porcentaje, Decimal::from_str("15").unwrap());
+        assert_eq!(sict.reserva_operacion_porcentaje, Decimal::from_str("0").unwrap());
+
         // Sembrar de nuevo no debe duplicar — corta temprano si ya hay al
         // menos una fila en `perfil_inactividad_equipo`.
         PerfilInactividadEquipoService::sembrar(&portafolio)
@@ -309,7 +345,7 @@ mod tests {
         let perfiles_repetido = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar de nuevo");
-        assert_eq!(perfiles_repetido.len(), 3, "no debe duplicar al sembrar dos veces");
+        assert_eq!(perfiles_repetido.len(), 4, "no debe duplicar al sembrar dos veces");
     }
 
     #[tokio::test]
@@ -338,8 +374,8 @@ mod tests {
         let listado = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar");
-        // El sembrado (`sembrar_catalogos_generales`) ya deja 3 perfiles (CFE/GCDMX/CMIC).
-        assert_eq!(listado.len(), 4);
+        // El sembrado (`sembrar_catalogos_generales`) ya deja 4 perfiles (CFE/GCDMX/CMIC/SICT).
+        assert_eq!(listado.len(), 5);
 
         let mut datos_actualizados = datos_prueba("Estado de México, revisado");
         datos_actualizados.espera_mantenimiento_porcentaje = Decimal::from_str("80").unwrap();
@@ -361,7 +397,7 @@ mod tests {
         let listado = PerfilInactividadEquipoService::listar(&portafolio, &organizacion.id)
             .await
             .expect("listar");
-        assert_eq!(listado.len(), 3);
+        assert_eq!(listado.len(), 4);
         let restante = Entity::find_by_id(&creado.id)
             .one(portafolio.conexion())
             .await

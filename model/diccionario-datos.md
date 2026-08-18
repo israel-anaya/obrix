@@ -724,11 +724,11 @@ reserva suele conservar inversión y seguro y apagar diesel y operador. Cada
 porcentaje (0–100) se aplica al rubro activo que ya cachea
 `equipo_costo_horario` — los cuatro cargos fijos por separado,
 `subtotal_operacion`, y el consumo **partido por naturaleza** (combustible,
-lubricante, llantas), no sobre `subtotal_consumo` entero. CMIC y el
-RLOPSRM desglosan así los costos por consumo; un solo % aplastaría diesel
-(ralentí) y llantas (no se desgastan paradas). El perfil no puede aplicarse
-si las líneas de `equipo_costo_horario_detalle` con `tipo = consumo` no
-llevan `naturaleza`.
+lubricante, llantas, piezas especiales, otras fuentes), no sobre
+`subtotal_consumo` entero. CMIC y el RLOPSRM desglosan así los costos por
+consumo; un solo % aplastaría diesel (ralentí) y llantas (no se desgastan
+paradas). El perfil no puede aplicarse si las líneas de
+`equipo_costo_horario_detalle` con `tipo = consumo` no llevan `naturaleza`.
 
 No aplica a `herramienta` (es un % sobre mano de obra) ni a
 `equipo_rentado` (la tarifa ya mete ociosidad; horas paradas = más horas de
@@ -752,6 +752,8 @@ inactivo; no fija estos porcentajes.
 | espera_combustible_porcentaje | decimal | sobre Σ importe de detalle `tipo = consumo` y `naturaleza = combustible` |
 | espera_lubricante_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = lubricante` |
 | espera_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
+| espera_piezas_especiales_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = piezas_especiales` |
+| espera_otras_fuentes_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = otras_fuentes` |
 | espera_operacion_porcentaje | decimal | sobre `subtotal_operacion` (operador) |
 | reserva_depreciacion_porcentaje | decimal | 0–100 — sobre `cf_depreciacion_hora` |
 | reserva_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
@@ -760,6 +762,8 @@ inactivo; no fija estos porcentajes.
 | reserva_combustible_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = combustible` |
 | reserva_lubricante_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = lubricante` |
 | reserva_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
+| reserva_piezas_especiales_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = piezas_especiales` |
+| reserva_otras_fuentes_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = otras_fuentes` |
 | reserva_operacion_porcentaje | decimal | sobre `subtotal_operacion` |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
@@ -776,6 +780,8 @@ Semilla ilustrativa (editable):
 | Combustible | 0 | 0 |
 | Lubricante | 0 | 0 |
 | Llantas | 0 | 0 |
+| Piezas especiales | 0 | 0 |
+| Otras fuentes | 0 | 0 |
 | Operación | 100 | 0 |
 
 ### `equipo_costo_horario`
@@ -819,6 +825,9 @@ por su propio desgaste — las llantas de hecho se cargan como consumo, ver
 | cargo_variable_hora | decimal | cache = subtotal_consumo + subtotal_operacion |
 | costo_horario_total | decimal | cache = cf_cargo_fijo_hora + cargo_variable_hora |
 
+INFO AYUDA
+https://www.youtube.com/watch?v=TsdTwQzFdME
+
 
 ### `equipo_costo_horario_detalle`
 
@@ -829,11 +838,10 @@ distinguir **consumo** (diesel, aceites, llantas — insumos `material`) de
 jornales u horas consumidos por hora de máquina).
 
 Cuando `tipo = consumo`, `naturaleza` clasifica el renglón en el desglose
-CMIC/RLOPSRM (combustible, lubricante, llantas). Sin eso,
-`perfil_inactividad_equipo` no puede aplicar un % distinto a diesel y a
-llantas. Piezas especiales y otras fuentes de energía, si se capturan como
-consumo, se tratan como el `naturaleza` que el analista asigne; no hay
-valores extra en el enum todavía.
+CMIC/RLOPSRM (combustible, lubricante, llantas, piezas especiales, otras
+fuentes de energía). Sin eso, `perfil_inactividad_equipo` no puede aplicar
+un % distinto a diesel, a llantas o a energía eléctrica. El analista
+asigna el valor; no se infiere del insumo.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -841,7 +849,7 @@ valores extra en el enum todavía.
 | equipo_costo_horario_id | uuid | FK → equipo_costo_horario (insumo_id) |
 | detalle_insumo_id | uuid | FK → insumo — `material` si `tipo = consumo`; `mano_obra`/`cuadrilla` si `tipo = operacion` |
 | tipo | enum | `consumo`, `operacion` |
-| naturaleza | enum | `combustible`, `lubricante`, `llantas` — obligatorio si `tipo = consumo`; `null` si `tipo = operacion` |
+| naturaleza | enum | `combustible`, `lubricante`, `llantas`, `piezas_especiales`, `otras_fuentes` — obligatorio si `tipo = consumo`; `null` si `tipo = operacion` |
 | orden | int | orden de visualización |
 | cantidad | decimal | cantidad consumida (o jornales/horas de operador) por hora de máquina |
 | costo | decimal | precio/costo vigente del insumo referenciado — si es `cuadrilla`, `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |

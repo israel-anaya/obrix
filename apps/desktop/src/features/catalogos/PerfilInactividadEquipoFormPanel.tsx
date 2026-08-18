@@ -18,6 +18,8 @@ function aPerfilData(p: PerfilInactividadEquipo): PerfilInactividadEquipoData {
     espera_combustible_porcentaje: p.espera_combustible_porcentaje,
     espera_lubricante_porcentaje: p.espera_lubricante_porcentaje,
     espera_llantas_porcentaje: p.espera_llantas_porcentaje,
+    espera_piezas_especiales_porcentaje: p.espera_piezas_especiales_porcentaje,
+    espera_otras_fuentes_porcentaje: p.espera_otras_fuentes_porcentaje,
     espera_operacion_porcentaje: p.espera_operacion_porcentaje,
     reserva_depreciacion_porcentaje: p.reserva_depreciacion_porcentaje,
     reserva_inversion_porcentaje: p.reserva_inversion_porcentaje,
@@ -26,6 +28,8 @@ function aPerfilData(p: PerfilInactividadEquipo): PerfilInactividadEquipoData {
     reserva_combustible_porcentaje: p.reserva_combustible_porcentaje,
     reserva_lubricante_porcentaje: p.reserva_lubricante_porcentaje,
     reserva_llantas_porcentaje: p.reserva_llantas_porcentaje,
+    reserva_piezas_especiales_porcentaje: p.reserva_piezas_especiales_porcentaje,
+    reserva_otras_fuentes_porcentaje: p.reserva_otras_fuentes_porcentaje,
     reserva_operacion_porcentaje: p.reserva_operacion_porcentaje,
   };
 }
@@ -65,7 +69,7 @@ function CampoPorcentaje({
 }
 
 /**
- * Vista en forma del perfil seleccionado — los mismos 16 porcentajes que las
+ * Vista en forma del perfil seleccionado — los mismos 20 porcentajes que las
  * columnas, agrupados como en el `VerticalGrid` (espera / reserva, fijos /
  * consumo / operación) para revisar o editar un registro a la vez. En
  * `PerfilInactividadEquipoSeccion` se sincroniza con la fila. "Guardar" hace
@@ -193,6 +197,16 @@ export function PerfilInactividadEquipoFormPanel({
                     value={datos.espera_llantas_porcentaje}
                     onCommit={(v) => setPorcentaje("espera_llantas_porcentaje", v)}
                   />
+                  <CampoPorcentaje
+                    label="Piezas especiales"
+                    value={datos.espera_piezas_especiales_porcentaje}
+                    onCommit={(v) => setPorcentaje("espera_piezas_especiales_porcentaje", v)}
+                  />
+                  <CampoPorcentaje
+                    label="Otras fuentes"
+                    value={datos.espera_otras_fuentes_porcentaje}
+                    onCommit={(v) => setPorcentaje("espera_otras_fuentes_porcentaje", v)}
+                  />
                 </div>
               </Subseccion>
               <Subseccion titulo="Costos por operación">
@@ -245,6 +259,16 @@ export function PerfilInactividadEquipoFormPanel({
                     label="Llantas"
                     value={datos.reserva_llantas_porcentaje}
                     onCommit={(v) => setPorcentaje("reserva_llantas_porcentaje", v)}
+                  />
+                  <CampoPorcentaje
+                    label="Piezas especiales"
+                    value={datos.reserva_piezas_especiales_porcentaje}
+                    onCommit={(v) => setPorcentaje("reserva_piezas_especiales_porcentaje", v)}
+                  />
+                  <CampoPorcentaje
+                    label="Otras fuentes"
+                    value={datos.reserva_otras_fuentes_porcentaje}
+                    onCommit={(v) => setPorcentaje("reserva_otras_fuentes_porcentaje", v)}
                   />
                 </div>
               </Subseccion>

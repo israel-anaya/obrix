@@ -1,24 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { DollarSign, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload, X } from "lucide-react";
+import { DollarSign, Download, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
-import {
-  ActualizarCostosMaterialesLoteDialog,
-  type EstadoActualizacionLoteMateriales,
-} from "@/features/catalogos/ActualizarCostosMaterialesLoteDialog";
+import { adaptadorCostosLote } from "@/features/catalogos/csv/adaptadorCostosLote";
+import { adaptadorExportMateriales, adaptadorImportMateriales } from "@/features/catalogos/csv/adaptadorMateriales";
 import { MaterialFormPanel } from "@/features/catalogos/MaterialFormPanel";
 import { PrecioHistorialGrid } from "@/features/catalogos/PrecioHistorialGrid";
 import { PreciosMaterialPanel } from "@/features/catalogos/PreciosMaterialPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
-import { validarCsvCostoMaterial } from "@/lib/csvPrecioMaterial";
 import {
   createMaterial,
   deleteMaterial,
-  importarMaterialesCsv,
-  leerArchivoTexto,
   listFamiliasInsumo,
   listMateriales,
   listProveedores,
@@ -28,12 +23,11 @@ import {
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
 import { toast } from "@/hooks/use-toast";
-import type { FamiliaInsumo, Material, MaterialData, Proveedor, ResultadoImportacion, UnidadMedida } from "@/lib/types";
+import type { FamiliaInsumo, Material, MaterialData, Proveedor, UnidadMedida } from "@/lib/types";
 
 const SIN_PROVEEDOR = "— Sin proveedor —";
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
-const FILTRO_CSV = [{ name: "CSV", extensions: ["csv"] }];
 
 const COLUMNAS_CONTROL = [
   { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
@@ -42,7 +36,7 @@ const COLUMNAS_CONTROL = [
   { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
 ];
 
-export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: string | null) => void }) {
+export function MaterialesSeccion() {
   const gridRef = useRef<DataGridHandle>(null);
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
@@ -51,8 +45,7 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
-  const [importando, setImportando] = useState(false);
-  const [resultadoImportacion, setResultadoImportacion] = useState<ResultadoImportacion | null>(null);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
   const [panelPreciosAbierto, setPanelPreciosAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
@@ -63,9 +56,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
-  const [estadoLote, setEstadoLote] = useState<EstadoActualizacionLoteMateriales | null>(null);
-  const [importandoLote, setImportandoLote] = useState(false);
-  const [noEncontradosLote, setNoEncontradosLote] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -104,42 +94,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
-  };
-
-  const importarCsv = async () => {
-    const path = await open({ filters: FILTRO_CSV, multiple: false });
-    if (!path || Array.isArray(path)) return;
-    setImportando(true);
-    setResultadoImportacion(null);
-    onProgreso?.("Importando materiales…");
-    try {
-      const resultado = await importarMaterialesCsv(path);
-      setResultadoImportacion(resultado);
-      await refrescarMateriales();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setImportando(false);
-      onProgreso?.(null);
-    }
-  };
-
-  const actualizarCostosLote = async () => {
-    const path = await open({ filters: FILTRO_CSV, multiple: false });
-    if (!path || Array.isArray(path)) return;
-    setImportandoLote(true);
-    setError(null);
-    setNoEncontradosLote(null);
-    onProgreso?.("Leyendo archivo de costos…");
-    try {
-      const contenido = await leerArchivoTexto(path);
-      setEstadoLote(validarCsvCostoMaterial(contenido, materiales));
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setImportandoLote(false);
-      onProgreso?.(null);
-    }
   };
 
   const { organizacionActivaId } = useOrganizacionActiva();
@@ -300,15 +254,21 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
                 icono: Upload,
-                titulo: importando ? "Importando…" : "Importar desde CSV",
-                onClick: () => void importarCsv(),
-                disabled: importando,
+                titulo: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportMateriales()),
+                disabled: csvAdaptador !== null,
+              },
+              {
+                icono: Download,
+                titulo: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportMateriales(materiales, unidades, familias)),
+                disabled: csvAdaptador !== null || materiales.length === 0,
               },
               {
                 icono: FileSpreadsheet,
-                titulo: importandoLote ? "Leyendo archivo…" : "Actualizar costos en lote",
-                onClick: () => void actualizarCostosLote(),
-                disabled: importandoLote,
+                titulo: "Actualizar costos en lote",
+                onClick: () => setCsvAdaptador(adaptadorCostosLote(materiales)),
+                disabled: csvAdaptador !== null || materiales.length === 0,
               },
               {
                 icono: DollarSign,
@@ -346,58 +306,6 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
           />
         </div>
       </div>
-      {resultadoImportacion && (
-        <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium">
-              Importación completa: {resultadoImportacion.importados} material
-              {resultadoImportacion.importados === 1 ? "" : "es"} importado
-              {resultadoImportacion.importados === 1 ? "" : "s"}
-              {resultadoImportacion.errores.length > 0 && `, ${resultadoImportacion.errores.length} con problemas`}.
-            </p>
-            <button
-              type="button"
-              title="Cerrar"
-              onClick={() => setResultadoImportacion(null)}
-              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          {resultadoImportacion.aviso && <p className="mt-1 text-muted-foreground">{resultadoImportacion.aviso}</p>}
-          {resultadoImportacion.errores.length > 0 && (
-            <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-auto pl-4 text-muted-foreground">
-              {resultadoImportacion.errores.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      {noEncontradosLote && (
-        <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium">
-              {noEncontradosLote.length} material{noEncontradosLote.length === 1 ? "" : "es"} del archivo no{" "}
-              {noEncontradosLote.length === 1 ? "se encontró" : "se encontraron"} en el catálogo y no se actualizó
-              {noEncontradosLote.length === 1 ? "" : "n"}:
-            </p>
-            <button
-              type="button"
-              title="Cerrar"
-              onClick={() => setNoEncontradosLote(null)}
-              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-auto pl-4 text-muted-foreground">
-            {noEncontradosLote.map((m, i) => (
-              <li key={i}>{m}</li>
-            ))}
-          </ul>
-        </div>
-      )}
       <div className="min-h-0 flex-1">
         {/* Los grupos viven siempre para no desmontar el grid al abrir precios,
             ficha o historial (si no, el virtualizador vuelve a scroll 0). */}
@@ -478,15 +386,10 @@ export function MaterialesSeccion({ onProgreso }: { onProgreso?: (mensaje: strin
           ) : null}
         </ResizablePanelGroup>
       </div>
-      <ActualizarCostosMaterialesLoteDialog
-        estado={estadoLote}
-        onCerrar={() => setEstadoLote(null)}
-        onAplicado={({ mensaje, noEncontrados }) => {
-          toast({ description: mensaje, variant: "success" });
-          setNoEncontradosLote(noEncontrados.length > 0 ? noEncontrados : null);
-          void refrescarMateriales();
-        }}
-        onProgreso={onProgreso}
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescarMateriales()}
       />
     </div>
   );

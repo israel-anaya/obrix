@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { HerramientaFormPanel } from "@/features/catalogos/HerramientaFormPanel";
+import { adaptadorExportHerramienta, adaptadorImportHerramienta } from "@/features/catalogos/csv/adaptadorInsumos";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createHerramienta,
@@ -52,6 +54,7 @@ export function HerramientaSeccion() {
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
   const [cargando, setCargando] = useState(true);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -228,6 +231,18 @@ export function HerramientaSeccion() {
             acciones={[
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
               {
+                icono: Upload,
+                titulo: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportHerramienta(herramientas, unidades, familias)),
+                disabled: csvAdaptador !== null,
+              },
+              {
+                icono: Download,
+                titulo: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportHerramienta(herramientas, unidades, familias)),
+                disabled: csvAdaptador !== null || herramientas.length === 0,
+              },
+              {
                 icono: FileText,
                 titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
                 onClick: () => setPanelFichaAbierto((v) => !v),
@@ -281,6 +296,11 @@ export function HerramientaSeccion() {
           ) : null}
         </ResizablePanelGroup>
       </div>
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescarHerramientas()}
+      />
     </div>
   );
 }

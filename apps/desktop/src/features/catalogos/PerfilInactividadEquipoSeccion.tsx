@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { BarraAcciones } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { VerticalGrid, type VerticalGridGroup } from "@/components/grid/VerticalGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { PerfilInactividadEquipoFormPanel } from "@/features/catalogos/PerfilInactividadEquipoFormPanel";
+import { adaptadorExportPerfiles, adaptadorImportPerfiles } from "@/features/catalogos/csv/adaptadorPerfiles";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -35,6 +37,8 @@ const CONFIG: DataGridConfig = {
     { field: "espera_combustible_porcentaje", header: "Espera · Combustible %", width: 155, numeric: true, suffix: "%" },
     { field: "espera_lubricante_porcentaje", header: "Espera · Lubricante %", width: 150, numeric: true, suffix: "%" },
     { field: "espera_llantas_porcentaje", header: "Espera · Llantas %", width: 135, numeric: true, suffix: "%" },
+    { field: "espera_piezas_especiales_porcentaje", header: "Espera · Piezas especiales %", width: 185, numeric: true, suffix: "%" },
+    { field: "espera_otras_fuentes_porcentaje", header: "Espera · Otras fuentes %", width: 165, numeric: true, suffix: "%" },
     { field: "espera_operacion_porcentaje", header: "Espera · Operación %", width: 140, numeric: true, suffix: "%" },
     { field: "reserva_depreciacion_porcentaje", header: "Reserva · Depreciación %", width: 150, numeric: true, suffix: "%" },
     { field: "reserva_inversion_porcentaje", header: "Reserva · Inversión %", width: 150, numeric: true, suffix: "%" },
@@ -43,6 +47,8 @@ const CONFIG: DataGridConfig = {
     { field: "reserva_combustible_porcentaje", header: "Reserva · Combustible %", width: 165, numeric: true, suffix: "%" },
     { field: "reserva_lubricante_porcentaje", header: "Reserva · Lubricante %", width: 160, numeric: true, suffix: "%" },
     { field: "reserva_llantas_porcentaje", header: "Reserva · Llantas %", width: 145, numeric: true, suffix: "%" },
+    { field: "reserva_piezas_especiales_porcentaje", header: "Reserva · Piezas especiales %", width: 195, numeric: true, suffix: "%" },
+    { field: "reserva_otras_fuentes_porcentaje", header: "Reserva · Otras fuentes %", width: 175, numeric: true, suffix: "%" },
     { field: "reserva_operacion_porcentaje", header: "Reserva · Operación %", width: 150, numeric: true, suffix: "%" },
     ...COLUMNAS_CONTROL,
   ],
@@ -82,6 +88,8 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
           "espera_combustible_porcentaje",
           "espera_lubricante_porcentaje",
           "espera_llantas_porcentaje",
+          "espera_piezas_especiales_porcentaje",
+          "espera_otras_fuentes_porcentaje",
         ]        
       },
       {
@@ -114,6 +122,8 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
           "reserva_combustible_porcentaje",
           "reserva_lubricante_porcentaje",
           "reserva_llantas_porcentaje",
+          "reserva_piezas_especiales_porcentaje",
+          "reserva_otras_fuentes_porcentaje",
         ]        
       },
       {
@@ -132,7 +142,7 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
  * `insumo`, igual que `factor_salario_real`) para derivar el costo horario
  * en espera y en reserva de un `equipo_costo_horario`, ver diccionario de
  * datos. Un renglón por perfil (p. ej. "CMIC frente / patio 2026"), con sus
- * 16 porcentajes editables en la misma fila — mismo patrón maestro que
+ * 20 porcentajes editables en la misma fila — mismo patrón maestro que
  * `HerramientaSeccion`/`EquipoCostoHorarioGridVista`. **Ver ficha** abre el
  * panel a la derecha (`PerfilInactividadEquipoFormPanel`) con el registro
  * seleccionado, igual que materiales/herramienta.
@@ -140,7 +150,7 @@ const GRUPOS_VERTICAL: VerticalGridGroup[] = [
  * La vista va partida en dos sobre los mismos datos: arriba el `DataGrid` de
  * siempre (un perfil por renglón, para compararlos de un vistazo) y abajo el
  * `VerticalGrid`, que acuesta la tabla —un perfil por columna, cada porcentaje
- * un renglón agrupado por espera/reserva— porque son 16 campos y a lo ancho
+ * un renglón agrupado por espera/reserva— porque son 20 campos y a lo ancho
  * obligan a pasearse. Las dos rejillas guardan por los mismos comandos y
  * cualquiera de las dos recarga a las dos.
  */
@@ -157,6 +167,7 @@ export function PerfilInactividadEquipoSeccion() {
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [perfilSeleccionadoId, setPerfilSeleccionadoId] = useState<string | null>(null);
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -203,6 +214,8 @@ export function PerfilInactividadEquipoSeccion() {
     espera_combustible_porcentaje: p.espera_combustible_porcentaje,
     espera_lubricante_porcentaje: p.espera_lubricante_porcentaje,
     espera_llantas_porcentaje: p.espera_llantas_porcentaje,
+    espera_piezas_especiales_porcentaje: p.espera_piezas_especiales_porcentaje,
+    espera_otras_fuentes_porcentaje: p.espera_otras_fuentes_porcentaje,
     espera_operacion_porcentaje: p.espera_operacion_porcentaje,
     reserva_depreciacion_porcentaje: p.reserva_depreciacion_porcentaje,
     reserva_inversion_porcentaje: p.reserva_inversion_porcentaje,
@@ -211,6 +224,8 @@ export function PerfilInactividadEquipoSeccion() {
     reserva_combustible_porcentaje: p.reserva_combustible_porcentaje,
     reserva_lubricante_porcentaje: p.reserva_lubricante_porcentaje,
     reserva_llantas_porcentaje: p.reserva_llantas_porcentaje,
+    reserva_piezas_especiales_porcentaje: p.reserva_piezas_especiales_porcentaje,
+    reserva_otras_fuentes_porcentaje: p.reserva_otras_fuentes_porcentaje,
     reserva_operacion_porcentaje: p.reserva_operacion_porcentaje,
     created_at: p.created_at,
     created_by: nombresPorUsuarioId[p.created_by] ?? p.created_by,
@@ -227,6 +242,8 @@ export function PerfilInactividadEquipoSeccion() {
     espera_combustible_porcentaje: String(fila.espera_combustible_porcentaje ?? "0"),
     espera_lubricante_porcentaje: String(fila.espera_lubricante_porcentaje ?? "0"),
     espera_llantas_porcentaje: String(fila.espera_llantas_porcentaje ?? "0"),
+    espera_piezas_especiales_porcentaje: String(fila.espera_piezas_especiales_porcentaje ?? "0"),
+    espera_otras_fuentes_porcentaje: String(fila.espera_otras_fuentes_porcentaje ?? "0"),
     espera_operacion_porcentaje: String(fila.espera_operacion_porcentaje ?? "0"),
     reserva_depreciacion_porcentaje: String(fila.reserva_depreciacion_porcentaje ?? "0"),
     reserva_inversion_porcentaje: String(fila.reserva_inversion_porcentaje ?? "0"),
@@ -235,6 +252,8 @@ export function PerfilInactividadEquipoSeccion() {
     reserva_combustible_porcentaje: String(fila.reserva_combustible_porcentaje ?? "0"),
     reserva_lubricante_porcentaje: String(fila.reserva_lubricante_porcentaje ?? "0"),
     reserva_llantas_porcentaje: String(fila.reserva_llantas_porcentaje ?? "0"),
+    reserva_piezas_especiales_porcentaje: String(fila.reserva_piezas_especiales_porcentaje ?? "0"),
+    reserva_otras_fuentes_porcentaje: String(fila.reserva_otras_fuentes_porcentaje ?? "0"),
     reserva_operacion_porcentaje: String(fila.reserva_operacion_porcentaje ?? "0"),
   });
 
@@ -251,6 +270,18 @@ export function PerfilInactividadEquipoSeccion() {
           <BarraAcciones
             acciones={[
               { icono: Plus, titulo: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icono: Upload,
+                titulo: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportPerfiles(perfiles)),
+                disabled: csvAdaptador !== null,
+              },
+              {
+                icono: Download,
+                titulo: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportPerfiles(perfiles)),
+                disabled: csvAdaptador !== null || perfiles.length === 0,
+              },
               {
                 icono: FileText,
                 titulo: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
@@ -397,6 +428,11 @@ export function PerfilInactividadEquipoSeccion() {
           ) : null}
         </ResizablePanelGroup>
       </div>
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescar()}
+      />
     </div>
   );
 }

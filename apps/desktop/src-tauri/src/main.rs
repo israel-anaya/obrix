@@ -537,8 +537,8 @@ mod tests {
             .expect("listar perfiles de inactividad de equipo");
         assert_eq!(
             perfiles_inactividad.len(),
-            3,
-            "CFE, GCDMX y CMIC de data/initial/perfil_inactividad_equipo.csv, sin duplicar"
+            4,
+            "CFE, GCDMX, CMIC y SICT de data/initial/perfil_inactividad_equipo.csv, sin duplicar"
         );
 
         let factores = obrix_db::entities::factor_salario_real::Entity::find()

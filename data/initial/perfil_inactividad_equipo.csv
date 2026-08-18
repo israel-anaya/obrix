@@ -1,4 +1,5 @@
-Nombre,EsperaDepreciacion,EsperaInversion,EsperaSeguro,EsperaMantenimiento,EsperaCombustible,EsperaLubricante,EsperaLlantas,EsperaOperacion,ReservaDepreciacion,ReservaInversion,ReservaSeguro,ReservaMantenimiento,ReservaCombustible,ReservaLubricante,ReservaLlantas,ReservaOperacion
-CFE,100,100,100,0,5,5,15,100,15,100,100,15,0,0,0,100
-GCDMX,100,100,100,75,5,5,5,100,15,100,100,15,0,0,0,100
-CMIC,100,100,100,50,5,5,10,100,15,100,100,15,3,3,5,100
+Nombre,EsperaDepreciacion,EsperaInversion,EsperaSeguro,EsperaMantenimiento,EsperaCombustible,EsperaLubricante,EsperaLlantas,EsperaPiezasEspeciales,EsperaOtrasFuentes,EsperaOperacion,ReservaDepreciacion,ReservaInversion,ReservaSeguro,ReservaMantenimiento,ReservaCombustible,ReservaLubricante,ReservaLlantas,ReservaPiezasEspeciales,ReservaOtrasFuentes,ReservaOperacion
+CFE,100,100,100,0,5,5,15,0,0,100,15,100,100,15,0,0,0,0,0,100
+GCDMX,100,100,100,75,5,5,5,0,0,100,15,100,100,15,0,0,0,0,0,100
+CMIC,100,100,100,50,5,5,10,0,0,100,15,100,100,15,3,3,5,0,0,100
+SICT,100,100,100,15,5,5,15,0,5,100,15,100,100,15,0,0,0,0,0,0

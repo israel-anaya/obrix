@@ -68,6 +68,20 @@ const CLIENTES: CatalogoGeneralDescriptor<Cliente, ClienteData> = {
     contacto_telefono: String(f.contacto_telefono) || null,
     domicilio_fiscal: String(f.domicilio_fiscal) || null,
   }),
+  csv: {
+    archivoDefault: "clientes.csv",
+    claveNaturalModelo: (m) => m.razon_social,
+    claveNaturalFila: (v) => v.razon_social ?? "",
+    campos: [
+      { field: "razon_social", encabezado: "Razón social", obligatorio: true },
+      { field: "rfc", encabezado: "RFC" },
+      { field: "tipo", encabezado: "Tipo" },
+      { field: "contacto_nombre", encabezado: "Contacto" },
+      { field: "contacto_correo", encabezado: "Correo de contacto" },
+      { field: "contacto_telefono", encabezado: "Teléfono" },
+      { field: "domicilio_fiscal", encabezado: "Domicilio fiscal" },
+    ],
+  },
 };
 
 export function ClientesSeccion() {

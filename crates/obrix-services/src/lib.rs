@@ -64,6 +64,42 @@ pub fn hoy() -> String {
     chrono::Utc::now().date_naive().to_string()
 }
 
+/// Clave de cruce para `insumo.clave` / `insumo.descripcion` al importar:
+/// recorta y no distingue mayúsculas.
+pub fn clave_cruce(texto: &str) -> String {
+    texto.trim().to_lowercase()
+}
+
+/// Localiza un insumo ya registrado: primero por clave (si viene), si no por
+/// descripción. Ambas sin distinguir mayúsculas.
+pub fn id_insumo_existente(
+    clave: Option<&str>,
+    descripcion: &str,
+    por_clave: &std::collections::HashMap<String, String>,
+    por_descripcion: &std::collections::HashMap<String, String>,
+) -> Option<String> {
+    clave
+        .map(str::trim)
+        .filter(|c| !c.is_empty())
+        .and_then(|c| por_clave.get(&clave_cruce(c)).cloned())
+        .or_else(|| por_descripcion.get(&clave_cruce(descripcion)).cloned())
+}
+
+/// Actualiza los índices de cruce tras crear o actualizar un insumo, para
+/// que filas posteriores del mismo CSV vean el registro ya escrito.
+pub fn recordar_insumo(
+    por_clave: &mut std::collections::HashMap<String, String>,
+    por_descripcion: &mut std::collections::HashMap<String, String>,
+    id: &str,
+    clave: &str,
+    descripcion: &str,
+) {
+    por_clave.retain(|_, v| v != id);
+    por_descripcion.retain(|_, v| v != id);
+    por_clave.insert(clave_cruce(clave), id.to_string());
+    por_descripcion.insert(clave_cruce(descripcion), id.to_string());
+}
+
 /// Verbo para mensajes de `ServiceError::Validacion` en los `validar` de
 /// cada `Service` — distingue alta de edición por si una regla solo aplica a
 /// uno de los dos casos (ver p. ej. `organizacion::OrganizacionService::validar`).
@@ -210,4 +246,35 @@ pub async fn marcar_insumo_eliminado(
     modelo.deleted_by = Set(Some(eliminado_por));
     modelo.update(repo.conexion()).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn id_insumo_existente_no_distingue_mayusculas_en_clave_ni_descripcion() {
+        let mut por_clave = HashMap::new();
+        let mut por_descripcion = HashMap::new();
+        recordar_insumo(
+            &mut por_clave,
+            &mut por_descripcion,
+            "id-1",
+            "MAT-1",
+            "Cemento Portland",
+        );
+        assert_eq!(
+            id_insumo_existente(Some("mat-1"), "otra", &por_clave, &por_descripcion).as_deref(),
+            Some("id-1")
+        );
+        assert_eq!(
+            id_insumo_existente(None, "CEMENTO PORTLAND", &por_clave, &por_descripcion).as_deref(),
+            Some("id-1")
+        );
+        assert_eq!(
+            id_insumo_existente(Some("MAT-9"), "arena", &por_clave, &por_descripcion),
+            None
+        );
+    }
 }

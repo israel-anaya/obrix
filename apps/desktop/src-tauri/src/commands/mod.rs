@@ -1,3 +1,11 @@
+pub const EVENTO_CSV_PROGRESO: &str = "csv-progreso";
+
+#[derive(Clone, serde::Serialize)]
+pub struct CsvProgresoPayload {
+    pub actual: u32,
+    pub total: u32,
+}
+
 pub mod archivo_json;
 pub mod auth;
 pub mod categorias_fasar;

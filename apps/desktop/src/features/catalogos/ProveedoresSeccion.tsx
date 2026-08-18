@@ -49,6 +49,17 @@ const PROVEEDORES: CatalogoGeneralDescriptor<Proveedor, ProveedorData> = {
     contacto: String(f.contacto) || null,
     calificacion: String(f.calificacion) || null,
   }),
+  csv: {
+    archivoDefault: "proveedores.csv",
+    claveNaturalModelo: (m) => m.razon_social,
+    claveNaturalFila: (v) => v.razon_social ?? "",
+    campos: [
+      { field: "razon_social", encabezado: "Razón social", obligatorio: true },
+      { field: "rfc", encabezado: "RFC" },
+      { field: "contacto", encabezado: "Contacto" },
+      { field: "calificacion", encabezado: "Calificación" },
+    ],
+  },
 };
 
 export function ProveedoresSeccion() {

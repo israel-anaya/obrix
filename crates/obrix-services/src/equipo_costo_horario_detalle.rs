@@ -8,7 +8,9 @@
 //! (`cargo_variable_hora`/`costo_horario_total`) — `cf_cargo_fijo_hora` no se
 //! toca aquí, lo administra `EquipoCostoHorarioService`.
 
-use obrix_db::entities::equipo_costo_horario_detalle::TipoEquipoCostoHorarioDetalle;
+use obrix_db::entities::equipo_costo_horario_detalle::{
+    NaturalezaEquipoCostoHorarioDetalle, TipoEquipoCostoHorarioDetalle,
+};
 use obrix_db::entities::{
     categoria_fasar, cuadrilla, equipo_costo_horario, equipo_costo_horario_detalle, insumo, material, moneda,
     organizacion, precio_material, salario_categoria_fasar,
@@ -36,6 +38,9 @@ pub struct EquipoCostoHorarioDetalleData {
     pub detalle_insumo_id: String,
     /// Cantidad consumida (o jornales/horas de operador) por hora de máquina.
     pub cantidad: Decimal,
+    /// Obligatorio si el insumo es un material (`tipo = consumo`); `None` si es operación.
+    #[serde(default)]
+    pub naturaleza: Option<NaturalezaEquipoCostoHorarioDetalle>,
 }
 
 pub struct EquipoCostoHorarioDetalleService;
@@ -61,6 +66,7 @@ impl EquipoCostoHorarioDetalleService {
         let txn = repo.conexion().begin().await?;
 
         let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
+        let naturaleza = Self::resolver_naturaleza(tipo.clone(), datos.naturaleza, None)?;
         Self::validar_referencia(&txn, equipo_costo_horario_insumo_id, &datos.detalle_insumo_id).await?;
         let orden = Self::siguiente_orden(&txn, equipo_costo_horario_insumo_id).await?;
 
@@ -69,6 +75,7 @@ impl EquipoCostoHorarioDetalleService {
             equipo_costo_horario_insumo_id: Set(equipo_costo_horario_insumo_id.to_string()),
             detalle_insumo_id: Set(datos.detalle_insumo_id),
             tipo: Set(tipo),
+            naturaleza: Set(naturaleza),
             orden: Set(orden),
             cantidad: Set(datos.cantidad),
             costo: Set(Decimal::ZERO),
@@ -104,11 +111,13 @@ impl EquipoCostoHorarioDetalleService {
         let equipo_costo_horario_insumo_id = existente.equipo_costo_horario_insumo_id.clone();
 
         let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
+        let naturaleza = Self::resolver_naturaleza(tipo.clone(), datos.naturaleza, existente.naturaleza.clone())?;
         Self::validar_referencia(&txn, &equipo_costo_horario_insumo_id, &datos.detalle_insumo_id).await?;
 
         let mut am: equipo_costo_horario_detalle::ActiveModel = existente.into();
         am.detalle_insumo_id = Set(datos.detalle_insumo_id);
         am.tipo = Set(tipo);
+        am.naturaleza = Set(naturaleza);
         am.cantidad = Set(datos.cantidad);
         am.updated_at = Set(Some(crate::ahora()));
         am.updated_by = Set(actualizado_por);
@@ -234,6 +243,34 @@ impl EquipoCostoHorarioDetalleService {
         Err(ServiceError::Validacion(format!(
             "\"{detalle_insumo_id}\" no es un material, una categoría FASAR ni una cuadrilla — un equipo de costo horario no puede contener otro equipo de costo horario"
         )))
+    }
+
+    /// `naturaleza` es obligatoria en consumo y nula en operación — ver
+    /// `equipo_costo_horario_detalle` en el diccionario. En una edición de
+    /// consumo, si no viene en el payload se conserva la que ya tenía la fila.
+    fn resolver_naturaleza(
+        tipo: TipoEquipoCostoHorarioDetalle,
+        propuesta: Option<NaturalezaEquipoCostoHorarioDetalle>,
+        existente: Option<NaturalezaEquipoCostoHorarioDetalle>,
+    ) -> Result<Option<NaturalezaEquipoCostoHorarioDetalle>, ServiceError> {
+        match tipo {
+            TipoEquipoCostoHorarioDetalle::Consumo => propuesta
+                .or(existente)
+                .ok_or_else(|| {
+                    ServiceError::Validacion(
+                        "naturaleza es obligatoria cuando el renglón es de consumo (combustible, lubricante, llantas, piezas_especiales u otras_fuentes)".into(),
+                    )
+                })
+                .map(Some),
+            TipoEquipoCostoHorarioDetalle::Operacion => {
+                if propuesta.is_some() {
+                    return Err(ServiceError::Validacion(
+                        "naturaleza solo aplica a renglones de consumo; en operación debe ir vacía".into(),
+                    ));
+                }
+                Ok(None)
+            }
+        }
     }
 
     async fn validar_referencia(
@@ -650,6 +687,7 @@ mod tests {
             EquipoCostoHorarioDetalleData {
                 detalle_insumo_id: diesel.clone(),
                 cantidad: Decimal::from_str("8").unwrap(),
+                naturaleza: Some(NaturalezaEquipoCostoHorarioDetalle::Combustible),
             },
             "usr-1".into(),
         )
@@ -665,6 +703,7 @@ mod tests {
             EquipoCostoHorarioDetalleData {
                 detalle_insumo_id: operador.clone(),
                 cantidad: Decimal::from_str("0.125").unwrap(),
+                naturaleza: None,
             },
             "usr-1".into(),
         )
@@ -681,8 +720,15 @@ mod tests {
             .await
             .expect("listar detalles");
         assert_eq!(detalles.len(), 2);
+        let fila_consumo = detalles.iter().find(|d| d.detalle_insumo_id == diesel).unwrap();
+        assert_eq!(fila_consumo.tipo, TipoEquipoCostoHorarioDetalle::Consumo);
+        assert_eq!(
+            fila_consumo.naturaleza,
+            Some(NaturalezaEquipoCostoHorarioDetalle::Combustible)
+        );
         let fila_operacion = detalles.iter().find(|d| d.detalle_insumo_id == operador).unwrap();
         assert_eq!(fila_operacion.tipo, TipoEquipoCostoHorarioDetalle::Operacion);
+        assert_eq!(fila_operacion.naturaleza, None);
         assert_eq!(fila_operacion.costo, Decimal::from_str("500").unwrap());
 
         let tras_borrar = EquipoCostoHorarioDetalleService::eliminar(&portafolio, fila_operacion.id.clone())
@@ -703,6 +749,7 @@ mod tests {
             EquipoCostoHorarioDetalleData {
                 detalle_insumo_id: otro_equipo.id,
                 cantidad: Decimal::ONE,
+                naturaleza: None,
             },
             "usr-1".into(),
         )

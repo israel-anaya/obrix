@@ -2,7 +2,7 @@ use obrix_db::entities::cuadrilla_costo::Model as CuadrillaCostoModel;
 use obrix_db::entities::cuadrilla_costo_detalle::Model as CuadrillaCostoDetalleModel;
 use obrix_db::entities::cuadrilla_detalle::Model as CuadrillaDetalleModel;
 
-use crate::AppState;
+use crate::{commands, AppState};
 use obrix_services::cuadrilla::{CuadrillaCompleto, CuadrillaData, CuadrillaService};
 use obrix_services::cuadrilla_costo::CuadrillaCostoService;
 use obrix_services::cuadrilla_costo_detalle::{CuadrillaCostoDetalleData, CuadrillaCostoDetalleService};
@@ -10,6 +10,7 @@ use obrix_services::cuadrilla_detalle::{
     CuadrillaDetalleData, CuadrillaDetalleEditarData, CuadrillaDetalleService, DireccionMovimiento,
 };
 use obrix_services::material::ResultadoImportacion;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn list_cuadrillas(state: tauri::State<'_, AppState>) -> Result<Vec<CuadrillaCompleto>, String> {
@@ -224,17 +225,24 @@ pub async fn update_cuadrilla_costo_detalle(
 
 #[tauri::command]
 pub async fn importar_cuadrillas_csv(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     path: String,
 ) -> Result<ResultadoImportacion, String> {
     let contenido = std::fs::read_to_string(&path).map_err(|e| format!("no se pudo leer el archivo: {e}"))?;
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    CuadrillaService::importar_csv(
+    CuadrillaService::importar_csv_con_progreso(
         activo.portafolio.as_ref(),
         &activo.organizacion_id,
         &contenido,
         activo.usuario_id_activo.clone(),
+        move |actual, total| {
+            let _ = app.emit(
+                commands::EVENTO_CSV_PROGRESO,
+                commands::CsvProgresoPayload { actual, total },
+            );
+        },
     )
     .await
     .map_err(|e| e.to_string())

@@ -10,10 +10,10 @@ impl MigrationTrait for Migration {
         // `factor_salario_real`): porcentaje de cada rubro de costo horario
         // que aplica cuando un equipo está inactivo ("en espera" o "en
         // reserva") — ver diccionario de datos. El consumo va partido por
-        // naturaleza (combustible, lubricante, llantas), no un % sobre
-        // `subtotal_consumo`. Varios equipos pueden compartir el mismo
-        // perfil; el borrado es lógico (`deleted`) y no rompe el vínculo de
-        // equipos que ya lo usan.
+        // naturaleza (combustible, lubricante, llantas, piezas_especiales,
+        // otras_fuentes), no un % sobre `subtotal_consumo`. Varios equipos
+        // pueden compartir el mismo perfil; el borrado es lógico (`deleted`)
+        // y no rompe el vínculo de equipos que ya lo usan.
         manager
             .create_table(
                 Table::create()
@@ -67,6 +67,16 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(
+                        ColumnDef::new(PerfilInactividadEquipo::EsperaPiezasEspecialesPorcentaje)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(PerfilInactividadEquipo::EsperaOtrasFuentesPorcentaje)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
                         ColumnDef::new(PerfilInactividadEquipo::EsperaOperacionPorcentaje)
                             .decimal()
                             .not_null(),
@@ -103,6 +113,16 @@ impl MigrationTrait for Migration {
                     )
                     .col(
                         ColumnDef::new(PerfilInactividadEquipo::ReservaLlantasPorcentaje)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(PerfilInactividadEquipo::ReservaPiezasEspecialesPorcentaje)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(PerfilInactividadEquipo::ReservaOtrasFuentesPorcentaje)
                             .decimal()
                             .not_null(),
                     )
@@ -189,6 +209,8 @@ enum PerfilInactividadEquipo {
     EsperaCombustiblePorcentaje,
     EsperaLubricantePorcentaje,
     EsperaLlantasPorcentaje,
+    EsperaPiezasEspecialesPorcentaje,
+    EsperaOtrasFuentesPorcentaje,
     EsperaOperacionPorcentaje,
     ReservaDepreciacionPorcentaje,
     ReservaInversionPorcentaje,
@@ -197,6 +219,8 @@ enum PerfilInactividadEquipo {
     ReservaCombustiblePorcentaje,
     ReservaLubricantePorcentaje,
     ReservaLlantasPorcentaje,
+    ReservaPiezasEspecialesPorcentaje,
+    ReservaOtrasFuentesPorcentaje,
     ReservaOperacionPorcentaje,
     Deleted,
     CreatedAt,

@@ -18,14 +18,12 @@ export type CuadrillasVista = "grid" | "ficha";
  */
 export function CuadrillasSeccion({
   vista,
-  onProgreso,
 }: {
   vista: CuadrillasVista;
-  onProgreso?: (mensaje: string | null) => void;
 }) {
   return (
     <div className="h-full">
-      {vista === "grid" ? <CuadrillasGridVista onProgreso={onProgreso} /> : <CuadrillasFicha />}
+      {vista === "grid" ? <CuadrillasGridVista /> : <CuadrillasFicha />}
     </div>
   );
 }

@@ -1,0 +1,34 @@
+Clave,Categoría,Unidad,Familia,Subfamili
+MO-001,Aluminero,jor,Mano de obra,Herrería
+MO-002,Auxiliar topógrafo,jor,Mano de obra,Ayudantes
+MO-003,Ayudante de instalación,jor,Mano de obra,Ayudantes
+MO-004,Ayudante oficial,jor,Mano de obra,Ayudantes
+MO-005,Cabo de ayudantes,jor,Mano de obra,Ayudantes
+MO-006,Cabo de oficios,jor,Mano de obra,Albañilería
+MO-007,Cadenero,jor,Mano de obra,Ayudantes
+MO-008,Carpintero de banco,jor,Mano de obra,Carpintería
+MO-009,Carpintero de obra negra,jor,Mano de obra,Carpintería
+MO-010,Herrero de campo,jor,Mano de obra,Herrería
+MO-011,Oficial albañil,jor,Mano de obra,Albañilería
+MO-012,Oficial azulejero,jor,Mano de obra,Albañilería
+MO-013,Oficial colocador,jor,Mano de obra,Albañilería
+MO-014,Oficial electricista,jor,Mano de obra,Electricidad
+MO-015,Oficial fierrero,jor,Mano de obra,Herrería
+MO-016,Oficial pintor,jor,Mano de obra,Pintura
+MO-017,Oficial plomero,jor,Mano de obra,Plomería
+MO-018,Oficial vidriero,jor,Mano de obra,Herrería
+MO-019,Oficial yesero,jor,Mano de obra,Albañilería
+MO-020,Operador de camión,jor,Mano de obra,Operadores
+MO-021,Operador de cargador,jor,Mano de obra,Operadores
+MO-022,Operador de carpeteador,jor,Mano de obra,Operadores
+MO-023,Operador de duo-pactor,jor,Mano de obra,Operadores
+MO-024,Operador de equipo ligero,jor,Mano de obra,Operadores
+MO-025,Operador de motoconformadora,jor,Mano de obra,Operadores
+MO-026,Operador de petrolizadora,jor,Mano de obra,Operadores
+MO-027,Operador de plancha,jor,Mano de obra,Operadores
+MO-028,Operador de retroexcavadora,jor,Mano de obra,Operadores
+MO-029,Operador de tractor,jor,Mano de obra,Operadores
+MO-030,Operador de vehículo con grúa,jor,Mano de obra,Operadores
+MO-031,Rastrillero,jor,Mano de obra,Ayudantes
+MO-032,Tornillero,jor,Mano de obra,Herrería
+MO-033,Tubero,jor,Mano de obra,Plomería

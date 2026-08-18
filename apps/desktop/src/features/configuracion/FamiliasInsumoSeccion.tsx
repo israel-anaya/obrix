@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Plus, RefreshCcw, Trash2 } from "lucide-react";
-import { BarraAcciones } from "@/components/BarraAcciones";
+import { Download, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
+import { BarraAcciones, type AccionBarra } from "@/components/BarraAcciones";
+import { CsvOperacionDialog, type CsvAdaptador } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from "@/hooks/use-toast";
+import { adaptadorExportFamilias, adaptadorImportFamilias } from "@/features/catalogos/csv/adaptadorFamilias";
 import { createFamiliaInsumo, deleteFamiliaInsumo, listFamiliasInsumo, listUsuarios, updateFamiliaInsumo } from "@/lib/tauri";
 import type { FamiliaInsumo } from "@/lib/types";
 
@@ -22,6 +24,7 @@ function PanelGrid({
   onAgregar,
   onEliminar,
   puedeEliminar,
+  extraAcciones,
   children,
 }: {
   titulo: string;
@@ -31,6 +34,7 @@ function PanelGrid({
   onAgregar: () => void;
   onEliminar: () => void;
   puedeEliminar: boolean;
+  extraAcciones?: AccionBarra[];
   children: ReactNode;
 }) {
   return (
@@ -40,7 +44,7 @@ function PanelGrid({
         <div className="flex items-center gap-2">
           <SearchInput value={busqueda} onChange={onBusquedaChange} />
           <BarraAcciones
-            acciones={[{ icono: Plus, titulo: "Agregar", onClick: onAgregar }]}
+            acciones={[{ icono: Plus, titulo: "Agregar", onClick: onAgregar }, ...(extraAcciones ?? [])]}
             menu={[
               { icono: RefreshCcw, titulo: "Recargar", onClick: onRecargar },
               {
@@ -99,6 +103,7 @@ export function FamiliasInsumoSeccion() {
   const [busquedaFamilia, setBusquedaFamilia] = useState("");
   const [busquedaSubfamilia, setBusquedaSubfamilia] = useState("");
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdaptador | null>(null);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -161,6 +166,20 @@ export function FamiliasInsumoSeccion() {
               onAgregar={() => familiaGridRef.current?.addRow()}
               onEliminar={() => familiaGridRef.current?.deleteSelectedRows()}
               puedeEliminar={puedeEliminarFamilia}
+              extraAcciones={[
+                {
+                  icono: Upload,
+                  titulo: "Importar desde CSV",
+                  onClick: () => setCsvAdaptador(adaptadorImportFamilias(familias)),
+                  disabled: csvAdaptador !== null,
+                },
+                {
+                  icono: Download,
+                  titulo: "Exportar a CSV",
+                  onClick: () => setCsvAdaptador(adaptadorExportFamilias(familias)),
+                  disabled: csvAdaptador !== null || familias.length === 0,
+                },
+              ]}
             >
               <DataGrid
                 ref={familiaGridRef}
@@ -242,6 +261,11 @@ export function FamiliasInsumoSeccion() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      <CsvOperacionDialog
+        adaptador={csvAdaptador}
+        onCerrar={() => setCsvAdaptador(null)}
+        onTerminado={() => void refrescar()}
+      />
     </div>
   );
 }
