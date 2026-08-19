@@ -352,7 +352,7 @@ export function CuadrillaFichaApu({
   const sincronizadoEn = useMemo(() => {
     const fechas = costos.map((c) => c.sincronizado_en).filter((f): f is string => !!f);
     if (fechas.length === 0) return null;
-    return fechas.sort().at(-1) ?? null;
+    return fechas.sort()[fechas.length - 1] ?? null;
   }, [costos]);
 
   const verRegion = (regionId: string | null) => {
