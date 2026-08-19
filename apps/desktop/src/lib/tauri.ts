@@ -59,8 +59,8 @@ export function iniciarSesion(correo: string, password: string): Promise<Account
   return invoke("iniciar_sesion", { correo, password });
 }
 
-export function registrarCuenta(correo: string, password: string): Promise<AccountInfo> {
-  return invoke("registrar_cuenta", { correo, password });
+export function registrarCuenta(correo: string, nombre: string, password: string): Promise<AccountInfo> {
+  return invoke("registrar_cuenta", { correo, nombre, password });
 }
 
 export function cerrarSesion(): Promise<void> {

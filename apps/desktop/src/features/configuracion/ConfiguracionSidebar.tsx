@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Info, Palette, Server } from "lucide-react";
+import { Info, Palette, Server, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function SeccionBoton({
@@ -46,6 +46,7 @@ export function ConfiguracionSidebar({
 }) {
   return (
     <div className="flex h-full flex-col gap-0.5 overflow-auto px-1 py-1">
+      <SeccionBoton id="general" label="General" icon={Settings} activa={activa} onSelect={onSelect} />
       <SeccionBoton id="apariencia" label="Apariencia" icon={Palette} activa={activa} onSelect={onSelect} />
       <SeccionBoton id="acerca-de" label="Acerca de" icon={Info} activa={activa} onSelect={onSelect} />
 

@@ -34,7 +34,10 @@ async function solicitud<T>(input: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!respuesta.ok) throw new ApiError(respuesta.status);
-  return (await respuesta.json()) as T;
+  // login/logout responden 200 sin body (solo Set-Cookie) — respuesta.json()
+  // sobre un body vacío lanza SyntaxError, así que se parsea a mano.
+  const texto = await respuesta.text();
+  return (texto ? JSON.parse(texto) : undefined) as T;
 }
 
 export const api = {

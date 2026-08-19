@@ -1,4 +1,5 @@
 mod entities;
+mod mail;
 mod migrator;
 mod routes;
 
@@ -27,7 +28,9 @@ async fn main() {
         .and_then(|p| p.parse().ok())
         .unwrap_or(8081);
 
-    let app = routes::router(db);
+    let mailer = mail::Mailer::from_env().expect("no se pudo configurar el mailer");
+
+    let app = routes::router(db, mailer);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     tracing::info!("licensing-server escuchando en {addr}");

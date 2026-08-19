@@ -7,12 +7,14 @@ export function LoginGate({
   error,
 }: {
   onIniciarSesion: (correo: string, password: string) => Promise<void>;
-  onRegistrarCuenta: (correo: string, password: string) => Promise<void>;
+  onRegistrarCuenta: (correo: string, nombre: string, password: string) => Promise<void>;
   error?: string | null;
 }) {
   const [modo, setModo] = useState<"login" | "registro">("login");
   const [correo, setCorreo] = useState("");
+  const [nombreUsuario, setNombreUsuario] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmarPassword, setConfirmarPassword] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
@@ -31,13 +33,23 @@ export function LoginGate({
       setErrorLocal("La contraseña debe tener al menos 6 caracteres");
       return;
     }
+    if (modo === "registro") {
+      if (!nombreUsuario.trim()) {
+        setErrorLocal("Ingresa un nombre de usuario");
+        return;
+      }
+      if (password !== confirmarPassword) {
+        setErrorLocal("Las contraseñas no coinciden");
+        return;
+      }
+    }
 
     setEnviando(true);
     try {
       if (modo === "login") {
         await onIniciarSesion(correo, password);
       } else {
-        await onRegistrarCuenta(correo, password);
+        await onRegistrarCuenta(correo, nombreUsuario.trim(), password);
       }
     } finally {
       setEnviando(false);
@@ -61,6 +73,15 @@ export function LoginGate({
             onChange={(e) => setCorreo(e.target.value)}
             className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
+          {modo === "registro" && (
+            <input
+              type="text"
+              placeholder="Nombre de usuario"
+              value={nombreUsuario}
+              onChange={(e) => setNombreUsuario(e.target.value)}
+              className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          )}
           <input
             type="password"
             placeholder="Contraseña"
@@ -68,6 +89,15 @@ export function LoginGate({
             onChange={(e) => setPassword(e.target.value)}
             className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
+          {modo === "registro" && (
+            <input
+              type="password"
+              placeholder="Confirmar contraseña"
+              value={confirmarPassword}
+              onChange={(e) => setConfirmarPassword(e.target.value)}
+              className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          )}
         </div>
 
         <button
@@ -88,6 +118,8 @@ export function LoginGate({
           onClick={() => {
             setModo(modo === "login" ? "registro" : "login");
             setErrorLocal(null);
+            setNombreUsuario("");
+            setConfirmarPassword("");
           }}
           className="mt-3 text-xs text-muted-foreground hover:text-foreground"
         >

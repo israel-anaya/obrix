@@ -193,9 +193,9 @@ export default function App() {
     }
   };
 
-  const handleRegistrarCuenta = async (correo: string, password: string) => {
+  const handleRegistrarCuenta = async (correo: string, nombre: string, password: string) => {
     try {
-      const cuentaIniciada = await registrarCuenta(correo, password);
+      const cuentaIniciada = await registrarCuenta(correo, nombre, password);
       setCuenta(cuentaIniciada);
       setSesionError(null);
     } catch (e) {
@@ -502,6 +502,8 @@ export default function App() {
           onToggleTheme={toggleTheme}
           sidebarVisible={sidebarVisible}
           onToggleSidebar={() => setSidebarVisible((v) => !v)}
+          cuenta={cuenta}
+          onCerrarSesion={handleCerrarSesion}
         />
       );
     }

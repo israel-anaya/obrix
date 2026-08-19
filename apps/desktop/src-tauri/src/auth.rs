@@ -48,6 +48,22 @@ fn auth_url() -> String {
     std::env::var("OBRIX_AUTH_URL").unwrap_or_else(|_| "http://localhost:9999".to_string())
 }
 
+/// `platform/docker-compose.yml` lo expone en `:8081` en local.
+fn licensing_url() -> String {
+    std::env::var("OBRIX_LICENSING_URL").unwrap_or_else(|_| "http://localhost:8081".to_string())
+}
+
+/// Best-effort: si el correo de bienvenida falla (SMTP caído, red, etc.) no
+/// debe bloquear ni fallar el registro de la cuenta.
+async fn enviar_bienvenida_best_effort(correo: &str, nombre: &str) {
+    let cliente = reqwest::Client::new();
+    let _ = cliente
+        .post(format!("{}/notificaciones/bienvenida", licensing_url()))
+        .json(&serde_json::json!({ "correo": correo, "nombre": nombre }))
+        .send()
+        .await;
+}
+
 fn auth_json_path() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or_else(|| "no se pudo resolver el directorio home".to_string())?;
     Ok(home.join(".obrix").join("auth.json"))
@@ -109,11 +125,15 @@ pub async fn iniciar_sesion(correo: &str, password: &str) -> Result<AccountInfo,
 /// dev) la sesión queda iniciada de inmediato; en un entorno con
 /// verificación de correo real, GoTrue no devuelve tokens todavía y hay
 /// que confirmar el correo antes de poder iniciar sesión.
-pub async fn registrar_cuenta(correo: &str, password: &str) -> Result<AccountInfo, String> {
+pub async fn registrar_cuenta(correo: &str, nombre: &str, password: &str) -> Result<AccountInfo, String> {
     let cliente = reqwest::Client::new();
     let respuesta = cliente
         .post(format!("{}/signup", auth_url()))
-        .json(&serde_json::json!({ "email": correo, "password": password }))
+        .json(&serde_json::json!({
+            "email": correo,
+            "password": password,
+            "data": { "nombre": nombre },
+        }))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -121,6 +141,8 @@ pub async fn registrar_cuenta(correo: &str, password: &str) -> Result<AccountInf
     if !respuesta.status().is_success() {
         return Err(extraer_error(respuesta).await);
     }
+
+    enviar_bienvenida_best_effort(correo, nombre).await;
 
     let sesion: GoTrueSesion = respuesta.json().await.map_err(|_| {
         "Cuenta creada — confirma tu correo antes de iniciar sesión".to_string()

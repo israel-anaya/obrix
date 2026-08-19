@@ -62,6 +62,10 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-obrix}:${POSTGRES_PASSWORD:-obrix_dev_password}@postgres:5432/obrix_licensing
       PORT: "8081"
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_SENDER_EMAIL: dev@obrix.local
+      SMTP_SENDER_NAME: Obrix
     ports:
       - "8081:8081"
 
@@ -84,6 +88,20 @@ services:
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-dev_admin_session_secret_change_me}
     ports:
       - "8090:8090"
+
+  landing:
+    build:
+      context: ../apps/landing
+    environment:
+      # URLs alcanzables desde el navegador del visitante (no desde la red
+      # interna de Docker) — por eso son localhost, no gotrue/licensing-server.
+      OBRIX_AUTH_URL: ${OBRIX_AUTH_URL:-http://localhost:9999}
+      OBRIX_LICENSING_URL: ${OBRIX_LICENSING_URL:-http://localhost:8081}
+    depends_on:
+      - gotrue
+      - licensing-server
+    ports:
+      - "8095:80"
 
 volumes:
   obrix_postgres_data:

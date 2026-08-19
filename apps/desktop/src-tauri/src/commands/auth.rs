@@ -31,10 +31,11 @@ pub async fn iniciar_sesion(
 #[tauri::command]
 pub async fn registrar_cuenta(
     correo: String,
+    nombre: String,
     password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<AccountInfo, String> {
-    let cuenta = auth::registrar_cuenta(&correo, &password).await?;
+    let cuenta = auth::registrar_cuenta(&correo, &nombre, &password).await?;
     state.set_cuenta(cuenta.clone()).await;
     Ok(cuenta)
 }
