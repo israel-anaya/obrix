@@ -29,7 +29,7 @@ import {
   recalculateCuadrillaZonas,
   updateCuadrillaDetalle,
 } from "@/lib/tauri";
-import { useFilaDrag } from "@/features/catalogos/useFilaDrag";
+import { useFilaDrag, type EtiquetaFila } from "@/features/catalogos/useFilaDrag";
 import { ordenarPor } from "@/lib/ordenar";
 import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
 import type {
@@ -52,6 +52,19 @@ function fmt(valor: string): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return valor;
   return numero.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Cantidad sin ceros de relleno: "1.000000" se lee mejor como "1". */
+function fmtCantidad(valor: string): string {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return valor;
+  return numero.toLocaleString("es-MX", { maximumFractionDigits: 6 });
+}
+
+function fmtPorcentaje(valor: string): string {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return valor;
+  return `${numero.toLocaleString("es-MX", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`;
 }
 
 function centavos(valor: number): number {
@@ -440,21 +453,45 @@ export function CuadrillaFichaApu({
     }
   };
 
+  const nombreDetalle = (detalle: CuadrillaDetalle) =>
+    detalle.tipo === "categoria_fasar"
+      ? (opcionPorCategoriaId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id)
+      : (opcionPorHerramientaId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id);
+
+  const etiquetaDetalle = (lista: CuadrillaDetalle[], id: string): EtiquetaFila | null => {
+    const detalle = lista.find((d) => d.id === id);
+    if (!detalle) return null;
+    const costo = costoDetallePorDetalleId[detalle.id]?.costo;
+    if (detalle.tipo === "categoria_fasar") {
+      const categoria = categoriaPorId[detalle.detalle_insumo_id];
+      return {
+        titulo: nombreDetalle(detalle),
+        cantidad: fmtCantidad(detalle.cantidad),
+        unidad: simboloPorUnidadId[categoria?.unidad_id ?? ""] ?? "",
+        costo: costo ? `$${fmt(costo)}` : undefined,
+      };
+    }
+    const herramienta = herramientaPorId[detalle.detalle_insumo_id];
+    return {
+      titulo: nombreDetalle(detalle),
+      cantidad: fmtPorcentaje(detalle.cantidad),
+      unidad: simboloPorUnidadId[herramienta?.unidad_id ?? ""] ?? "",
+      costo: costo ? `$${fmt(costo)}` : undefined,
+    };
+  };
+
   const dragIntegrantes = useFilaDrag({
     ids: integrantes.map((d) => d.id),
     enabled: true,
     onMove: (id, dest) => void reordenar(integrantes, id, dest),
+    etiqueta: (id) => etiquetaDetalle(integrantes, id),
   });
   const dragHerramienta = useFilaDrag({
     ids: herramientaDetalles.map((d) => d.id),
     enabled: true,
     onMove: (id, dest) => void reordenar(herramientaDetalles, id, dest),
+    etiqueta: (id) => etiquetaDetalle(herramientaDetalles, id),
   });
-
-  const nombreDetalle = (detalle: CuadrillaDetalle) =>
-    detalle.tipo === "categoria_fasar"
-      ? (opcionPorCategoriaId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id)
-      : (opcionPorHerramientaId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id);
 
   const confirmarQuitar = async () => {
     if (!pendingQuitar) return;
@@ -1023,6 +1060,9 @@ export function CuadrillaFichaApu({
           </p>
         </div>
       </div>
+
+      {dragIntegrantes.vistaPrevia}
+      {dragHerramienta.vistaPrevia}
 
       <AlertDialog open={pendingQuitar !== null} onOpenChange={(open) => !open && setPendingQuitar(null)}>
         <AlertDialogContent>

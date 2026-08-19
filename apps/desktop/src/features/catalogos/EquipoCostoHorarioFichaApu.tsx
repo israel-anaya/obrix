@@ -38,7 +38,7 @@ import {
   updateEquipoCostoHorario,
   updateEquipoCostoHorarioDetalle,
 } from "@/lib/tauri";
-import { useFilaDrag } from "@/features/catalogos/useFilaDrag";
+import { useFilaDrag, type EtiquetaFila } from "@/features/catalogos/useFilaDrag";
 import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
 import { ordenarPor } from "@/lib/ordenar";
 import type {
@@ -62,6 +62,13 @@ function fmt(valor: string): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return valor;
   return numero.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Cantidad sin ceros de relleno: "1.000000" se lee mejor como "1". */
+function fmtCantidad(valor: string): string {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return valor;
+  return numero.toLocaleString("es-MX", { maximumFractionDigits: 6 });
 }
 
 const NACIONAL = "Nacional";
@@ -520,15 +527,38 @@ export function EquipoCostoHorarioFichaApu({
     }
   };
 
+  const nombreDetalle = (detalle: EquipoCostoHorarioDetalle) =>
+    detalle.tipo === "consumo"
+      ? (opcionPorMaterialId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id)
+      : (opcionPorOperacionId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id);
+
+  const etiquetaDetalle = (lista: EquipoCostoHorarioDetalle[], id: string): EtiquetaFila | null => {
+    const detalle = lista.find((d) => d.id === id);
+    if (!detalle) return null;
+    const costo = costoDetallePorDetalleId[detalle.id]?.costo;
+    const unidadId =
+      detalle.tipo === "consumo"
+        ? (materialPorId[detalle.detalle_insumo_id]?.unidad_id ?? "")
+        : unidadDeOperacion(detalle.detalle_insumo_id);
+    return {
+      titulo: nombreDetalle(detalle),
+      cantidad: fmtCantidad(detalle.cantidad),
+      unidad: simboloPorUnidadId[unidadId] ?? "",
+      costo: costo ? `$${fmt(costo)}` : undefined,
+    };
+  };
+
   const dragConsumos = useFilaDrag({
     ids: consumos.map((d) => d.id),
     enabled: true,
     onMove: (id, dest) => void reordenar(consumos, id, dest),
+    etiqueta: (id) => etiquetaDetalle(consumos, id),
   });
   const dragOperaciones = useFilaDrag({
     ids: operaciones.map((d) => d.id),
     enabled: true,
     onMove: (id, dest) => void reordenar(operaciones, id, dest),
+    etiqueta: (id) => etiquetaDetalle(operaciones, id),
   });
 
   const agregarConsumo = async (id: string) => {
@@ -598,11 +628,6 @@ export function EquipoCostoHorarioFichaApu({
       setError(String(e));
     }
   };
-
-  const nombreDetalle = (detalle: EquipoCostoHorarioDetalle) =>
-    detalle.tipo === "consumo"
-      ? (opcionPorMaterialId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id)
-      : (opcionPorOperacionId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id);
 
   const confirmarQuitar = async () => {
     if (!pendingQuitar) return;
@@ -1300,6 +1325,9 @@ export function EquipoCostoHorarioFichaApu({
           </p>
         </div>
       </div>
+
+      {dragConsumos.vistaPrevia}
+      {dragOperaciones.vistaPrevia}
 
       <AlertDialog open={pendingQuitar !== null} onOpenChange={(open) => !open && setPendingQuitar(null)}>
         <AlertDialogContent>
