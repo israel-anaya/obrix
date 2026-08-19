@@ -614,6 +614,15 @@ derivado** de receta × tabulador de **esa** región:
 - Quien consume el costo pide la región concreta; no se sustituye el
   `costo_total` nacional porque falte la fila de cache de esa región.
 
+`fecha_costo` no contradice el "sin vigencias" de arriba: no es una vigencia
+de la valuación (nadie la consulta "a una fecha"), es la foto de la
+`fecha_vigencia_desde` más reciente entre los salarios que respaldan este
+costo — el mismo tipo de dato que `cuadrilla_costo_detalle.fecha_precio`,
+resumido a nivel de la zona. Existe para que quien cachea el costo de la
+cuadrilla herede su frescura en vez de quedarse sin fecha; hoy la consume
+`equipo_costo_horario_costo_detalle.fecha_precio` cuando el operador del
+equipo es una cuadrilla.
+
 Al crearla se inserta un `cuadrilla_costo_detalle` por cada renglón de receta
 y se recalcula con los salarios vigentes de esa región. Las cantidades no se
 copian ni se editan aquí: se leen de `cuadrilla_detalle`.
@@ -633,6 +642,8 @@ sobre la receta entera:
    `costo` = el `sub_total_mano_obra` recién calculado de **esta**
    valuación. Con eso se obtiene `sub_total_herramienta`.
 3. `costo_total` = `sub_total_mano_obra` + `sub_total_herramienta`.
+4. `fecha_costo` = la `fecha_precio` más reciente de los renglones de mano de
+   obra de esta valuación; NULL si ninguno tiene salario.
 
 Nota de implementación: igual que en `precio_material`, `NULL` no cuenta
 como igual a `NULL` en una restricción `UNIQUE` estándar, así que la
@@ -648,6 +659,7 @@ aplicación.
 | sub_total_mano_obra | decimal | cache = Σ cuadrilla_costo_detalle.importe donde el `cuadrilla_detalle.tipo` = categoria_fasar, de **esta** valuación |
 | sub_total_herramienta | decimal | cache = Σ cuadrilla_costo_detalle.importe donde el `cuadrilla_detalle.tipo` = equipo_herramienta, de **esta** valuación |
 | costo_total | decimal | cache = sub_total_mano_obra + sub_total_herramienta |
+| fecha_costo | date | nullable — cache: la `fecha_precio` más reciente entre los `cuadrilla_costo_detalle` de mano de obra de **esta** valuación (herramienta no aporta fecha). NULL si ningún integrante tiene salario en esa zona |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
@@ -865,11 +877,20 @@ todas. `costo` / `importe` no viven aquí — varían por región (precios de
 material, salarios, costo de cuadrilla) y cuelgan de
 `equipo_costo_horario_costo_detalle`.
 
-Cuando `tipo = consumo`, `naturaleza` clasifica el renglón en el desglose
-CMIC/RLOPSRM (combustible, lubricante, llantas, piezas especiales, otras
-fuentes de energía). Sin eso, `perfil_inactividad_equipo` no puede aplicar
-un % distinto a diesel, a llantas o a energía eléctrica. El analista
-asigna el valor; no se infiere del insumo.
+`naturaleza` es obligatoria en los dos tipos, pero cada `tipo` admite solo
+su propio subconjunto de valores:
+
+- `tipo = consumo`: `combustible`, `lubricante`, `llantas`,
+  `piezas_especiales`, `otras_fuentes` — el desglose CMIC/RLOPSRM. Sin eso,
+  `perfil_inactividad_equipo` no puede aplicar un % distinto a diesel, a
+  llantas o a energía eléctrica. Lo asigna el analista; no se infiere del
+  insumo.
+- `tipo = operacion`: `categoria` o `cuadrilla`. Aquí sí se deriva — igual
+  que `tipo`, denormaliza qué extensión resuelve `detalle_insumo_id`
+  (`categoria_fasar` o `cuadrilla`), para saber con qué se valúa el renglón
+  (salario FASAR vs. `cuadrilla_costo.costo_total`) sin join. El cliente
+  puede mandarla, pero solo para confirmar la derivada: capturar otra es un
+  error de validación.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -877,7 +898,7 @@ asigna el valor; no se infiere del insumo.
 | equipo_costo_horario_id | uuid | FK → equipo_costo_horario (insumo_id) |
 | detalle_insumo_id | uuid | FK → insumo — `material` si `tipo = consumo`; `mano_obra`/`cuadrilla` si `tipo = operacion` |
 | tipo | enum | `consumo`, `operacion` — denormalizado de qué extensión resuelve `detalle_insumo_id` |
-| naturaleza | enum | `combustible`, `lubricante`, `llantas`, `piezas_especiales`, `otras_fuentes` — obligatorio si `tipo = consumo`; `null` si `tipo = operacion` |
+| naturaleza | enum | si `tipo = consumo`: `combustible`, `lubricante`, `llantas`, `piezas_especiales`, `otras_fuentes` (lo captura el analista). Si `tipo = operacion`: `categoria`, `cuadrilla` (lo deriva el servicio de la extensión del insumo) |
 | orden | int | orden de visualización |
 | cantidad | decimal | **capturable** — cantidad consumida (o jornales/horas de operador) por hora de máquina. No varía por región |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
@@ -903,9 +924,11 @@ al registrar un precio o salario nuevo. El congelamiento sigue siendo de
 proyecto (`concepto_componente` / `proyecto_presupuesto.precio_unitario`).
 
 `region_id` es **nullable**, igual que en `precio_material` y
-`salario_categoria_fasar`, pero **no comparte su prioridad de resolución
-para el total**. El cache se deriva de receta × tabulador/precios de
-**esa** región:
+`salario_categoria_fasar`. El cache se deriva de receta × precios/salarios
+de **esa** región, con la misma prioridad de resolución que esos
+tabuladores (regional → nacional). **El total** no se sustituye: si no hay
+fila de cache de esa región, quien consume no hereda el `costo_total`
+nacional.
 
 - Todo equipo nace con la fila nacional (`region_id = NULL`).
 - Al agregar, quitar o cambiar `cantidad` de un renglón de receta — y al
@@ -915,11 +938,16 @@ para el total**. El cache se deriva de receta × tabulador/precios de
   hay, se cae al nacional (prioridad ya documentada de `precio_material`).
   Si tampoco hay nacional, `costo` e `importe` quedan en 0 y `fecha_precio`
   en NULL.
-- El salario de cada operador `categoria_fasar` es el vigente **de esa
-  misma región**, sin caer al nacional. Si el tabulador no tiene el oficio
-  ahí, `costo` e `importe` quedan en 0. Si el operador es una `cuadrilla`,
-  se toma `cuadrilla_costo.costo_total` de esa misma región, sin sustituir
-  el nacional.
+- El salario de cada operador `categoria_fasar` sigue la misma regla: el
+  vigente de esa región, o el nacional si falta. Si tampoco hay nacional,
+  `costo` e `importe` quedan en 0. Si el operador es una `cuadrilla`, se
+  toma `cuadrilla_costo.costo_total` de esa región, o el nacional cuando
+  esa zona **no está valuada**: la fila no existe, o existe en cero. El
+  cero cuenta como "sin valuar" porque `cuadrilla_costo` sí conserva la
+  regla estricta (sus integrantes no heredan el salario nacional), así que
+  un cero ahí significa que esa zona no tiene tabulador. Consecuencia
+  visible: la misma cuadrilla puede mostrar 0 en su propia ficha para esa
+  región y aportar el costo nacional dentro del equipo.
 - Quien consume el costo pide la región concreta; no se sustituye el
   `costo_total` nacional porque falte la fila de cache de esa región.
 
@@ -937,9 +965,11 @@ región), no sobre la receta entera:
    receta y `costo` = `precio_material.precio` vigente de esa región (o
    nacional si falta). Con eso se obtiene `subtotal_consumo`.
 2. Operación: cada detalle cuyo tipo = `operacion` toma `cantidad` de la
-   receta y `costo` = salario vigente de esa región, o
-   `cuadrilla_costo.costo_total` de esa región. Con eso se obtiene
-   `subtotal_operacion`.
+   receta y, según su `naturaleza`, `costo` = salario vigente de esa región
+   (`categoria`) o `cuadrilla_costo.costo_total` de esa región
+   (`cuadrilla`), en ambos casos cayendo al nacional si esa zona no está
+   valuada — para la cuadrilla, eso incluye la fila regional en cero. Con
+   eso se obtiene `subtotal_operacion`.
 3. `cargo_variable_hora` = `subtotal_consumo` + `subtotal_operacion`.
 4. `costo_total` = `equipo_costo_horario.cf_cargo_fijo_hora` +
    `cargo_variable_hora`.
@@ -981,9 +1011,9 @@ No hay campos capturables. `cantidad` vive en `equipo_costo_horario_detalle`
 | id | uuid | PK |
 | equipo_costo_horario_costo_id | uuid | FK → equipo_costo_horario_costo |
 | equipo_costo_horario_detalle_id | uuid | FK → equipo_costo_horario_detalle — debe pertenecer al mismo equipo que `equipo_costo_horario_costo.equipo_costo_horario_id` |
-| costo | decimal | cache: si tipo = consumo, `precio_material.precio` vigente de la región (o nacional si falta; 0 si tampoco hay); si tipo = operacion, salario vigente de esa región o `cuadrilla_costo.costo_total` de esa región (0 si falta) |
+| costo | decimal | cache: si tipo = consumo, `precio_material.precio` vigente de la región (o nacional si falta; 0 si tampoco hay); si tipo = operacion, salario vigente de esa región (o nacional si falta) o `cuadrilla_costo.costo_total` de esa región (o nacional si falta; 0 si tampoco hay) |
 | importe | decimal | cache = `equipo_costo_horario_detalle.cantidad` × costo |
-| fecha_precio | date | nullable — foto de `precio_material.fecha_vigencia_desde` o `salario_categoria_fasar.fecha_vigencia_desde` al recalcular; NULL si el renglón quedó en 0 |
+| fecha_precio | date | nullable — foto de `precio_material.fecha_vigencia_desde`, de `salario_categoria_fasar.fecha_vigencia_desde` o, si el operador es cuadrilla, de `cuadrilla_costo.fecha_costo` de la valuación usada; NULL si el renglón quedó en 0 |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 

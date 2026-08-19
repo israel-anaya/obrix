@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Fuel, HardHat, Pencil, Plus, RefreshCcw, Timer, Trash2 } from "lucide-react";
+import { Boxes, Joystick, Pencil, Plus, RefreshCcw, Timer, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -340,10 +340,10 @@ export function EquipoCostoHorarioFicha() {
                         <Timer size={16} className="text-blue-500" />${fmt(e.cf_cargo_fijo_hora)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Fuel size={16} className="text-amber-500" />${fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
+                        <Boxes size={16} className="text-amber-500" />${fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <HardHat size={16} className="text-violet-500" />${fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
+                        <Joystick size={16} className="text-violet-500" />${fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
                       </span>
                     </div>
                   </button>

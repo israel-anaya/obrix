@@ -21,6 +21,12 @@ pub struct Model {
     pub sub_total_mano_obra: Decimal,
     pub sub_total_herramienta: Decimal,
     pub costo_total: Decimal,
+    /// Foto de la `fecha_vigencia_desde` más reciente entre los salarios que
+    /// respaldan esta valuación (`cuadrilla_costo_detalle.fecha_precio` de
+    /// mano de obra; herramienta no aporta fecha). No es una vigencia de la
+    /// valuación: es el dato que necesita quien consume el costo para saber
+    /// qué tan fresco es. `None` si ningún integrante tiene salario.
+    pub fecha_costo: Option<String>,
     /// Última vez que se recalcularon los costos desde los insumos vigentes
     /// (el ⟳ de Costo por región). No es `updated_at`: editar clave/descripción o
     /// la receta no cuenta como sincronización.

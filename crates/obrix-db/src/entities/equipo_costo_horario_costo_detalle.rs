@@ -17,13 +17,15 @@ pub struct Model {
     pub equipo_costo_horario_detalle_id: String,
     /// Si tipo = consumo: `precio_material.precio` vigente de la región
     /// (o nacional si falta; 0 si tampoco hay). Si tipo = operacion:
-    /// salario vigente de esa región o `cuadrilla_costo.costo_total` de esa
-    /// región (0 si falta).
+    /// salario vigente de esa región (o nacional si falta) o
+    /// `cuadrilla_costo.costo_total` de esa región (o el nacional si esa
+    /// zona no está valuada: fila ausente o en cero; 0 si tampoco hay).
     pub costo: Decimal,
     pub importe: Decimal,
-    /// Foto de `precio_material.fecha_vigencia_desde` o
-    /// `salario_categoria_fasar.fecha_vigencia_desde` al recalcular. NULL
-    /// si el renglón quedó en 0.
+    /// Foto de `precio_material.fecha_vigencia_desde`, de
+    /// `salario_categoria_fasar.fecha_vigencia_desde` o, si el operador es
+    /// una cuadrilla, de `cuadrilla_costo.fecha_costo` de la valuación que
+    /// se usó. NULL si el renglón quedó en 0 o si nada lo respalda con fecha.
     pub fecha_precio: Option<String>,
     pub deleted: bool,
     pub created_at: String,

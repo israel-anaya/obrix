@@ -113,10 +113,13 @@ insumo, y cada extensión solo lleva los campos que de verdad le aplican.
   y piezas especiales, que se deprecian por desgaste, no por tiempo. La
   receta de cargos variables (diesel, aceites, llantas, el operador) vive
   en `equipo_costo_horario_detalle` — plana, no recursiva, compartida entre
-  regiones, con `tipo` para distinguir `consumo` de `operacion`. El costo
+  regiones, con `tipo` para distinguir `consumo` de `operacion` y
+  `naturaleza` para el desglose CMIC del consumo o, en operación, para
+  distinguir categoría FASAR de cuadrilla. El costo
   por hora se valúa por región en `equipo_costo_horario_costo` /
   `equipo_costo_horario_costo_detalle` (precios de material y salarios de
-  esa zona) — metodología estándar SCT/CMIC.
+  esa zona, con caída al nacional si faltan) — metodología estándar
+  SCT/CMIC.
 - **`herramienta`** — herramienta mayor/con motor con precio propio simple
   (sin cálculo de depreciación); distinta de la herramienta menor.
 - **`equipo_rentado`** — equipo de terceros con tarifa de renta en vez de

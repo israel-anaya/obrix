@@ -160,6 +160,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(0),
                     )
+                    .col(ColumnDef::new(CuadrillaCosto::FechaCosto).text())
                     .col(
                         ColumnDef::new(CuadrillaCosto::Deleted)
                             .boolean()
@@ -379,6 +380,7 @@ enum CuadrillaCosto {
     SubTotalManoObra,
     SubTotalHerramienta,
     CostoTotal,
+    FechaCosto,
     Deleted,
     CreatedAt,
     CreatedBy,

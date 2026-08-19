@@ -37,7 +37,9 @@ pub struct EquipoCostoHorarioDetalleData {
     pub detalle_insumo_id: String,
     /// Cantidad consumida (o jornales/horas de operador) por hora de máquina.
     pub cantidad: Decimal,
-    /// Obligatorio si el insumo es un material (`tipo = consumo`); `None` si es operación.
+    /// Obligatorio si el insumo es un material (`tipo = consumo`). En
+    /// operación se deriva de la extensión del insumo (`categoria` o
+    /// `cuadrilla`): mandarla es opcional y solo puede confirmar la derivada.
     #[serde(default)]
     pub naturaleza: Option<NaturalezaEquipoCostoHorarioDetalle>,
 }
@@ -68,8 +70,9 @@ impl EquipoCostoHorarioDetalleService {
     ) -> Result<EquipoCostoHorarioCompleto, ServiceError> {
         let txn = repo.conexion().begin().await?;
 
-        let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
-        let naturaleza = Self::resolver_naturaleza(tipo.clone(), datos.naturaleza, None)?;
+        let (tipo, derivada) = Self::clasificar(&txn, &datos.detalle_insumo_id).await?;
+        let naturaleza =
+            Self::resolver_naturaleza(tipo.clone(), derivada, datos.naturaleza, None)?;
         Self::validar_referencia(
             &txn,
             equipo_costo_horario_insumo_id,
@@ -155,9 +158,10 @@ impl EquipoCostoHorarioDetalleService {
             .clone()
             .unwrap_or_else(|| existente.created_by.clone());
 
-        let tipo = Self::resolver_tipo(&txn, &datos.detalle_insumo_id).await?;
+        let (tipo, derivada) = Self::clasificar(&txn, &datos.detalle_insumo_id).await?;
         let naturaleza = Self::resolver_naturaleza(
             tipo.clone(),
+            derivada,
             datos.naturaleza,
             existente.naturaleza.clone(),
         )?;
@@ -305,61 +309,91 @@ impl EquipoCostoHorarioDetalleService {
         Ok(resultado)
     }
 
+    /// `tipo` y, en operación, la `naturaleza` que le corresponde — ambos
+    /// denormalizados de qué extensión resuelve `detalle_insumo_id`. En
+    /// consumo la naturaleza no se deriva: la captura el analista.
+    ///
     /// `material` (consumo) y `categoria_fasar`/`cuadrilla` (operación) son
     /// las únicas extensiones válidas dentro de un equipo_costo_horario — en
     /// particular, esto rechaza referenciar otro `equipo_costo_horario`.
-    async fn resolver_tipo(
+    async fn clasificar(
         txn: &DatabaseTransaction,
         detalle_insumo_id: &str,
-    ) -> Result<TipoEquipoCostoHorarioDetalle, ServiceError> {
+    ) -> Result<
+        (
+            TipoEquipoCostoHorarioDetalle,
+            Option<NaturalezaEquipoCostoHorarioDetalle>,
+        ),
+        ServiceError,
+    > {
         if material::Entity::find_by_id(detalle_insumo_id)
             .one(txn)
             .await?
             .is_some()
         {
-            return Ok(TipoEquipoCostoHorarioDetalle::Consumo);
+            return Ok((TipoEquipoCostoHorarioDetalle::Consumo, None));
         }
         if categoria_fasar::Entity::find_by_id(detalle_insumo_id)
             .one(txn)
             .await?
             .is_some()
         {
-            return Ok(TipoEquipoCostoHorarioDetalle::Operacion);
+            return Ok((
+                TipoEquipoCostoHorarioDetalle::Operacion,
+                Some(NaturalezaEquipoCostoHorarioDetalle::Categoria),
+            ));
         }
         if cuadrilla::Entity::find_by_id(detalle_insumo_id)
             .one(txn)
             .await?
             .is_some()
         {
-            return Ok(TipoEquipoCostoHorarioDetalle::Operacion);
+            return Ok((
+                TipoEquipoCostoHorarioDetalle::Operacion,
+                Some(NaturalezaEquipoCostoHorarioDetalle::Cuadrilla),
+            ));
         }
         Err(ServiceError::Validacion(format!(
             "\"{detalle_insumo_id}\" no es un material, una categoría FASAR ni una cuadrilla — un equipo de costo horario no puede contener otro equipo de costo horario"
         )))
     }
 
-    /// `naturaleza` es obligatoria en consumo y nula en operación.
+    /// `naturaleza` es obligatoria en ambos tipos, con un subconjunto de
+    /// valores por tipo. En consumo la captura el analista (desglose CMIC);
+    /// en operación la manda `derivada` — `categoria` o `cuadrilla` según la
+    /// extensión del insumo — y lo que venga del cliente solo puede
+    /// confirmarla.
     fn resolver_naturaleza(
         tipo: TipoEquipoCostoHorarioDetalle,
+        derivada: Option<NaturalezaEquipoCostoHorarioDetalle>,
         propuesta: Option<NaturalezaEquipoCostoHorarioDetalle>,
         existente: Option<NaturalezaEquipoCostoHorarioDetalle>,
     ) -> Result<Option<NaturalezaEquipoCostoHorarioDetalle>, ServiceError> {
         match tipo {
-            TipoEquipoCostoHorarioDetalle::Consumo => propuesta
-                .or(existente)
-                .ok_or_else(|| {
-                    ServiceError::Validacion(
-                        "naturaleza es obligatoria cuando el renglón es de consumo (combustible, lubricante, llantas, piezas_especiales u otras_fuentes)".into(),
-                    )
-                })
-                .map(Some),
-            TipoEquipoCostoHorarioDetalle::Operacion => {
-                if propuesta.is_some() {
+            TipoEquipoCostoHorarioDetalle::Consumo => {
+                let naturaleza = propuesta
+                    .or_else(|| existente.filter(|n| n.valida_para(&tipo)))
+                    .ok_or_else(|| {
+                        ServiceError::Validacion(
+                            "naturaleza es obligatoria cuando el renglón es de consumo (combustible, lubricante, llantas, piezas_especiales u otras_fuentes)".into(),
+                        )
+                    })?;
+                if !naturaleza.valida_para(&tipo) {
                     return Err(ServiceError::Validacion(
-                        "naturaleza solo aplica a renglones de consumo; en operación debe ir vacía".into(),
+                        "categoria y cuadrilla son naturalezas de operación; un consumo va con combustible, lubricante, llantas, piezas_especiales u otras_fuentes".into(),
                     ));
                 }
-                Ok(None)
+                Ok(Some(naturaleza))
+            }
+            TipoEquipoCostoHorarioDetalle::Operacion => {
+                if let Some(propuesta) = propuesta {
+                    if Some(&propuesta) != derivada.as_ref() {
+                        return Err(ServiceError::Validacion(
+                            "en operación la naturaleza la define la extensión del insumo (categoria o cuadrilla); no se puede capturar otra".into(),
+                        ));
+                    }
+                }
+                Ok(derivada)
             }
         }
     }
@@ -803,6 +837,127 @@ mod tests {
                 .cargo_variable_hora,
             Decimal::from_str("180.00").unwrap()
         );
+    }
+
+    #[tokio::test]
+    async fn operacion_deriva_naturaleza_de_la_extension_del_insumo() {
+        use crate::cuadrilla::{CuadrillaData, CuadrillaService};
+
+        let portafolio = portafolio_con_fixtures().await;
+        let equipo = crear_equipo(&portafolio, "ECH-1").await;
+        let operador = crear_operador_con_salario(&portafolio, "500").await;
+        let cuadrilla = CuadrillaService::crear(
+            &portafolio,
+            "org-1",
+            CuadrillaData {
+                clave: "CUA-1".into(),
+                descripcion: "Cuadrilla de operación".into(),
+                unidad_id: "um-jor".into(),
+                familia_id: None,
+                sub_familia_id: None,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear cuadrilla")
+        .id;
+
+        for insumo_id in [operador.clone(), cuadrilla.clone()] {
+            EquipoCostoHorarioDetalleService::crear(
+                &portafolio,
+                &equipo.id,
+                EquipoCostoHorarioDetalleData {
+                    detalle_insumo_id: insumo_id,
+                    cantidad: Decimal::ONE,
+                    naturaleza: None,
+                },
+                "usr-1".into(),
+            )
+            .await
+            .expect("agregar operacion");
+        }
+
+        let detalles = EquipoCostoHorarioDetalleService::listar_por_equipo(&portafolio, &equipo.id)
+            .await
+            .expect("listar detalles");
+        let de_categoria = detalles
+            .iter()
+            .find(|d| d.detalle_insumo_id == operador)
+            .unwrap();
+        let de_cuadrilla = detalles
+            .iter()
+            .find(|d| d.detalle_insumo_id == cuadrilla)
+            .unwrap();
+        assert_eq!(
+            de_categoria.naturaleza,
+            Some(NaturalezaEquipoCostoHorarioDetalle::Categoria)
+        );
+        assert_eq!(
+            de_cuadrilla.naturaleza,
+            Some(NaturalezaEquipoCostoHorarioDetalle::Cuadrilla)
+        );
+
+        // Reenviar la naturaleza derivada (lo que hace la ficha al editar la
+        // cantidad) no debe fallar.
+        EquipoCostoHorarioDetalleService::actualizar(
+            &portafolio,
+            de_cuadrilla.id.clone(),
+            EquipoCostoHorarioDetalleData {
+                detalle_insumo_id: cuadrilla.clone(),
+                cantidad: Decimal::from(2),
+                naturaleza: Some(NaturalezaEquipoCostoHorarioDetalle::Cuadrilla),
+            },
+            Some("usr-1".into()),
+        )
+        .await
+        .expect("actualizar cantidad conservando la naturaleza derivada");
+
+        let err = EquipoCostoHorarioDetalleService::actualizar(
+            &portafolio,
+            de_cuadrilla.id.clone(),
+            EquipoCostoHorarioDetalleData {
+                detalle_insumo_id: cuadrilla,
+                cantidad: Decimal::ONE,
+                naturaleza: Some(NaturalezaEquipoCostoHorarioDetalle::Categoria),
+            },
+            Some("usr-1".into()),
+        )
+        .await
+        .expect_err("no debe permitir capturar una naturaleza que contradiga la extensión");
+        match err {
+            ServiceError::Validacion(mensaje) => assert!(
+                mensaje.contains("la define la extensión del insumo"),
+                "mensaje inesperado: {mensaje}"
+            ),
+            otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn consumo_rechaza_naturaleza_de_operacion() {
+        let portafolio = portafolio_con_fixtures().await;
+        let equipo = crear_equipo(&portafolio, "ECH-1").await;
+        let diesel = crear_material_con_precio(&portafolio, "MAT-1", "Diesel", "22.50").await;
+
+        let err = EquipoCostoHorarioDetalleService::crear(
+            &portafolio,
+            &equipo.id,
+            EquipoCostoHorarioDetalleData {
+                detalle_insumo_id: diesel,
+                cantidad: Decimal::ONE,
+                naturaleza: Some(NaturalezaEquipoCostoHorarioDetalle::Cuadrilla),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect_err("cuadrilla no es una naturaleza de consumo");
+        match err {
+            ServiceError::Validacion(mensaje) => assert!(
+                mensaje.contains("naturalezas de operación"),
+                "mensaje inesperado: {mensaje}"
+            ),
+            otro => panic!("se esperaba Validacion, se obtuvo {otro}"),
+        }
     }
 
     #[tokio::test]

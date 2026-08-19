@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { AlertTriangle, CalendarDays, Fuel, Gauge, Globe2, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Timer, X } from "lucide-react";
+import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe2, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,13 @@ import {
 import { ComboboxFiltrable } from "@/components/ComboboxFiltrable";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { QuantityInput } from "@/components/QuantityInput";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -44,7 +50,8 @@ import type {
   EquipoCostoHorarioCostoDetalle,
   EquipoCostoHorarioDetalle,
   Material,
-  NaturalezaEquipoCostoHorarioDetalle,
+  NaturalezaConsumoEquipoCostoHorario,
+  NaturalezaOperacionEquipoCostoHorario,
   Region,
   UnidadMedida,
 } from "@/lib/types";
@@ -59,13 +66,79 @@ function fmt(valor: string): string {
 
 const NACIONAL = "Nacional";
 
-const NATURALEZAS_CONSUMO: { id: NaturalezaEquipoCostoHorarioDetalle; etiqueta: string }[] = [
-  { id: "combustible", etiqueta: "Combustible" },
-  { id: "lubricante", etiqueta: "Lubricante" },
-  { id: "llantas", etiqueta: "Llantas" },
-  { id: "piezas_especiales", etiqueta: "Piezas especiales" },
-  { id: "otras_fuentes", etiqueta: "Otras fuentes" },
+const NATURALEZAS_CONSUMO: {
+  id: NaturalezaConsumoEquipoCostoHorario;
+  etiqueta: string;
+  icono: LucideIcon;
+  clase: string;
+}[] = [
+  { id: "combustible", etiqueta: "Combustible", icono: Fuel, clase: "text-amber-500" },
+  { id: "lubricante", etiqueta: "Lubricante", icono: Droplets, clase: "text-cyan-600 dark:text-cyan-400" },
+  { id: "llantas", etiqueta: "Llantas", icono: CircleDot, clase: "text-slate-500 dark:text-slate-400" },
+  { id: "piezas_especiales", etiqueta: "Piezas especiales", icono: Cog, clase: "text-orange-500" },
+  { id: "otras_fuentes", etiqueta: "Otras fuentes", icono: Layers, clase: "text-muted-foreground" },
 ];
+
+/** La naturaleza de operación no se captura: la deriva el backend de la extensión del insumo. */
+const NATURALEZAS_OPERACION: Record<
+  NaturalezaOperacionEquipoCostoHorario,
+  { etiqueta: string; icono: LucideIcon; clase: string }
+> = {
+  categoria: { etiqueta: "Categoría FASAR", icono: HardHat, clase: "text-violet-500" },
+  cuadrilla: { etiqueta: "Cuadrilla", icono: Users, clase: "text-emerald-600 dark:text-emerald-400" },
+};
+
+function ComboNaturaleza({
+  valor,
+  onElegir,
+}: {
+  valor: NaturalezaConsumoEquipoCostoHorario;
+  onElegir: (naturaleza: NaturalezaConsumoEquipoCostoHorario) => void;
+}) {
+  const actual = NATURALEZAS_CONSUMO.find((n) => n.id === valor) ?? NATURALEZAS_CONSUMO[0];
+  const Icono = actual.icono;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title={actual.etiqueta}
+          className="rounded p-0.5 hover:bg-muted"
+        >
+          <Icono size={16} className={actual.clase} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuRadioGroup
+          value={actual.id}
+          onValueChange={(v) => onElegir(v as NaturalezaConsumoEquipoCostoHorario)}
+        >
+          {NATURALEZAS_CONSUMO.map((n) => (
+            <DropdownMenuRadioItem key={n.id} value={n.id}>
+              <n.icono size={16} className={n.clase} />
+              {n.etiqueta}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function IconoNaturalezaOperacion({ naturaleza }: { naturaleza: string | null }) {
+  const info =
+    naturaleza && naturaleza in NATURALEZAS_OPERACION
+      ? NATURALEZAS_OPERACION[naturaleza as NaturalezaOperacionEquipoCostoHorario]
+      : null;
+  if (!info) return null;
+  const Icono = info.icono;
+  return (
+    <span title={info.etiqueta} className="inline-flex p-0.5">
+      <Icono size={16} className={info.clase} />
+      <span className="sr-only">{info.etiqueta}</span>
+    </span>
+  );
+}
 
 /** Hasta 30 días: vigente. Más de 30: ámbar. Más de 90, o el salario vigente ya no coincide: crítico. */
 const DIAS_PRECIO_FRESCO = 30;
@@ -610,7 +683,7 @@ export function EquipoCostoHorarioFichaApu({
 
   const guardarNaturaleza = async (
     detalle: EquipoCostoHorarioDetalle,
-    naturaleza: NaturalezaEquipoCostoHorarioDetalle,
+    naturaleza: NaturalezaConsumoEquipoCostoHorario,
   ) => {
     if (detalle.naturaleza === naturaleza) return;
     setError(null);
@@ -734,11 +807,11 @@ export function EquipoCostoHorarioFichaApu({
                 {pctFijo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <Fuel size={16} className="text-amber-500" />
+                <Boxes size={16} className="text-amber-500" />
                 {pctConsumo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <HardHat size={16} className="text-violet-500" />
+                <Joystick size={16} className="text-violet-500" />
                 {pctOperacion.toFixed(0)}%
               </span>
             </span>
@@ -874,7 +947,9 @@ export function EquipoCostoHorarioFichaApu({
               <tr className="border-b border-foreground/30 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
                 <th className="w-20 py-1 pr-2 font-semibold">Código</th>
                 <th className="py-1 pr-2 font-semibold">Descripción</th>
-                <th className="w-36 py-1 pr-2 font-semibold">Naturaleza</th>
+                <th className="w-8 py-1 pr-2 font-semibold" title="Naturaleza">
+                  <span className="sr-only">Naturaleza</span>
+                </th>
                 <th className="w-16 py-1 pr-2 font-semibold">Unidad</th>
                 <th className="w-20 py-1 pr-2 text-right font-semibold">Cantidad</th>
                 <th className="w-24 py-1 pr-2 text-right font-semibold">
@@ -909,7 +984,7 @@ export function EquipoCostoHorarioFichaApu({
               <tr>
                 <td colSpan={8} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Fuel size={16} className="text-amber-500" />
+                    <Boxes size={16} className="text-amber-500" />
                     Consumo
                   </span>
                 </td>
@@ -935,26 +1010,10 @@ export function EquipoCostoHorarioFichaApu({
                   </td>
                   <td className="py-1 pr-2">{materialPorId[d.detalle_insumo_id]?.descripcion ?? ""}</td>
                   <td className="py-1 pr-2">
-                    <Select
-                      value={d.naturaleza ?? "combustible"}
-                      onValueChange={(v) =>
-                        void guardarNaturaleza(d, v as NaturalezaEquipoCostoHorarioDetalle)
-                      }
-                    >
-                      <SelectTrigger
-                        size="sm"
-                        className="w-full rounded border-transparent bg-transparent px-1.5 text-[11px] hover:border-border focus:border-border focus:bg-background"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {NATURALEZAS_CONSUMO.map((n) => (
-                          <SelectItem key={n.id} value={n.id}>
-                            {n.etiqueta}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ComboNaturaleza
+                      valor={(d.naturaleza as NaturalezaConsumoEquipoCostoHorario | null) ?? "combustible"}
+                      onElegir={(naturaleza) => void guardarNaturaleza(d, naturaleza)}
+                    />
                   </td>
                   <td className="py-1 pr-2 text-muted-foreground">
                     {simboloPorUnidadId[materialPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? ""}
@@ -1037,7 +1096,7 @@ export function EquipoCostoHorarioFichaApu({
               <tr>
                 <td colSpan={8} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <HardHat size={16} className="text-violet-500" />
+                    <Joystick size={16} className="text-violet-500" />
                     Operación
                   </span>
                 </td>
@@ -1065,7 +1124,9 @@ export function EquipoCostoHorarioFichaApu({
                   <td className="py-1 pr-2">
                     {(categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id])?.descripcion ?? ""}
                   </td>
-                  <td className="py-1 pr-2 text-muted-foreground">—</td>
+                  <td className="py-1 pr-2">
+                    <IconoNaturalezaOperacion naturaleza={d.naturaleza} />
+                  </td>
                   <td className="py-1 pr-2 text-muted-foreground">
                     {simboloPorUnidadId[unidadDeOperacion(d.detalle_insumo_id)] ?? ""}
                   </td>

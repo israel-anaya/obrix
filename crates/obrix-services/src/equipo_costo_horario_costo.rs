@@ -7,11 +7,13 @@
 //! leyendo `cantidad` de la receta — sin fallback al total nacional.
 
 use obrix_db::PortafolioRepository;
-use obrix_db::entities::equipo_costo_horario_detalle::TipoEquipoCostoHorarioDetalle;
+use obrix_db::entities::equipo_costo_horario_detalle::{
+    NaturalezaEquipoCostoHorarioDetalle, TipoEquipoCostoHorarioDetalle,
+};
 use obrix_db::entities::{
-    categoria_fasar, equipo_costo_horario, equipo_costo_horario_costo,
-    equipo_costo_horario_costo_detalle, equipo_costo_horario_detalle, insumo, moneda, organizacion,
-    precio_material, region, salario_categoria_fasar,
+    equipo_costo_horario, equipo_costo_horario_costo, equipo_costo_horario_costo_detalle,
+    equipo_costo_horario_detalle, insumo, moneda, organizacion, precio_material, region,
+    salario_categoria_fasar,
 };
 use rust_decimal::Decimal;
 use sea_orm::{
@@ -295,8 +297,10 @@ impl EquipoCostoHorarioCostoService {
     /// algoritmo corre **dentro de una sola zona**:
     /// 1. consumo: costo = precio vigente de esa región, o nacional si
     ///    falta; 0 si tampoco hay.
-    /// 2. operación: salario vigente de esa misma región (sin fallback) o
-    ///    `cuadrilla_costo.costo_total` de esa región.
+    /// 2. operación: salario vigente de esa región, o nacional si falta;
+    ///    si el operador es cuadrilla, `cuadrilla_costo.costo_total` de esa
+    ///    región, o el nacional si esa zona no está valuada (fila ausente o
+    ///    en cero). 0 si tampoco hay.
     /// 3. `costo_total` = `cf_cargo_fijo_hora` del header + variable.
     pub(crate) async fn recalcular_valuacion(
         txn: &DatabaseTransaction,
@@ -374,6 +378,7 @@ impl EquipoCostoHorarioCostoService {
                     Self::costo_operacion(
                         txn,
                         &receta.detalle_insumo_id,
+                        receta.naturaleza.as_ref(),
                         region_id.as_deref(),
                     )
                     .await?
@@ -474,16 +479,21 @@ impl EquipoCostoHorarioCostoService {
         Ok(consulta.one(txn).await?)
     }
 
+    /// `naturaleza` dice si el operador es una categoría FASAR o una
+    /// cuadrilla, sin ir a las extensiones (ver
+    /// `equipo_costo_horario_detalle`).
+    ///
+    /// Un `cuadrilla_costo` regional en cero se trata como zona sin valuar,
+    /// igual que si la fila no existiera: `CuadrillaCostoService` no hereda
+    /// salarios nacionales, así que un cero ahí significa "esa zona no tiene
+    /// tabulador", no que la cuadrilla cueste cero.
     async fn costo_operacion(
         txn: &DatabaseTransaction,
         detalle_insumo_id: &str,
+        naturaleza: Option<&NaturalezaEquipoCostoHorarioDetalle>,
         region_id: Option<&str>,
     ) -> Result<(Decimal, Option<String>), ServiceError> {
-        if categoria_fasar::Entity::find_by_id(detalle_insumo_id)
-            .one(txn)
-            .await?
-            .is_some()
-        {
+        if naturaleza != Some(&NaturalezaEquipoCostoHorarioDetalle::Cuadrilla) {
             return match Self::salario_vigente(txn, detalle_insumo_id, region_id).await? {
                 Some(salario) => Ok((
                     salario.salario_real_diario,
@@ -492,12 +502,41 @@ impl EquipoCostoHorarioCostoService {
                 None => Ok((Decimal::ZERO, None)),
             };
         }
-        let costo =
-            CuadrillaCostoService::resolver_costo_total(txn, detalle_insumo_id, region_id).await?;
-        Ok((costo.unwrap_or(Decimal::ZERO), None))
+        let de_la_zona = CuadrillaCostoService::resolver_costo_y_fecha(
+            txn,
+            detalle_insumo_id,
+            region_id,
+        )
+        .await?
+        .filter(|(costo, _)| !costo.is_zero());
+        if let Some(valuacion) = de_la_zona {
+            return Ok(valuacion);
+        }
+        if region_id.is_some() {
+            let nacional =
+                CuadrillaCostoService::resolver_costo_y_fecha(txn, detalle_insumo_id, None).await?;
+            return Ok(nacional.unwrap_or((Decimal::ZERO, None)));
+        }
+        Ok((Decimal::ZERO, None))
     }
 
+    /// Salario vigente de esa zona; si es regional y no hay, cae al nacional.
+    /// Sin salario nacional tampoco, el renglón queda en cero.
     async fn salario_vigente(
+        txn: &DatabaseTransaction,
+        insumo_id: &str,
+        region_id: Option<&str>,
+    ) -> Result<Option<salario_categoria_fasar::Model>, ServiceError> {
+        if let Some(region_id) = region_id {
+            let regional = Self::salario_de_zona(txn, insumo_id, Some(region_id)).await?;
+            if regional.is_some() {
+                return Ok(regional);
+            }
+        }
+        Self::salario_de_zona(txn, insumo_id, None).await
+    }
+
+    async fn salario_de_zona(
         txn: &DatabaseTransaction,
         insumo_id: &str,
         region_id: Option<&str>,
@@ -789,6 +828,44 @@ mod tests {
         categoria.id
     }
 
+    async fn registrar_salario(
+        portafolio: &PortafolioSqliteRepository,
+        insumo_id: &str,
+        region_id: Option<String>,
+        salario: &str,
+    ) {
+        let etiqueta = region_id.as_deref().unwrap_or("nacional");
+        let fsr = FactorSalarioRealService::crear(
+            portafolio,
+            "org-1".into(),
+            FactorSalarioRealData {
+                nombre: format!("FSR {insumo_id} {etiqueta}"),
+                region_id: region_id.clone(),
+                modelo_calculo_json: String::new(),
+                parametros_json: String::new(),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear FSR")
+        .id;
+        SalarioCategoriaFasarService::crear(
+            portafolio,
+            insumo_id,
+            SalarioCategoriaFasarData {
+                salario_base_diario: Decimal::from_str(salario).unwrap(),
+                factor_salario_real_id: fsr,
+                factor_salario_real: Decimal::ONE,
+                salario_real_diario: Decimal::from_str(salario).unwrap(),
+                region_id,
+                fecha_vigencia_desde: "2026-01-01".into(),
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("registrar salario");
+    }
+
     #[tokio::test]
     async fn receta_mutada_materializa_regiones_y_consumo_cae_al_nacional() {
         let portafolio = portafolio_con_fixtures().await;
@@ -860,7 +937,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn operacion_no_hereda_salario_nacional() {
+    async fn operacion_cae_al_salario_nacional_si_falta_regional() {
         let portafolio = portafolio_con_fixtures().await;
         let equipo_id = crear_equipo(&portafolio).await;
         let region_id = crear_region(&portafolio, "Norte").await;
@@ -888,7 +965,125 @@ mod tests {
             .find(|c| c.region_id.as_deref() == Some(region_id.as_str()))
             .unwrap();
         assert_eq!(nacional.subtotal_operacion, Decimal::from(500));
-        assert_eq!(norte.subtotal_operacion, Decimal::ZERO);
+        assert_eq!(norte.subtotal_operacion, Decimal::from(500));
+    }
+
+    #[tokio::test]
+    async fn operacion_con_cuadrilla_sin_tabulador_de_la_zona_hereda_la_nacional() {
+        use crate::cuadrilla::{CuadrillaData, CuadrillaService};
+        use crate::cuadrilla_costo::CuadrillaCostoService;
+        use crate::cuadrilla_detalle::{CuadrillaDetalleData, CuadrillaDetalleService};
+
+        let portafolio = portafolio_con_fixtures().await;
+        let equipo_id = crear_equipo(&portafolio).await;
+        let region_id = crear_region(&portafolio, "Norte").await;
+        let integrante = crear_operador(&portafolio, None, "500", "OP-3").await;
+        let cuadrilla = CuadrillaService::crear(
+            &portafolio,
+            "org-1",
+            CuadrillaData {
+                clave: "CUA-1".into(),
+                descripcion: "Operador de camión + ayudante".into(),
+                unidad_id: "um-jor".into(),
+                familia_id: None,
+                sub_familia_id: None,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear cuadrilla")
+        .id;
+        CuadrillaDetalleService::crear(
+            &portafolio,
+            &cuadrilla,
+            CuadrillaDetalleData {
+                detalle_insumo_id: integrante,
+                cantidad: Decimal::ONE,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("agregar integrante");
+
+        // La cuadrilla sí materializa su cache de Norte, pero sin tabulador
+        // de esa zona queda en cero — el equipo no debe tomar ese cero.
+        let cuadrilla_en_norte = CuadrillaCostoService::resolver_costo_total(
+            portafolio.conexion(),
+            &cuadrilla,
+            Some(region_id.as_str()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(cuadrilla_en_norte, Some(Decimal::ZERO));
+
+        EquipoCostoHorarioDetalleService::crear(
+            &portafolio,
+            &equipo_id,
+            EquipoCostoHorarioDetalleData {
+                detalle_insumo_id: cuadrilla,
+                cantidad: Decimal::ONE,
+                naturaleza: None,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("agregar operacion");
+
+        let costos = EquipoCostoHorarioCostoService::listar_por_equipo(&portafolio, &equipo_id)
+            .await
+            .unwrap();
+        let nacional = costos.iter().find(|c| c.region_id.is_none()).unwrap();
+        let norte = costos
+            .iter()
+            .find(|c| c.region_id.as_deref() == Some(region_id.as_str()))
+            .unwrap();
+        assert_eq!(nacional.subtotal_operacion, Decimal::from(500));
+        assert_eq!(norte.subtotal_operacion, Decimal::from(500));
+
+        // El renglón hereda la fecha del salario que respalda a la cuadrilla,
+        // tanto en su propia zona como cuando cae a la nacional — sin eso la
+        // ficha marcaría la región como "sin precio en algún renglón".
+        for costo in [nacional, norte] {
+            let detalles = crate::equipo_costo_horario_costo_detalle::
+                EquipoCostoHorarioCostoDetalleService::listar_por_costo(&portafolio, &costo.id)
+                    .await
+                    .expect("listar detalles de la valuación");
+            assert_eq!(detalles.len(), 1);
+            assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
+        }
+    }
+
+    #[tokio::test]
+    async fn operacion_usa_salario_regional_cuando_existe() {
+        let portafolio = portafolio_con_fixtures().await;
+        let equipo_id = crear_equipo(&portafolio).await;
+        let region_id = crear_region(&portafolio, "Norte").await;
+        let operador = crear_operador(&portafolio, None, "500", "OP-2").await;
+        registrar_salario(&portafolio, &operador, Some(region_id.clone()), "800").await;
+
+        EquipoCostoHorarioDetalleService::crear(
+            &portafolio,
+            &equipo_id,
+            EquipoCostoHorarioDetalleData {
+                detalle_insumo_id: operador,
+                cantidad: Decimal::ONE,
+                naturaleza: None,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("agregar operacion");
+
+        let costos = EquipoCostoHorarioCostoService::listar_por_equipo(&portafolio, &equipo_id)
+            .await
+            .unwrap();
+        let nacional = costos.iter().find(|c| c.region_id.is_none()).unwrap();
+        let norte = costos
+            .iter()
+            .find(|c| c.region_id.as_deref() == Some(region_id.as_str()))
+            .unwrap();
+        assert_eq!(nacional.subtotal_operacion, Decimal::from(500));
+        assert_eq!(norte.subtotal_operacion, Decimal::from(800));
     }
 
     #[tokio::test]

@@ -171,6 +171,7 @@ impl CuadrillaCostoService {
             sub_total_mano_obra: Set(Decimal::ZERO),
             sub_total_herramienta: Set(Decimal::ZERO),
             costo_total: Set(Decimal::ZERO),
+            fecha_costo: Set(None),
             sincronizado_en: Set(None),
             deleted: Set(false),
             created_at: Set(ahora.to_string()),
@@ -280,6 +281,8 @@ impl CuadrillaCostoService {
     /// 2. herramienta: costo = `sub_total_mano_obra` recién calculado de
     ///    esta misma zona.
     /// 3. `costo_total` = suma de ambos subtotales.
+    /// 4. `fecha_costo` = la `fecha_precio` más reciente de los renglones de
+    ///    mano de obra, para que quien consuma el costo sepa qué tan fresco es.
     pub(crate) async fn recalcular_valuacion(
         txn: &DatabaseTransaction,
         cuadrilla_costo_id: &str,
@@ -346,6 +349,13 @@ impl CuadrillaCostoService {
             pendientes.push((d.id.clone(), costo, importe, None));
         }
 
+        // Los salarios vienen como `YYYY-MM-DD`, así que el máximo lexicográfico
+        // es el más reciente. La herramienta no aporta fecha (es % sobre MO).
+        let fecha_costo = pendientes
+            .iter()
+            .filter_map(|(_, _, _, fecha)| fecha.clone())
+            .max();
+
         for (id, costo, importe, fecha_precio) in pendientes {
             let mut am: cuadrilla_costo_detalle::ActiveModel =
                 cuadrilla_costo_detalle::Entity::find_by_id(&id)
@@ -366,6 +376,7 @@ impl CuadrillaCostoService {
         am.sub_total_mano_obra = Set(sub_total_mano_obra);
         am.sub_total_herramienta = Set(sub_total_herramienta);
         am.costo_total = Set(costo_total);
+        am.fecha_costo = Set(fecha_costo);
         Ok(am.update(txn).await?)
     }
 
@@ -408,6 +419,27 @@ impl CuadrillaCostoService {
             None => consulta.filter(cuadrilla_costo::Column::RegionId.is_null()),
         };
         Ok(consulta.one(conn).await?.map(|c| c.costo_total))
+    }
+
+    /// Igual que `resolver_costo_total`, pero devuelve también `fecha_costo`
+    /// — para quien cachea el costo de la cuadrilla y necesita heredar su
+    /// frescura (`equipo_costo_horario_costo_detalle.fecha_precio`).
+    pub async fn resolver_costo_y_fecha(
+        conn: &impl ConnectionTrait,
+        cuadrilla_id: &str,
+        region_id: Option<&str>,
+    ) -> Result<Option<(Decimal, Option<String>)>, ServiceError> {
+        let mut consulta = cuadrilla_costo::Entity::find()
+            .filter(cuadrilla_costo::Column::CuadrillaId.eq(cuadrilla_id))
+            .filter(cuadrilla_costo::Column::Deleted.eq(false));
+        consulta = match region_id {
+            Some(region_id) => consulta.filter(cuadrilla_costo::Column::RegionId.eq(region_id)),
+            None => consulta.filter(cuadrilla_costo::Column::RegionId.is_null()),
+        };
+        Ok(consulta
+            .one(conn)
+            .await?
+            .map(|c| (c.costo_total, c.fecha_costo)))
     }
 }
 
@@ -579,6 +611,25 @@ mod tests {
         region_id: Option<String>,
         salario_real_diario: &str,
     ) {
+        registrar_salario_desde(
+            portafolio,
+            insumo_id,
+            fsr_id,
+            region_id,
+            salario_real_diario,
+            "2026-01-01",
+        )
+        .await;
+    }
+
+    async fn registrar_salario_desde(
+        portafolio: &PortafolioSqliteRepository,
+        insumo_id: &str,
+        fsr_id: &str,
+        region_id: Option<String>,
+        salario_real_diario: &str,
+        fecha_vigencia_desde: &str,
+    ) {
         SalarioCategoriaFasarService::crear(
             portafolio,
             insumo_id,
@@ -588,7 +639,7 @@ mod tests {
                 factor_salario_real: Decimal::ONE,
                 salario_real_diario: Decimal::from_str(salario_real_diario).unwrap(),
                 region_id,
-                fecha_vigencia_desde: "2026-01-01".into(),
+                fecha_vigencia_desde: fecha_vigencia_desde.into(),
             },
             "usr-1".into(),
         )
@@ -682,6 +733,68 @@ mod tests {
             regional.sincronizado_en, None,
             "crear regional no es una sincronización ⟳"
         );
+    }
+
+    #[tokio::test]
+    async fn fecha_costo_es_la_del_salario_mas_reciente_de_la_zona() {
+        let portafolio = portafolio_con_fixtures().await;
+        let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
+        let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
+        let ayudante = crear_categoria(&portafolio, "CAT-2", "Ayudante").await;
+        registrar_salario_desde(&portafolio, &oficial, &fsr, None, "700", "2019-03-15").await;
+        registrar_salario_desde(&portafolio, &ayudante, &fsr, None, "400", "2026-02-01").await;
+
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
+        CuadrillaDetalleService::crear(
+            &portafolio,
+            &cuadrilla_id,
+            CuadrillaDetalleData {
+                detalle_insumo_id: ayudante,
+                cantidad: Decimal::ONE,
+            },
+            "usr-1".into(),
+        )
+        .await
+        .expect("agregar segundo integrante");
+
+        let costos = CuadrillaCostoService::listar_por_cuadrilla(&portafolio, &cuadrilla_id)
+            .await
+            .expect("listar valuaciones");
+        let nacional = costos.iter().find(|c| c.region_id.is_none()).unwrap();
+        assert_eq!(nacional.fecha_costo.as_deref(), Some("2026-02-01"));
+
+        let (costo, fecha) = CuadrillaCostoService::resolver_costo_y_fecha(
+            portafolio.conexion(),
+            &cuadrilla_id,
+            None,
+        )
+        .await
+        .unwrap()
+        .expect("valuación nacional");
+        assert_eq!(costo, Decimal::from(1100));
+        assert_eq!(fecha.as_deref(), Some("2026-02-01"));
+    }
+
+    #[tokio::test]
+    async fn sin_salario_de_la_zona_no_hay_fecha_costo() {
+        let portafolio = portafolio_con_fixtures().await;
+        let fsr = crear_fsr(&portafolio, "FSR nacional", None).await;
+        let oficial = crear_categoria(&portafolio, "CAT-1", "Oficial albañil").await;
+        registrar_salario(&portafolio, &oficial, &fsr, None, "700").await;
+        let cuadrilla_id =
+            crear_cuadrilla_con_integrante(&portafolio, &oficial, Decimal::ONE).await;
+        let region_id = crear_region(&portafolio, "Norte").await;
+
+        let regional = CuadrillaCostoService::crear_regional(
+            &portafolio,
+            &cuadrilla_id,
+            region_id,
+            "usr-1".into(),
+        )
+        .await
+        .expect("crear valuación regional");
+        assert_eq!(regional.fecha_costo, None);
     }
 
     #[tokio::test]

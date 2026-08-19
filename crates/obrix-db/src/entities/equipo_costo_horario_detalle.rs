@@ -7,7 +7,8 @@ use sea_orm::entity::prelude::*;
 /// `cuadrilla`), nunca otro equipo. Compartida entre regiones: `cantidad`
 /// es de la receta (igual en todas); `costo`/`importe` varían por región y
 /// cuelgan de `equipo_costo_horario_costo_detalle`. `naturaleza` clasifica
-/// el consumo para `perfil_inactividad_equipo`. Borrado lógico: al borrar
+/// el consumo para `perfil_inactividad_equipo` y, en operación, distingue
+/// categoría FASAR de cuadrilla sin join. Borrado lógico: al borrar
 /// un renglón se borran en cascada sus `equipo_costo_horario_costo_detalle`
 /// en todas las valuaciones.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
@@ -21,7 +22,9 @@ pub struct Model {
     /// `categoria_fasar`/`cuadrilla` (operación).
     pub detalle_insumo_id: String,
     pub tipo: TipoEquipoCostoHorarioDetalle,
-    /// Obligatorio si `tipo = consumo`; `None` si `tipo = operacion`.
+    /// Obligatorio, y sus valores dependen de `tipo`: en consumo el
+    /// desglose CMIC (lo captura el analista); en operación, `categoria` o
+    /// `cuadrilla` (lo deriva el servicio de la extensión del insumo).
     pub naturaleza: Option<NaturalezaEquipoCostoHorarioDetalle>,
     pub orden: i32,
     /// Cantidad consumida (o jornales/horas de operador) por hora de
@@ -90,7 +93,10 @@ pub enum TipoEquipoCostoHorarioDetalle {
     Operacion,
 }
 
-/// Desglose CMIC/RLOPSRM de un renglón de consumo — ver diccionario de datos.
+/// Desglose CMIC/RLOPSRM de un renglón de consumo y, en operación, qué
+/// extensión resuelve el insumo — ver diccionario de datos. Cada `tipo`
+/// admite solo su propio subconjunto (ver
+/// `NaturalezaEquipoCostoHorarioDetalle::valida_para`).
 #[derive(
     Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, serde::Serialize, serde::Deserialize,
 )]
@@ -106,4 +112,19 @@ pub enum NaturalezaEquipoCostoHorarioDetalle {
     Llantas,
     PiezasEspeciales,
     OtrasFuentes,
+    /// Operación con extensión `categoria_fasar`.
+    Categoria,
+    /// Operación con extensión `cuadrilla`.
+    Cuadrilla,
+}
+
+impl NaturalezaEquipoCostoHorarioDetalle {
+    /// Si esta naturaleza pertenece al subconjunto que admite ese `tipo`.
+    pub fn valida_para(&self, tipo: &TipoEquipoCostoHorarioDetalle) -> bool {
+        let de_operacion = matches!(self, Self::Categoria | Self::Cuadrilla);
+        match tipo {
+            TipoEquipoCostoHorarioDetalle::Consumo => !de_operacion,
+            TipoEquipoCostoHorarioDetalle::Operacion => de_operacion,
+        }
+    }
 }

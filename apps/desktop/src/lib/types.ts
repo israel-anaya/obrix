@@ -448,6 +448,12 @@ export interface CuadrillaCosto extends CamposControl {
   sub_total_mano_obra: string;
   sub_total_herramienta: string;
   costo_total: string;
+  /**
+   * Foto de la vigencia más reciente entre los salarios que respaldan esta
+   * valuación. No es una vigencia de la valuación: sirve para saber qué tan
+   * fresco es el costo. `null` si ningún integrante tiene salario.
+   */
+  fecha_costo: string | null;
   /** Última vez que se pulsó ⟳ en Costo por región. No es `updated_at`. */
   sincronizado_en: string | null;
 }
@@ -536,18 +542,37 @@ export interface EquipoCostoHorarioData {
  * `costo`/`importe` varían por región y cuelgan de
  * `EquipoCostoHorarioCostoDetalle`.
  */
-export type NaturalezaEquipoCostoHorarioDetalle =
+/**
+ * Desglose CMIC/RLOPSRM de un renglón de consumo — lo captura el analista y
+ * es lo que `PerfilInactividadEquipo` usa para aplicar un % distinto a
+ * diesel, llantas o energía.
+ */
+export type NaturalezaConsumoEquipoCostoHorario =
   | "combustible"
   | "lubricante"
   | "llantas"
   | "piezas_especiales"
   | "otras_fuentes";
 
+/**
+ * Naturaleza de un renglón de operación — la deriva el backend de la
+ * extensión del insumo, no se captura.
+ */
+export type NaturalezaOperacionEquipoCostoHorario = "categoria" | "cuadrilla";
+
+export type NaturalezaEquipoCostoHorarioDetalle =
+  | NaturalezaConsumoEquipoCostoHorario
+  | NaturalezaOperacionEquipoCostoHorario;
+
 export interface EquipoCostoHorarioDetalle {
   id: string;
   equipo_costo_horario_insumo_id: string;
   detalle_insumo_id: string;
   tipo: "consumo" | "operacion";
+  /**
+   * Desglose CMIC si `tipo` es `consumo`; `categoria`/`cuadrilla` si es
+   * `operacion`.
+   */
   naturaleza: NaturalezaEquipoCostoHorarioDetalle | null;
   orden: number;
   /** Cantidad consumida (o jornales/horas de operador) por hora de máquina. */
