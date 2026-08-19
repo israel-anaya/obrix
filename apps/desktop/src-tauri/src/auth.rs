@@ -1,8 +1,9 @@
-//! Sesión de usuario, mock — la plataforma de autenticación real todavía no
-//! existe. `$HOME/.obrix/auth.json` guarda solo tokens; `AccountInfo`
-//! (correo, nombre) nunca se persiste: se deriva de los tokens vía
-//! `login_mock`, que hoy siempre devuelve la misma identidad fija porque no
-//! hay servidor contra el cual decodificarlos.
+//! Sesión de usuario contra GoTrue (ver `platform/docker-compose.yml`).
+//! `$HOME/.obrix/auth.json` guarda `access_token`/`refresh_token`; la
+//! identidad (`AccountInfo`) nunca se persiste — se re-deriva del `user`
+//! que devuelve GoTrue en cada login/registro/refresh, así que siempre
+//! refleja el estado real de la cuenta, no una copia local que pueda
+//! quedar desactualizada.
 
 use std::path::PathBuf;
 
@@ -16,14 +17,35 @@ pub struct AccountInfo {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ArchivoAuth {
-    tokens: Tokens,
+    access_token: String,
+    refresh_token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Tokens {
-    id_token: String,
+#[derive(Debug, Deserialize)]
+struct GoTrueUser {
+    email: Option<String>,
+    #[serde(default)]
+    user_metadata: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct GoTrueSesion {
     access_token: String,
-    account_id: String,
+    refresh_token: String,
+    user: GoTrueUser,
+}
+
+#[derive(Debug, Deserialize)]
+struct GoTrueError {
+    #[serde(alias = "error_description", alias = "msg")]
+    mensaje: Option<String>,
+}
+
+/// URL base de GoTrue — `platform/docker-compose.yml` lo expone en
+/// `:9999` en local. Configurable por si el desktop apunta a otro entorno
+/// (staging, producción) sin recompilar.
+fn auth_url() -> String {
+    std::env::var("OBRIX_AUTH_URL").unwrap_or_else(|_| "http://localhost:9999".to_string())
 }
 
 fn auth_json_path() -> Result<PathBuf, String> {
@@ -31,55 +53,133 @@ fn auth_json_path() -> Result<PathBuf, String> {
     Ok(home.join(".obrix").join("auth.json"))
 }
 
-/// No hay plataforma real contra la cual validar los tokens, así que
-/// cualquier `auth.json` presente resuelve siempre a la misma identidad.
-fn login_mock(_tokens: &Tokens) -> AccountInfo {
-    AccountInfo {
-        correo: "demo@obrix.local".to_string(),
-        nombre: "Usuario Demo".to_string(),
-    }
+fn cuenta_desde_usuario(user: &GoTrueUser) -> AccountInfo {
+    let correo = user.email.clone().unwrap_or_default();
+    let nombre = user
+        .user_metadata
+        .get("nombre")
+        .and_then(|v| v.as_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| correo.split('@').next().unwrap_or(&correo).to_string());
+    AccountInfo { correo, nombre }
 }
 
-/// Lee `auth.json` si existe y resuelve la cuenta activa. `Ok(None)` significa
-/// que no hay sesión — el frontend debe mostrar el botón de inicio de sesión.
-pub fn sesion_actual() -> Result<Option<AccountInfo>, String> {
-    let path = auth_json_path()?;
-    if !path.exists() {
-        return Ok(None);
-    }
-    let contenido = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    let archivo: ArchivoAuth = serde_json::from_str(&contenido).map_err(|e| e.to_string())?;
-    Ok(Some(login_mock(&archivo.tokens)))
-}
-
-/// Simula el flujo de "iniciar sesión": abre la URL de la plataforma (mock,
-/// no responde nada real) y escribe un `auth.json` con tokens inventados
-/// para poder probar el resto del flujo sin depender de un servidor.
-pub fn iniciar_sesion_mock(app: &tauri::AppHandle) -> Result<AccountInfo, String> {
-    use tauri_plugin_opener::OpenerExt;
-    let _ = app.opener().open_url("https://obrix.app/auth", None::<&str>);
-
-    let tokens = Tokens {
-        id_token: format!("mock-id-{}", uuid::Uuid::new_v4()),
-        access_token: format!("mock-access-{}", uuid::Uuid::new_v4()),
-        account_id: uuid::Uuid::new_v4().to_string(),
+fn guardar_tokens(sesion: &GoTrueSesion) -> Result<(), String> {
+    let archivo = ArchivoAuth {
+        access_token: sesion.access_token.clone(),
+        refresh_token: sesion.refresh_token.clone(),
     };
-    let cuenta = login_mock(&tokens);
-    let archivo = ArchivoAuth { tokens };
-
     let path = auth_json_path()?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
     let contenido = serde_json::to_string_pretty(&archivo).map_err(|e| e.to_string())?;
-    std::fs::write(&path, contenido).map_err(|e| e.to_string())?;
+    std::fs::write(&path, contenido).map_err(|e| e.to_string())
+}
 
+async fn extraer_error(respuesta: reqwest::Response) -> String {
+    let status = respuesta.status();
+    match respuesta.json::<GoTrueError>().await {
+        Ok(err) => err.mensaje.unwrap_or_else(|| status.to_string()),
+        Err(_) => status.to_string(),
+    }
+}
+
+/// Login real contra GoTrue (email + password).
+pub async fn iniciar_sesion(correo: &str, password: &str) -> Result<AccountInfo, String> {
+    let cliente = reqwest::Client::new();
+    let respuesta = cliente
+        .post(format!("{}/token?grant_type=password", auth_url()))
+        .json(&serde_json::json!({ "email": correo, "password": password }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !respuesta.status().is_success() {
+        return Err(extraer_error(respuesta).await);
+    }
+
+    let sesion: GoTrueSesion = respuesta.json().await.map_err(|e| e.to_string())?;
+    let cuenta = cuenta_desde_usuario(&sesion.user);
+    guardar_tokens(&sesion)?;
     Ok(cuenta)
 }
 
-/// Borra `auth.json` — la próxima `sesion_actual()` ya no encuentra tokens.
-pub fn cerrar_sesion() -> Result<(), String> {
+/// Alta de cuenta nueva. Con `GOTRUE_MAILER_AUTOCONFIRM` activo (como en
+/// dev) la sesión queda iniciada de inmediato; en un entorno con
+/// verificación de correo real, GoTrue no devuelve tokens todavía y hay
+/// que confirmar el correo antes de poder iniciar sesión.
+pub async fn registrar_cuenta(correo: &str, password: &str) -> Result<AccountInfo, String> {
+    let cliente = reqwest::Client::new();
+    let respuesta = cliente
+        .post(format!("{}/signup", auth_url()))
+        .json(&serde_json::json!({ "email": correo, "password": password }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !respuesta.status().is_success() {
+        return Err(extraer_error(respuesta).await);
+    }
+
+    let sesion: GoTrueSesion = respuesta.json().await.map_err(|_| {
+        "Cuenta creada — confirma tu correo antes de iniciar sesión".to_string()
+    })?;
+    let cuenta = cuenta_desde_usuario(&sesion.user);
+    guardar_tokens(&sesion)?;
+    Ok(cuenta)
+}
+
+/// Llamado al arrancar la app: si hay tokens guardados, los refresca
+/// contra GoTrue — valida que la sesión siga viva y trae la identidad al
+/// día en el mismo viaje. `Ok(None)` si no hay tokens o el refresh falla
+/// (sesión expirada o revocada); el frontend debe mostrar el login. GoTrue
+/// rota el `refresh_token` en cada uso, por eso se reemplaza el archivo
+/// completo con la respuesta, nunca solo el `access_token`.
+pub async fn sesion_actual() -> Result<Option<AccountInfo>, String> {
     let path = auth_json_path()?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    let contenido = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let archivo: ArchivoAuth = match serde_json::from_str(&contenido) {
+        Ok(a) => a,
+        Err(_) => return Ok(None),
+    };
+
+    let cliente = reqwest::Client::new();
+    let respuesta = cliente
+        .post(format!("{}/token?grant_type=refresh_token", auth_url()))
+        .json(&serde_json::json!({ "refresh_token": archivo.refresh_token }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !respuesta.status().is_success() {
+        let _ = std::fs::remove_file(&path);
+        return Ok(None);
+    }
+
+    let sesion: GoTrueSesion = respuesta.json().await.map_err(|e| e.to_string())?;
+    let cuenta = cuenta_desde_usuario(&sesion.user);
+    guardar_tokens(&sesion)?;
+    Ok(Some(cuenta))
+}
+
+/// Revoca el `access_token` en GoTrue (best-effort — si la red falla, de
+/// todos modos se borra la sesión local) y borra `auth.json`.
+pub async fn cerrar_sesion() -> Result<(), String> {
+    let path = auth_json_path()?;
+    if let Ok(contenido) = std::fs::read_to_string(&path) {
+        if let Ok(archivo) = serde_json::from_str::<ArchivoAuth>(&contenido) {
+            let cliente = reqwest::Client::new();
+            let _ = cliente
+                .post(format!("{}/logout", auth_url()))
+                .bearer_auth(&archivo.access_token)
+                .send()
+                .await;
+        }
+    }
     if path.exists() {
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
     }

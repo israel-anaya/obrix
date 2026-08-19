@@ -224,6 +224,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::auth::obtener_sesion,
             commands::auth::iniciar_sesion,
+            commands::auth::registrar_cuenta,
             commands::auth::cerrar_sesion,
             commands::portafolio::crear_portafolio,
             commands::portafolio::abrir_portafolio,

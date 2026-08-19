@@ -73,6 +73,7 @@ import {
   listarPortafoliosRecientes,
   obtenerOrganizacionActiva,
   obtenerSesion,
+  registrarCuenta,
   setOrganizacionActiva,
 } from "@/lib/tauri";
 
@@ -182,9 +183,19 @@ export default function App() {
     recargarRecientes();
   }, [cuenta]);
 
-  const handleIniciarSesion = async () => {
+  const handleIniciarSesion = async (correo: string, password: string) => {
     try {
-      const cuentaIniciada = await iniciarSesion();
+      const cuentaIniciada = await iniciarSesion(correo, password);
+      setCuenta(cuentaIniciada);
+      setSesionError(null);
+    } catch (e) {
+      setSesionError(String(e));
+    }
+  };
+
+  const handleRegistrarCuenta = async (correo: string, password: string) => {
+    try {
+      const cuentaIniciada = await registrarCuenta(correo, password);
       setCuenta(cuentaIniciada);
       setSesionError(null);
     } catch (e) {
@@ -433,7 +444,13 @@ export default function App() {
     if (!activeTab) {
       if (sesionCargando) return null;
       if (!cuenta) {
-        return <LoginGate onIniciarSesion={handleIniciarSesion} error={sesionError} />;
+        return (
+          <LoginGate
+            onIniciarSesion={handleIniciarSesion}
+            onRegistrarCuenta={handleRegistrarCuenta}
+            error={sesionError}
+          />
+        );
       }
       if (!portafolio) {
         return (

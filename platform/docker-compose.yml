@@ -80,7 +80,7 @@ services:
       GOTRUE_URL: http://gotrue:9999
       GOTRUE_JWT_SECRET: ${GOTRUE_JWT_SECRET:-dev_jwt_secret_change_me_min_32_chars}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin_dev_password}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-dev_admin_session_secret_change_me}
     ports:
       - "8090:8090"

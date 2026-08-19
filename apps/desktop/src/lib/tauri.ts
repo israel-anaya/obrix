@@ -55,8 +55,12 @@ export function obtenerSesion(): Promise<AccountInfo | null> {
   return invoke("obtener_sesion");
 }
 
-export function iniciarSesion(): Promise<AccountInfo> {
-  return invoke("iniciar_sesion");
+export function iniciarSesion(correo: string, password: string): Promise<AccountInfo> {
+  return invoke("iniciar_sesion", { correo, password });
+}
+
+export function registrarCuenta(correo: string, password: string): Promise<AccountInfo> {
+  return invoke("registrar_cuenta", { correo, password });
 }
 
 export function cerrarSesion(): Promise<void> {
