@@ -27,12 +27,12 @@ pub async fn activar_suscripcion(state: &AppState, payload: &Value) -> Result<Va
 
 pub async fn cancelar_suscripcion(
     state: &AppState,
-    organizacion_id: &str,
+    correo: &str,
 ) -> Result<Value, reqwest::Error> {
     state
         .http
         .post(format!(
-            "{}/admin/suscripciones/{organizacion_id}/cancelar",
+            "{}/admin/suscripciones/{correo}/cancelar",
             state.licensing_server_url
         ))
         .send()

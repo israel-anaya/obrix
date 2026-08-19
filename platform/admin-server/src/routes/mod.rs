@@ -23,7 +23,7 @@ pub fn router(state: AppState, frontend_dist: &str) -> Router {
             get(suscripciones::listar).post(suscripciones::activar),
         )
         .route(
-            "/api/suscripciones/{organizacion_id}/cancelar",
+            "/api/suscripciones/{correo}/cancelar",
             post(suscripciones::cancelar),
         )
         .route("/api/usuarios", get(usuarios::listar))

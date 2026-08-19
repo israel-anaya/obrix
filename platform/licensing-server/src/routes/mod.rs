@@ -22,7 +22,7 @@ pub fn router(db: DatabaseConnection, mailer: Mailer) -> Router {
     Router::new()
         .route("/health", get(|| async { "ok" }))
         .route(
-            "/organizaciones/{organizacion_id}/entitlements",
+            "/cuentas/{correo}/entitlements",
             get(entitlements::obtener_entitlements),
         )
         .route(
@@ -30,7 +30,7 @@ pub fn router(db: DatabaseConnection, mailer: Mailer) -> Router {
             get(admin::listar_suscripciones).post(admin::activar_suscripcion),
         )
         .route(
-            "/admin/suscripciones/{organizacion_id}/cancelar",
+            "/admin/suscripciones/{correo}/cancelar",
             post(admin::cancelar_suscripcion),
         )
         .route(

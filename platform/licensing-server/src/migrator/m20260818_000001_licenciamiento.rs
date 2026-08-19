@@ -18,7 +18,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(
-                        ColumnDef::new(Suscripcion::OrganizacionId)
+                        ColumnDef::new(Suscripcion::Correo)
                             .text()
                             .not_null()
                             .unique_key(),
@@ -106,7 +106,7 @@ impl MigrationTrait for Migration {
 enum Suscripcion {
     Table,
     Id,
-    OrganizacionId,
+    Correo,
     Plan,
     Estado,
     StripeCustomerId,

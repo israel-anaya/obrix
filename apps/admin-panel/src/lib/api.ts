@@ -3,7 +3,7 @@ export type EstadoSuscripcion = "activa" | "cancelada" | "vencida";
 
 export interface Suscripcion {
   id: string;
-  organizacion_id: string;
+  correo: string;
   plan: Plan;
   estado: EstadoSuscripcion;
   stripe_customer_id: string | null;
@@ -50,13 +50,13 @@ export const api = {
   me: () => solicitud<{ username: string }>("/api/me"),
 
   listarSuscripciones: () => solicitud<Suscripcion[]>("/api/suscripciones"),
-  activarSuscripcion: (organizacion_id: string, plan: Plan) =>
+  activarSuscripcion: (correo: string, plan: Plan) =>
     solicitud<Suscripcion>("/api/suscripciones", {
       method: "POST",
-      body: JSON.stringify({ organizacion_id, plan }),
+      body: JSON.stringify({ correo, plan }),
     }),
-  cancelarSuscripcion: (organizacionId: string) =>
-    solicitud<Suscripcion>(`/api/suscripciones/${organizacionId}/cancelar`, {
+  cancelarSuscripcion: (correo: string) =>
+    solicitud<Suscripcion>(`/api/suscripciones/${correo}/cancelar`, {
       method: "POST",
     }),
 

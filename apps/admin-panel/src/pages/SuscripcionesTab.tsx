@@ -24,7 +24,7 @@ export function SuscripcionesTab() {
   const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [nuevaOrgId, setNuevaOrgId] = useState("");
+  const [nuevoCorreo, setNuevoCorreo] = useState("");
   const [nuevoPlan, setNuevoPlan] = useState<Plan>("free");
 
   async function recargar() {
@@ -45,19 +45,19 @@ export function SuscripcionesTab() {
 
   async function activarNueva(e: React.FormEvent) {
     e.preventDefault();
-    if (!nuevaOrgId.trim()) return;
-    await api.activarSuscripcion(nuevaOrgId.trim(), nuevoPlan);
-    setNuevaOrgId("");
+    if (!nuevoCorreo.trim()) return;
+    await api.activarSuscripcion(nuevoCorreo.trim(), nuevoPlan);
+    setNuevoCorreo("");
     recargar();
   }
 
-  async function cambiarPlan(organizacionId: string, plan: Plan) {
-    await api.activarSuscripcion(organizacionId, plan);
+  async function cambiarPlan(correo: string, plan: Plan) {
+    await api.activarSuscripcion(correo, plan);
     recargar();
   }
 
-  async function cancelar(organizacionId: string) {
-    await api.cancelarSuscripcion(organizacionId);
+  async function cancelar(correo: string) {
+    await api.cancelarSuscripcion(correo);
     recargar();
   }
 
@@ -65,11 +65,11 @@ export function SuscripcionesTab() {
     <div className="flex flex-col gap-4">
       <form onSubmit={activarNueva} className="flex items-end gap-2">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Organización</label>
+          <label className="text-xs text-muted-foreground">Correo</label>
           <Input
-            placeholder="organizacion_id"
-            value={nuevaOrgId}
-            onChange={(e) => setNuevaOrgId(e.target.value)}
+            placeholder="correo@ejemplo.com"
+            value={nuevoCorreo}
+            onChange={(e) => setNuevoCorreo(e.target.value)}
             className="w-64"
           />
         </div>
@@ -91,7 +91,7 @@ export function SuscripcionesTab() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Organización</TableHead>
+            <TableHead>Correo</TableHead>
             <TableHead>Plan</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Renovación</TableHead>
@@ -101,11 +101,11 @@ export function SuscripcionesTab() {
         <TableBody>
           {suscripciones.map((s) => (
             <TableRow key={s.id}>
-              <TableCell className="font-mono text-xs">{s.organizacion_id}</TableCell>
+              <TableCell className="font-mono text-xs">{s.correo}</TableCell>
               <TableCell>
                 <Select
                   value={s.plan}
-                  onChange={(e) => cambiarPlan(s.organizacion_id, e.target.value as Plan)}
+                  onChange={(e) => cambiarPlan(s.correo, e.target.value as Plan)}
                 >
                   {PLANES.map((p) => (
                     <option key={p} value={p}>
@@ -123,7 +123,7 @@ export function SuscripcionesTab() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => cancelar(s.organizacion_id)}
+                    onClick={() => cancelar(s.correo)}
                   >
                     Cancelar
                   </Button>

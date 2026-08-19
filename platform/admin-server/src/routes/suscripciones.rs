@@ -29,9 +29,9 @@ pub async fn activar(
 pub async fn cancelar(
     _sesion: SesionAdmin,
     State(state): State<AppState>,
-    Path(organizacion_id): Path<String>,
+    Path(correo): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
-    licensing::cancelar_suscripcion(&state, &organizacion_id)
+    licensing::cancelar_suscripcion(&state, &correo)
         .await
         .map(Json)
         .map_err(|_| StatusCode::BAD_GATEWAY)

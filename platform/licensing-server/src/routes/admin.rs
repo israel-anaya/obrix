@@ -28,20 +28,20 @@ pub async fn listar_suscripciones(
 
 #[derive(Deserialize)]
 pub struct ActivarSuscripcionRequest {
-    pub organizacion_id: String,
+    pub correo: String,
     pub plan: Plan,
 }
 
 /// Mockup del webhook `checkout.session.completed` de Stripe — activa o
-/// cambia el plan de una organización sin cobrar nada todavía. Cuando se
-/// conecte Stripe de verdad, esto se reemplaza por el handler del webhook;
-/// la forma de la tabla `suscripcion` no cambia.
+/// cambia el plan de una cuenta sin cobrar nada todavía. Cuando se conecte
+/// Stripe de verdad, esto se reemplaza por el handler del webhook; la forma
+/// de la tabla `suscripcion` no cambia.
 pub async fn activar_suscripcion(
     State(state): State<AppState>,
     Json(payload): Json<ActivarSuscripcionRequest>,
 ) -> Result<Json<suscripcion::Model>, StatusCode> {
     let existente = suscripcion::Entity::find()
-        .filter(suscripcion::Column::OrganizacionId.eq(payload.organizacion_id.clone()))
+        .filter(suscripcion::Column::Correo.eq(payload.correo.clone()))
         .one(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -64,7 +64,7 @@ pub async fn activar_suscripcion(
         None => {
             let nuevo = suscripcion::ActiveModel {
                 id: Set(Uuid::new_v4().to_string()),
-                organizacion_id: Set(payload.organizacion_id),
+                correo: Set(payload.correo),
                 plan: Set(payload.plan),
                 estado: Set(EstadoSuscripcion::Activa),
                 stripe_customer_id: Set(None),
@@ -87,10 +87,10 @@ pub async fn activar_suscripcion(
 /// Mockup del webhook `customer.subscription.deleted` de Stripe.
 pub async fn cancelar_suscripcion(
     State(state): State<AppState>,
-    Path(organizacion_id): Path<String>,
+    Path(correo): Path<String>,
 ) -> Result<Json<suscripcion::Model>, StatusCode> {
     let fila = suscripcion::Entity::find()
-        .filter(suscripcion::Column::OrganizacionId.eq(organizacion_id))
+        .filter(suscripcion::Column::Correo.eq(correo))
         .one(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?

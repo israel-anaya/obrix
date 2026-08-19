@@ -20,27 +20,28 @@ pub struct CapacidadResponse {
 
 #[derive(Serialize)]
 pub struct EntitlementsResponse {
-    pub organizacion_id: String,
+    pub correo: String,
     pub plan: Plan,
     pub estado: EstadoSuscripcion,
     pub capacidades: HashMap<String, CapacidadResponse>,
 }
 
-/// Qué le está permitido hacer a una organización ahora mismo. El desktop
-/// llama esto tras login y cachea la respuesta para poder seguir operando
-/// offline un tiempo de gracia.
+/// Qué le está permitido hacer a una cuenta ahora mismo. El desktop llama
+/// esto tras login y cachea la respuesta para poder seguir operando offline
+/// un tiempo de gracia.
 pub async fn obtener_entitlements(
     State(state): State<AppState>,
-    Path(organizacion_id): Path<String>,
+    Path(correo): Path<String>,
 ) -> Result<Json<EntitlementsResponse>, StatusCode> {
     let existente = suscripcion::Entity::find()
-        .filter(suscripcion::Column::OrganizacionId.eq(organizacion_id.clone()))
+        .filter(suscripcion::Column::Correo.eq(correo.clone()))
         .one(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Toda organización sin fila explícita en `suscripcion` empieza en
-    // `free` — no hace falta sembrar una suscripción por cada alta nueva.
+    // Toda cuenta sin fila explícita en `suscripcion` empieza en `free` —
+    // no hace falta sembrar una suscripción por cada alta nueva, así que un
+    // registro nuevo en GoTrue ya queda en Free sin ninguna acción extra.
     let (plan, estado) = match existente {
         Some(s) => (s.plan, s.estado),
         None => (Plan::Free, EstadoSuscripcion::Activa),
@@ -66,7 +67,7 @@ pub async fn obtener_entitlements(
         .collect();
 
     Ok(Json(EntitlementsResponse {
-        organizacion_id,
+        correo,
         plan,
         estado,
         capacidades,

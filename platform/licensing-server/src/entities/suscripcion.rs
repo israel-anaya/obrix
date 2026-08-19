@@ -2,16 +2,18 @@ use sea_orm::entity::prelude::*;
 
 use super::plan::Plan;
 
-/// Suscripción vigente de una `organizacion` (referenciada solo por su
-/// `id` — esta base no es dueña de la tabla `organizacion` de negocio, ver
-/// `README.md`). El plan aplica a la organización completa, no por usuario.
+/// Suscripción vigente de una cuenta (identificada por su correo de GoTrue).
+/// El plan es por cuenta individual, no por la `organizacion` de negocio del
+/// desktop (esa es solo un concepto de organización de datos dentro de un
+/// portafolio — ver `README.md`). La colaboración multi-cuenta bajo un
+/// mismo plan Enterprise es un concepto aparte, todavía sin construir.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "suscripcion")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     #[sea_orm(unique)]
-    pub organizacion_id: String,
+    pub correo: String,
     pub plan: Plan,
     pub estado: EstadoSuscripcion,
     /// Mockup: la integración real con Stripe aún no está implementada —
