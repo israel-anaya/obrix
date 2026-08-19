@@ -1,5 +1,7 @@
-use crate::AppState;
+use crate::{commands, AppState};
 use obrix_services::categoria_fasar::{CategoriaFasarCompleto, CategoriaFasarData, CategoriaFasarService};
+use obrix_services::material::ResultadoImportacion;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn list_categorias_fasar(state: tauri::State<'_, AppState>) -> Result<Vec<CategoriaFasarCompleto>, String> {
@@ -56,4 +58,29 @@ pub async fn delete_categoria_fasar(state: tauri::State<'_, AppState>, id: Strin
     )
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn importar_categorias_fasar_csv(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<ResultadoImportacion, String> {
+    let contenido = std::fs::read_to_string(&path).map_err(|e| format!("no se pudo leer el archivo: {e}"))?;
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    CategoriaFasarService::importar_csv_con_progreso(
+        activo.portafolio.as_ref(),
+        &activo.organizacion_id,
+        &contenido,
+        activo.usuario_id_activo.clone(),
+        move |actual, total| {
+            let _ = app.emit(
+                commands::EVENTO_CSV_PROGRESO,
+                commands::CsvProgresoPayload { actual, total },
+            );
+        },
+    )
+    .await
+    .map_err(|e| e.to_string())
 }

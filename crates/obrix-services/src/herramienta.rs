@@ -221,6 +221,226 @@ impl HerramientaService {
     ) -> Result<(), ServiceError> {
         crate::marcar_insumo_eliminado(repo, &id, "herramienta", eliminado_por).await
     }
+
+    pub async fn importar_csv(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+        contenido_csv: &str,
+        creado_por: String,
+    ) -> Result<crate::material::ResultadoImportacion, ServiceError> {
+        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {})
+            .await
+    }
+
+    pub async fn importar_csv_con_progreso(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+        contenido_csv: &str,
+        creado_por: String,
+        mut on_progreso: impl FnMut(u32, u32) + Send,
+    ) -> Result<crate::material::ResultadoImportacion, ServiceError> {
+        use crate::material::ResultadoImportacion;
+        use crate::{
+            id_insumo_existente, mapas_familia, recordar_insumo, resolver_familia_csv,
+            siguiente_consecutivo,
+        };
+        use std::collections::HashMap;
+
+        let unidades = unidad_medida::Entity::find()
+            .filter(unidad_medida::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let unidad_id_por_texto = UnidadMedidaService::mapa_id_por_texto(&unidades);
+
+        let familias = familia_insumo::Entity::find()
+            .filter(familia_insumo::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let (raiz_id_por_nombre, hija_id_por_padre_y_nombre) = mapas_familia(&familias);
+
+        let extension: std::collections::HashSet<String> = herramienta::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|h| h.insumo_id)
+            .collect();
+        let insumos = insumo::Entity::find()
+            .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
+            .filter(insumo::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let mut clave_por_id: HashMap<String, String> = HashMap::new();
+        let mut por_clave: HashMap<String, String> = HashMap::new();
+        let mut por_descripcion: HashMap<String, String> = HashMap::new();
+        for ins in &insumos {
+            if !extension.contains(&ins.id) {
+                continue;
+            }
+            clave_por_id.insert(ins.id.clone(), ins.clave.clone());
+            recordar_insumo(
+                &mut por_clave,
+                &mut por_descripcion,
+                &ins.id,
+                &ins.clave,
+                &ins.descripcion,
+            );
+        }
+        let mut siguiente = siguiente_consecutivo(clave_por_id.values().map(String::as_str), "HER-");
+
+        let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
+        let mut creados = 0u32;
+        let mut actualizados = 0u32;
+        let mut se_autogenero_clave = false;
+        let mut errores = Vec::new();
+        let tiene_columna_clave = lector
+            .headers()
+            .map(|h| {
+                h.iter()
+                    .any(|columna| columna.trim().eq_ignore_ascii_case("clave"))
+            })
+            .unwrap_or(false);
+
+        let registros: Vec<Result<RegistroCsvImportHerramienta, csv::Error>> =
+            lector.deserialize::<RegistroCsvImportHerramienta>().collect();
+        let total = registros.len() as u32;
+        for (i, registro) in registros.into_iter().enumerate() {
+            on_progreso(i as u32 + 1, total);
+            let fila = i + 2;
+            let registro = match registro {
+                Ok(r) => r,
+                Err(e) => {
+                    errores.push(format!("fila {fila}: {e}"));
+                    continue;
+                }
+            };
+            let descripcion = registro.herramienta.trim().to_string();
+            if descripcion.is_empty() {
+                errores.push(format!("fila {fila}: herramienta vacía, se omitió"));
+                continue;
+            }
+            let unidad_texto = registro.unidad.trim().to_lowercase();
+            let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto).cloned() else {
+                errores.push(format!(
+                    "fila {fila}: unidad \"{}\" no encontrada, se omitió",
+                    registro.unidad.trim()
+                ));
+                continue;
+            };
+            let (familia_id, sub_familia_id) = resolver_familia_csv(
+                registro.familia.as_deref().unwrap_or(""),
+                registro.subfamilia.as_deref().unwrap_or(""),
+                &raiz_id_por_nombre,
+                &hija_id_por_padre_y_nombre,
+                fila,
+                &mut errores,
+            );
+            let clave_archivo = registro
+                .clave
+                .as_deref()
+                .map(str::trim)
+                .filter(|c| !c.is_empty());
+            let existente_id =
+                id_insumo_existente(clave_archivo, &descripcion, &por_clave, &por_descripcion);
+            let clave = match (clave_archivo, existente_id.as_deref()) {
+                (Some(clave_archivo), _) => clave_archivo.to_string(),
+                (None, Some(id)) => clave_por_id
+                    .get(id)
+                    .cloned()
+                    .unwrap_or_else(|| id.to_string()),
+                (None, None) => {
+                    let clave = format!("HER-{siguiente:03}");
+                    siguiente += 1;
+                    se_autogenero_clave = true;
+                    clave
+                }
+            };
+            let datos = HerramientaData {
+                clave: clave.clone(),
+                descripcion: descripcion.clone(),
+                unidad_id,
+                familia_id,
+                sub_familia_id,
+                porcentaje_mano_obra: parsear_porcentaje_mo(
+                    registro.porcentaje_mano_obra.as_deref().unwrap_or(""),
+                ),
+            };
+            let item = if let Some(id) = existente_id {
+                match Self::actualizar(repo, id, datos, Some(creado_por.clone())).await {
+                    Ok(h) => {
+                        actualizados += 1;
+                        h
+                    }
+                    Err(e) => {
+                        errores.push(format!(
+                            "fila {fila}: no se pudo actualizar la herramienta ({e})"
+                        ));
+                        continue;
+                    }
+                }
+            } else {
+                match Self::crear(repo, organizacion_id, datos, creado_por.clone()).await {
+                    Ok(h) => {
+                        creados += 1;
+                        h
+                    }
+                    Err(e) => {
+                        errores.push(format!("fila {fila}: no se pudo crear la herramienta ({e})"));
+                        continue;
+                    }
+                }
+            };
+            clave_por_id.insert(item.id.clone(), item.clave.clone());
+            recordar_insumo(
+                &mut por_clave,
+                &mut por_descripcion,
+                &item.id,
+                &item.clave,
+                &item.descripcion,
+            );
+        }
+        let aviso = if !tiene_columna_clave && se_autogenero_clave {
+            Some(
+                "El archivo no tiene columna \"Clave\"; se generarán claves automáticas con el prefijo HER-."
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+        Ok(ResultadoImportacion::nuevo(
+            creados,
+            actualizados,
+            errores,
+            aviso,
+        ))
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct RegistroCsvImportHerramienta {
+    #[serde(rename = "Clave", default)]
+    clave: Option<String>,
+    #[serde(rename = "Herramienta")]
+    herramienta: String,
+    #[serde(rename = "Unidad")]
+    unidad: String,
+    #[serde(rename = "Familia", default)]
+    familia: Option<String>,
+    #[serde(rename = "Subfamilia", default)]
+    subfamilia: Option<String>,
+    #[serde(rename = "PorcentajeManoObra", default)]
+    porcentaje_mano_obra: Option<String>,
+}
+
+fn parsear_porcentaje_mo(texto: &str) -> Option<i32> {
+    let limpio: String = texto
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .collect();
+    if limpio.is_empty() {
+        return None;
+    }
+    let n: f64 = limpio.parse().ok()?;
+    Some(n.round().clamp(0.0, 100.0) as i32)
 }
 
 #[derive(serde::Deserialize)]
@@ -262,14 +482,7 @@ impl DatosIniciales for HerramientaService {
             .filter(unidad_medida::Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?;
-        let unidad_id_por_texto: std::collections::HashMap<String, String> = unidades
-            .iter()
-            .flat_map(|u| {
-                UnidadMedidaService::variantes(u)
-                    .into_iter()
-                    .map(|t| (t, u.id.clone()))
-            })
-            .collect();
+        let unidad_id_por_texto = UnidadMedidaService::mapa_id_por_texto(&unidades);
 
         let familias = familia_insumo::Entity::find()
             .filter(familia_insumo::Column::Deleted.eq(false))
@@ -738,5 +951,45 @@ mod tests {
             2,
             "no debe duplicar al sembrar dos veces"
         );
+    }
+
+    #[tokio::test]
+    async fn importar_csv_resuelve_unidad_por_variantes() {
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        crate::seed::sembrar_catalogos_generales(&portafolio)
+            .await
+            .expect("sembrar");
+        let org = crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
+            .await
+            .expect("org");
+        let admin = crate::usuario::UsuarioService::buscar_admin_obrix(&portafolio)
+            .await
+            .expect("admin");
+
+        let csv = "Herramienta,Unidad,PorcentajeManoObra\n\
+                    Rotomartillo de prueba,% de MO,4\n";
+        let resultado =
+            HerramientaService::importar_csv(&portafolio, &org.id, csv, admin.id.clone())
+                .await
+                .expect("importar");
+        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
+        assert_eq!(resultado.creados, 1);
+
+        let item = HerramientaService::listar(&portafolio, &org.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|h| h.descripcion == "Rotomartillo de prueba")
+            .expect("importada");
+        let unidades = unidad_medida::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .unwrap();
+        let mapa = UnidadMedidaService::mapa_id_por_texto(&unidades);
+        assert_eq!(item.unidad_id, mapa["%mo"]);
+        assert_eq!(item.unidad_id, mapa["% de mo"]);
+        assert_eq!(item.porcentaje_mano_obra, Some(4));
     }
 }

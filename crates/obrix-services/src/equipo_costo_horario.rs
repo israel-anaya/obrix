@@ -12,11 +12,13 @@
 use obrix_db::PortafolioRepository;
 use obrix_db::entities::equipo_costo_horario;
 use obrix_db::entities::insumo::{self, TipoInsumo};
+use obrix_db::entities::{familia_insumo, region, unidad_medida};
 use rust_decimal::Decimal;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
 };
 
+use crate::unidad_medida::UnidadMedidaService;
 use crate::{ServiceError, nuevo_id};
 
 #[derive(serde::Deserialize)]
@@ -396,6 +398,275 @@ impl EquipoCostoHorarioService {
     ) -> Result<(), ServiceError> {
         crate::marcar_insumo_eliminado(repo, &id, "equipo_costo_horario", eliminado_por).await
     }
+
+    pub async fn importar_csv(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+        contenido_csv: &str,
+        creado_por: String,
+    ) -> Result<crate::material::ResultadoImportacion, ServiceError> {
+        Self::importar_csv_con_progreso(repo, organizacion_id, contenido_csv, creado_por, |_, _| {})
+            .await
+    }
+
+    pub async fn importar_csv_con_progreso(
+        repo: &dyn PortafolioRepository,
+        organizacion_id: &str,
+        contenido_csv: &str,
+        creado_por: String,
+        mut on_progreso: impl FnMut(u32, u32) + Send,
+    ) -> Result<crate::material::ResultadoImportacion, ServiceError> {
+        use crate::material::ResultadoImportacion;
+        use crate::{
+            id_insumo_existente, mapas_familia, recordar_insumo, resolver_familia_csv,
+            siguiente_consecutivo,
+        };
+        use std::collections::HashMap;
+
+        let unidades = unidad_medida::Entity::find()
+            .filter(unidad_medida::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let unidad_id_por_texto = UnidadMedidaService::mapa_id_por_texto(&unidades);
+
+        let familias = familia_insumo::Entity::find()
+            .filter(familia_insumo::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let (raiz_id_por_nombre, hija_id_por_padre_y_nombre) = mapas_familia(&familias);
+
+        let region_id_por_nombre: HashMap<String, String> = region::Entity::find()
+            .filter(region::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|r| (r.nombre.to_lowercase(), r.id))
+            .collect();
+
+        let extension: std::collections::HashSet<String> = equipo_costo_horario::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|e| e.insumo_id)
+            .collect();
+        let insumos = insumo::Entity::find()
+            .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
+            .filter(insumo::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let mut clave_por_id: HashMap<String, String> = HashMap::new();
+        let mut por_clave: HashMap<String, String> = HashMap::new();
+        let mut por_descripcion: HashMap<String, String> = HashMap::new();
+        for ins in &insumos {
+            if !extension.contains(&ins.id) {
+                continue;
+            }
+            clave_por_id.insert(ins.id.clone(), ins.clave.clone());
+            recordar_insumo(
+                &mut por_clave,
+                &mut por_descripcion,
+                &ins.id,
+                &ins.clave,
+                &ins.descripcion,
+            );
+        }
+        let mut siguiente = siguiente_consecutivo(clave_por_id.values().map(String::as_str), "EQ-");
+
+        let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
+        let mut creados = 0u32;
+        let mut actualizados = 0u32;
+        let mut se_autogenero_clave = false;
+        let mut errores = Vec::new();
+        let tiene_columna_clave = lector
+            .headers()
+            .map(|h| {
+                h.iter()
+                    .any(|columna| columna.trim().eq_ignore_ascii_case("clave"))
+            })
+            .unwrap_or(false);
+
+        let registros: Vec<Result<RegistroCsvEquipo, csv::Error>> =
+            lector.deserialize::<RegistroCsvEquipo>().collect();
+        let total = registros.len() as u32;
+        for (i, registro) in registros.into_iter().enumerate() {
+            on_progreso(i as u32 + 1, total);
+            let fila = i + 2;
+            let registro = match registro {
+                Ok(r) => r,
+                Err(e) => {
+                    errores.push(format!("fila {fila}: {e}"));
+                    continue;
+                }
+            };
+            let descripcion = registro.descripcion.trim().to_string();
+            if descripcion.is_empty() {
+                errores.push(format!("fila {fila}: descripción vacía, se omitió"));
+                continue;
+            }
+            let unidad_texto = registro.unidad.trim().to_lowercase();
+            let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto).cloned() else {
+                errores.push(format!(
+                    "fila {fila}: unidad \"{}\" no encontrada, se omitió",
+                    registro.unidad.trim()
+                ));
+                continue;
+            };
+            let (familia_id, sub_familia_id) = resolver_familia_csv(
+                registro.familia.as_deref().unwrap_or(""),
+                registro.subfamilia.as_deref().unwrap_or(""),
+                &raiz_id_por_nombre,
+                &hija_id_por_padre_y_nombre,
+                fila,
+                &mut errores,
+            );
+            let region_txt = registro.region.as_deref().unwrap_or("").trim();
+            let region_id = if region_txt.is_empty() {
+                None
+            } else {
+                match region_id_por_nombre.get(&region_txt.to_lowercase()) {
+                    Some(id) => Some(id.clone()),
+                    None => {
+                        errores.push(format!(
+                            "fila {fila}: región \"{region_txt}\" no encontrada, se importó sin región"
+                        ));
+                        None
+                    }
+                }
+            };
+            let horas_uso = decimal_o_cero(&registro.horas_uso_anual);
+            let clave_archivo = registro
+                .clave
+                .as_deref()
+                .map(str::trim)
+                .filter(|c| !c.is_empty());
+            let existente_id =
+                id_insumo_existente(clave_archivo, &descripcion, &por_clave, &por_descripcion);
+            let clave = match (clave_archivo, existente_id.as_deref()) {
+                (Some(clave_archivo), _) => clave_archivo.to_string(),
+                (None, Some(id)) => clave_por_id
+                    .get(id)
+                    .cloned()
+                    .unwrap_or_else(|| id.to_string()),
+                (None, None) => {
+                    let clave = format!("EQ-{siguiente:03}");
+                    siguiente += 1;
+                    se_autogenero_clave = true;
+                    clave
+                }
+            };
+            let datos = EquipoCostoHorarioData {
+                clave: clave.clone(),
+                descripcion: descripcion.clone(),
+                unidad_id,
+                familia_id,
+                sub_familia_id,
+                region_id,
+                cf_costo_maquina: decimal_o_cero(&registro.costo_maquina),
+                cf_valor_llantas: decimal_o_cero(&registro.valor_llantas),
+                cf_valor_piezas_especiales: decimal_o_cero(&registro.valor_piezas_especiales),
+                cf_valor_rescate_porcentaje: decimal_o_cero(&registro.rescate),
+                cf_vida_economica_anios: decimal_o_cero(&registro.vida_economica),
+                cf_horas_uso_anual: if horas_uso > Decimal::ZERO {
+                    horas_uso
+                } else {
+                    Decimal::ONE
+                },
+                cf_tasa_interes_anual_porcentaje: decimal_o_cero(&registro.interes_anual),
+                cf_tasa_seguros_anual_porcentaje: decimal_o_cero(&registro.seguros_anual),
+                cf_mantenimiento_porcentaje: decimal_o_cero(&registro.mantenimiento),
+            };
+            let item = if let Some(id) = existente_id {
+                match Self::actualizar(repo, id, datos, Some(creado_por.clone())).await {
+                    Ok(e) => {
+                        actualizados += 1;
+                        e
+                    }
+                    Err(e) => {
+                        errores.push(format!("fila {fila}: no se pudo actualizar el equipo ({e})"));
+                        continue;
+                    }
+                }
+            } else {
+                match Self::crear(repo, organizacion_id, datos, creado_por.clone()).await {
+                    Ok(e) => {
+                        creados += 1;
+                        e
+                    }
+                    Err(e) => {
+                        errores.push(format!("fila {fila}: no se pudo crear el equipo ({e})"));
+                        continue;
+                    }
+                }
+            };
+            clave_por_id.insert(item.id.clone(), item.clave.clone());
+            recordar_insumo(
+                &mut por_clave,
+                &mut por_descripcion,
+                &item.id,
+                &item.clave,
+                &item.descripcion,
+            );
+        }
+        let aviso = if !tiene_columna_clave && se_autogenero_clave {
+            Some(
+                "El archivo no tiene columna \"Clave\"; se generarán claves automáticas con el prefijo EQ-."
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+        Ok(ResultadoImportacion::nuevo(
+            creados,
+            actualizados,
+            errores,
+            aviso,
+        ))
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct RegistroCsvEquipo {
+    #[serde(rename = "Clave", default)]
+    clave: Option<String>,
+    #[serde(rename = "Descripción")]
+    descripcion: String,
+    #[serde(rename = "Unidad")]
+    unidad: String,
+    #[serde(rename = "Familia", default)]
+    familia: Option<String>,
+    #[serde(rename = "Subfamilia", default)]
+    subfamilia: Option<String>,
+    #[serde(rename = "Región", default)]
+    region: Option<String>,
+    #[serde(rename = "Costo máquina", default)]
+    costo_maquina: String,
+    #[serde(rename = "Valor llantas", default)]
+    valor_llantas: String,
+    #[serde(rename = "Valor piezas especiales", default)]
+    valor_piezas_especiales: String,
+    #[serde(rename = "Rescate %", default)]
+    rescate: String,
+    #[serde(rename = "Vida económica (años)", default)]
+    vida_economica: String,
+    #[serde(rename = "Horas de uso anual", default)]
+    horas_uso_anual: String,
+    #[serde(rename = "Interés anual %", default)]
+    interes_anual: String,
+    #[serde(rename = "Seguros anual %", default)]
+    seguros_anual: String,
+    #[serde(rename = "Mantenimiento %", default)]
+    mantenimiento: String,
+}
+
+fn decimal_o_cero(texto: &str) -> Decimal {
+    let limpio: String = texto
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .collect();
+    if limpio.is_empty() || limpio == "-" || limpio == "." {
+        return Decimal::ZERO;
+    }
+    limpio.parse().unwrap_or(Decimal::ZERO)
 }
 
 #[cfg(test)]
@@ -812,5 +1083,49 @@ mod tests {
             .await
             .expect("listar tras borrar");
         assert!(listado_tras_borrar.iter().all(|e| e.id != creado.id));
+    }
+
+    #[tokio::test]
+    async fn importar_csv_resuelve_unidad_por_variantes() {
+        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
+            .await
+            .expect("crear portafolio");
+        crate::seed::sembrar_catalogos_generales(&portafolio)
+            .await
+            .expect("sembrar");
+        let org = crate::organizacion::OrganizacionService::buscar_admin_obrix(&portafolio)
+            .await
+            .expect("org");
+        let admin = crate::usuario::UsuarioService::buscar_admin_obrix(&portafolio)
+            .await
+            .expect("admin");
+
+        let csv = "Descripción,Unidad,Horas de uso anual,Vida económica (años)\n\
+                    Camión de prueba,h,1500,6\n";
+        let resultado = EquipoCostoHorarioService::importar_csv(
+            &portafolio,
+            &org.id,
+            csv,
+            admin.id.clone(),
+        )
+        .await
+        .expect("importar");
+        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
+        assert_eq!(resultado.creados, 1);
+
+        let item = EquipoCostoHorarioService::listar(&portafolio, &org.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|e| e.descripcion == "Camión de prueba")
+            .expect("importado");
+        let unidades = unidad_medida::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .unwrap();
+        let mapa = UnidadMedidaService::mapa_id_por_texto(&unidades);
+        assert_eq!(item.unidad_id, mapa["hr"]);
+        assert_eq!(item.unidad_id, mapa["h"]);
+        assert_eq!(item.cf_horas_uso_anual, Decimal::from(1500));
     }
 }

@@ -259,7 +259,7 @@ export function EquipoCostoHorarioGridVista() {
                 icono: Upload,
                 titulo: "Importar desde CSV",
                 onClick: () =>
-                  setCsvAdaptador(adaptadorImportEquipoCostoHorario(equipos, unidades, familias, regiones)),
+                  setCsvAdaptador(adaptadorImportEquipoCostoHorario()),
                 disabled: csvAdaptador !== null,
               },
               {

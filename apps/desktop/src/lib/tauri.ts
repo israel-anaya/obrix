@@ -274,6 +274,9 @@ export function updateCategoriaFasar(id: string, categoria: CategoriaFasarData):
 export function deleteCategoriaFasar(id: string): Promise<void> {
   return invoke("delete_categoria_fasar", { id });
 }
+export function importarCategoriasFasarCsv(path: string): Promise<ResultadoImportacion> {
+  return invoke("importar_categorias_fasar_csv", { path });
+}
 export function listSalariosCategoriaFasar(insumoId: string): Promise<SalarioCategoriaFasar[]> {
   return invoke("list_salarios_categoria_fasar", { insumoId });
 }
@@ -298,6 +301,9 @@ export function updateHerramienta(id: string, herramienta: HerramientaData): Pro
 }
 export function deleteHerramienta(id: string): Promise<void> {
   return invoke("delete_herramienta", { id });
+}
+export function importarHerramientasCsv(path: string): Promise<ResultadoImportacion> {
+  return invoke("importar_herramientas_csv", { path });
 }
 
 export function listCuadrillas(): Promise<Cuadrilla[]> {
@@ -357,6 +363,9 @@ export function updateEquipoCostoHorario(id: string, equipo: EquipoCostoHorarioD
 }
 export function deleteEquipoCostoHorario(id: string): Promise<void> {
   return invoke("delete_equipo_costo_horario", { id });
+}
+export function importarEquiposCostoHorarioCsv(path: string): Promise<ResultadoImportacion> {
+  return invoke("importar_equipos_costo_horario_csv", { path });
 }
 export function listEquipoCostoHorarioDetalles(equipoCostoHorarioInsumoId: string): Promise<EquipoCostoHorarioDetalle[]> {
   return invoke("list_equipo_costo_horario_detalles", { equipoCostoHorarioInsumoId });

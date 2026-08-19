@@ -100,6 +100,89 @@ pub fn recordar_insumo(
     por_descripcion.insert(clave_cruce(descripcion), id.to_string());
 }
 
+/// Familia raíz por nombre y subfamilia por (padre, nombre), en minúsculas.
+/// Lo arma el import de insumos en memoria; no hay WHERE sobre el nombre.
+pub fn mapas_familia(
+    familias: &[obrix_db::entities::familia_insumo::Model],
+) -> (
+    std::collections::HashMap<String, String>,
+    std::collections::HashMap<(String, String), String>,
+) {
+    let raiz_id_por_nombre = familias
+        .iter()
+        .filter(|f| f.parent_id.is_none())
+        .map(|f| (f.nombre.to_lowercase(), f.id.clone()))
+        .collect();
+    let hija_id_por_padre_y_nombre = familias
+        .iter()
+        .filter_map(|f| {
+            f.parent_id
+                .as_ref()
+                .map(|padre| ((padre.clone(), f.nombre.to_lowercase()), f.id.clone()))
+        })
+        .collect();
+    (raiz_id_por_nombre, hija_id_por_padre_y_nombre)
+}
+
+/// Resuelve Familia/Subfamilia del CSV. Si el nombre no existe se importa
+/// sin ese dato y se reporta en `errores` (igual que materiales).
+pub fn resolver_familia_csv(
+    familia_texto: &str,
+    subfamilia_texto: &str,
+    raiz_id_por_nombre: &std::collections::HashMap<String, String>,
+    hija_id_por_padre_y_nombre: &std::collections::HashMap<(String, String), String>,
+    fila: usize,
+    errores: &mut Vec<String>,
+) -> (Option<String>, Option<String>) {
+    let familia_texto = familia_texto.trim();
+    let familia_id = if familia_texto.is_empty() {
+        None
+    } else {
+        match raiz_id_por_nombre.get(&familia_texto.to_lowercase()) {
+            Some(id) => Some(id.clone()),
+            None => {
+                errores.push(format!(
+                    "fila {fila}: familia \"{familia_texto}\" no encontrada, se importó sin familia"
+                ));
+                None
+            }
+        }
+    };
+    let subfamilia_texto = subfamilia_texto.trim();
+    let sub_familia_id = if subfamilia_texto.is_empty() {
+        None
+    } else if let Some(familia_id) = &familia_id {
+        match hija_id_por_padre_y_nombre.get(&(familia_id.clone(), subfamilia_texto.to_lowercase()))
+        {
+            Some(id) => Some(id.clone()),
+            None => {
+                errores.push(format!(
+                    "fila {fila}: subfamilia \"{subfamilia_texto}\" no encontrada dentro de \"{familia_texto}\", se importó sin subfamilia"
+                ));
+                None
+            }
+        }
+    } else {
+        errores.push(format!(
+            "fila {fila}: subfamilia \"{subfamilia_texto}\" indicada sin familia válida, se ignoró"
+        ));
+        None
+    };
+    (familia_id, sub_familia_id)
+}
+
+/// Siguiente número de clave `PREFIJO-N` (p. ej. `HER-001` → 2).
+pub fn siguiente_consecutivo<'a>(
+    claves: impl Iterator<Item = &'a str>,
+    prefijo: &str,
+) -> u32 {
+    claves
+        .filter_map(|c| c.strip_prefix(prefijo)?.parse::<u32>().ok())
+        .max()
+        .unwrap_or(0)
+        + 1
+}
+
 /// Verbo para mensajes de `ServiceError::Validacion` en los `validar` de
 /// cada `Service` — distingue alta de edición por si una regla solo aplica a
 /// uno de los dos casos (ver p. ej. `organizacion::OrganizacionService::validar`).

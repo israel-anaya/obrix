@@ -89,6 +89,20 @@ impl UnidadMedidaService {
             .collect()
     }
 
+    /// Token de la columna Unidad → id. Lo usan los imports de insumos
+    /// (materiales, semilla de herramienta/categoría). Se arma en memoria
+    /// con `variantes`; no hay WHERE sobre `variantes`.
+    pub fn mapa_id_por_texto(unidades: &[Model]) -> std::collections::HashMap<String, String> {
+        unidades
+            .iter()
+            .flat_map(|u| {
+                Self::variantes(u)
+                    .into_iter()
+                    .map(|t| (t, u.id.clone()))
+            })
+            .collect()
+    }
+
     pub async fn crear(
         repo: &dyn PortafolioRepository,
         datos: UnidadMedidaData,
@@ -239,6 +253,30 @@ mod tests {
         let grafias = UnidadMedidaService::variantes(&unidad);
         assert!(grafias.contains(&"pieza".into()));
         assert!(grafias.contains(&"pza".into()));
+    }
+
+    #[test]
+    fn mapa_id_por_texto_resuelve_simbolo_impresion_y_variantes() {
+        let hora = Model {
+            id: "um-hr".into(),
+            simbolo: "hr".into(),
+            simbolo_impresion: "h".into(),
+            variantes: "hr, h, hrs, hora".into(),
+            clave_sat: Some("HUR".into()),
+            descripcion: "Hora".into(),
+            tipo_magnitud: TipoMagnitud::Tiempo,
+            deleted: false,
+            created_at: String::new(),
+            created_by: String::new(),
+            updated_at: None,
+            updated_by: None,
+            deleted_at: None,
+            deleted_by: None,
+        };
+        let mapa = UnidadMedidaService::mapa_id_por_texto(&[hora]);
+        for token in ["hr", "h", "hrs", "hora"] {
+            assert_eq!(mapa.get(token), Some(&"um-hr".to_string()), "{token}");
+        }
     }
 
     #[test]

@@ -1,10 +1,12 @@
 use obrix_db::entities::equipo_costo_horario_detalle::Model as EquipoCostoHorarioDetalleModel;
 
-use crate::AppState;
+use crate::{commands, AppState};
 use obrix_services::equipo_costo_horario::{EquipoCostoHorarioCompleto, EquipoCostoHorarioData, EquipoCostoHorarioService};
 use obrix_services::equipo_costo_horario_detalle::{
     DireccionMovimiento, EquipoCostoHorarioDetalleData, EquipoCostoHorarioDetalleService,
 };
+use obrix_services::material::ResultadoImportacion;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn list_equipos_costo_horario(
@@ -148,4 +150,29 @@ pub async fn move_equipo_costo_horario_detalle(
     EquipoCostoHorarioDetalleService::mover(activo.portafolio.as_ref(), id, direccion)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn importar_equipos_costo_horario_csv(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<ResultadoImportacion, String> {
+    let contenido = std::fs::read_to_string(&path).map_err(|e| format!("no se pudo leer el archivo: {e}"))?;
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    EquipoCostoHorarioService::importar_csv_con_progreso(
+        activo.portafolio.as_ref(),
+        &activo.organizacion_id,
+        &contenido,
+        activo.usuario_id_activo.clone(),
+        move |actual, total| {
+            let _ = app.emit(
+                commands::EVENTO_CSV_PROGRESO,
+                commands::CsvProgresoPayload { actual, total },
+            );
+        },
+    )
+    .await
+    .map_err(|e| e.to_string())
 }

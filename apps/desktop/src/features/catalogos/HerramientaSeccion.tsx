@@ -233,7 +233,7 @@ export function HerramientaSeccion() {
               {
                 icono: Upload,
                 titulo: "Importar desde CSV",
-                onClick: () => setCsvAdaptador(adaptadorImportHerramienta(herramientas, unidades, familias)),
+                onClick: () => setCsvAdaptador(adaptadorImportHerramienta()),
                 disabled: csvAdaptador !== null,
               },
               {

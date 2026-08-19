@@ -8,6 +8,7 @@ const COLUMNAS_CUADRILLA = [
   { nombre: "Descripción Cuadrilla", obligatorio: true },
   { nombre: "Sección", obligatorio: true },
   { nombre: "Descripción", obligatorio: true },
+  { nombre: "Unidad", obligatorio: false },
   { nombre: "Cantidad", obligatorio: true },
 ];
 

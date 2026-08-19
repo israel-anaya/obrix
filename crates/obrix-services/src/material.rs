@@ -309,16 +309,7 @@ impl MaterialService {
             .filter(obrix_db::entities::unidad_medida::Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?;
-        // Token de la columna Unidad → id. Se arma en memoria con
-        // `UnidadMedidaService::variantes`; no hay WHERE sobre `variantes`.
-        let unidad_id_por_texto: std::collections::HashMap<String, String> = unidades
-            .iter()
-            .flat_map(|u| {
-                UnidadMedidaService::variantes(u)
-                    .into_iter()
-                    .map(|t| (t, u.id.clone()))
-            })
-            .collect();
+        let unidad_id_por_texto = UnidadMedidaService::mapa_id_por_texto(&unidades);
 
         let familias = obrix_db::entities::familia_insumo::Entity::find()
             .filter(obrix_db::entities::familia_insumo::Column::Deleted.eq(false))

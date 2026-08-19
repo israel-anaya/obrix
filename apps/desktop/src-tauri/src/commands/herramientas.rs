@@ -1,5 +1,7 @@
-use crate::AppState;
+use crate::{commands, AppState};
 use obrix_services::herramienta::{HerramientaCompleto, HerramientaData, HerramientaService};
+use obrix_services::material::ResultadoImportacion;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn list_herramientas(state: tauri::State<'_, AppState>) -> Result<Vec<HerramientaCompleto>, String> {
@@ -56,4 +58,29 @@ pub async fn delete_herramienta(state: tauri::State<'_, AppState>, id: String) -
     )
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn importar_herramientas_csv(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<ResultadoImportacion, String> {
+    let contenido = std::fs::read_to_string(&path).map_err(|e| format!("no se pudo leer el archivo: {e}"))?;
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    HerramientaService::importar_csv_con_progreso(
+        activo.portafolio.as_ref(),
+        &activo.organizacion_id,
+        &contenido,
+        activo.usuario_id_activo.clone(),
+        move |actual, total| {
+            let _ = app.emit(
+                commands::EVENTO_CSV_PROGRESO,
+                commands::CsvProgresoPayload { actual, total },
+            );
+        },
+    )
+    .await
+    .map_err(|e| e.to_string())
 }

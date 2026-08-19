@@ -291,6 +291,7 @@ fn main() {
             commands::categorias_fasar::create_categoria_fasar,
             commands::categorias_fasar::update_categoria_fasar,
             commands::categorias_fasar::delete_categoria_fasar,
+            commands::categorias_fasar::importar_categorias_fasar_csv,
             commands::salarios_categoria_fasar::list_salarios_categoria_fasar,
             commands::salarios_categoria_fasar::create_salario_categoria_fasar,
             commands::salarios_categoria_fasar::create_salarios_categoria_fasar_lote,
@@ -298,6 +299,7 @@ fn main() {
             commands::herramientas::create_herramienta,
             commands::herramientas::update_herramienta,
             commands::herramientas::delete_herramienta,
+            commands::herramientas::importar_herramientas_csv,
             commands::cuadrillas::list_cuadrillas,
             commands::cuadrillas::create_cuadrilla,
             commands::cuadrillas::update_cuadrilla,
@@ -323,6 +325,7 @@ fn main() {
             commands::equipos_costo_horario::delete_equipo_costo_horario_detalle,
             commands::equipos_costo_horario::move_equipo_costo_horario_detalle,
             commands::equipos_costo_horario::recalculate_equipo_costo_horario,
+            commands::equipos_costo_horario::importar_equipos_costo_horario_csv,
             commands::archivo_json::escribir_archivo_texto,
             commands::archivo_json::leer_archivo_texto,
         ])

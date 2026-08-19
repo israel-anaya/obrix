@@ -239,7 +239,7 @@ export function CategoriaFasarSeccion() {
               {
                 icono: Upload,
                 titulo: "Importar desde CSV",
-                onClick: () => setCsvAdaptador(adaptadorImportCategoriasFasar(categorias, unidades, familias)),
+                onClick: () => setCsvAdaptador(adaptadorImportCategoriasFasar()),
                 disabled: csvAdaptador !== null,
               },
               {

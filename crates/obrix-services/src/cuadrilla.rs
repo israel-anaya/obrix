@@ -278,8 +278,11 @@ impl CuadrillaService {
     /// cabecera y se hace upsert de integrantes (cantidad si ya está, alta
     /// si no). `MANO DE OBRA` se resuelve contra `insumo.descripcion` de
     /// `categoria_fasar`; `EQUIPO Y HERRAMIENTA` contra `insumo.descripcion`
-    /// de `herramienta`. Familia default: "Mano de obra". Unidad default:
-    /// `jor`. Si el archivo no trae clave (columna ausente o celda vacía) y
+    /// de `herramienta`. Familia default: "Mano de obra". Unidad de la
+    /// cabecera: se toma del primer renglón de mano de obra y se resuelve
+    /// con `UnidadMedidaService::mapa_id_por_texto` (símbolo y variantes);
+    /// si la columna falta, está vacía o no hay match, se usa `jor`. Si el
+    /// archivo no trae clave (columna ausente o celda vacía) y
     /// es alta, se genera `CUA-001`, `CUA-002`, … continuando desde la
     /// `CUA-` más alta ya registrada. Las cantidades de herramienta en
     /// fracción (`0.03`) se convierten a porcentaje 0–100. Un integrante de
@@ -336,8 +339,18 @@ impl CuadrillaService {
         let col_cantidad = buscar_columna(&headers, &["cantidad"]).ok_or_else(|| {
             ServiceError::Validacion("el archivo debe tener la columna \"Cantidad\"".into())
         })?;
+        let col_unidad = buscar_columna(&headers, &["unidad"]);
 
-        let unidad_jor_id = unidad_medida_jor(repo).await?;
+        let unidades = obrix_db::entities::unidad_medida::Entity::find()
+            .filter(obrix_db::entities::unidad_medida::Column::Deleted.eq(false))
+            .all(repo.conexion())
+            .await?;
+        let unidad_id_por_texto = UnidadMedidaService::mapa_id_por_texto(&unidades);
+        let unidad_jor_id = unidad_id_por_texto.get("jor").cloned().ok_or_else(|| {
+            ServiceError::Validacion(
+                "no se encontró la unidad \"jor\" para asignar a las cuadrillas importadas".into(),
+            )
+        })?;
         let familia_mano_obra_id = familia_mano_obra_id(repo).await?;
 
         let insumos = insumo::Entity::find()
@@ -424,6 +437,9 @@ impl CuadrillaService {
             let seccion = celda(&registro, col_seccion);
             let descripcion = celda(&registro, col_descripcion);
             let cantidad = celda(&registro, col_cantidad);
+            let unidad = col_unidad
+                .map(|c| celda(&registro, c))
+                .unwrap_or_default();
 
             if descripcion_cuadrilla.is_empty()
                 && clave_archivo.is_none()
@@ -449,6 +465,7 @@ impl CuadrillaService {
                     seccion,
                     descripcion,
                     cantidad,
+                    unidad,
                 });
             } else {
                 indice_por_llave.insert(llave, grupos.len());
@@ -460,6 +477,7 @@ impl CuadrillaService {
                         seccion,
                         descripcion,
                         cantidad,
+                        unidad,
                     }],
                 });
             }
@@ -515,7 +533,12 @@ impl CuadrillaService {
             let datos = CuadrillaData {
                 clave: clave.clone(),
                 descripcion: grupo.descripcion.clone(),
-                unidad_id: unidad_jor_id.clone(),
+                unidad_id: unidad_cabecera(
+                    &grupo.filas,
+                    &unidad_id_por_texto,
+                    &unidad_jor_id,
+                    &mut errores,
+                ),
                 familia_id: familia_mano_obra_id.clone(),
                 sub_familia_id: None,
             };
@@ -689,6 +712,7 @@ struct FilaDetalleCsv {
     seccion: String,
     descripcion: String,
     cantidad: String,
+    unidad: String,
 }
 
 fn buscar_columna(headers: &csv::StringRecord, candidatos: &[&str]) -> Option<usize> {
@@ -789,19 +813,30 @@ fn resolver_detalle_csv(
     })
 }
 
-async fn unidad_medida_jor(repo: &dyn PortafolioRepository) -> Result<String, ServiceError> {
-    let unidades = obrix_db::entities::unidad_medida::Entity::find()
-        .filter(obrix_db::entities::unidad_medida::Column::Deleted.eq(false))
-        .all(repo.conexion())
-        .await?;
-    for u in &unidades {
-        if UnidadMedidaService::variantes(u).iter().any(|t| t == "jor") {
-            return Ok(u.id.clone());
+fn unidad_cabecera(
+    filas: &[FilaDetalleCsv],
+    unidad_id_por_texto: &HashMap<String, String>,
+    unidad_jor_id: &str,
+    errores: &mut Vec<String>,
+) -> String {
+    use obrix_db::entities::cuadrilla_detalle::TipoCuadrillaDetalle;
+    for fila in filas {
+        if parsear_seccion(&fila.seccion) != Some(TipoCuadrillaDetalle::CategoriaFasar) {
+            continue;
+        }
+        let token = fila.unidad.trim();
+        if token.is_empty() {
+            continue;
+        }
+        match unidad_id_por_texto.get(&token.to_lowercase()) {
+            Some(id) => return id.clone(),
+            None => errores.push(format!(
+                "fila {}: unidad \"{}\" no encontrada",
+                fila.fila, token
+            )),
         }
     }
-    Err(ServiceError::Validacion(
-        "no se encontró la unidad \"jor\" para asignar a las cuadrillas importadas".into(),
-    ))
+    unidad_jor_id.to_string()
 }
 
 async fn familia_mano_obra_id(
@@ -1341,6 +1376,33 @@ mod tests {
             .find(|c| c.clave == "CUA-001")
             .expect("cuadrilla de prueba");
         assert_eq!(prueba.descripcion, "CUADRILLA DE PRUEBA");
+    }
+
+    #[tokio::test]
+    async fn importar_csv_resuelve_unidad_por_variantes() {
+        let (portafolio, org_id, admin_id) = portafolio_listo_para_importar().await;
+        let csv = "Descripción Cuadrilla,Sección,Descripción,Unidad,Cantidad\n\
+                    Cuadrilla jornada,MANO DE OBRA,Ayudante oficial,jornada,1\n";
+
+        let resultado = CuadrillaService::importar_csv(&portafolio, &org_id, csv, admin_id)
+            .await
+            .expect("importar con variante de unidad");
+        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
+        assert_eq!(resultado.importados, 1);
+
+        let cuadrilla = CuadrillaService::listar(&portafolio, &org_id)
+            .await
+            .expect("listar")
+            .into_iter()
+            .find(|c| c.descripcion == "Cuadrilla jornada")
+            .expect("cuadrilla importada");
+        let unidades = obrix_db::entities::unidad_medida::Entity::find()
+            .all(portafolio.conexion())
+            .await
+            .unwrap();
+        let mapa = UnidadMedidaService::mapa_id_por_texto(&unidades);
+        assert_eq!(cuadrilla.unidad_id, mapa["jor"]);
+        assert_eq!(cuadrilla.unidad_id, mapa["jornada"]);
     }
 
     #[tokio::test]
