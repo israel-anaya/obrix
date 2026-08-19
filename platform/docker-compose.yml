@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-obrix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-obrix_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-obrix_licensing}
+      POSTGRES_MULTIPLE_DATABASES: obrix_auth
+    volumes:
+      - obrix_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-obrix} -d ${POSTGRES_DB:-obrix_licensing}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025" # SMTP que consume GoTrue
+      - "8025:8025" # UI web para ver los correos de verificación/reset en dev
+
+  gotrue:
+    image: supabase/gotrue:v2.158.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_API_PORT: "9999"
+      PORT: "9999"
+      DATABASE_URL: postgres://${POSTGRES_USER:-obrix}:${POSTGRES_PASSWORD:-obrix_dev_password}@postgres:5432/obrix_auth?search_path=auth
+      API_EXTERNAL_URL: ${GOTRUE_SITE_URL:-http://localhost:9999}
+      GOTRUE_SITE_URL: ${GOTRUE_SITE_URL:-http://localhost:9999}
+      GOTRUE_JWT_SECRET: ${GOTRUE_JWT_SECRET:-dev_jwt_secret_change_me_min_32_chars}
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      # Dev only: autoconfirma correos sin flujo real de verificación.
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_HOST: mailhog
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_ADMIN_EMAIL: dev@obrix.local
+      GOTRUE_SMTP_SENDER_NAME: Obrix
+      # Login con Google deshabilitado hasta configurar credenciales reales
+      # en Google Cloud Console (ver .env.example).
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOTRUE_EXTERNAL_GOOGLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOTRUE_EXTERNAL_GOOGLE_SECRET:-}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI:-http://localhost:9999/callback}
+    ports:
+      - "9999:9999"
+
+  licensing-server:
+    build:
+      context: ./licensing-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-obrix}:${POSTGRES_PASSWORD:-obrix_dev_password}@postgres:5432/obrix_licensing
+      PORT: "8081"
+    ports:
+      - "8081:8081"
+
+  admin-server:
+    build:
+      # Contexto en la raíz del repo (no platform/) porque el frontend
+      # (apps/admin-panel) vive junto a apps/desktop, no aquí.
+      context: ..
+      dockerfile: platform/admin-server/Dockerfile
+    depends_on:
+      - licensing-server
+      - gotrue
+    environment:
+      PORT: "8090"
+      LICENSING_SERVER_URL: http://licensing-server:8081
+      GOTRUE_URL: http://gotrue:9999
+      GOTRUE_JWT_SECRET: ${GOTRUE_JWT_SECRET:-dev_jwt_secret_change_me_min_32_chars}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin_dev_password}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-dev_admin_session_secret_change_me}
+    ports:
+      - "8090:8090"
+
+volumes:
+  obrix_postgres_data:

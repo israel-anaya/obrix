@@ -1,0 +1,16 @@
+# Contexto de build para imágenes que necesitan la raíz del repo (ej.
+# admin-server, que junta apps/admin-panel/ + admin-server/). Evita mandar
+# el resto del monorepo (Tauri, crates de Rust, node_modules) al daemon.
+.git
+target
+**/target
+node_modules
+**/node_modules
+apps/desktop
+crates
+data
+docs
+model
+portafolios
+sync-server
+*.obx
