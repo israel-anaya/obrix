@@ -16,7 +16,6 @@ import type {
   EquipoCostoHorario,
   FamiliaInsumo,
   Herramienta,
-  Region,
   UnidadMedida,
 } from "@/lib/types";
 import { mapasFamilia, mapasUnidad } from "@/features/catalogos/csv/insumoCsv";
@@ -129,7 +128,6 @@ export function adaptadorExportCategoriasFasar(
 
 const COLS_EQUIPO = [
   ...columnasInsumo("Descripción"),
-  "Región",
   "Costo máquina",
   "Valor llantas",
   "Valor piezas especiales",
@@ -161,11 +159,9 @@ export function adaptadorExportEquipoCostoHorario(
   items: EquipoCostoHorario[],
   unidades: UnidadMedida[],
   familias: FamiliaInsumo[],
-  regiones: Region[],
 ): CsvAdaptador {
   const u = mapasUnidad(unidades);
   const f = mapasFamilia(familias);
-  const nombreRegion = Object.fromEntries(regiones.map((r) => [r.id, r.nombre]));
   return exportInsumo(
     "Exportar equipo de costo horario",
     "equipo-costo-horario.csv",
@@ -176,7 +172,6 @@ export function adaptadorExportEquipoCostoHorario(
       u.simboloPorId[e.unidad_id] ?? "",
       (e.familia_id && f.nombrePorId[e.familia_id]) || "",
       (e.sub_familia_id && f.nombrePorId[e.sub_familia_id]) || "",
-      (e.region_id && nombreRegion[e.region_id]) || "",
       e.cf_costo_maquina,
       e.cf_valor_llantas,
       e.cf_valor_piezas_especiales,

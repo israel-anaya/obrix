@@ -12,9 +12,10 @@ impl MigrationTrait for Migration {
         // diferencia de `herramienta` (sin depreciación) y `equipo_rentado`
         // (de terceros) — ver diccionario de datos. Los campos `cf_*` de
         // cache se recalculan en
-        // `EquipoCostoHorarioService::calcular_cargos_fijos`;
-        // `cargo_variable_hora`/`costo_horario_total` los recalcula
-        // `EquipoCostoHorarioDetalleService::recalcular`.
+        // `EquipoCostoHorarioService::calcular_cargos_fijos`. La receta de
+        // cargos variables vive en `equipo_costo_horario_detalle`; la
+        // valuación por región en `equipo_costo_horario_costo` /
+        // `equipo_costo_horario_costo_detalle`.
         manager
             .create_table(
                 Table::create()
@@ -26,7 +27,6 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(EquipoCostoHorario::RegionId).text())
                     .col(
                         ColumnDef::new(EquipoCostoHorario::CfCostoMaquina)
                             .decimal()
@@ -129,39 +129,19 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(0),
                     )
-                    .col(
-                        ColumnDef::new(EquipoCostoHorario::CargoVariableHora)
-                            .decimal()
-                            .not_null()
-                            .default(0),
-                    )
-                    .col(
-                        ColumnDef::new(EquipoCostoHorario::CostoHorarioTotal)
-                            .decimal()
-                            .not_null()
-                            .default(0),
-                    )
                     .foreign_key(
                         ForeignKey::create()
                             .from(EquipoCostoHorario::Table, EquipoCostoHorario::InsumoId)
                             .to(Insumo::Table, Insumo::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(EquipoCostoHorario::Table, EquipoCostoHorario::RegionId)
-                            .to(Region::Table, Region::Id),
-                    )
                     .to_owned(),
             )
             .await?;
 
-        // Composición plana de un equipo_costo_horario — cada fila es un
-        // consumo (material) o una operación (categoria_fasar/cuadrilla),
-        // nunca otro equipo_costo_horario (misma nota "no recursiva" que
-        // `cuadrilla_detalle`). `naturaleza` clasifica el consumo
-        // (combustible, lubricante, llantas, piezas_especiales,
-        // otras_fuentes); nula en operación.
+        // Receta plana no recursiva (consumo/operación), compartida entre
+        // regiones. `cantidad` es de la receta; `costo`/`importe` cuelgan de
+        // `equipo_costo_horario_costo_detalle`.
         manager
             .create_table(
                 Table::create()
@@ -200,14 +180,10 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(EquipoCostoHorarioDetalle::Costo)
-                            .decimal()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(EquipoCostoHorarioDetalle::Importe)
-                            .decimal()
-                            .not_null(),
+                        ColumnDef::new(EquipoCostoHorarioDetalle::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
                     )
                     .col(
                         ColumnDef::new(EquipoCostoHorarioDetalle::CreatedAt)
@@ -221,6 +197,8 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(EquipoCostoHorarioDetalle::UpdatedAt).text())
                     .col(ColumnDef::new(EquipoCostoHorarioDetalle::UpdatedBy).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::DeletedAt).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioDetalle::DeletedBy).text())
                     .foreign_key(
                         ForeignKey::create()
                             .from(
@@ -255,6 +233,224 @@ impl MigrationTrait for Migration {
                             )
                             .to(Usuario::Table, Usuario::Id),
                     )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioDetalle::Table,
+                                EquipoCostoHorarioDetalle::DeletedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // Valuación regional: caches de variable + total. `region_id`
+        // nullable = nacional; todo equipo nace con esa fila.
+        manager
+            .create_table(
+                Table::create()
+                    .table(EquipoCostoHorarioCosto::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::Id)
+                            .text()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::EquipoCostoHorarioId)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(EquipoCostoHorarioCosto::RegionId).text())
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::SubtotalConsumo)
+                            .decimal()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::SubtotalOperacion)
+                            .decimal()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::CargoVariableHora)
+                            .decimal()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::CostoTotal)
+                            .decimal()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(ColumnDef::new(EquipoCostoHorarioCosto::SincronizadoEn).text())
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::CreatedAt)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCosto::CreatedBy)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(EquipoCostoHorarioCosto::UpdatedAt).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioCosto::UpdatedBy).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioCosto::DeletedAt).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioCosto::DeletedBy).text())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCosto::Table,
+                                EquipoCostoHorarioCosto::EquipoCostoHorarioId,
+                            )
+                            .to(EquipoCostoHorario::Table, EquipoCostoHorario::InsumoId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCosto::Table,
+                                EquipoCostoHorarioCosto::RegionId,
+                            )
+                            .to(Region::Table, Region::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCosto::Table,
+                                EquipoCostoHorarioCosto::CreatedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCosto::Table,
+                                EquipoCostoHorarioCosto::UpdatedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCosto::Table,
+                                EquipoCostoHorarioCosto::DeletedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(EquipoCostoHorarioCostoDetalle::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::Id)
+                            .text()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::EquipoCostoHorarioCostoId)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::EquipoCostoHorarioDetalleId)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::Costo)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::Importe)
+                            .decimal()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(EquipoCostoHorarioCostoDetalle::FechaPrecio).text())
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::Deleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::CreatedAt)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(EquipoCostoHorarioCostoDetalle::CreatedBy)
+                            .text()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(EquipoCostoHorarioCostoDetalle::UpdatedAt).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioCostoDetalle::UpdatedBy).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioCostoDetalle::DeletedAt).text())
+                    .col(ColumnDef::new(EquipoCostoHorarioCostoDetalle::DeletedBy).text())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCostoDetalle::Table,
+                                EquipoCostoHorarioCostoDetalle::EquipoCostoHorarioCostoId,
+                            )
+                            .to(EquipoCostoHorarioCosto::Table, EquipoCostoHorarioCosto::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCostoDetalle::Table,
+                                EquipoCostoHorarioCostoDetalle::EquipoCostoHorarioDetalleId,
+                            )
+                            .to(
+                                EquipoCostoHorarioDetalle::Table,
+                                EquipoCostoHorarioDetalle::Id,
+                            )
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCostoDetalle::Table,
+                                EquipoCostoHorarioCostoDetalle::CreatedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCostoDetalle::Table,
+                                EquipoCostoHorarioCostoDetalle::UpdatedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(
+                                EquipoCostoHorarioCostoDetalle::Table,
+                                EquipoCostoHorarioCostoDetalle::DeletedBy,
+                            )
+                            .to(Usuario::Table, Usuario::Id),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -263,6 +459,20 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(EquipoCostoHorarioCostoDetalle::Table)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(EquipoCostoHorarioCosto::Table)
+                    .to_owned(),
+            )
+            .await?;
         manager
             .drop_table(
                 Table::drop()
@@ -299,7 +509,6 @@ enum Region {
 enum EquipoCostoHorario {
     Table,
     InsumoId,
-    RegionId,
     CfCostoMaquina,
     CfValorLlantas,
     CfValorPiezasEspeciales,
@@ -317,8 +526,6 @@ enum EquipoCostoHorario {
     CfSeguroHora,
     CfMantenimientoHora,
     CfCargoFijoHora,
-    CargoVariableHora,
-    CostoHorarioTotal,
 }
 
 #[derive(DeriveIden)]
@@ -331,10 +538,49 @@ enum EquipoCostoHorarioDetalle {
     Naturaleza,
     Orden,
     Cantidad,
-    Costo,
-    Importe,
+    Deleted,
     CreatedAt,
     CreatedBy,
     UpdatedAt,
     UpdatedBy,
+    DeletedAt,
+    DeletedBy,
+}
+
+#[derive(DeriveIden)]
+enum EquipoCostoHorarioCosto {
+    Table,
+    Id,
+    EquipoCostoHorarioId,
+    RegionId,
+    SubtotalConsumo,
+    SubtotalOperacion,
+    CargoVariableHora,
+    CostoTotal,
+    SincronizadoEn,
+    Deleted,
+    CreatedAt,
+    CreatedBy,
+    UpdatedAt,
+    UpdatedBy,
+    DeletedAt,
+    DeletedBy,
+}
+
+#[derive(DeriveIden)]
+enum EquipoCostoHorarioCostoDetalle {
+    Table,
+    Id,
+    EquipoCostoHorarioCostoId,
+    EquipoCostoHorarioDetalleId,
+    Costo,
+    Importe,
+    FechaPrecio,
+    Deleted,
+    CreatedAt,
+    CreatedBy,
+    UpdatedAt,
+    UpdatedBy,
+    DeletedAt,
+    DeletedBy,
 }

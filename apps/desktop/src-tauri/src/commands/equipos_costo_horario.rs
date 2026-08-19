@@ -1,7 +1,11 @@
+use obrix_db::entities::equipo_costo_horario_costo::Model as EquipoCostoHorarioCostoModel;
+use obrix_db::entities::equipo_costo_horario_costo_detalle::Model as EquipoCostoHorarioCostoDetalleModel;
 use obrix_db::entities::equipo_costo_horario_detalle::Model as EquipoCostoHorarioDetalleModel;
 
 use crate::{commands, AppState};
 use obrix_services::equipo_costo_horario::{EquipoCostoHorarioCompleto, EquipoCostoHorarioData, EquipoCostoHorarioService};
+use obrix_services::equipo_costo_horario_costo::EquipoCostoHorarioCostoService;
+use obrix_services::equipo_costo_horario_costo_detalle::EquipoCostoHorarioCostoDetalleService;
 use obrix_services::equipo_costo_horario_detalle::{
     DireccionMovimiento, EquipoCostoHorarioDetalleData, EquipoCostoHorarioDetalleService,
 };
@@ -122,19 +126,11 @@ pub async fn delete_equipo_costo_horario_detalle(
 ) -> Result<EquipoCostoHorarioCompleto, String> {
     let guard = state.requerir().await?;
     let activo = guard.as_ref().unwrap();
-    EquipoCostoHorarioDetalleService::eliminar(activo.portafolio.as_ref(), id)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn recalculate_equipo_costo_horario(
-    state: tauri::State<'_, AppState>,
-    equipo_costo_horario_insumo_id: String,
-) -> Result<EquipoCostoHorarioCompleto, String> {
-    let guard = state.requerir().await?;
-    let activo = guard.as_ref().unwrap();
-    EquipoCostoHorarioDetalleService::recalcular_costos(activo.portafolio.as_ref(), equipo_costo_horario_insumo_id)
+    EquipoCostoHorarioDetalleService::eliminar(
+        activo.portafolio.as_ref(),
+        id,
+        activo.usuario_id_activo.clone(),
+    )
         .await
         .map_err(|e| e.to_string())
 }
@@ -150,6 +146,49 @@ pub async fn move_equipo_costo_horario_detalle(
     EquipoCostoHorarioDetalleService::mover(activo.portafolio.as_ref(), id, direccion)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_equipo_costo_horario_costos(
+    state: tauri::State<'_, AppState>,
+    equipo_costo_horario_id: String,
+) -> Result<Vec<EquipoCostoHorarioCostoModel>, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    EquipoCostoHorarioCostoService::listar_por_equipo(activo.portafolio.as_ref(), &equipo_costo_horario_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn recalculate_equipo_costo_horario_zonas(
+    state: tauri::State<'_, AppState>,
+    equipo_costo_horario_id: String,
+) -> Result<Vec<EquipoCostoHorarioCostoModel>, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    EquipoCostoHorarioCostoService::recalcular_zonas(
+        activo.portafolio.as_ref(),
+        &equipo_costo_horario_id,
+        &activo.usuario_id_activo,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_equipo_costo_horario_costo_detalles(
+    state: tauri::State<'_, AppState>,
+    equipo_costo_horario_costo_id: String,
+) -> Result<Vec<EquipoCostoHorarioCostoDetalleModel>, String> {
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    EquipoCostoHorarioCostoDetalleService::listar_por_costo(
+        activo.portafolio.as_ref(),
+        &equipo_costo_horario_costo_id,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

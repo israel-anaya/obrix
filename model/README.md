@@ -110,11 +110,13 @@ insumo, y cada extensión solo lleva los campos que de verdad le aplican.
 - **`equipo_costo_horario`** — el costo de equipo propio no es su
   depreciación lineal: los cargos fijos (depreciación, inversión, seguros,
   mantenimiento) se calculan sobre el valor de la máquina separando llantas
-  y piezas especiales, que se deprecian por desgaste, no por tiempo. Los
-  cargos variables (diesel, aceites, llantas, el operador) viven en
-  `equipo_costo_horario_detalle` — una matriz con la misma forma que
-  `concepto_componente` (insumo, rendimiento por hora, costo, importe), con `tipo`
-  para distinguir `consumo` de `operacion` — metodología estándar SCT/CMIC.
+  y piezas especiales, que se deprecian por desgaste, no por tiempo. La
+  receta de cargos variables (diesel, aceites, llantas, el operador) vive
+  en `equipo_costo_horario_detalle` — plana, no recursiva, compartida entre
+  regiones, con `tipo` para distinguir `consumo` de `operacion`. El costo
+  por hora se valúa por región en `equipo_costo_horario_costo` /
+  `equipo_costo_horario_costo_detalle` (precios de material y salarios de
+  esa zona) — metodología estándar SCT/CMIC.
 - **`herramienta`** — herramienta mayor/con motor con precio propio simple
   (sin cálculo de depreciación); distinta de la herramienta menor.
 - **`equipo_rentado`** — equipo de terceros con tarifa de renta en vez de
@@ -154,8 +156,12 @@ erDiagram
     insumo ||--o{ cuadrilla_detalle : integra
 
     insumo ||--o| equipo_costo_horario : extiende
-    equipo_costo_horario ||--o{ equipo_costo_horario_detalle : desglosa
+    equipo_costo_horario ||--o{ equipo_costo_horario_detalle : receta
     insumo ||--o{ equipo_costo_horario_detalle : integra
+    equipo_costo_horario ||--o{ equipo_costo_horario_costo : valua
+    region ||--o{ equipo_costo_horario_costo : ubica
+    equipo_costo_horario_costo ||--o{ equipo_costo_horario_costo_detalle : desglosa
+    equipo_costo_horario_detalle ||--o{ equipo_costo_horario_costo_detalle : valua
     insumo ||--o| herramienta : extiende
     insumo ||--o| equipo_rentado : extiende
     proveedor ||--o{ equipo_rentado : renta

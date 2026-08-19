@@ -544,7 +544,7 @@ salario con el que se valúa.
 No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
 región por insumo. Quien consume el costo de la cuadrilla
 (`concepto_componente.precio_unitario`, `basico_auxiliar_componente.importe`,
-`equipo_costo_horario_detalle.costo` si el operador es cuadrilla) toma
+`equipo_costo_horario_costo_detalle.costo` si el operador es cuadrilla) toma
 `cuadrilla_costo.costo_total` resuelto por región, no un número en esta
 tabla.
 
@@ -735,16 +735,18 @@ Espera = la máquina está en el frente, asignada a la tarea, sin producir
 (ciclo, material, la otra máquina). Reserva = está en el patio de la obra,
 de respaldo, no asignada a ninguna tarea.
 
-No hay un porcentaje único sobre `equipo_costo_horario.costo_horario_total`:
+No hay un porcentaje único sobre `equipo_costo_horario_costo.costo_total`:
 reserva suele conservar inversión y seguro y apagar diesel y operador. Cada
-porcentaje (0–100) se aplica al rubro activo que ya cachea
-`equipo_costo_horario` — los cuatro cargos fijos por separado,
-`subtotal_operacion`, y el consumo **partido por naturaleza** (combustible,
-lubricante, llantas, piezas especiales, otras fuentes), no sobre
-`subtotal_consumo` entero. CMIC y el RLOPSRM desglosan así los costos por
-consumo; un solo % aplastaría diesel (ralentí) y llantas (no se desgastan
-paradas). El perfil no puede aplicarse si las líneas de
-`equipo_costo_horario_detalle` con `tipo = consumo` no llevan `naturaleza`.
+porcentaje (0–100) se aplica al rubro activo de **una** valuación — los
+cuatro cargos fijos por separado (viven en `equipo_costo_horario`, no
+varían por región), `equipo_costo_horario_costo.subtotal_operacion`, y el
+consumo **partido por naturaleza** (combustible, lubricante, llantas,
+piezas especiales, otras fuentes) sobre los importes de
+`equipo_costo_horario_costo_detalle`, no sobre `subtotal_consumo` entero.
+CMIC y el RLOPSRM desglosan así los costos por consumo; un solo %
+aplastaría diesel (ralentí) y llantas (no se desgastan paradas). El perfil
+no puede aplicarse si las líneas de `equipo_costo_horario_detalle` con
+`tipo = consumo` no llevan `naturaleza`.
 
 No aplica a `herramienta` (es un % sobre mano de obra) ni a
 `equipo_rentado` (la tarifa ya mete ociosidad; horas paradas = más horas de
@@ -765,12 +767,12 @@ inactivo; no fija estos porcentajes.
 | espera_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
 | espera_seguro_porcentaje | decimal | sobre `cf_seguro_hora` |
 | espera_mantenimiento_porcentaje | decimal | sobre `cf_mantenimiento_hora` |
-| espera_combustible_porcentaje | decimal | sobre Σ importe de detalle `tipo = consumo` y `naturaleza = combustible` |
+| espera_combustible_porcentaje | decimal | sobre Σ importe de `equipo_costo_horario_costo_detalle` cuyo renglón de receta es `tipo = consumo` y `naturaleza = combustible` |
 | espera_lubricante_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = lubricante` |
 | espera_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
 | espera_piezas_especiales_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = piezas_especiales` |
 | espera_otras_fuentes_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = otras_fuentes` |
-| espera_operacion_porcentaje | decimal | sobre `subtotal_operacion` (operador) |
+| espera_operacion_porcentaje | decimal | sobre `equipo_costo_horario_costo.subtotal_operacion` (operador) |
 | reserva_depreciacion_porcentaje | decimal | 0–100 — sobre `cf_depreciacion_hora` |
 | reserva_inversion_porcentaje | decimal | sobre `cf_inversion_hora` |
 | reserva_seguro_porcentaje | decimal | sobre `cf_seguro_hora` |
@@ -780,7 +782,7 @@ inactivo; no fija estos porcentajes.
 | reserva_llantas_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = llantas` |
 | reserva_piezas_especiales_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = piezas_especiales` |
 | reserva_otras_fuentes_porcentaje | decimal | sobre Σ importe de detalle `naturaleza = otras_fuentes` |
-| reserva_operacion_porcentaje | decimal | sobre `subtotal_operacion` |
+| reserva_operacion_porcentaje | decimal | sobre `equipo_costo_horario_costo.subtotal_operacion` |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 
@@ -813,12 +815,21 @@ como costo horario.
 Los cargos fijos se calculan sobre `cf_valor_maquina` (el costo de
 adquisición **sin** llantas ni piezas especiales, que se deprecian aparte
 por su propio desgaste — las llantas de hecho se cargan como consumo, ver
-`equipo_costo_horario_detalle`), no sobre el costo total de la máquina.
+`equipo_costo_horario_detalle`), no sobre el costo total de la máquina. Son
+de la máquina, no de la zona: no llevan `region_id`. La receta de cargos
+variables vive en `equipo_costo_horario_detalle`; la valuación por región
+(a qué precio de material, a qué salario/cuadrilla) vive en
+`equipo_costo_horario_costo` / `equipo_costo_horario_costo_detalle`.
+
+No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
+región por insumo. Quien consume el costo del equipo
+(`concepto_componente.precio_unitario`, `basico_auxiliar_componente.importe`)
+toma `equipo_costo_horario_costo.costo_total` resuelto por región, no un
+número en esta tabla.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| region_id | uuid | FK → region, nullable — `null` = nacional (sin región específica) |
 | cf_costo_maquina | decimal | precio de la máquina nueva, todo incluido (Cm) |
 | cf_valor_llantas | decimal | default 0 — valor de las llantas incluido en `cf_costo_maquina` (Pn), se resta porque se deprecia por desgaste, no por tiempo |
 | cf_valor_piezas_especiales | decimal | default 0 — valor de piezas especiales incluido en `cf_costo_maquina` (Pa) |
@@ -836,10 +847,6 @@ por su propio desgaste — las llantas de hecho se cargan como consumo, ver
 | cf_seguro_hora | decimal | cache = (cf_valor_maquina + cf_valor_rescate) × cf_tasa_seguros_anual_porcentaje/100 / (2 × cf_horas_uso_anual) (Sm) |
 | cf_mantenimiento_hora | decimal | cache = cf_mantenimiento_porcentaje/100 × cf_depreciacion_hora (Mn) |
 | cf_cargo_fijo_hora | decimal | cache = cf_depreciacion_hora + cf_inversion_hora + cf_seguro_hora + cf_mantenimiento_hora |
-| subtotal_consumo | decimal | cache = Σ `equipo_costo_horario_detalle`.importe donde `tipo = consumo` |
-| subtotal_operacion | decimal | cache = Σ `equipo_costo_horario_detalle`.importe donde `tipo = operacion` |
-| cargo_variable_hora | decimal | cache = subtotal_consumo + subtotal_operacion |
-| costo_horario_total | decimal | cache = cf_cargo_fijo_hora + cargo_variable_hora |
 
 INFO AYUDA
 https://www.youtube.com/watch?v=TsdTwQzFdME
@@ -847,11 +854,16 @@ https://www.youtube.com/watch?v=TsdTwQzFdME
 
 ### `equipo_costo_horario_detalle`
 
-Matriz de cargos variables (insumo, cantidad
-por hora, costo, importe), unificada en una sola tabla con `tipo` para
-distinguir **consumo** (diesel, aceites, llantas — insumos `material`) de
-**operación** (el operador, como `salario` o `cuadrilla`, con su cantidad en
-jornales u horas consumidos por hora de máquina).
+Composición **plana, no recursiva**, compartida entre regiones. Cada fila
+es un consumo (`detalle_insumo_id` con extensión `material`: diesel,
+aceites, llantas, piezas especiales, otras fuentes) o una operación
+(`detalle_insumo_id` con extensión `categoria_fasar` o `cuadrilla`: el
+operador, con su cantidad en jornales u horas por hora de máquina). Nunca
+otro `equipo_costo_horario`. La receta no se copia por región: si un
+renglón entra o sale, o cambia su `cantidad`, entra, sale o cambia en
+todas. `costo` / `importe` no viven aquí — varían por región (precios de
+material, salarios, costo de cuadrilla) y cuelgan de
+`equipo_costo_horario_costo_detalle`.
 
 Cuando `tipo = consumo`, `naturaleza` clasifica el renglón en el desglose
 CMIC/RLOPSRM (combustible, lubricante, llantas, piezas especiales, otras
@@ -864,13 +876,118 @@ asigna el valor; no se infiere del insumo.
 | id | uuid | PK |
 | equipo_costo_horario_id | uuid | FK → equipo_costo_horario (insumo_id) |
 | detalle_insumo_id | uuid | FK → insumo — `material` si `tipo = consumo`; `mano_obra`/`cuadrilla` si `tipo = operacion` |
-| tipo | enum | `consumo`, `operacion` |
+| tipo | enum | `consumo`, `operacion` — denormalizado de qué extensión resuelve `detalle_insumo_id` |
 | naturaleza | enum | `combustible`, `lubricante`, `llantas`, `piezas_especiales`, `otras_fuentes` — obligatorio si `tipo = consumo`; `null` si `tipo = operacion` |
 | orden | int | orden de visualización |
-| cantidad | decimal | cantidad consumida (o jornales/horas de operador) por hora de máquina |
-| costo | decimal | precio/costo vigente del insumo referenciado — si es `cuadrilla`, `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |
-| importe | decimal | cache = cantidad × costo |
-| created_at / created_by / updated_at / updated_by | | |
+| cantidad | decimal | **capturable** — cantidad consumida (o jornales/horas de operador) por hora de máquina. No varía por región |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+Restricción: única `(equipo_costo_horario_insumo_id, detalle_insumo_id)` entre filas no borradas.
+
+Al insertar un renglón de receta hay que insertar también un
+`equipo_costo_horario_costo_detalle` en **cada** `equipo_costo_horario_costo`
+de ese equipo (nacional y una por región del catálogo; las que falten se
+materializan antes). Al borrar el renglón, se borran esos detalles de
+valuación.
+
+
+### `equipo_costo_horario_costo`
+
+Valuación regional de un `equipo_costo_horario` — los caches de variable y
+el total que antes vivían en la extensión 1:1. **Sin vigencias**: el costo
+horario no se cotiza solo; el consumo se deriva de `precio_material` y la
+operación de `salario_categoria_fasar` / `cuadrilla_costo`, que ya
+historizan por fecha. Duplicar la dimensión tiempo aquí desfasaría el cache
+al registrar un precio o salario nuevo. El congelamiento sigue siendo de
+proyecto (`concepto_componente` / `proyecto_presupuesto.precio_unitario`).
+
+`region_id` es **nullable**, igual que en `precio_material` y
+`salario_categoria_fasar`, pero **no comparte su prioridad de resolución
+para el total**. El cache se deriva de receta × tabulador/precios de
+**esa** región:
+
+- Todo equipo nace con la fila nacional (`region_id = NULL`).
+- Al agregar, quitar o cambiar `cantidad` de un renglón de receta — y al
+  pulsar sincronizar en Costo por región — se materializa una fila de cache
+  por cada `region` del catálogo y se recalculan todas.
+- El precio de cada consumo es el vigente **de esa misma región**; si no
+  hay, se cae al nacional (prioridad ya documentada de `precio_material`).
+  Si tampoco hay nacional, `costo` e `importe` quedan en 0 y `fecha_precio`
+  en NULL.
+- El salario de cada operador `categoria_fasar` es el vigente **de esa
+  misma región**, sin caer al nacional. Si el tabulador no tiene el oficio
+  ahí, `costo` e `importe` quedan en 0. Si el operador es una `cuadrilla`,
+  se toma `cuadrilla_costo.costo_total` de esa misma región, sin sustituir
+  el nacional.
+- Quien consume el costo pide la región concreta; no se sustituye el
+  `costo_total` nacional porque falte la fila de cache de esa región.
+
+Al crearla se inserta un `equipo_costo_horario_costo_detalle` por cada
+renglón de receta y se recalcula. Las cantidades no se copian ni se
+editan aquí: se leen de `equipo_costo_horario_detalle`. Los cargos fijos
+no se copian: se leen de `equipo_costo_horario.cf_cargo_fijo_hora` al
+recalcular.
+
+El cálculo se corre **dentro de un** `equipo_costo_horario_costo` (una
+región), no sobre la receta entera:
+
+1. Consumo: cada `equipo_costo_horario_costo_detalle` cuyo
+   `equipo_costo_horario_detalle.tipo` = `consumo` toma `cantidad` de la
+   receta y `costo` = `precio_material.precio` vigente de esa región (o
+   nacional si falta). Con eso se obtiene `subtotal_consumo`.
+2. Operación: cada detalle cuyo tipo = `operacion` toma `cantidad` de la
+   receta y `costo` = salario vigente de esa región, o
+   `cuadrilla_costo.costo_total` de esa región. Con eso se obtiene
+   `subtotal_operacion`.
+3. `cargo_variable_hora` = `subtotal_consumo` + `subtotal_operacion`.
+4. `costo_total` = `equipo_costo_horario.cf_cargo_fijo_hora` +
+   `cargo_variable_hora`.
+
+Nota de implementación: igual que en `precio_material`, `NULL` no cuenta
+como igual a `NULL` en una restricción `UNIQUE` estándar, así que la
+unicidad de "una sola valuación por región" (incluyendo cuando `region_id
+IS NULL`) debe reforzarse con un índice único parcial o a nivel de
+aplicación.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| equipo_costo_horario_id | uuid | FK → equipo_costo_horario (insumo_id) |
+| region_id | uuid | FK → region, nullable — `null` = nacional |
+| subtotal_consumo | decimal | cache = Σ `equipo_costo_horario_costo_detalle`.importe donde el renglón de receta es `tipo = consumo`, de **esta** valuación |
+| subtotal_operacion | decimal | cache = Σ importe donde el renglón de receta es `tipo = operacion`, de **esta** valuación |
+| cargo_variable_hora | decimal | cache = subtotal_consumo + subtotal_operacion |
+| costo_total | decimal | cache = `cf_cargo_fijo_hora` del header + cargo_variable_hora |
+| sincronizado_en | datetime | nullable — última vez que se pulsó ⟳ en Costo por región. No es `updated_at` |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+
+### `equipo_costo_horario_costo_detalle`
+
+Cache valuado de un renglón de receta **en una valuación**. `region_id` no
+se repite aquí: se hereda de `equipo_costo_horario_costo`, así un renglón
+no puede colgar de una valuación de otra región. Toda valuación tiene
+exactamente un renglón por cada `equipo_costo_horario_detalle` de ese
+equipo.
+
+No hay campos capturables. `cantidad` vive en `equipo_costo_horario_detalle`
+(la receta). `costo` e `importe` son cache y los deriva el recálculo del
+`equipo_costo_horario_costo` padre.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| equipo_costo_horario_costo_id | uuid | FK → equipo_costo_horario_costo |
+| equipo_costo_horario_detalle_id | uuid | FK → equipo_costo_horario_detalle — debe pertenecer al mismo equipo que `equipo_costo_horario_costo.equipo_costo_horario_id` |
+| costo | decimal | cache: si tipo = consumo, `precio_material.precio` vigente de la región (o nacional si falta; 0 si tampoco hay); si tipo = operacion, salario vigente de esa región o `cuadrilla_costo.costo_total` de esa región (0 si falta) |
+| importe | decimal | cache = `equipo_costo_horario_detalle.cantidad` × costo |
+| fecha_precio | date | nullable — foto de `precio_material.fecha_vigencia_desde` o `salario_categoria_fasar.fecha_vigencia_desde` al recalcular; NULL si el renglón quedó en 0 |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+Restricción: única `(equipo_costo_horario_costo_id, equipo_costo_horario_detalle_id)`.
 
 
 

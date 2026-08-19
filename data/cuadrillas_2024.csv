@@ -1,0 +1,177 @@
+MAESTRO
+Clave,Descripción,Unidad,Familia,Subfamilia
+00-M0001,Cuadrilla 01 (Ayudante),jor,,
+00-M0002,Cuadrilla 02 (Oficial albañil + ayudante),jor,,
+00-M0003,Cuadrilla 03 (Oficial electricista + ayudante de instalación),jor,,
+00-M0004,Cuadrilla 04 (Oficial plomero + ayudante de instalación),jor,,
+00-M0005,Cuadrilla 05 (Oficial albañil + 2 ayudantes),jor,,
+00-M0006,Cuadrilla 06 (Oficial carpintero de obra negra + ayudante),jor,,
+00-M0007,Cuadrilla 07 (Oficial fierrero + ayudante),jor,,
+00-M0008,Cuadrilla 08 (Oficial herrero en campo + ayudante),jor,,
+00-M0010,Cuadrilla 10 (Oficial azulejero + ayudante),jor,,
+00-M0012,Cuadrilla 12 (Oficial yesero + ayudante),jor,,
+00-M0013,Cuadrilla 13 (Oficial carpintero de banco + ayudante),jor,,
+00-M0014,Cuadrilla 14 (Oficial pintor + ayudante),jor,,
+00-M0016,Cuadrilla 16 (Tubero + ayudante de instalación),jor,,
+00-M0017,Cuadrilla 17 (Operador de equipo ligero),jor,,
+00-M0018,Cuadrilla 18 (Operador de Vehículo con Grúa),jor,,
+00-M0019,Cuadrilla 19 (Operador de camión + ayudante),jor,,
+00-M0020,Cuadrilla 20 (Operador de cargador + ayudante),jor,,
+00-M0021,Cuadrilla 21 (Operador de carpeteador + 1 tornillero + 2 rastrilleros + 3 ayudantes),jor,,
+00-M0023,Cuadrilla 23 (Operador de duo-pactor),jor,,
+00-M0024,Cuadrilla 24 (Operador de motoconformadora + ayudante),jor,,
+00-M0026,Cuadrilla 26 (Operador de petrolizadora + ayudante),jor,,
+00-M0027,Cuadrilla 27 (Operador de plancha),jor,,
+00-M0028,Cuadrilla 28 (Operador de retroexcavadora + ayudante),jor,,
+00-M0029,Cuadrilla 29 (Operador de tractor + ayudante),jor,,
+00-M0030,Cuadrilla 30 (Auxiliar de topógrafo + 2 Cadeneros),jor,,
+00-M0031,Cuadrilla 31 (Oficial vidriero + ayudante),jor,,
+00-M0032,Cuadrilla 32 (Oficial albañil + 6 ayudantes),jor,,
+00-M0033,Cuadrilla 33 (Aluminero + ayudante),jor,,
+00-M0034,Cuadrilla 34 (Colocador + ayudante),jor,,
+
+DETALLE
+Clave Cuadrilla,Sección,Clave Insumo,Descripción Insumo,Unidad,Cantidad
+00-M0001,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0001,MANO DE OBRA,,Cabo de ayudantes,jor,0.050000
+00-M0001,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0001,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0002,MANO DE OBRA,,Oficial albañil,jor,1.000000
+00-M0002,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0002,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0002,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0002,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0003,MANO DE OBRA,,Oficial electricista,jor,1.000000
+00-M0003,MANO DE OBRA,,Ayudante de instalación,jor,1.000000
+00-M0003,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0003,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0003,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0004,MANO DE OBRA,,Oficial plomero,jor,1.000000
+00-M0004,MANO DE OBRA,,Ayudante de instalación,jor,1.000000
+00-M0004,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0004,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0004,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0005,MANO DE OBRA,,Oficial albañil,jor,1.000000
+00-M0005,MANO DE OBRA,,Ayudante oficial,jor,2.000000
+00-M0005,MANO DE OBRA,,Cabo de oficios,jor,0.150000
+00-M0005,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0005,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0006,MANO DE OBRA,,Carpintero de obra negra,jor,1.000000
+00-M0006,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0006,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0006,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0006,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0007,MANO DE OBRA,,Oficial fierrero,jor,1.000000
+00-M0007,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0007,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0007,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0007,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0008,MANO DE OBRA,,Herrero de campo,jor,1.000000
+00-M0008,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0008,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0008,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0008,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0010,MANO DE OBRA,,Oficial azulejero,jor,1.000000
+00-M0010,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0010,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0010,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0010,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0012,MANO DE OBRA,,Oficial yesero,jor,1.000000
+00-M0012,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0012,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0012,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0012,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0013,MANO DE OBRA,,Carpintero de banco,jor,1.000000
+00-M0013,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0013,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0013,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0013,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0014,MANO DE OBRA,,Oficial pintor,jor,1.000000
+00-M0014,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0014,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0014,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0014,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0016,MANO DE OBRA,,Tubero,jor,1.000000
+00-M0016,MANO DE OBRA,,Ayudante de instalación,jor,1.000000
+00-M0016,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0016,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0016,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0017,MANO DE OBRA,,Operador de equipo ligero,jor,1.000000
+00-M0017,MANO DE OBRA,,Cabo de oficios,jor,0.050000
+00-M0017,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0017,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0018,MANO DE OBRA,,Operador de vehículo con grúa,jor,1.000000
+00-M0018,MANO DE OBRA,,Cabo de oficios,jor,0.050000
+00-M0018,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0018,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0019,MANO DE OBRA,,Operador de camión,jor,1.000000
+00-M0019,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0019,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0019,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0019,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0020,MANO DE OBRA,,Operador de cargador,jor,1.000000
+00-M0020,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0020,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0020,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0020,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0021,MANO DE OBRA,,Operador de carpeteador,jor,1.000000
+00-M0021,MANO DE OBRA,,Tornillero,jor,1.000000
+00-M0021,MANO DE OBRA,,Rastrillero,jor,2.000000
+00-M0021,MANO DE OBRA,,Ayudante oficial,jor,3.000000
+00-M0021,MANO DE OBRA,,Cabo de oficios,jor,0.350000
+00-M0021,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0021,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0023,MANO DE OBRA,,Operador de duo-pactor,jor,1.000000
+00-M0023,MANO DE OBRA,,Cabo de oficios,jor,0.050000
+00-M0023,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0023,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0024,MANO DE OBRA,,Operador de motoconformadora,jor,1.000000
+00-M0024,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0024,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0024,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0024,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0026,MANO DE OBRA,,Operador de petrolizadora,jor,1.000000
+00-M0026,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0026,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0026,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0026,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0027,MANO DE OBRA,,Operador de plancha,jor,1.000000
+00-M0027,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0027,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0027,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0027,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0028,MANO DE OBRA,,Operador de retroexcavadora,jor,1.000000
+00-M0028,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0028,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0028,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0028,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0029,MANO DE OBRA,,Operador de tractor,jor,1.000000
+00-M0029,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0029,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0029,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0029,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0030,MANO DE OBRA,,Auxiliar topógrafo,jor,1.000000
+00-M0030,MANO DE OBRA,,Cadenero,jor,2.000000
+00-M0030,MANO DE OBRA,,Cabo de oficios,jor,0.150000
+00-M0030,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0030,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0031,MANO DE OBRA,,Oficial vidriero,jor,1.000000
+00-M0031,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0031,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0031,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0031,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0032,MANO DE OBRA,,Oficial albañil,jor,1.000000
+00-M0032,MANO DE OBRA,,Ayudante oficial,jor,6.000000
+00-M0032,MANO DE OBRA,,Cabo de oficios,jor,0.350000
+00-M0032,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0032,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0033,MANO DE OBRA,,Aluminero,jor,1.000000
+00-M0033,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0033,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0033,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0033,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000
+00-M0034,MANO DE OBRA,,Oficial colocador,jor,1.000000
+00-M0034,MANO DE OBRA,,Ayudante oficial,jor,1.000000
+00-M0034,MANO DE OBRA,,Cabo de oficios,jor,0.100000
+00-M0034,EQUIPO Y HERRAMIENTA,,Herramienta de mano,%mo,0.030000
+00-M0034,EQUIPO Y HERRAMIENTA,,Equipo de seguridad,%mo,0.020000

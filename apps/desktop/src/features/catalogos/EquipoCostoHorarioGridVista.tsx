@@ -12,18 +12,15 @@ import {
   deleteEquipoCostoHorario,
   listEquiposCostoHorario,
   listFamiliasInsumo,
-  listRegiones,
   listUnidadesMedida,
   listUsuarios,
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
-import type { EquipoCostoHorario, EquipoCostoHorarioData, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
-import { regionesVisibles } from "@/lib/types";
+import type { EquipoCostoHorario, EquipoCostoHorarioData, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 
 const SIN_FAMILIA = "— Sin familia —";
 const SIN_SUBFAMILIA = "— Sin sub familia —";
-const SIN_REGION = "— Nacional —";
 const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
 const SIMBOLO_UNIDAD_HORA = "hr";
 
@@ -38,8 +35,8 @@ const COLUMNAS_CONTROL = [
  * Vista "Grid" de Equipo de costo horario — grid de `equipo_costo_horario`
  * (extensión de `insumo` cuando `tipo = equipo_herramienta`, equipo propio
  * costado por depreciación) con los 9 valores de captura de cargos fijos
- * como columnas editables y los 12 de cache (incluido `costo_horario_total`)
- * como columnas de solo lectura. La composición (consumo/operación) solo se
+ * como columnas editables y los caches de cargos fijos más
+ * `costo_nacional` (subtotales y total) como columnas de solo lectura. La composición (consumo/operación) solo se
  * edita desde `EquipoCostoHorarioFicha` — mismo patrón que
  * `HerramientaSeccion`. Alternativa a `EquipoCostoHorarioFicha` (ver
  * `EquipoCostoHorarioSeccion`, que alterna entre las dos).
@@ -49,7 +46,6 @@ export function EquipoCostoHorarioGridVista() {
   const [equipos, setEquipos] = useState<EquipoCostoHorario[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
-  const [regiones, setRegiones] = useState<Region[]>([]);
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
@@ -88,7 +84,6 @@ export function EquipoCostoHorarioGridVista() {
     void recargarEquipos();
     listUnidadesMedida().then(setUnidades).catch((e) => setError(String(e)));
     listFamiliasInsumo().then(setFamilias).catch((e) => setError(String(e)));
-    listRegiones().then(setRegiones).catch((e) => setError(String(e)));
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
@@ -113,9 +108,6 @@ export function EquipoCostoHorarioGridVista() {
   }, [familias]);
   const nombrePorFamiliaId = useMemo(() => Object.fromEntries(familias.map((f) => [f.id, f.nombre])), [familias]);
   const raizIdPorNombre = useMemo(() => Object.fromEntries(raicesFamilia.map((f) => [f.nombre, f.id])), [raicesFamilia]);
-
-  const nombrePorRegionId = useMemo(() => Object.fromEntries(regiones.map((r) => [r.id, r.nombre])), [regiones]);
-  const regionIdPorNombre = useMemo(() => Object.fromEntries(regiones.map((r) => [r.nombre, r.id])), [regiones]);
 
   const config: DataGridConfig = useMemo(
     () => ({
@@ -149,12 +141,6 @@ export function EquipoCostoHorarioGridVista() {
             return [SIN_SUBFAMILIA, ...ordenarPor(hijas, (h) => h.nombre).map((h) => h.nombre)];
           },
         },
-        {
-          field: "region",
-          header: "Región",
-          width: 140,
-          options: [SIN_REGION, ...ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => r.nombre)],
-        },
         { field: "cf_costo_maquina", header: "Costo máquina", width: 130, numeric: true },
         { field: "cf_valor_llantas", header: "Valor llantas", width: 120, numeric: true },
         { field: "cf_valor_piezas_especiales", header: "Valor piezas esp.", width: 130, numeric: true },
@@ -179,7 +165,7 @@ export function EquipoCostoHorarioGridVista() {
         ...COLUMNAS_CONTROL,
       ],
     }),
-    [unidades, raicesFamilia, hijasPorPadreId, raizIdPorNombre, regiones],
+    [unidades, raicesFamilia, hijasPorPadreId, raizIdPorNombre],
   );
 
   const filas: Row[] = useMemo(
@@ -191,7 +177,6 @@ export function EquipoCostoHorarioGridVista() {
         unidad: simboloPorUnidadId[e.unidad_id] ?? e.unidad_id,
         familia: (e.familia_id && nombrePorFamiliaId[e.familia_id]) || SIN_FAMILIA,
         subfamilia: (e.sub_familia_id && nombrePorFamiliaId[e.sub_familia_id]) || SIN_SUBFAMILIA,
-        region: (e.region_id && nombrePorRegionId[e.region_id]) || SIN_REGION,
         cf_costo_maquina: e.cf_costo_maquina,
         cf_valor_llantas: e.cf_valor_llantas,
         cf_valor_piezas_especiales: e.cf_valor_piezas_especiales,
@@ -209,16 +194,16 @@ export function EquipoCostoHorarioGridVista() {
         cf_seguro_hora: e.cf_seguro_hora,
         cf_mantenimiento_hora: e.cf_mantenimiento_hora,
         cf_cargo_fijo_hora: e.cf_cargo_fijo_hora,
-        subtotal_consumo: e.subtotal_consumo,
-        subtotal_operacion: e.subtotal_operacion,
-        cargo_variable_hora: e.cargo_variable_hora,
-        costo_horario_total: e.costo_horario_total,
+        subtotal_consumo: e.costo_nacional?.subtotal_consumo ?? "0",
+        subtotal_operacion: e.costo_nacional?.subtotal_operacion ?? "0",
+        cargo_variable_hora: e.costo_nacional?.cargo_variable_hora ?? "0",
+        costo_horario_total: e.costo_nacional?.costo_total ?? "0",
         created_at: e.created_at,
         created_by: nombresPorUsuarioId[e.created_by] ?? e.created_by,
         updated_at: e.updated_at ?? "",
         updated_by: (e.updated_by && nombresPorUsuarioId[e.updated_by]) ?? e.updated_by ?? "",
       })),
-    [equipos, simboloPorUnidadId, nombrePorFamiliaId, nombrePorRegionId, nombresPorUsuarioId],
+    [equipos, simboloPorUnidadId, nombrePorFamiliaId, nombresPorUsuarioId],
   );
 
   const filaAEquipoCostoHorarioData = (fila: Row): EquipoCostoHorarioData => {
@@ -227,14 +212,12 @@ export function EquipoCostoHorarioGridVista() {
       familiaId && fila.subfamilia !== SIN_SUBFAMILIA
         ? (hijasPorPadreId[familiaId] ?? []).find((h) => h.nombre === fila.subfamilia)?.id ?? null
         : null;
-    const regionId = fila.region === SIN_REGION ? null : regionIdPorNombre[String(fila.region)] ?? null;
     return {
       clave: String(fila.clave),
       descripcion: String(fila.descripcion),
       unidad_id: unidadIdPorSimbolo[String(fila.unidad)] ?? String(fila.unidad),
       familia_id: familiaId,
       sub_familia_id: subFamiliaId,
-      region_id: regionId,
       cf_costo_maquina: String(fila.cf_costo_maquina ?? "0"),
       cf_valor_llantas: String(fila.cf_valor_llantas ?? "0"),
       cf_valor_piezas_especiales: String(fila.cf_valor_piezas_especiales ?? "0"),
@@ -266,7 +249,7 @@ export function EquipoCostoHorarioGridVista() {
                 icono: Download,
                 titulo: "Exportar a CSV",
                 onClick: () =>
-                  setCsvAdaptador(adaptadorExportEquipoCostoHorario(equipos, unidades, familias, regiones)),
+                  setCsvAdaptador(adaptadorExportEquipoCostoHorario(equipos, unidades, familias)),
                 disabled: csvAdaptador !== null || equipos.length === 0,
               },
             ]}

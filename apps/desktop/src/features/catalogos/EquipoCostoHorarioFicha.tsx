@@ -25,13 +25,11 @@ import {
   deleteEquipoCostoHorario,
   listEquiposCostoHorario,
   listFamiliasInsumo,
-  listRegiones,
   listUnidadesMedida,
   listUsuarios,
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
-import type { EquipoCostoHorario, FamiliaInsumo, Region, UnidadMedida } from "@/lib/types";
-import { regionesVisibles } from "@/lib/types";
+import type { EquipoCostoHorario, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
@@ -39,7 +37,6 @@ const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
 // el backend y necesitan un valor propio para poder ofrecerse como opción.
 const SIN_FAMILIA_VALOR = "__sin_familia__";
 const SIN_SUBFAMILIA_VALOR = "__sin_subfamilia__";
-const NACIONAL_VALOR = "__nacional__";
 
 function fmt(valor: string): string {
   const numero = Number(valor);
@@ -57,7 +54,7 @@ function fmt(valor: string): string {
  * Agregar/editar/eliminar/recargar viven todos juntos en la barra de
  * acciones del encabezado, junto al buscador — un solo formulario (en un
  * `Sheet`, igual que `CuadrillasFicha`) sirve tanto para crear como para
- * editar la identidad del equipo (clave/descripción/unidad/familia/región).
+ * editar la identidad del equipo (clave/descripción/unidad/familia).
  * Los 9 valores de captura de cargos fijos viven en la ficha de detalle, no
  * aquí, para que se vea el desglose calculado mientras se ajustan.
  */
@@ -65,7 +62,6 @@ export function EquipoCostoHorarioFicha() {
   const [equipos, setEquipos] = useState<EquipoCostoHorario[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [familias, setFamilias] = useState<FamiliaInsumo[]>([]);
-  const [regiones, setRegiones] = useState<Region[]>([]);
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -81,7 +77,6 @@ export function EquipoCostoHorarioFicha() {
   const [nuevaUnidadId, setNuevaUnidadId] = useState("");
   const [nuevaFamiliaId, setNuevaFamiliaId] = useState<string | null>(null);
   const [nuevaSubfamiliaId, setNuevaSubfamiliaId] = useState<string | null>(null);
-  const [nuevaRegionId, setNuevaRegionId] = useState<string | null>(null);
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -108,7 +103,6 @@ export function EquipoCostoHorarioFicha() {
     void recargarEquipos();
     listUnidadesMedida().then(setUnidades).catch((e) => setError(String(e)));
     listFamiliasInsumo().then(setFamilias).catch((e) => setError(String(e)));
-    listRegiones().then(setRegiones).catch((e) => setError(String(e)));
     listUsuarios().then((usuarios) => {
       setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
     });
@@ -179,7 +173,6 @@ export function EquipoCostoHorarioFicha() {
     // evita que quien da de alta tenga que elegirla cada vez.
     setNuevaFamiliaId(familiaEquipoHerramientaId);
     setNuevaSubfamiliaId(null);
-    setNuevaRegionId(null);
     setError(null);
     setCreando(true);
   };
@@ -192,7 +185,6 @@ export function EquipoCostoHorarioFicha() {
     setNuevaUnidadId(e.unidad_id);
     setNuevaFamiliaId(e.familia_id);
     setNuevaSubfamiliaId(e.sub_familia_id);
-    setNuevaRegionId(e.region_id);
     setError(null);
   };
 
@@ -219,7 +211,6 @@ export function EquipoCostoHorarioFicha() {
           unidad_id: nuevaUnidadId,
           familia_id: nuevaFamiliaId,
           sub_familia_id: nuevaSubfamiliaId,
-          region_id: nuevaRegionId,
           cf_costo_maquina: actual.cf_costo_maquina,
           cf_valor_llantas: actual.cf_valor_llantas,
           cf_valor_piezas_especiales: actual.cf_valor_piezas_especiales,
@@ -239,7 +230,6 @@ export function EquipoCostoHorarioFicha() {
           unidad_id: nuevaUnidadId,
           familia_id: nuevaFamiliaId,
           sub_familia_id: nuevaSubfamiliaId,
-          region_id: nuevaRegionId,
           cf_costo_maquina: "0",
           cf_valor_llantas: "0",
           cf_valor_piezas_especiales: "0",
@@ -341,7 +331,7 @@ export function EquipoCostoHorarioFicha() {
                         {e.clave}
                       </span>
                       <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
-                        ${fmt(e.costo_horario_total)}
+                        ${fmt(e.costo_nacional?.costo_total ?? "0")}
                       </span>
                     </div>
                     <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{e.descripcion}</span>
@@ -350,10 +340,10 @@ export function EquipoCostoHorarioFicha() {
                         <Timer size={16} className="text-blue-500" />${fmt(e.cf_cargo_fijo_hora)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Fuel size={16} className="text-amber-500" />${fmt(e.subtotal_consumo)}
+                        <Fuel size={16} className="text-amber-500" />${fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <HardHat size={16} className="text-violet-500" />${fmt(e.subtotal_operacion)}
+                        <HardHat size={16} className="text-violet-500" />${fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
                       </span>
                     </div>
                   </button>
@@ -460,24 +450,6 @@ export function EquipoCostoHorarioFicha() {
                   {ordenarPor(hijasNueva, (h) => h.nombre).map((h) => (
                     <SelectItem key={h.id} value={h.id}>
                       {h.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Campo>
-            <Campo label="Región">
-              <Select
-                value={nuevaRegionId ?? NACIONAL_VALOR}
-                onValueChange={(v) => setNuevaRegionId(v === NACIONAL_VALOR ? null : v)}
-              >
-                <SelectTrigger className={CAMPO_INPUT_CLASE}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NACIONAL_VALOR}>— Nacional —</SelectItem>
-                  {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>

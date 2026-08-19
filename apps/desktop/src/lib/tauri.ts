@@ -13,6 +13,8 @@ import type {
   CuadrillaDetalleEditarData,
   DireccionMovimiento,
   EquipoCostoHorario,
+  EquipoCostoHorarioCosto,
+  EquipoCostoHorarioCostoDetalle,
   EquipoCostoHorarioData,
   EquipoCostoHorarioDetalle,
   EquipoCostoHorarioDetalleData,
@@ -388,8 +390,16 @@ export function deleteEquipoCostoHorarioDetalle(id: string): Promise<EquipoCosto
 export function moveEquipoCostoHorarioDetalle(id: string, direccion: DireccionMovimiento): Promise<EquipoCostoHorario> {
   return invoke("move_equipo_costo_horario_detalle", { id, direccion });
 }
-export function recalculateEquipoCostoHorario(equipoCostoHorarioInsumoId: string): Promise<EquipoCostoHorario> {
-  return invoke("recalculate_equipo_costo_horario", { equipoCostoHorarioInsumoId });
+export function listEquipoCostoHorarioCostos(equipoCostoHorarioId: string): Promise<EquipoCostoHorarioCosto[]> {
+  return invoke("list_equipo_costo_horario_costos", { equipoCostoHorarioId });
+}
+export function recalculateEquipoCostoHorarioZonas(equipoCostoHorarioId: string): Promise<EquipoCostoHorarioCosto[]> {
+  return invoke("recalculate_equipo_costo_horario_zonas", { equipoCostoHorarioId });
+}
+export function listEquipoCostoHorarioCostoDetalles(
+  equipoCostoHorarioCostoId: string,
+): Promise<EquipoCostoHorarioCostoDetalle[]> {
+  return invoke("list_equipo_costo_horario_costo_detalles", { equipoCostoHorarioCostoId });
 }
 
 export function escribirArchivoTexto(path: string, contenido: string): Promise<void> {

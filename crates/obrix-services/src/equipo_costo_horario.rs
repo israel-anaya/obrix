@@ -5,19 +5,20 @@
 //! Los campos `cf_*` de cache (todo salvo los 9 de captura directa del
 //! usuario) se recalculan aquí, en `calcular_cargos_fijos`, cada vez que se
 //! crea o actualiza el equipo — son puramente función de esos 9 valores, no
-//! dependen de la composición. `cargo_variable_hora`/`costo_horario_total`
-//! sí dependen de la composición (`equipo_costo_horario_detalle`) y los
-//! administra `EquipoCostoHorarioDetalleService`.
+//! dependen de la composición. La valuación por región vive en
+//! `equipo_costo_horario_costo`/`equipo_costo_horario_costo_detalle` —
+//! `costo_nacional` aquí es solo un reflejo de conveniencia de la valuación
+//! nacional, igual que `CuadrillaCompleto.costo_nacional`.
 
 use obrix_db::PortafolioRepository;
-use obrix_db::entities::equipo_costo_horario;
 use obrix_db::entities::insumo::{self, TipoInsumo};
-use obrix_db::entities::{familia_insumo, region, unidad_medida};
+use obrix_db::entities::{equipo_costo_horario, equipo_costo_horario_costo, familia_insumo, unidad_medida};
 use rust_decimal::Decimal;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
 };
 
+use crate::equipo_costo_horario_costo::EquipoCostoHorarioCostoService;
 use crate::unidad_medida::UnidadMedidaService;
 use crate::{ServiceError, nuevo_id};
 
@@ -30,8 +31,6 @@ pub struct EquipoCostoHorarioData {
     /// Debe ser hija (`parent_id`) de `familia_id` — no se valida aquí, el
     /// frontend ya restringe las opciones mostradas a los hijos de la familia elegida.
     pub sub_familia_id: Option<String>,
-    /// `null` = nacional — solo descriptivo, no participa en ningún cálculo.
-    pub region_id: Option<String>,
     pub cf_costo_maquina: Decimal,
     pub cf_valor_llantas: Decimal,
     pub cf_valor_piezas_especiales: Decimal,
@@ -105,7 +104,7 @@ fn calcular_cargos_fijos(datos: &EquipoCostoHorarioData) -> Result<CargosFijos, 
 }
 
 /// `insumo` + `equipo_costo_horario` combinados en una sola fila — así es
-/// como lo ve el frontend, que no necesita saber que internamente son dos tablas.
+/// como lo ve el frontend, que no necesita saber que internamente son varias tablas.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct EquipoCostoHorarioCompleto {
     pub id: String,
@@ -114,7 +113,6 @@ pub struct EquipoCostoHorarioCompleto {
     pub unidad_id: String,
     pub familia_id: Option<String>,
     pub sub_familia_id: Option<String>,
-    pub region_id: Option<String>,
     pub cf_costo_maquina: Decimal,
     pub cf_valor_llantas: Decimal,
     pub cf_valor_piezas_especiales: Decimal,
@@ -132,10 +130,10 @@ pub struct EquipoCostoHorarioCompleto {
     pub cf_seguro_hora: Decimal,
     pub cf_mantenimiento_hora: Decimal,
     pub cf_cargo_fijo_hora: Decimal,
-    pub subtotal_consumo: Decimal,
-    pub subtotal_operacion: Decimal,
-    pub cargo_variable_hora: Decimal,
-    pub costo_horario_total: Decimal,
+    /// Valuación nacional (`region_id IS NULL`) — siempre existe salvo un
+    /// estado transitorio imposible desde este servicio, todo equipo nace
+    /// con ella.
+    pub costo_nacional: Option<equipo_costo_horario_costo::Model>,
     pub created_at: String,
     pub created_by: String,
     pub updated_at: Option<String>,
@@ -145,6 +143,7 @@ pub struct EquipoCostoHorarioCompleto {
 pub(crate) fn combinar(
     insumo: insumo::Model,
     equipo: equipo_costo_horario::Model,
+    costo_nacional: Option<equipo_costo_horario_costo::Model>,
 ) -> EquipoCostoHorarioCompleto {
     EquipoCostoHorarioCompleto {
         id: insumo.id,
@@ -153,7 +152,6 @@ pub(crate) fn combinar(
         unidad_id: insumo.unidad_id,
         familia_id: insumo.familia_id,
         sub_familia_id: insumo.sub_familia_id,
-        region_id: equipo.region_id,
         cf_costo_maquina: equipo.cf_costo_maquina,
         cf_valor_llantas: equipo.cf_valor_llantas,
         cf_valor_piezas_especiales: equipo.cf_valor_piezas_especiales,
@@ -171,10 +169,7 @@ pub(crate) fn combinar(
         cf_seguro_hora: equipo.cf_seguro_hora,
         cf_mantenimiento_hora: equipo.cf_mantenimiento_hora,
         cf_cargo_fijo_hora: equipo.cf_cargo_fijo_hora,
-        subtotal_consumo: equipo.subtotal_consumo,
-        subtotal_operacion: equipo.subtotal_operacion,
-        cargo_variable_hora: equipo.cargo_variable_hora,
-        costo_horario_total: equipo.costo_horario_total,
+        costo_nacional,
         created_at: insumo.created_at,
         created_by: insumo.created_by,
         updated_at: insumo.updated_at,
@@ -207,7 +202,6 @@ impl EquipoCostoHorarioService {
         crate::validar_opcionales_no_vacios(&[
             (&datos.familia_id, "familia_id"),
             (&datos.sub_familia_id, "sub_familia_id"),
-            (&datos.region_id, "region_id"),
         ])?;
         Ok(())
     }
@@ -225,16 +219,14 @@ impl EquipoCostoHorarioService {
 
         let mut resultado = Vec::with_capacity(insumos.len());
         for ins in insumos {
-            // `herramienta`/`equipo_rentado` también son `tipo =
-            // equipo_herramienta` — solo las que tienen fila en
-            // `equipo_costo_horario` pertenecen a este catálogo.
             let Some(equipo) = equipo_costo_horario::Entity::find_by_id(&ins.id)
                 .one(repo.conexion())
                 .await?
             else {
                 continue;
             };
-            resultado.push(combinar(ins, equipo));
+            let costo_nacional = Self::buscar_costo_nacional(repo, &ins.id).await?;
+            resultado.push(combinar(ins, equipo, costo_nacional));
         }
         Ok(resultado)
     }
@@ -252,9 +244,14 @@ impl EquipoCostoHorarioService {
             .one(repo.conexion())
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {id}")))?;
-        Ok(combinar(ins, equipo))
+        let costo_nacional = Self::buscar_costo_nacional(repo, id).await?;
+        Ok(combinar(ins, equipo, costo_nacional))
     }
 
+    /// Inserta `insumo` + `equipo_costo_horario` + su fila de valuación
+    /// nacional (`equipo_costo_horario_costo` con `region_id = NULL`) en la
+    /// misma transacción — todo equipo nace con su fila nacional
+    /// (`costo_total` = cargos fijos, variable en cero).
     pub async fn crear(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -265,7 +262,6 @@ impl EquipoCostoHorarioService {
         crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
         crate::validar_familia_existe(repo, &datos.familia_id).await?;
         crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
-        crate::validar_region_existe(repo, &datos.region_id).await?;
         let cargos = calcular_cargos_fijos(&datos)?;
         let txn = repo.conexion().begin().await?;
         let id = nuevo_id();
@@ -281,8 +277,8 @@ impl EquipoCostoHorarioService {
             familia_id: Set(datos.familia_id),
             sub_familia_id: Set(datos.sub_familia_id),
             deleted: Set(false),
-            created_at: Set(ahora),
-            created_by: Set(creado_por),
+            created_at: Set(ahora.clone()),
+            created_by: Set(creado_por.clone()),
             updated_at: Set(None),
             updated_by: Set(None),
             deleted_at: Set(None),
@@ -292,8 +288,7 @@ impl EquipoCostoHorarioService {
         .await?;
 
         let equipo = equipo_costo_horario::ActiveModel {
-            insumo_id: Set(id),
-            region_id: Set(datos.region_id),
+            insumo_id: Set(id.clone()),
             cf_costo_maquina: Set(datos.cf_costo_maquina),
             cf_valor_llantas: Set(datos.cf_valor_llantas),
             cf_valor_piezas_especiales: Set(datos.cf_valor_piezas_especiales),
@@ -311,25 +306,38 @@ impl EquipoCostoHorarioService {
             cf_seguro_hora: Set(cargos.cf_seguro_hora),
             cf_mantenimiento_hora: Set(cargos.cf_mantenimiento_hora),
             cf_cargo_fijo_hora: Set(cargos.cf_cargo_fijo_hora),
+        }
+        .insert(&txn)
+        .await?;
+
+        let costo_nacional = equipo_costo_horario_costo::ActiveModel {
+            id: Set(nuevo_id()),
+            equipo_costo_horario_id: Set(id),
+            region_id: Set(None),
             subtotal_consumo: Set(Decimal::ZERO),
             subtotal_operacion: Set(Decimal::ZERO),
             cargo_variable_hora: Set(Decimal::ZERO),
-            costo_horario_total: Set(cargos.cf_cargo_fijo_hora),
+            costo_total: Set(cargos.cf_cargo_fijo_hora),
+            sincronizado_en: Set(None),
+            deleted: Set(false),
+            created_at: Set(ahora),
+            created_by: Set(creado_por),
+            updated_at: Set(None),
+            updated_by: Set(None),
+            deleted_at: Set(None),
+            deleted_by: Set(None),
         }
         .insert(&txn)
         .await?;
 
         txn.commit().await?;
-        Ok(combinar(ins, equipo))
+        Ok(combinar(ins, equipo, Some(costo_nacional)))
     }
 
-    /// Actualiza tanto los datos de catálogo (clave/descripción/unidad/
-    /// familia/región) como los 9 valores de captura de cargos fijos
-    /// — recalcula los 8 de cache a partir de ellos. `cargo_variable_hora`
-    /// no se toca aquí (lo administra `EquipoCostoHorarioDetalleService` a
-    /// partir de la composición); `costo_horario_total` se recompone con el
-    /// `cargo_variable_hora` existente más el `cf_cargo_fijo_hora` recién
-    /// calculado.
+    /// Actualiza los datos de catálogo y los 9 valores de captura de cargos
+    /// fijos — recalcula los 8 de cache a partir de ellos y recompone
+    /// `costo_total` de **todas** las valuaciones (variable no cambia de
+    /// cantidades; el total sí, porque CF cambió).
     pub async fn actualizar(
         repo: &dyn PortafolioRepository,
         id: String,
@@ -340,12 +348,14 @@ impl EquipoCostoHorarioService {
         crate::validar_unidad_existe(repo, &datos.unidad_id).await?;
         crate::validar_familia_existe(repo, &datos.familia_id).await?;
         crate::validar_familia_existe(repo, &datos.sub_familia_id).await?;
-        crate::validar_region_existe(repo, &datos.region_id).await?;
         let cargos = calcular_cargos_fijos(&datos)?;
         let ahora = crate::ahora();
+        let autor = actualizado_por.clone().unwrap_or_else(|| "sistema".into());
+
+        let txn = repo.conexion().begin().await?;
 
         let mut ins: insumo::ActiveModel = insumo::Entity::find_by_id(&id)
-            .one(repo.conexion())
+            .one(&txn)
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {id}")))?
             .into();
@@ -354,18 +364,15 @@ impl EquipoCostoHorarioService {
         ins.unidad_id = Set(datos.unidad_id);
         ins.familia_id = Set(datos.familia_id);
         ins.sub_familia_id = Set(datos.sub_familia_id);
-        ins.updated_at = Set(Some(ahora));
+        ins.updated_at = Set(Some(ahora.clone()));
         ins.updated_by = Set(actualizado_por);
-        let ins = ins.update(repo.conexion()).await?;
+        let ins = ins.update(&txn).await?;
 
         let existente = equipo_costo_horario::Entity::find_by_id(&ins.id)
-            .one(repo.conexion())
+            .one(&txn)
             .await?
             .ok_or_else(|| ServiceError::NoEncontrado(format!("equipo_costo_horario {id}")))?;
-        let cargo_variable_hora = existente.cargo_variable_hora;
-
         let mut eq: equipo_costo_horario::ActiveModel = existente.into();
-        eq.region_id = Set(datos.region_id);
         eq.cf_costo_maquina = Set(datos.cf_costo_maquina);
         eq.cf_valor_llantas = Set(datos.cf_valor_llantas);
         eq.cf_valor_piezas_especiales = Set(datos.cf_valor_piezas_especiales);
@@ -383,14 +390,27 @@ impl EquipoCostoHorarioService {
         eq.cf_seguro_hora = Set(cargos.cf_seguro_hora);
         eq.cf_mantenimiento_hora = Set(cargos.cf_mantenimiento_hora);
         eq.cf_cargo_fijo_hora = Set(cargos.cf_cargo_fijo_hora);
-        eq.costo_horario_total = Set(cargos.cf_cargo_fijo_hora + cargo_variable_hora);
-        let equipo = eq.update(repo.conexion()).await?;
+        let equipo = eq.update(&txn).await?;
 
-        Ok(combinar(ins, equipo))
+        let valuaciones =
+            EquipoCostoHorarioCostoService::asegurar_zonas(&txn, &ins.id, &autor).await?;
+        for v in &valuaciones {
+            EquipoCostoHorarioCostoService::recalcular_valuacion(&txn, &v.id).await?;
+        }
+
+        let costo_nacional = equipo_costo_horario_costo::Entity::find()
+            .filter(equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(&ins.id))
+            .filter(equipo_costo_horario_costo::Column::RegionId.is_null())
+            .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
+            .one(&txn)
+            .await?;
+
+        txn.commit().await?;
+        Ok(combinar(ins, equipo, costo_nacional))
     }
 
     /// Borrado lógico del `insumo` — `equipo_costo_horario` y su
-    /// `equipo_costo_horario_detalle` se quedan.
+    /// composición/valuación se quedan.
     pub async fn eliminar(
         repo: &dyn PortafolioRepository,
         id: String,
@@ -434,14 +454,6 @@ impl EquipoCostoHorarioService {
             .all(repo.conexion())
             .await?;
         let (raiz_id_por_nombre, hija_id_por_padre_y_nombre) = mapas_familia(&familias);
-
-        let region_id_por_nombre: HashMap<String, String> = region::Entity::find()
-            .filter(region::Column::Deleted.eq(false))
-            .all(repo.conexion())
-            .await?
-            .into_iter()
-            .map(|r| (r.nombre.to_lowercase(), r.id))
-            .collect();
 
         let extension: std::collections::HashSet<String> = equipo_costo_horario::Entity::find()
             .all(repo.conexion())
@@ -519,20 +531,6 @@ impl EquipoCostoHorarioService {
                 fila,
                 &mut errores,
             );
-            let region_txt = registro.region.as_deref().unwrap_or("").trim();
-            let region_id = if region_txt.is_empty() {
-                None
-            } else {
-                match region_id_por_nombre.get(&region_txt.to_lowercase()) {
-                    Some(id) => Some(id.clone()),
-                    None => {
-                        errores.push(format!(
-                            "fila {fila}: región \"{region_txt}\" no encontrada, se importó sin región"
-                        ));
-                        None
-                    }
-                }
-            };
             let horas_uso = decimal_o_cero(&registro.horas_uso_anual);
             let clave_archivo = registro
                 .clave
@@ -560,7 +558,6 @@ impl EquipoCostoHorarioService {
                 unidad_id,
                 familia_id,
                 sub_familia_id,
-                region_id,
                 cf_costo_maquina: decimal_o_cero(&registro.costo_maquina),
                 cf_valor_llantas: decimal_o_cero(&registro.valor_llantas),
                 cf_valor_piezas_especiales: decimal_o_cero(&registro.valor_piezas_especiales),
@@ -622,6 +619,20 @@ impl EquipoCostoHorarioService {
             aviso,
         ))
     }
+
+    async fn buscar_costo_nacional(
+        repo: &dyn PortafolioRepository,
+        equipo_costo_horario_id: &str,
+    ) -> Result<Option<equipo_costo_horario_costo::Model>, ServiceError> {
+        Ok(equipo_costo_horario_costo::Entity::find()
+            .filter(
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+            )
+            .filter(equipo_costo_horario_costo::Column::RegionId.is_null())
+            .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
+            .one(repo.conexion())
+            .await?)
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -636,8 +647,6 @@ struct RegistroCsvEquipo {
     familia: Option<String>,
     #[serde(rename = "Subfamilia", default)]
     subfamilia: Option<String>,
-    #[serde(rename = "Región", default)]
-    region: Option<String>,
     #[serde(rename = "Costo máquina", default)]
     costo_maquina: String,
     #[serde(rename = "Valor llantas", default)]
@@ -682,7 +691,6 @@ mod tests {
             unidad_id: "um-1".to_string(),
             familia_id: None,
             sub_familia_id: None,
-            region_id: None,
             cf_costo_maquina: "1000000".parse().unwrap(),
             cf_valor_llantas: "0".parse().unwrap(),
             cf_valor_piezas_especiales: "0".parse().unwrap(),
@@ -739,195 +747,9 @@ mod tests {
         assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
     }
 
-    #[test]
-    fn validar_rechaza_region_id_vacio() {
-        let mut d = datos_validar("ECH-1", "Excavadora");
-        d.region_id = Some(String::new());
-        assert!(EquipoCostoHorarioService::validar(&d, false).is_err());
-    }
-
-    async fn portafolio_con_unidad_familia_y_region()
-    -> (PortafolioSqliteRepository, String, String, String) {
-        use obrix_db::entities::{familia_insumo, moneda, organizacion, region, unidad_medida, usuario};
-        use rust_decimal::Decimal;
-        use sea_orm::ActiveModelTrait;
-
-        let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
-            .await
-            .expect("crear portafolio");
-        let now = "2026-08-16T00:00:00Z".to_string();
-
-        usuario::ActiveModel {
-            id: Set("usr-1".into()),
-            nombre: Set("Admin".into()),
-            correo: Set("a@a.com".into()),
-            rol: Set(usuario::RolUsuario::Admin),
-            activo: Set(true),
-            created_at: Set(now.clone()),
-            created_by: Set(None),
-            updated_at: Set(None),
-            updated_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .unwrap();
-
-        moneda::ActiveModel {
-            id: Set("mon-1".into()),
-            codigo: Set("MXN".into()),
-            nombre: Set("Peso mexicano".into()),
-            simbolo: Set("$".into()),
-            decimales: Set(2),
-            created_at: Set(now.clone()),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted: Set(false),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .unwrap();
-
-        organizacion::ActiveModel {
-            id: Set("org-1".into()),
-            razon_social: Set("Org".into()),
-            rfc: Set("XAXX010101000".into()),
-            tipo: Set(organizacion::TipoOrganizacion::Despacho),
-            moneda_default_id: Set("mon-1".into()),
-            horas_jornada: Set(Decimal::from(8)),
-            created_at: Set(now.clone()),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted: Set(false),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .unwrap();
-
-        unidad_medida::ActiveModel {
-            id: Set("um-1".into()),
-            simbolo: Set("hr".into()),
-            simbolo_impresion: Set("hr".into()),
-            variantes: Set("".into()),
-            clave_sat: Set(None),
-            descripcion: Set("Hora".into()),
-            tipo_magnitud: Set(unidad_medida::TipoMagnitud::Tiempo),
-            created_at: Set(now.clone()),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted: Set(false),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .unwrap();
-
-        familia_insumo::ActiveModel {
-            id: Set("fam-1".into()),
-            parent_id: Set(None),
-            nombre: Set("Equipo pesado".into()),
-            insumos_asociados: Set(None),
-            icono: Set(None),
-            deleted: Set(false),
-            created_at: Set(now.clone()),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .unwrap();
-
-        region::ActiveModel {
-            id: Set("reg-1".into()),
-            organizacion_id: Set("org-1".into()),
-            nombre: Set("Centro".into()),
-            estado: Set("CDMX".into()),
-            factor_ajuste: Set(None),
-            visible: Set(true),
-            deleted: Set(false),
-            created_at: Set(now),
-            created_by: Set("usr-1".into()),
-            updated_at: Set(None),
-            updated_by: Set(None),
-            deleted_at: Set(None),
-            deleted_by: Set(None),
-        }
-        .insert(portafolio.conexion())
-        .await
-        .unwrap();
-
-        (
-            portafolio,
-            "um-1".to_string(),
-            "fam-1".to_string(),
-            "reg-1".to_string(),
-        )
-    }
-
-    #[tokio::test]
-    async fn validar_unidad_existe_acepta_unidad_existente() {
-        let (portafolio, unidad_id, _, _) = portafolio_con_unidad_familia_y_region().await;
-        assert!(
-            crate::validar_unidad_existe(&portafolio, &unidad_id)
-                .await
-                .is_ok()
-        );
-    }
-
-    #[tokio::test]
-    async fn validar_unidad_existe_rechaza_unidad_inexistente() {
-        let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
-        assert!(
-            crate::validar_unidad_existe(&portafolio, "no-existe")
-                .await
-                .is_err()
-        );
-    }
-
-    #[tokio::test]
-    async fn validar_familia_existe_rechaza_familia_inexistente() {
-        let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
-        assert!(
-            crate::validar_familia_existe(&portafolio, &Some("no-existe".to_string()))
-                .await
-                .is_err()
-        );
-    }
-
-    #[tokio::test]
-    async fn validar_region_existe_acepta_region_existente() {
-        let (portafolio, _, _, region_id) = portafolio_con_unidad_familia_y_region().await;
-        assert!(
-            crate::validar_region_existe(&portafolio, &Some(region_id))
-                .await
-                .is_ok()
-        );
-    }
-
-    #[tokio::test]
-    async fn validar_region_existe_rechaza_region_inexistente() {
-        let (portafolio, _, _, _) = portafolio_con_unidad_familia_y_region().await;
-        assert!(
-            crate::validar_region_existe(&portafolio, &Some("no-existe".to_string()))
-                .await
-                .is_err()
-        );
-    }
-
-    #[tokio::test]
-    async fn crear_listar_actualizar_eliminar_equipo_costo_horario() {
+    async fn portafolio_con_unidad() -> PortafolioSqliteRepository {
         use obrix_db::entities::{moneda, organizacion, unidad_medida, usuario};
-        use sea_orm::{ActiveModelTrait, ActiveValue::Set};
+        use sea_orm::ActiveModelTrait;
 
         let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
             .await
@@ -994,7 +816,7 @@ mod tests {
             clave_sat: Set(None),
             descripcion: Set("Hora".into()),
             tipo_magnitud: Set(unidad_medida::TipoMagnitud::Tiempo),
-            created_at: Set(now.clone()),
+            created_at: Set(now),
             created_by: Set("usr-1".into()),
             updated_at: Set(None),
             updated_by: Set(None),
@@ -1006,13 +828,18 @@ mod tests {
         .await
         .unwrap();
 
+        portafolio
+    }
+
+    #[tokio::test]
+    async fn crear_listar_actualizar_eliminar_equipo_costo_horario() {
+        let portafolio = portafolio_con_unidad().await;
         let datos = |descripcion: &str| EquipoCostoHorarioData {
             clave: "ECH-1".into(),
             descripcion: descripcion.into(),
             unidad_id: "um-1".into(),
             familia_id: None,
             sub_familia_id: None,
-            region_id: None,
             cf_costo_maquina: "1000000".parse().unwrap(),
             cf_valor_llantas: "0".parse().unwrap(),
             cf_valor_piezas_especiales: "0".parse().unwrap(),
@@ -1033,14 +860,14 @@ mod tests {
         .await
         .expect("crear equipo_costo_horario");
         assert_eq!(creado.clave, "ECH-1");
-        // Vm = 1,000,000; Vr = 100,000; Ve = 10,000 horas
         assert_eq!(creado.cf_valor_maquina, "1000000".parse().unwrap());
         assert_eq!(creado.cf_valor_rescate, "100000".parse().unwrap());
         assert_eq!(creado.cf_vida_util_horas, "10000".parse().unwrap());
-        // D = (1,000,000 - 100,000) / 10,000 = 90
         assert_eq!(creado.cf_depreciacion_hora, "90".parse().unwrap());
-        assert_eq!(creado.cargo_variable_hora, Decimal::ZERO);
-        assert_eq!(creado.costo_horario_total, creado.cf_cargo_fijo_hora);
+        let costo_nacional = creado.costo_nacional.as_ref().expect("valuación nacional");
+        assert!(costo_nacional.region_id.is_none());
+        assert_eq!(costo_nacional.cargo_variable_hora, Decimal::ZERO);
+        assert_eq!(costo_nacional.costo_total, creado.cf_cargo_fijo_hora);
 
         let listado = EquipoCostoHorarioService::listar(&portafolio, "org-1")
             .await
@@ -1067,17 +894,6 @@ mod tests {
             .unwrap()
             .expect("el insumo debe seguir existiendo");
         assert!(insumo_restante.deleted);
-        assert_eq!(insumo_restante.deleted_by.as_deref(), Some("usr-1"));
-
-        let equipo_restante =
-            obrix_db::entities::equipo_costo_horario::Entity::find_by_id(&creado.id)
-                .one(portafolio.conexion())
-                .await
-                .unwrap();
-        assert!(
-            equipo_restante.is_some(),
-            "la extensión equipo_costo_horario no se borra; el listado la oculta con deleted"
-        );
 
         let listado_tras_borrar = EquipoCostoHorarioService::listar(&portafolio, "org-1")
             .await

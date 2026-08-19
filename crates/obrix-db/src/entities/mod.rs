@@ -6,6 +6,8 @@ pub mod cuadrilla_costo;
 pub mod cuadrilla_costo_detalle;
 pub mod cuadrilla_detalle;
 pub mod equipo_costo_horario;
+pub mod equipo_costo_horario_costo;
+pub mod equipo_costo_horario_costo_detalle;
 pub mod equipo_costo_horario_detalle;
 pub mod factor_salario_real;
 pub mod familia_insumo;

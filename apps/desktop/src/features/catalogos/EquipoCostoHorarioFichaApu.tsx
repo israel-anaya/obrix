@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import { ArrowDown, ArrowUp, Fuel, Gauge, HardHat, Plus, RefreshCcw, Timer, X } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { AlertTriangle, CalendarDays, Fuel, Gauge, Globe2, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Timer, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,30 +13,42 @@ import {
 import { ComboboxFiltrable } from "@/components/ComboboxFiltrable";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { QuantityInput } from "@/components/QuantityInput";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createEquipoCostoHorarioDetalle,
   deleteEquipoCostoHorarioDetalle,
   listCategoriasFasar,
   listCuadrillas,
+  listEquipoCostoHorarioCostoDetalles,
+  listEquipoCostoHorarioCostos,
   listEquipoCostoHorarioDetalles,
   listMateriales,
+  listRegiones,
   listUnidadesMedida,
   moveEquipoCostoHorarioDetalle,
-  recalculateEquipoCostoHorario,
+  recalculateEquipoCostoHorarioZonas,
   updateEquipoCostoHorario,
   updateEquipoCostoHorarioDetalle,
 } from "@/lib/tauri";
+import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
+import { ordenarPor } from "@/lib/ordenar";
 import type {
   CategoriaFasar,
   Cuadrilla,
   DireccionMovimiento,
   EquipoCostoHorario,
+  EquipoCostoHorarioCosto,
+  EquipoCostoHorarioCostoDetalle,
   EquipoCostoHorarioDetalle,
   Material,
   NaturalezaEquipoCostoHorarioDetalle,
+  Region,
   UnidadMedida,
 } from "@/lib/types";
+import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function fmt(valor: string): string {
@@ -46,6 +57,8 @@ function fmt(valor: string): string {
   return numero.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const NACIONAL = "Nacional";
+
 const NATURALEZAS_CONSUMO: { id: NaturalezaEquipoCostoHorarioDetalle; etiqueta: string }[] = [
   { id: "combustible", etiqueta: "Combustible" },
   { id: "lubricante", etiqueta: "Lubricante" },
@@ -53,6 +66,166 @@ const NATURALEZAS_CONSUMO: { id: NaturalezaEquipoCostoHorarioDetalle; etiqueta: 
   { id: "piezas_especiales", etiqueta: "Piezas especiales" },
   { id: "otras_fuentes", etiqueta: "Otras fuentes" },
 ];
+
+/** Hasta 30 días: vigente. Más de 30: ámbar. Más de 90, o el salario vigente ya no coincide: crítico. */
+const DIAS_PRECIO_FRESCO = 30;
+const DIAS_PRECIO_CRITICO = 90;
+
+function FechaPrecioFrescura({
+  fecha,
+  fechaSalarioVigente,
+}: {
+  fecha: string;
+  fechaSalarioVigente?: string | null;
+}) {
+  const salarioCambio =
+    !!fechaSalarioVigente && fecha.slice(0, 10) !== fechaSalarioVigente.slice(0, 10);
+  const dias = diasTranscurridos(fecha);
+  const nivel = salarioCambio || (dias != null && dias > DIAS_PRECIO_CRITICO)
+    ? "critica"
+    : dias != null && dias > DIAS_PRECIO_FRESCO
+      ? "desactualizada"
+      : "vigente";
+  const titulo = salarioCambio
+    ? `El salario vigente cambió (${formatearFecha(fechaSalarioVigente)}). Sincroniza para actualizar este costo.`
+    : nivel === "critica"
+      ? `Precio con más de ${DIAS_PRECIO_CRITICO} días de vigencia`
+      : nivel === "desactualizada"
+        ? `Precio con más de ${DIAS_PRECIO_FRESCO} días de vigencia`
+        : formatearFecha(fecha);
+
+  return (
+    <div
+      title={titulo}
+      className={cn(
+        "inline-flex items-center justify-end gap-0.5 leading-tight",
+        nivel === "vigente" && "text-[10px] font-normal text-muted-foreground/70",
+        nivel === "desactualizada" && "text-[11px] font-medium text-amber-700 dark:text-amber-400",
+        nivel === "critica" && "text-[11px] font-semibold text-rose-600 dark:text-rose-400",
+      )}
+    >
+      {nivel === "critica" ? <AlertTriangle size={16} className="shrink-0" /> : null}
+      {formatearFecha(fecha)}
+    </div>
+  );
+}
+
+const MITAD_FILA = 0.5;
+
+function useFilaDrag({
+  ids,
+  onMove,
+  enabled,
+}: {
+  ids: string[];
+  onMove: (id: string, indiceDestino: number) => void;
+  enabled: boolean;
+}) {
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  const [soltarEn, setSoltarEn] = useState<{ id: string; antes: boolean } | null>(null);
+  const soltarEnRef = useRef(soltarEn);
+  soltarEnRef.current = soltarEn;
+  const arrastrandoRef = useRef<string | null>(null);
+
+  const limpiar = useCallback(() => {
+    arrastrandoRef.current = null;
+    setArrastrando(null);
+    setSoltarEn(null);
+  }, []);
+
+  const handleProps = useCallback(
+    (id: string) =>
+      enabled
+        ? {
+            draggable: true as const,
+            onDragStart: (e: DragEvent) => {
+              arrastrandoRef.current = id;
+              setArrastrando(id);
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", id);
+            },
+            onDragEnd: limpiar,
+          }
+        : {},
+    [enabled, limpiar],
+  );
+
+  const mitadSuperior = (e: DragEvent) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    return e.clientY - box.top < box.height * MITAD_FILA;
+  };
+
+  const filaProps = useCallback(
+    (id: string) =>
+      enabled
+        ? {
+            onDragOver: (e: DragEvent) => {
+              if (arrastrandoRef.current === null) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              const antes = mitadSuperior(e);
+              const actual = soltarEnRef.current;
+              if (!actual || actual.id !== id || actual.antes !== antes) {
+                setSoltarEn({ id, antes });
+              }
+            },
+            onDrop: (e: DragEvent) => {
+              const from = arrastrandoRef.current;
+              if (from === null) return limpiar();
+              e.preventDefault();
+              const to = ids.indexOf(id);
+              const fromIndex = ids.indexOf(from);
+              if (to < 0 || fromIndex < 0) return limpiar();
+              let dest = mitadSuperior(e) ? to : to + 1;
+              if (fromIndex < dest) dest -= 1;
+              limpiar();
+              if (dest !== fromIndex) onMove(from, dest);
+            },
+          }
+        : {},
+    [enabled, ids, onMove, limpiar],
+  );
+
+  const filaClass = useCallback(
+    (id: string): string | false => {
+      if (arrastrando === id) return "opacity-40";
+      return false;
+    },
+    [arrastrando],
+  );
+
+  const hueco = useMemo(() => {
+    if (!soltarEn || !arrastrando) return null;
+    const to = ids.indexOf(soltarEn.id);
+    const from = ids.indexOf(arrastrando);
+    if (to < 0 || from < 0) return null;
+    const dest = soltarEn.antes ? to : to + 1;
+    if (dest === from || dest === from + 1) return null;
+    return dest;
+  }, [soltarEn, arrastrando, ids]);
+
+  return useMemo(
+    () => ({ handleProps, filaProps, filaClass, hueco }),
+    [handleProps, filaProps, filaClass, hueco],
+  );
+}
+
+function MarcadorInsercion() {
+  return (
+    <tr aria-hidden className="pointer-events-none">
+      <td colSpan={8} className="relative h-0 p-0">
+        <div className="absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 items-center gap-2 px-1">
+          <span className="size-2 shrink-0 rounded-full bg-primary ring-2 ring-background" />
+          <span className="h-0.5 flex-1 bg-primary" />
+          <span className="rounded-sm bg-primary px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+            Soltar aquí
+          </span>
+          <span className="h-0.5 flex-1 bg-primary" />
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 interface CamposCf {
   cf_costo_maquina: string;
@@ -128,10 +301,11 @@ function aCamposCf(e: EquipoCostoHorario): CamposCf {
  * metodología SCT/CMIC) antes de las dos tablas de composición (Consumo,
  * Operación) — así se ve el desglose recalculado mientras se ajustan los
  * valores de la máquina. Enfoque alterno a la vista de grid: mismos
- * comandos de Tauri, mismo recálculo en el backend.
+ * comandos de Tauri; los montos del análisis son los de la región elegida
+ * en Costo por región (Nacional al abrir).
  *
  * Agregar/editar/eliminar el equipo en sí (identidad: clave/descripción/
- * unidad/familia/región) vive en la barra de acciones de
+ * unidad/familia) vive en la barra de acciones de
  * `EquipoCostoHorarioFicha` — este componente administra los cargos fijos y
  * la composición.
  */
@@ -142,10 +316,16 @@ export function EquipoCostoHorarioFichaApu({
   equipo: EquipoCostoHorario;
   onCambio: () => void;
 }) {
+  const { organizacionActivaId } = useOrganizacionActiva();
   const [detalles, setDetalles] = useState<EquipoCostoHorarioDetalle[]>([]);
+  const [costos, setCostos] = useState<EquipoCostoHorarioCosto[]>([]);
+  const [costoSeleccionadoId, setCostoSeleccionadoId] = useState<string | null>(null);
+  const [costoDetalles, setCostoDetalles] = useState<EquipoCostoHorarioCostoDetalle[]>([]);
+  const [costoDetallesPorCostoId, setCostoDetallesPorCostoId] = useState<Record<string, EquipoCostoHorarioCostoDetalle[]>>({});
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
   const [cuadrillas, setCuadrillas] = useState<Cuadrilla[]>([]);
+  const [regiones, setRegiones] = useState<Region[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [totales, setTotales] = useState<EquipoCostoHorario>(equipo);
   const [error, setError] = useState<string | null>(null);
@@ -154,16 +334,21 @@ export function EquipoCostoHorarioFichaApu({
   const [agregandoOperacion, setAgregandoOperacion] = useState(false);
   const [pendingQuitar, setPendingQuitar] = useState<EquipoCostoHorarioDetalle | null>(null);
   const [recalculando, setRecalculando] = useState(false);
+  /** `null` = Nacional. No se persiste: solo elige qué cache ve el análisis. */
+  const [regionVistaId, setRegionVistaId] = useState<string | null>(null);
+  const [mostrarFechaPrecio, setMostrarFechaPrecio] = useState(false);
 
   const [camposCf, setCamposCf] = useState<CamposCf>(() => aCamposCf(equipo));
   const [guardandoCf, setGuardandoCf] = useState(false);
+  const zonasMaterializadasId = useRef<string | null>(null);
 
   useEffect(() => {
     listMateriales().then(setMateriales).catch(() => {});
     listCategoriasFasar().then(setCategorias).catch(() => {});
     listCuadrillas().then(setCuadrillas).catch(() => {});
+    listRegiones().then(setRegiones).catch(() => {});
     listUnidadesMedida().then(setUnidades).catch(() => {});
-  }, []);
+  }, [organizacionActivaId]);
 
   useEffect(() => {
     setTotales(equipo);
@@ -179,15 +364,46 @@ export function EquipoCostoHorarioFichaApu({
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const cargarDetalles = (id: string) =>
-    listEquipoCostoHorarioDetalles(id)
-      .then(setDetalles)
-      .catch((e) => setError(String(e)));
+  const aplicarCostos = async (costosR: EquipoCostoHorarioCosto[], vistaId: string | null) => {
+    setCostos(costosR);
+    const pares = await Promise.all(
+      costosR.map(async (c) => {
+        const dets = await listEquipoCostoHorarioCostoDetalles(c.id).catch(() => [] as EquipoCostoHorarioCostoDetalle[]);
+        return [c.id, dets] as const;
+      }),
+    );
+    const porCosto = Object.fromEntries(pares);
+    setCostoDetallesPorCostoId(porCosto);
+    const nacionalId = costosR.find((c) => c.region_id === null)?.id ?? costosR[0]?.id ?? null;
+    const elegido = costosR.find((c) => (c.region_id ?? null) === vistaId) ?? null;
+    const seleccionadoId = elegido?.id ?? (vistaId === null ? nacionalId : null);
+    setCostoSeleccionadoId(seleccionadoId);
+    setCostoDetalles(seleccionadoId ? (porCosto[seleccionadoId] ?? []) : []);
+  };
+
+  const cargarCostos = (id: string, vistaId: string | null = regionVistaId) =>
+    listEquipoCostoHorarioCostos(id)
+      .then((costosR) => aplicarCostos(costosR, vistaId))
+      .catch((e) => {
+        setError(String(e));
+        setCostos([]);
+        setCostoDetalles([]);
+        setCostoDetallesPorCostoId({});
+      });
 
   useEffect(() => {
     setCargando(true);
     setError(null);
-    cargarDetalles(equipo.id).finally(() => setCargando(false));
+    setCostoSeleccionadoId(null);
+    setRegionVistaId(null);
+    zonasMaterializadasId.current = null;
+    Promise.all([listEquipoCostoHorarioDetalles(equipo.id), listEquipoCostoHorarioCostos(equipo.id)])
+      .then(async ([detallesR, costosR]) => {
+        setDetalles(detallesR);
+        await aplicarCostos(costosR, null);
+      })
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [equipo.id]);
 
@@ -195,21 +411,37 @@ export function EquipoCostoHorarioFichaApu({
     setTotales(equipoActualizado);
     setCamposCf(aCamposCf(equipoActualizado));
     onCambio();
-    await cargarDetalles(equipo.id);
+    await listEquipoCostoHorarioDetalles(equipo.id).then(setDetalles).catch((e) => setError(String(e)));
+    await cargarCostos(equipo.id);
   };
 
-  const recalcular = async () => {
+  const recalcularZonas = async () => {
     setRecalculando(true);
     setError(null);
     try {
-      const actualizado = await recalculateEquipoCostoHorario(equipo.id);
-      await trasMutar(actualizado);
+      await recalculateEquipoCostoHorarioZonas(equipo.id);
+      await cargarCostos(equipo.id);
+      onCambio();
     } catch (e) {
       setError(String(e));
     } finally {
       setRecalculando(false);
     }
   };
+
+  // El alta/CSV solo crea la valuación nacional. Las columnas regionales
+  // nacen al mutar la receta o al sincronizar; si el catálogo ya tiene
+  // regiones, materialízalas al abrir la ficha para que Costo por región
+  // no quede solo en Nacional.
+  useEffect(() => {
+    if (cargando || recalculando || costos.length === 0) return;
+    if (zonasMaterializadasId.current === equipo.id) return;
+    const visibles = regionesVisibles(regiones);
+    const faltante = visibles.some((r) => !costos.some((c) => c.region_id === r.id));
+    zonasMaterializadasId.current = equipo.id;
+    if (faltante) void recalcularZonas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equipo.id, cargando, costos, regiones]);
 
   const simboloUnidad = useMemo(
     () => unidades.find((u) => u.id === totales.unidad_id)?.simbolo ?? totales.unidad_id,
@@ -254,8 +486,77 @@ export function EquipoCostoHorarioFichaApu({
     () => detalles.filter((d) => d.tipo === "operacion").sort((a, b) => a.orden - b.orden),
     [detalles],
   );
-  const subtotalConsumo = useMemo(() => consumos.reduce((acc, d) => acc + Number(d.importe), 0), [consumos]);
-  const subtotalOperacion = useMemo(() => operaciones.reduce((acc, d) => acc + Number(d.importe), 0), [operaciones]);
+  const costoDetallePorDetalleId = useMemo(
+    () => Object.fromEntries(costoDetalles.map((cd) => [cd.equipo_costo_horario_detalle_id, cd])),
+    [costoDetalles],
+  );
+  const costoSeleccionado = costos.find((c) => c.id === costoSeleccionadoId) ?? null;
+
+  const zonas = useMemo(() => {
+    const nacional = costos.find((c) => c.region_id === null) ?? null;
+    const regionales = ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => ({
+      key: r.id,
+      regionId: r.id as string | null,
+      nombre: r.nombre,
+      costo: costos.find((c) => c.region_id === r.id) ?? null,
+      esNac: false,
+    }));
+    return [
+      { key: "nacional", regionId: null as string | null, nombre: NACIONAL, costo: nacional, esNac: true },
+      ...regionales,
+    ];
+  }, [costos, regiones]);
+
+  const coberturaPorCostoId = useMemo(() => {
+    const idsReceta = new Set(detalles.map((d) => d.id));
+    return Object.fromEntries(
+      Object.entries(costoDetallesPorCostoId).map(([costoId, dets]) => {
+        const deReceta = dets.filter((d) => idsReceta.has(d.equipo_costo_horario_detalle_id));
+        const sin = deReceta.filter((d) => !d.fecha_precio).length;
+        return [costoId, { total: idsReceta.size, sin }];
+      }),
+    );
+  }, [costoDetallesPorCostoId, detalles]);
+
+  const sincronizadoEn = useMemo(() => {
+    const fechas = costos.map((c) => c.sincronizado_en).filter((f): f is string => !!f);
+    if (fechas.length === 0) return null;
+    return fechas.sort().at(-1) ?? null;
+  }, [costos]);
+
+  const verRegion = (regionId: string | null) => {
+    setRegionVistaId(regionId);
+    const elegido = costos.find((c) => (c.region_id ?? null) === regionId) ?? null;
+    setCostoSeleccionadoId(elegido?.id ?? null);
+    setCostoDetalles(elegido ? (costoDetallesPorCostoId[elegido.id] ?? []) : []);
+  };
+
+  const reordenar = async (filas: EquipoCostoHorarioDetalle[], id: string, indiceDestino: number) => {
+    const fromIndex = filas.findIndex((d) => d.id === id);
+    if (fromIndex < 0 || fromIndex === indiceDestino) return;
+    const direccion: DireccionMovimiento = indiceDestino < fromIndex ? "arriba" : "abajo";
+    const pasos = Math.abs(indiceDestino - fromIndex);
+    setError(null);
+    try {
+      for (let i = 0; i < pasos; i++) {
+        await moveEquipoCostoHorarioDetalle(id, direccion);
+      }
+      await listEquipoCostoHorarioDetalles(equipo.id).then(setDetalles).catch((e) => setError(String(e)));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const dragConsumos = useFilaDrag({
+    ids: consumos.map((d) => d.id),
+    enabled: true,
+    onMove: (id, dest) => void reordenar(consumos, id, dest),
+  });
+  const dragOperaciones = useFilaDrag({
+    ids: operaciones.map((d) => d.id),
+    enabled: true,
+    onMove: (id, dest) => void reordenar(operaciones, id, dest),
+  });
 
   const agregarConsumo = async (id: string) => {
     setAgregandoConsumo(false);
@@ -286,12 +587,14 @@ export function EquipoCostoHorarioFichaApu({
   };
 
   const guardarCantidad = async (detalle: EquipoCostoHorarioDetalle, valorTexto: string) => {
+    if (valorTexto.trim() === "") return;
     const numero = Number(valorTexto);
     if (!Number.isFinite(numero) || numero < 0) {
       setError("La cantidad debe ser un número mayor o igual a 0.");
       return;
     }
     const redondeada = Number(numero.toFixed(6));
+    if (redondeada === Number(detalle.cantidad)) return;
     setError(null);
     try {
       const actualizado = await updateEquipoCostoHorarioDetalle(detalle.id, {
@@ -317,16 +620,6 @@ export function EquipoCostoHorarioFichaApu({
         cantidad: detalle.cantidad,
         naturaleza,
       });
-      await trasMutar(actualizado);
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  const mover = async (detalle: EquipoCostoHorarioDetalle, direccion: DireccionMovimiento) => {
-    setError(null);
-    try {
-      const actualizado = await moveEquipoCostoHorarioDetalle(detalle.id, direccion);
       await trasMutar(actualizado);
     } catch (e) {
       setError(String(e));
@@ -375,12 +668,12 @@ export function EquipoCostoHorarioFichaApu({
         unidad_id: totales.unidad_id,
         familia_id: totales.familia_id,
         sub_familia_id: totales.sub_familia_id,
-        region_id: totales.region_id,
         ...camposCf,
       });
       setTotales(actualizado);
       setCamposCf(aCamposCf(actualizado));
       onCambio();
+      await cargarCostos(equipo.id);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -388,10 +681,10 @@ export function EquipoCostoHorarioFichaApu({
     }
   };
 
-  const costoTotalNum = Number(totales.costo_horario_total) || 0;
+  const costoTotalNum = Number(costoSeleccionado?.costo_total) || 0;
   const pctFijo = costoTotalNum > 0 ? ((Number(totales.cf_cargo_fijo_hora) || 0) / costoTotalNum) * 100 : 0;
-  const pctConsumo = costoTotalNum > 0 ? ((Number(totales.subtotal_consumo) || 0) / costoTotalNum) * 100 : 0;
-  const pctOperacion = costoTotalNum > 0 ? ((Number(totales.subtotal_operacion) || 0) / costoTotalNum) * 100 : 0;
+  const pctConsumo = costoTotalNum > 0 ? ((Number(costoSeleccionado?.subtotal_consumo) || 0) / costoTotalNum) * 100 : 0;
+  const pctOperacion = costoTotalNum > 0 ? ((Number(costoSeleccionado?.subtotal_operacion) || 0) / costoTotalNum) * 100 : 0;
 
   return (
     <div className="w-full">
@@ -405,29 +698,24 @@ export function EquipoCostoHorarioFichaApu({
         )}
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              <Gauge size={16} className="text-emerald-500" />
-              Análisis de costo horario
-            </span>
-            <button
-              type="button"
-              title="Recalcular costos desde los insumos vigentes"
-              onClick={() => void recalcular()}
-              disabled={recalculando}
-              className={cn(
-                "rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground",
-                recalculando && "opacity-50",
-              )}
-            >
-              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
-            </button>
-          </div>
+          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <Gauge size={16} className="text-emerald-500" />
+            Análisis de costo horario
+          </span>
 
           <div className="mt-1 flex items-baseline justify-between gap-3">
             <span className="font-mono text-base font-bold tracking-tight">{totales.clave}</span>
             <span className="shrink-0 text-xs text-muted-foreground">
               Unidad: <span className="font-medium text-foreground">{simboloUnidad}</span>
+              <span aria-hidden className="px-1.5 text-border">·</span>
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                {regionVistaId ? (
+                  <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
+                ) : (
+                  <Globe2 size={12} className="text-primary" />
+                )}
+                {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
+              </span>
             </span>
           </div>
           <p className="mt-0.5 text-xs text-foreground">{totales.descripcion}</p>
@@ -589,9 +877,30 @@ export function EquipoCostoHorarioFichaApu({
                 <th className="w-36 py-1 pr-2 font-semibold">Naturaleza</th>
                 <th className="w-16 py-1 pr-2 font-semibold">Unidad</th>
                 <th className="w-20 py-1 pr-2 text-right font-semibold">Cantidad</th>
-                <th className="w-24 py-1 pr-2 text-right font-semibold">Costo</th>
+                <th className="w-24 py-1 pr-2 text-right font-semibold">
+                  <span className="inline-flex items-center justify-end gap-1">
+                    Costo
+                    <button
+                      type="button"
+                      aria-pressed={mostrarFechaPrecio}
+                      title="Mostrar/ocultar fecha de precios"
+                      onClick={() => setMostrarFechaPrecio((v) => !v)}
+                      className={cn(
+                        "rounded p-0.5 normal-case tracking-normal",
+                        mostrarFechaPrecio
+                          ? "text-primary"
+                          : "text-muted-foreground/70 hover:text-foreground",
+                      )}
+                    >
+                      <CalendarDays
+                        size={16}
+                        className={mostrarFechaPrecio ? "fill-current" : undefined}
+                      />
+                    </button>
+                  </span>
+                </th>
                 <th className="w-24 py-1 text-right font-semibold">Importe</th>
-                <th className="w-6" />
+                <th className="w-14" />
               </tr>
             </thead>
 
@@ -612,80 +921,86 @@ export function EquipoCostoHorarioFichaApu({
                   </td>
                 </tr>
               )}
-              {consumos.map((d, i) => (
-                <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30">
+              {consumos.map((d, i) => {
+                const cd = costoDetallePorDetalleId[d.id];
+                return (
+                  <Fragment key={d.id}>
+                    {dragConsumos.hueco === i && <MarcadorInsercion />}
+                    <tr
+                      className={cn("border-b border-border/50 hover:bg-muted/30", dragConsumos.filaClass(d.id))}
+                      {...dragConsumos.filaProps(d.id)}
+                    >
                   <td className="py-1 pr-2 font-mono text-muted-foreground">
                     {materialPorId[d.detalle_insumo_id]?.clave ?? d.detalle_insumo_id}
                   </td>
                   <td className="py-1 pr-2">{materialPorId[d.detalle_insumo_id]?.descripcion ?? ""}</td>
                   <td className="py-1 pr-2">
-                    <select
+                    <Select
                       value={d.naturaleza ?? "combustible"}
-                      onChange={(e) =>
-                        void guardarNaturaleza(d, e.target.value as NaturalezaEquipoCostoHorarioDetalle)
+                      onValueChange={(v) =>
+                        void guardarNaturaleza(d, v as NaturalezaEquipoCostoHorarioDetalle)
                       }
-                      className="w-full rounded border border-transparent bg-transparent py-0.5 text-[11px] hover:border-border focus:border-border focus:bg-background"
                     >
-                      {NATURALEZAS_CONSUMO.map((n) => (
-                        <option key={n.id} value={n.id}>
-                          {n.etiqueta}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        size="sm"
+                        className="w-full rounded border-transparent bg-transparent px-1.5 text-[11px] hover:border-border focus:border-border focus:bg-background"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NATURALEZAS_CONSUMO.map((n) => (
+                          <SelectItem key={n.id} value={n.id}>
+                            {n.etiqueta}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="py-1 pr-2 text-muted-foreground">
                     {simboloPorUnidadId[materialPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? ""}
                   </td>
                   <td className="py-1 pr-2 text-right">
-                    <input
-                      key={`${d.id}-${d.cantidad}`}
-                      type="number"
-                      min={0}
-                      step={0.000001}
-                      defaultValue={Number(d.cantidad).toFixed(6)}
-                      onBlur={(e) => {
-                        if (e.target.value.trim() !== "" && Number(e.target.value) !== Number(d.cantidad)) {
-                          void guardarCantidad(d, e.target.value);
-                        }
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                      className="campo-decimal w-24 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums hover:border-border focus:border-border focus:bg-background"
+                    <QuantityInput
+                      value={d.cantidad}
+                      onCommit={(v) => void guardarCantidad(d, v)}
+                      decimals={6}
+                      className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                     />
                   </td>
-                  <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">${fmt(d.costo)}</td>
-                  <td className="py-1 text-right font-medium tabular-nums">${fmt(d.importe)}</td>
+                  <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
+                    <div>${fmt(cd?.costo ?? "0")}</div>
+                    {mostrarFechaPrecio && cd?.fecha_precio ? (
+                      <FechaPrecioFrescura fecha={cd.fecha_precio} />
+                    ) : null}
+                  </td>
+                  <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
                   <td className="py-1 text-right">
                     <div className="flex items-center justify-end gap-0.5">
-                      <button
-                        type="button"
-                        title="Subir"
-                        disabled={i === 0}
-                        onClick={() => void mover(d, "arriba")}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
+                      <span
+                        title="Arrastra para reordenar"
+                        className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                        {...dragConsumos.handleProps(d.id)}
                       >
-                        <ArrowUp size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        title="Bajar"
-                        disabled={i === consumos.length - 1}
-                        onClick={() => void mover(d, "abajo")}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
-                      >
-                        <ArrowDown size={16} />
-                      </button>
+                        <GripVertical size={16} />
+                      </span>
+                      <Separator orientation="vertical" />
                       <button
                         type="button"
                         title="Quitar"
                         onClick={() => setPendingQuitar(d)}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                       >
                         <X size={16} />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+                    {dragConsumos.hueco === consumos.length && i === consumos.length - 1 && (
+                      <MarcadorInsercion />
+                    )}
+                  </Fragment>
+                );
+              })}
               <tr>
                 <td colSpan={8} className="pt-1.5">
                   {agregandoConsumo ? (
@@ -701,7 +1016,7 @@ export function EquipoCostoHorarioFichaApu({
                     <button
                       type="button"
                       onClick={() => setAgregandoConsumo(true)}
-                      className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                     >
                       <Plus size={16} /> Agregar renglón
                     </button>
@@ -712,7 +1027,7 @@ export function EquipoCostoHorarioFichaApu({
                 <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal consumo
                 </td>
-                <td className="py-1.5 text-right tabular-nums">${fmt(String(subtotalConsumo))}</td>
+                <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.subtotal_consumo ?? "0")}</td>
                 <td />
               </tr>
             </tbody>
@@ -734,8 +1049,15 @@ export function EquipoCostoHorarioFichaApu({
                   </td>
                 </tr>
               )}
-              {operaciones.map((d, i) => (
-                <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30">
+              {operaciones.map((d, i) => {
+                const cd = costoDetallePorDetalleId[d.id];
+                return (
+                  <Fragment key={d.id}>
+                    {dragOperaciones.hueco === i && <MarcadorInsercion />}
+                    <tr
+                      className={cn("border-b border-border/50 hover:bg-muted/30", dragOperaciones.filaClass(d.id))}
+                      {...dragOperaciones.filaProps(d.id)}
+                    >
                   <td className="py-1 pr-2 font-mono text-muted-foreground">
                     {(categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id])?.clave ??
                       d.detalle_insumo_id}
@@ -748,55 +1070,52 @@ export function EquipoCostoHorarioFichaApu({
                     {simboloPorUnidadId[unidadDeOperacion(d.detalle_insumo_id)] ?? ""}
                   </td>
                   <td className="py-1 pr-2 text-right">
-                    <input
-                      key={`${d.id}-${d.cantidad}`}
-                      type="number"
-                      min={0}
-                      step={0.000001}
-                      defaultValue={Number(d.cantidad).toFixed(6)}
-                      onBlur={(e) => {
-                        if (e.target.value.trim() !== "" && Number(e.target.value) !== Number(d.cantidad)) {
-                          void guardarCantidad(d, e.target.value);
-                        }
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                      className="campo-decimal w-24 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums hover:border-border focus:border-border focus:bg-background"
+                    <QuantityInput
+                      value={d.cantidad}
+                      onCommit={(v) => void guardarCantidad(d, v)}
+                      decimals={6}
+                      className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
                     />
                   </td>
-                  <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">${fmt(d.costo)}</td>
-                  <td className="py-1 text-right font-medium tabular-nums">${fmt(d.importe)}</td>
+                  <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
+                    <div>${fmt(cd?.costo ?? "0")}</div>
+                    {mostrarFechaPrecio && cd?.fecha_precio ? (
+                      <FechaPrecioFrescura
+                        fecha={cd.fecha_precio}
+                        fechaSalarioVigente={
+                          categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
+                        }
+                      />
+                    ) : null}
+                  </td>
+                  <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
                   <td className="py-1 text-right">
                     <div className="flex items-center justify-end gap-0.5">
-                      <button
-                        type="button"
-                        title="Subir"
-                        disabled={i === 0}
-                        onClick={() => void mover(d, "arriba")}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
+                      <span
+                        title="Arrastra para reordenar"
+                        className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                        {...dragOperaciones.handleProps(d.id)}
                       >
-                        <ArrowUp size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        title="Bajar"
-                        disabled={i === operaciones.length - 1}
-                        onClick={() => void mover(d, "abajo")}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
-                      >
-                        <ArrowDown size={16} />
-                      </button>
+                        <GripVertical size={16} />
+                      </span>
+                      <Separator orientation="vertical" />
                       <button
                         type="button"
                         title="Quitar"
                         onClick={() => setPendingQuitar(d)}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded p-0.5 text-destructive hover:bg-destructive/10"
                       >
                         <X size={16} />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+                    {dragOperaciones.hueco === operaciones.length && i === operaciones.length - 1 && (
+                      <MarcadorInsercion />
+                    )}
+                  </Fragment>
+                );
+              })}
               <tr>
                 <td colSpan={8} className="pt-1.5">
                   {agregandoOperacion ? (
@@ -809,7 +1128,7 @@ export function EquipoCostoHorarioFichaApu({
                     <button
                       type="button"
                       onClick={() => setAgregandoOperacion(true)}
-                      className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                     >
                       <Plus size={16} /> Agregar renglón
                     </button>
@@ -820,7 +1139,7 @@ export function EquipoCostoHorarioFichaApu({
                 <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal operación
                 </td>
-                <td className="py-1.5 text-right tabular-nums">${fmt(String(subtotalOperacion))}</td>
+                <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.subtotal_operacion ?? "0")}</td>
                 <td />
               </tr>
             </tbody>
@@ -832,7 +1151,187 @@ export function EquipoCostoHorarioFichaApu({
         {/* Costo total */}
         <div className="flex items-center justify-between rounded-b-lg border-t-2 border-foreground/20 bg-muted/40 px-4 py-2.5">
           <span className="text-xs font-semibold uppercase tracking-widest">Costo horario total</span>
-          <span className="text-xl font-bold tabular-nums">${fmt(totales.costo_horario_total)}/hr</span>
+          <span className="text-xl font-bold tabular-nums">${fmt(costoSeleccionado?.costo_total ?? "0")}/hr</span>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Costo por región
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Calculado desde precios de materiales y salarios/cuadrillas vigentes. Clic en una región para ver su costo en el análisis.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              title={
+                recalculando
+                  ? "Recalculando costos de todas las regiones…"
+                  : [
+                      "Recalcular todas las regiones con los precios y salarios vigentes.",
+                      sincronizadoEn
+                        ? `Última sincronización: ${formatearFecha(sincronizadoEn)}`
+                        : "Aún no se ha sincronizado con los catálogos vigentes.",
+                    ].join("\n")
+              }
+              onClick={() => void recalcularZonas()}
+              disabled={recalculando}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted",
+                recalculando && "opacity-50",
+              )}
+            >
+              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
+              {recalculando ? "Sincronizando…" : "Sincronizar"}
+            </button>
+            {sincronizadoEn ? (
+              <span className="text-right text-[9px] leading-tight text-muted-foreground tabular-nums">
+                {formatearFecha(sincronizadoEn)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
+                <AlertTriangle size={16} className="shrink-0" />
+                Sin sincronizar
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="overflow-x-auto px-4 py-3">
+          <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
+            <thead>
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="sticky left-0 top-0 z-30 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  Concepto
+                </th>
+                {zonas.map((z) => {
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                  <th
+                    key={`${z.key}-grupo`}
+                    className={cn(
+                      "h-7 w-14 max-w-14 cursor-pointer border-b border-r border-border text-center hover:bg-muted/60",
+                      activa ? "bg-primary/10" : "bg-background",
+                    )}
+                    title={`Ver análisis en ${z.nombre}`}
+                    aria-pressed={activa}
+                    onClick={() => verRegion(z.regionId)}
+                  >
+                    {z.esNac ? (
+                      <Globe2 size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                    ) : (
+                      <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
+                    )}
+                  </th>
+                  );
+                })}
+              </tr>
+              <tr>
+                {zonas.map((z) => {
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                  <th
+                    key={`${z.key}-nombre`}
+                    className={cn(
+                      "w-14 max-w-14 cursor-pointer border-b border-r border-border px-1 py-1 text-center text-[11px] font-semibold leading-tight hover:bg-muted/60",
+                      activa ? "bg-primary/10 text-foreground" : "bg-background text-muted-foreground",
+                    )}
+                    title={`Ver análisis en ${z.nombre}`}
+                    onClick={() => verRegion(z.regionId)}
+                  >
+                    <span className="line-clamp-2 break-words">{z.nombre}</span>
+                  </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {(
+                [
+                  ["Consumo", "subtotal_consumo"],
+                  ["Operación", "subtotal_operacion"],
+                  ["Variable", "cargo_variable_hora"],
+                ] as const
+              ).map(([etiqueta, campo]) => (
+                <tr key={campo}>
+                  <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-normal text-muted-foreground">
+                    {etiqueta}
+                  </th>
+                  {zonas.map((z) => {
+                    const monto = z.costo ? `$${fmt(z.costo[campo])}` : "—";
+                    const activa = (z.regionId ?? null) === regionVistaId;
+                    return (
+                      <td
+                        key={z.key}
+                        className={cn(
+                          "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
+                          activa && "bg-primary/10",
+                        )}
+                        onClick={() => verRegion(z.regionId)}
+                      >
+                        <span className="num block truncate" title={z.costo ? monto : undefined}>
+                          {monto}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              <tr>
+                <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-semibold">
+                  Costo Total
+                </th>
+                {zonas.map((z) => {
+                  const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
+                  const sin = cob?.sin ?? (detalles.length > 0 && !z.costo ? detalles.length : 0);
+                  const monto = z.costo ? `$${fmt(z.costo.costo_total)}` : undefined;
+                  const activa = (z.regionId ?? null) === regionVistaId;
+                  return (
+                    <td
+                      key={z.key}
+                      className={cn(
+                        "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
+                        activa && "bg-primary/10",
+                      )}
+                      onClick={() => verRegion(z.regionId)}
+                    >
+                      {!z.costo ? (
+                        "—"
+                      ) : (
+                        <span className="inline-flex items-center justify-end gap-0.5">
+                          {sin > 0 ? (
+                            <span
+                              title="sin precio en algún renglón"
+                              className="inline-flex text-amber-800 dark:text-amber-300"
+                            >
+                              <AlertTriangle size={12} className="shrink-0" />
+                            </span>
+                          ) : null}
+                          <span className="num block truncate font-semibold text-primary" title={monto}>
+                            {monto}
+                          </span>
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            {regionVistaId ? (
+              <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
+            ) : (
+              <Globe2 size={12} className="shrink-0 text-primary" />
+            )}
+            El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
+          </p>
         </div>
       </div>
 
@@ -841,7 +1340,7 @@ export function EquipoCostoHorarioFichaApu({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Quitar este renglón del equipo?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingQuitar && `Se quitará "${nombreDetalle(pendingQuitar)}". Esta acción no se puede deshacer.`}
+              {pendingQuitar && `Se quitará "${nombreDetalle(pendingQuitar)}" de todas las regiones. Esta acción no se puede deshacer.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

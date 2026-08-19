@@ -478,9 +478,10 @@ export type DireccionMovimiento = "arriba" | "abajo";
  * a diferencia de `herramienta` (sin depreciación) — ver
  * `equipo_costo_horario` en el diccionario de datos. Los campos `cf_*`
  * salvo los 9 de captura directa son cache que recalcula el backend cada
- * vez que se edita el equipo; `cargo_variable_hora`/`costo_horario_total`
- * son cache de la composición (`equipo_costo_horario_detalle`). Serializados
- * como texto para no perder precisión.
+ * vez que se edita el equipo. Tabla del header sin cache de variable/total:
+ * `costo_nacional` es el reflejo de la valuación nacional
+ * (`equipo_costo_horario_costo` con `region_id` nulo). Serializados como
+ * texto para no perder precisión.
  */
 export interface EquipoCostoHorario extends CamposControl {
   id: string;
@@ -490,8 +491,6 @@ export interface EquipoCostoHorario extends CamposControl {
   familia_id: string | null;
   /** Debe ser hija (`parent_id`) de `familia_id`. */
   sub_familia_id: string | null;
-  /** `null` = nacional — solo descriptivo, no participa en ningún cálculo. */
-  region_id: string | null;
   cf_costo_maquina: string;
   cf_valor_llantas: string;
   cf_valor_piezas_especiales: string;
@@ -509,10 +508,7 @@ export interface EquipoCostoHorario extends CamposControl {
   cf_seguro_hora: string;
   cf_mantenimiento_hora: string;
   cf_cargo_fijo_hora: string;
-  subtotal_consumo: string;
-  subtotal_operacion: string;
-  cargo_variable_hora: string;
-  costo_horario_total: string;
+  costo_nacional: EquipoCostoHorarioCosto | null;
 }
 
 export interface EquipoCostoHorarioData {
@@ -521,7 +517,6 @@ export interface EquipoCostoHorarioData {
   unidad_id: string;
   familia_id: string | null;
   sub_familia_id: string | null;
-  region_id: string | null;
   cf_costo_maquina: string;
   cf_valor_llantas: string;
   cf_valor_piezas_especiales: string;
@@ -537,9 +532,9 @@ export interface EquipoCostoHorarioData {
  * Un renglón de la composición plana de un `equipo_costo_horario` — un
  * consumo (`tipo: "consumo"`, material) o una operación (`tipo:
  * "operacion"`, categoría FASAR o cuadrilla), nunca otro equipo de costo
- * horario. `naturaleza` clasifica el consumo para el perfil de inactividad.
- * `costo`/`importe` los calcula el backend, no son editables
- * directamente.
+ * horario. Compartido entre regiones: `cantidad` es de la receta;
+ * `costo`/`importe` varían por región y cuelgan de
+ * `EquipoCostoHorarioCostoDetalle`.
  */
 export type NaturalezaEquipoCostoHorarioDetalle =
   | "combustible"
@@ -557,8 +552,6 @@ export interface EquipoCostoHorarioDetalle {
   orden: number;
   /** Cantidad consumida (o jornales/horas de operador) por hora de máquina. */
   cantidad: string;
-  costo: string;
-  importe: string;
   created_at: string;
   created_by: string;
   updated_at: string | null;
@@ -569,6 +562,40 @@ export interface EquipoCostoHorarioDetalleData {
   detalle_insumo_id: string;
   cantidad: string;
   naturaleza?: NaturalezaEquipoCostoHorarioDetalle | null;
+}
+
+/**
+ * Valuación por región de un `equipo_costo_horario` — reemplaza los caches
+ * de variable/total que antes vivían en la extensión 1:1.
+ * `region_id = null` es la valuación nacional.
+ */
+export interface EquipoCostoHorarioCosto extends CamposControl {
+  id: string;
+  equipo_costo_horario_id: string;
+  region_id: string | null;
+  subtotal_consumo: string;
+  subtotal_operacion: string;
+  cargo_variable_hora: string;
+  costo_total: string;
+  /** Última vez que se pulsó ⟳ en Costo por región. No es `updated_at`. */
+  sincronizado_en: string | null;
+}
+
+/**
+ * El renglón valuado de un `EquipoCostoHorarioDetalle` **dentro de una
+ * valuación** concreta — cache de `costo`/`importe`; `cantidad` vive en la receta.
+ */
+export interface EquipoCostoHorarioCostoDetalle {
+  id: string;
+  equipo_costo_horario_costo_id: string;
+  equipo_costo_horario_detalle_id: string;
+  costo: string;
+  importe: string;
+  fecha_precio: string | null;
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  updated_by: string | null;
 }
 
 /**

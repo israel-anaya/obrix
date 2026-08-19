@@ -5,24 +5,21 @@ use sea_orm::entity::prelude::*;
 /// trata de equipo **propio** costado por depreciación/consumo (a diferencia
 /// de `herramienta`, que no calcula depreciación, y `equipo_rentado`, que es
 /// de terceros) — metodología estándar SCT/CMIC: cargos fijos (existen
-/// aunque la máquina no trabaje, calculados sobre `cf_valor_maquina`) más
-/// cargos variables (consumo y operación, ver `equipo_costo_horario_detalle`).
-/// Todos los campos `cf_*` salvo los marcados como cache son captura directa
-/// del usuario; los de cache se recalculan en
-/// `EquipoCostoHorarioService::calcular_cargos_fijos` cada vez que cualquiera
-/// de los campos de captura cambia. `cargo_variable_hora`/`costo_horario_total`
-/// son cache de la composición, recalculados por
-/// `EquipoCostoHorarioDetalleService::recalcular`. Sin columnas de auditoría
-/// propias: comparte el ciclo de vida de su `insumo` (mismo patrón que
-/// `material`/`cuadrilla`).
+/// aunque la máquina no trabaje, calculados sobre `cf_valor_maquina`). La
+/// receta de cargos variables vive en `equipo_costo_horario_detalle`; la
+/// valuación por región vive en `equipo_costo_horario_costo` /
+/// `equipo_costo_horario_costo_detalle`. Todos los campos `cf_*` salvo los
+/// marcados como cache son captura directa del usuario; los de cache se
+/// recalculan en `EquipoCostoHorarioService::calcular_cargos_fijos` cada vez
+/// que cualquiera de los campos de captura cambia. Sin `region_id` ni
+/// caches de variable/total: un `region_id` en la extensión 1:1 dejaría una
+/// sola región por insumo. Sin columnas de auditoría propias: comparte el
+/// ciclo de vida de su `insumo` (mismo patrón que `material`/`cuadrilla`).
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, serde::Serialize, serde::Deserialize)]
 #[sea_orm(table_name = "equipo_costo_horario")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub insumo_id: String,
-    /// `null` = nacional (sin región específica) — solo descriptivo, no
-    /// participa en ningún cálculo.
-    pub region_id: Option<String>,
     /// Precio de la máquina nueva, todo incluido (Cm).
     pub cf_costo_maquina: Decimal,
     /// Valor de las llantas incluido en `cf_costo_maquina` (Pn), default 0.
@@ -55,14 +52,6 @@ pub struct Model {
     pub cf_mantenimiento_hora: Decimal,
     /// Cache = cf_depreciacion_hora + cf_inversion_hora + cf_seguro_hora + cf_mantenimiento_hora.
     pub cf_cargo_fijo_hora: Decimal,
-    /// Cache = Σ equipo_costo_horario_detalle.importe donde tipo = consumo.
-    pub subtotal_consumo: Decimal,
-    /// Cache = Σ equipo_costo_horario_detalle.importe donde tipo = operacion.
-    pub subtotal_operacion: Decimal,
-    /// Cache = subtotal_consumo + subtotal_operacion.
-    pub cargo_variable_hora: Decimal,
-    /// Cache = cf_cargo_fijo_hora + cargo_variable_hora.
-    pub costo_horario_total: Decimal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -73,14 +62,10 @@ pub enum Relation {
         to = "super::insumo::Column::Id"
     )]
     Insumo,
-    #[sea_orm(
-        belongs_to = "super::region::Entity",
-        from = "Column::RegionId",
-        to = "super::region::Column::Id"
-    )]
-    Region,
     #[sea_orm(has_many = "super::equipo_costo_horario_detalle::Entity")]
     EquipoCostoHorarioDetalle,
+    #[sea_orm(has_many = "super::equipo_costo_horario_costo::Entity")]
+    EquipoCostoHorarioCosto,
 }
 
 impl Related<super::insumo::Entity> for Entity {
@@ -89,15 +74,15 @@ impl Related<super::insumo::Entity> for Entity {
     }
 }
 
-impl Related<super::region::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Region.def()
-    }
-}
-
 impl Related<super::equipo_costo_horario_detalle::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::EquipoCostoHorarioDetalle.def()
+    }
+}
+
+impl Related<super::equipo_costo_horario_costo::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::EquipoCostoHorarioCosto.def()
     }
 }
 
