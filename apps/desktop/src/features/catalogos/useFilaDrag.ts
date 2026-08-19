@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type DragEvent } from "react";
 
 const MITAD_FILA = 0.5;
 
@@ -38,25 +38,6 @@ export function useFilaDrag({
     setArrastrando(null);
     setSoltarEn(null);
   }, []);
-
-  // El webview no siempre entrega `dragend` al handle (p. ej. al soltar fuera
-  // de la tabla), y sin él la fila se quedaría translúcida. Los listeners van en
-  // burbuja para que el `drop` de la fila corra primero, y el `pointermove` solo
-  // limpia sin botones presionados: nunca puede adelantarse al soltar.
-  useEffect(() => {
-    if (arrastrando === null) return;
-    const limpiarSiSuelto = (e: PointerEvent) => {
-      if (e.buttons === 0) limpiar();
-    };
-    window.addEventListener("dragend", limpiar);
-    window.addEventListener("drop", limpiar);
-    window.addEventListener("pointermove", limpiarSiSuelto);
-    return () => {
-      window.removeEventListener("dragend", limpiar);
-      window.removeEventListener("drop", limpiar);
-      window.removeEventListener("pointermove", limpiarSiSuelto);
-    };
-  }, [arrastrando, limpiar]);
 
   const handleProps = useCallback(
     (id: string) =>
@@ -121,15 +102,13 @@ export function useFilaDrag({
   );
 
   // Índice del hueco visual (0 = antes del primero, `ids.length` = después del
-  // último). `null` si no hay drag o si soltar ahí no movería la fila.
+  // último). Se marca también el hueco que deja la fila donde ya está: sin la
+  // imagen nativa del drag, es la única referencia mientras se arrastra.
   const hueco = useMemo(() => {
     if (!soltarEn || !arrastrando) return null;
     const to = ids.indexOf(soltarEn.id);
-    const from = ids.indexOf(arrastrando);
-    if (to < 0 || from < 0) return null;
-    const dest = soltarEn.antes ? to : to + 1;
-    if (dest === from || dest === from + 1) return null;
-    return dest;
+    if (to < 0 || ids.indexOf(arrastrando) < 0) return null;
+    return soltarEn.antes ? to : to + 1;
   }, [soltarEn, arrastrando, ids]);
 
   return useMemo(

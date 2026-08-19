@@ -214,7 +214,17 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                // El estado guardado incluye `decorated`; si no se excluye, una
+                // sesión previa con chrome nativo lo vuelve a encender y pisa
+                // `decorations` de tauri.conf.json.
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        - tauri_plugin_window_state::StateFlags::DECORATIONS,
+                )
+                .build(),
+        )
         .setup(|app| {
             #[cfg(target_os = "linux")]
             reparar_clics_tras_restaurar_ventana(app);
