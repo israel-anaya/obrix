@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Globe2, HardHat, MapPinned, Plus, Trash2, Users, Wrench, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Globe2, HardHat, MapPinned, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
+import { formatearFecha } from "@/lib/fecha";
 import {
   createCuadrillaDetalle,
   deleteCuadrillaDetalle,
@@ -16,6 +17,7 @@ import {
   listRegiones,
   listUnidadesMedida,
   moveCuadrillaDetalle,
+  recalculateCuadrillaZonas,
   updateCuadrillaDetalle,
 } from "@/lib/tauri";
 import { ordenarPor } from "@/lib/ordenar";
@@ -79,6 +81,7 @@ export function CuadrillaDetallePanel({
   const [regionVistaId, setRegionVistaId] = useState<string | null>(null);
   const [integranteSeleccionadoId, setIntegranteSeleccionadoId] = useState<string | null>(null);
   const [herramientaSeleccionadaId, setHerramientaSeleccionadaId] = useState<string | null>(null);
+  const [recalculando, setRecalculando] = useState(false);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -181,10 +184,29 @@ export function CuadrillaDetallePanel({
     }
   };
 
+  const recalcularZonas = async () => {
+    if (!cuadrillaId) return;
+    setRecalculando(true);
+    setError(null);
+    try {
+      await recalculateCuadrillaZonas(cuadrillaId);
+      await trasMutarReceta();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setRecalculando(false);
+    }
+  };
+
   const costoSeleccionado = costos.find((c) => c.id === costoSeleccionadoId) ?? null;
   const costoTotalNum = Number(costoSeleccionado?.costo_total) || 0;
   const pctMo = costoTotalNum > 0 ? ((Number(costoSeleccionado?.sub_total_mano_obra) || 0) / costoTotalNum) * 100 : 0;
   const pctHe = costoTotalNum > 0 ? ((Number(costoSeleccionado?.sub_total_herramienta) || 0) / costoTotalNum) * 100 : 0;
+  const sincronizadoEn = useMemo(() => {
+    const fechas = costos.map((c) => c.sincronizado_en).filter((f): f is string => !!f);
+    if (fechas.length === 0) return null;
+    return fechas.sort().at(-1) ?? null;
+  }, [costos]);
 
   const elegirRegion = (valor: string) => {
     const regionId = valor === NACIONAL_VALOR ? null : valor;
@@ -370,6 +392,31 @@ export function CuadrillaDetallePanel({
             </Select>
             <button
               type="button"
+              title={
+                !cuadrillaId
+                  ? "Selecciona una cuadrilla para sincronizar"
+                  : recalculando
+                    ? "Recalculando costos de todas las regiones…"
+                    : [
+                        "Recalcular todas las regiones con los salarios y la herramienta vigentes.",
+                        sincronizadoEn
+                          ? `Última sincronización: ${formatearFecha(sincronizadoEn)}`
+                          : "Aún no se ha sincronizado con los tabuladores vigentes.",
+                      ].join("\n")
+              }
+              onClick={() => void recalcularZonas()}
+              disabled={!cuadrillaId || recalculando}
+              className={cn(
+                "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium text-foreground hover:bg-muted",
+                (!cuadrillaId || recalculando) && "opacity-50",
+                !sincronizadoEn && cuadrillaId && "border-amber-500/40",
+              )}
+            >
+              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
+              {recalculando ? "Sincronizando…" : "Sincronizar"}
+            </button>
+            <button
+              type="button"
               title="Cerrar"
               onClick={onCerrar}
               className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -465,7 +512,7 @@ export function CuadrillaDetallePanel({
                   ref={integrantesRef}
                   config={configIntegrantes}
                   initialRows={filasIntegrantes}
-                  loading={cargando}
+                  loading={cargando || recalculando}
                   selectionMode="single"
                   enableSorting={false}
                   search=""
@@ -546,7 +593,7 @@ export function CuadrillaDetallePanel({
                   ref={herramientaRef}
                   config={configHerramienta}
                   initialRows={filasHerramienta}
-                  loading={cargando}
+                  loading={cargando || recalculando}
                   selectionMode="single"
                   enableSorting={false}
                   search=""
