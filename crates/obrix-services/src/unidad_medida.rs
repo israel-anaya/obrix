@@ -95,11 +95,7 @@ impl UnidadMedidaService {
     pub fn mapa_id_por_texto(unidades: &[Model]) -> std::collections::HashMap<String, String> {
         unidades
             .iter()
-            .flat_map(|u| {
-                Self::variantes(u)
-                    .into_iter()
-                    .map(|t| (t, u.id.clone()))
-            })
+            .flat_map(|u| Self::variantes(u).into_iter().map(|t| (t, u.id.clone())))
             .collect()
     }
 

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe2, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
@@ -20,7 +20,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -39,6 +38,7 @@ import {
   updateEquipoCostoHorario,
   updateEquipoCostoHorarioDetalle,
 } from "@/lib/tauri";
+import { useFilaDrag } from "@/features/catalogos/useFilaDrag";
 import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
 import { ordenarPor } from "@/lib/ordenar";
 import type {
@@ -183,110 +183,10 @@ function FechaPrecioFrescura({
   );
 }
 
-const MITAD_FILA = 0.5;
-
-function useFilaDrag({
-  ids,
-  onMove,
-  enabled,
-}: {
-  ids: string[];
-  onMove: (id: string, indiceDestino: number) => void;
-  enabled: boolean;
-}) {
-  const [arrastrando, setArrastrando] = useState<string | null>(null);
-  const [soltarEn, setSoltarEn] = useState<{ id: string; antes: boolean } | null>(null);
-  const soltarEnRef = useRef(soltarEn);
-  soltarEnRef.current = soltarEn;
-  const arrastrandoRef = useRef<string | null>(null);
-
-  const limpiar = useCallback(() => {
-    arrastrandoRef.current = null;
-    setArrastrando(null);
-    setSoltarEn(null);
-  }, []);
-
-  const handleProps = useCallback(
-    (id: string) =>
-      enabled
-        ? {
-            draggable: true as const,
-            onDragStart: (e: DragEvent) => {
-              arrastrandoRef.current = id;
-              setArrastrando(id);
-              e.dataTransfer.effectAllowed = "move";
-              e.dataTransfer.setData("text/plain", id);
-            },
-            onDragEnd: limpiar,
-          }
-        : {},
-    [enabled, limpiar],
-  );
-
-  const mitadSuperior = (e: DragEvent) => {
-    const box = e.currentTarget.getBoundingClientRect();
-    return e.clientY - box.top < box.height * MITAD_FILA;
-  };
-
-  const filaProps = useCallback(
-    (id: string) =>
-      enabled
-        ? {
-            onDragOver: (e: DragEvent) => {
-              if (arrastrandoRef.current === null) return;
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-              const antes = mitadSuperior(e);
-              const actual = soltarEnRef.current;
-              if (!actual || actual.id !== id || actual.antes !== antes) {
-                setSoltarEn({ id, antes });
-              }
-            },
-            onDrop: (e: DragEvent) => {
-              const from = arrastrandoRef.current;
-              if (from === null) return limpiar();
-              e.preventDefault();
-              const to = ids.indexOf(id);
-              const fromIndex = ids.indexOf(from);
-              if (to < 0 || fromIndex < 0) return limpiar();
-              let dest = mitadSuperior(e) ? to : to + 1;
-              if (fromIndex < dest) dest -= 1;
-              limpiar();
-              if (dest !== fromIndex) onMove(from, dest);
-            },
-          }
-        : {},
-    [enabled, ids, onMove, limpiar],
-  );
-
-  const filaClass = useCallback(
-    (id: string): string | false => {
-      if (arrastrando === id) return "opacity-40";
-      return false;
-    },
-    [arrastrando],
-  );
-
-  const hueco = useMemo(() => {
-    if (!soltarEn || !arrastrando) return null;
-    const to = ids.indexOf(soltarEn.id);
-    const from = ids.indexOf(arrastrando);
-    if (to < 0 || from < 0) return null;
-    const dest = soltarEn.antes ? to : to + 1;
-    if (dest === from || dest === from + 1) return null;
-    return dest;
-  }, [soltarEn, arrastrando, ids]);
-
-  return useMemo(
-    () => ({ handleProps, filaProps, filaClass, hueco }),
-    [handleProps, filaProps, filaClass, hueco],
-  );
-}
-
 function MarcadorInsercion() {
   return (
     <tr aria-hidden className="pointer-events-none">
-      <td colSpan={8} className="relative h-0 p-0">
+      <td colSpan={9} className="relative h-0 p-0">
         <div className="absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 items-center gap-2 px-1">
           <span className="size-2 shrink-0 rounded-full bg-primary ring-2 ring-background" />
           <span className="h-0.5 flex-1 bg-primary" />
@@ -945,6 +845,7 @@ export function EquipoCostoHorarioFichaApu({
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-foreground/30 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+                <th className="w-6 py-1" />
                 <th className="w-20 py-1 pr-2 font-semibold">Código</th>
                 <th className="py-1 pr-2 font-semibold">Descripción</th>
                 <th className="w-8 py-1 pr-2 font-semibold" title="Naturaleza">
@@ -975,14 +876,14 @@ export function EquipoCostoHorarioFichaApu({
                   </span>
                 </th>
                 <th className="w-24 py-1 text-right font-semibold">Importe</th>
-                <th className="w-14" />
+                <th className="w-8" />
               </tr>
             </thead>
 
             {/* CONSUMO */}
             <tbody>
               <tr>
-                <td colSpan={8} className="pt-2 pb-1">
+                <td colSpan={9} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     <Boxes size={16} className="text-amber-500" />
                     Consumo
@@ -991,7 +892,7 @@ export function EquipoCostoHorarioFichaApu({
               </tr>
               {consumos.length === 0 && !agregandoConsumo && (
                 <tr>
-                  <td colSpan={8} className="py-1.5 text-muted-foreground">
+                  <td colSpan={9} className="py-1.5 text-muted-foreground">
                     Sin consumos todavía.
                   </td>
                 </tr>
@@ -1002,9 +903,21 @@ export function EquipoCostoHorarioFichaApu({
                   <Fragment key={d.id}>
                     {dragConsumos.hueco === i && <MarcadorInsercion />}
                     <tr
-                      className={cn("border-b border-border/50 hover:bg-muted/30", dragConsumos.filaClass(d.id))}
+                      className={cn(
+                        "group border-b border-border/50 hover:bg-muted/30",
+                        dragConsumos.filaClass(d.id),
+                      )}
                       {...dragConsumos.filaProps(d.id)}
                     >
+                  <td className="py-1 pr-1">
+                    <span
+                      title="Arrastra para reordenar"
+                      className="inline-flex cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                      {...dragConsumos.handleProps(d.id)}
+                    >
+                      <GripVertical size={16} />
+                    </span>
+                  </td>
                   <td className="py-1 pr-2 font-mono text-muted-foreground">
                     {materialPorId[d.detalle_insumo_id]?.clave ?? d.detalle_insumo_id}
                   </td>
@@ -1034,24 +947,14 @@ export function EquipoCostoHorarioFichaApu({
                   </td>
                   <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
                   <td className="py-1 text-right">
-                    <div className="flex items-center justify-end gap-0.5">
-                      <span
-                        title="Arrastra para reordenar"
-                        className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-                        {...dragConsumos.handleProps(d.id)}
-                      >
-                        <GripVertical size={16} />
-                      </span>
-                      <Separator orientation="vertical" />
-                      <button
-                        type="button"
-                        title="Quitar"
-                        onClick={() => setPendingQuitar(d)}
-                        className="rounded p-0.5 text-destructive hover:bg-destructive/10"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      title="Quitar"
+                      onClick={() => setPendingQuitar(d)}
+                      className="rounded p-0.5 text-destructive opacity-0 pointer-events-none transition-opacity hover:bg-destructive/10 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                    >
+                      <X size={16} />
+                    </button>
                   </td>
                 </tr>
                     {dragConsumos.hueco === consumos.length && i === consumos.length - 1 && (
@@ -1061,7 +964,7 @@ export function EquipoCostoHorarioFichaApu({
                 );
               })}
               <tr>
-                <td colSpan={8} className="pt-1.5">
+                <td colSpan={9} className="pt-1.5">
                   {agregandoConsumo ? (
                     <ComboboxFiltrable
                       opciones={materialesDisponibles.map((m) => ({
@@ -1083,7 +986,7 @@ export function EquipoCostoHorarioFichaApu({
                 </td>
               </tr>
               <tr className="border-t-2 border-foreground/30 font-semibold">
-                <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
+                <td colSpan={7} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal consumo
                 </td>
                 <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.subtotal_consumo ?? "0")}</td>
@@ -1094,7 +997,7 @@ export function EquipoCostoHorarioFichaApu({
             {/* OPERACIÓN */}
             <tbody>
               <tr>
-                <td colSpan={8} className="pt-3 pb-1">
+                <td colSpan={9} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     <Joystick size={16} className="text-violet-500" />
                     Operación
@@ -1103,7 +1006,7 @@ export function EquipoCostoHorarioFichaApu({
               </tr>
               {operaciones.length === 0 && !agregandoOperacion && (
                 <tr>
-                  <td colSpan={8} className="py-1.5 text-muted-foreground">
+                  <td colSpan={9} className="py-1.5 text-muted-foreground">
                     Sin operación todavía.
                   </td>
                 </tr>
@@ -1114,9 +1017,21 @@ export function EquipoCostoHorarioFichaApu({
                   <Fragment key={d.id}>
                     {dragOperaciones.hueco === i && <MarcadorInsercion />}
                     <tr
-                      className={cn("border-b border-border/50 hover:bg-muted/30", dragOperaciones.filaClass(d.id))}
+                      className={cn(
+                        "group border-b border-border/50 hover:bg-muted/30",
+                        dragOperaciones.filaClass(d.id),
+                      )}
                       {...dragOperaciones.filaProps(d.id)}
                     >
+                  <td className="py-1 pr-1">
+                    <span
+                      title="Arrastra para reordenar"
+                      className="inline-flex cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                      {...dragOperaciones.handleProps(d.id)}
+                    >
+                      <GripVertical size={16} />
+                    </span>
+                  </td>
                   <td className="py-1 pr-2 font-mono text-muted-foreground">
                     {(categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id])?.clave ??
                       d.detalle_insumo_id}
@@ -1151,24 +1066,14 @@ export function EquipoCostoHorarioFichaApu({
                   </td>
                   <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
                   <td className="py-1 text-right">
-                    <div className="flex items-center justify-end gap-0.5">
-                      <span
-                        title="Arrastra para reordenar"
-                        className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-                        {...dragOperaciones.handleProps(d.id)}
-                      >
-                        <GripVertical size={16} />
-                      </span>
-                      <Separator orientation="vertical" />
-                      <button
-                        type="button"
-                        title="Quitar"
-                        onClick={() => setPendingQuitar(d)}
-                        className="rounded p-0.5 text-destructive hover:bg-destructive/10"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      title="Quitar"
+                      onClick={() => setPendingQuitar(d)}
+                      className="rounded p-0.5 text-destructive opacity-0 pointer-events-none transition-opacity hover:bg-destructive/10 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                    >
+                      <X size={16} />
+                    </button>
                   </td>
                 </tr>
                     {dragOperaciones.hueco === operaciones.length && i === operaciones.length - 1 && (
@@ -1178,7 +1083,7 @@ export function EquipoCostoHorarioFichaApu({
                 );
               })}
               <tr>
-                <td colSpan={8} className="pt-1.5">
+                <td colSpan={9} className="pt-1.5">
                   {agregandoOperacion ? (
                     <ComboboxFiltrable
                       opciones={operacionesDisponibles}
@@ -1197,7 +1102,7 @@ export function EquipoCostoHorarioFichaApu({
                 </td>
               </tr>
               <tr className="border-t-2 border-foreground/30 font-semibold">
-                <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
+                <td colSpan={7} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
                   Subtotal operación
                 </td>
                 <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.subtotal_operacion ?? "0")}</td>

@@ -35,7 +35,8 @@ impl EquipoCostoHorarioCostoService {
     ) -> Result<Vec<equipo_costo_horario_costo::Model>, ServiceError> {
         Ok(equipo_costo_horario_costo::Entity::find()
             .filter(
-                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
             )
             .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
             .all(repo.conexion())
@@ -76,7 +77,8 @@ impl EquipoCostoHorarioCostoService {
     ) -> Result<Vec<equipo_costo_horario_costo::Model>, ServiceError> {
         let _nacional = equipo_costo_horario_costo::Entity::find()
             .filter(
-                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
             )
             .filter(equipo_costo_horario_costo::Column::RegionId.is_null())
             .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
@@ -91,9 +93,7 @@ impl EquipoCostoHorarioCostoService {
         let org_id = insumo::Entity::find_by_id(equipo_costo_horario_id)
             .one(txn)
             .await?
-            .ok_or_else(|| {
-                ServiceError::NoEncontrado(format!("insumo {equipo_costo_horario_id}"))
-            })?
+            .ok_or_else(|| ServiceError::NoEncontrado(format!("insumo {equipo_costo_horario_id}")))?
             .organizacion_id;
         let regiones = region::Entity::find()
             .filter(region::Column::OrganizacionId.eq(org_id))
@@ -145,7 +145,8 @@ impl EquipoCostoHorarioCostoService {
     ) -> Result<Vec<equipo_costo_horario_costo::Model>, ServiceError> {
         Ok(equipo_costo_horario_costo::Entity::find()
             .filter(
-                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
             )
             .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
             .all(txn)
@@ -169,7 +170,8 @@ impl EquipoCostoHorarioCostoService {
         }
         let existente = equipo_costo_horario_costo::Entity::find()
             .filter(
-                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
             )
             .filter(equipo_costo_horario_costo::Column::RegionId.eq(region_id))
             .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
@@ -245,7 +247,10 @@ impl EquipoCostoHorarioCostoService {
 
         let ahora = crate::ahora();
         let detalles = equipo_costo_horario_costo_detalle::Entity::find()
-            .filter(equipo_costo_horario_costo_detalle::Column::EquipoCostoHorarioCostoId.eq(id.clone()))
+            .filter(
+                equipo_costo_horario_costo_detalle::Column::EquipoCostoHorarioCostoId
+                    .eq(id.clone()),
+            )
             .filter(equipo_costo_horario_costo_detalle::Column::Deleted.eq(false))
             .all(&txn)
             .await?;
@@ -316,16 +321,18 @@ impl EquipoCostoHorarioCostoService {
                     ))
                 })?;
         let region_id = costo_existente.region_id.clone();
-        let header = equipo_costo_horario::Entity::find_by_id(&costo_existente.equipo_costo_horario_id)
-            .one(txn)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::NoEncontrado(format!(
-                    "equipo_costo_horario {}",
-                    costo_existente.equipo_costo_horario_id
-                ))
-            })?;
-        let moneda_codigo = Self::moneda_default(txn, &costo_existente.equipo_costo_horario_id).await?;
+        let header =
+            equipo_costo_horario::Entity::find_by_id(&costo_existente.equipo_costo_horario_id)
+                .one(txn)
+                .await?
+                .ok_or_else(|| {
+                    ServiceError::NoEncontrado(format!(
+                        "equipo_costo_horario {}",
+                        costo_existente.equipo_costo_horario_id
+                    ))
+                })?;
+        let moneda_codigo =
+            Self::moneda_default(txn, &costo_existente.equipo_costo_horario_id).await?;
 
         let detalles = equipo_costo_horario_costo_detalle::Entity::find()
             .filter(
@@ -502,13 +509,10 @@ impl EquipoCostoHorarioCostoService {
                 None => Ok((Decimal::ZERO, None)),
             };
         }
-        let de_la_zona = CuadrillaCostoService::resolver_costo_y_fecha(
-            txn,
-            detalle_insumo_id,
-            region_id,
-        )
-        .await?
-        .filter(|(costo, _)| !costo.is_zero());
+        let de_la_zona =
+            CuadrillaCostoService::resolver_costo_y_fecha(txn, detalle_insumo_id, region_id)
+                .await?
+                .filter(|(costo, _)| !costo.is_zero());
         if let Some(valuacion) = de_la_zona {
             return Ok(valuacion);
         }
@@ -563,7 +567,8 @@ impl EquipoCostoHorarioCostoService {
     ) -> Result<Option<Decimal>, ServiceError> {
         let mut consulta = equipo_costo_horario_costo::Entity::find()
             .filter(
-                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
             )
             .filter(equipo_costo_horario_costo::Column::Deleted.eq(false));
         consulta = match region_id {
@@ -655,12 +660,7 @@ mod tests {
         .unwrap();
 
         for (id, simbolo, desc, tipo) in [
-            (
-                "um-hr",
-                "hr",
-                "Hora",
-                unidad_medida::TipoMagnitud::Tiempo,
-            ),
+            ("um-hr", "hr", "Hora", unidad_medida::TipoMagnitud::Tiempo),
             ("um-lt", "lt", "Litro", unidad_medida::TipoMagnitud::Otro),
             ("um-jor", "jor", "Jornal", unidad_medida::TipoMagnitud::Otro),
         ] {
@@ -731,10 +731,7 @@ mod tests {
         .id
     }
 
-    async fn crear_material(
-        portafolio: &PortafolioSqliteRepository,
-        clave: &str,
-    ) -> String {
+    async fn crear_material(portafolio: &PortafolioSqliteRepository, clave: &str) -> String {
         MaterialService::crear(
             portafolio,
             "org-1",
@@ -891,7 +888,9 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            costos.iter().any(|c| c.region_id.as_deref() == Some(region_id.as_str())),
+            costos
+                .iter()
+                .any(|c| c.region_id.as_deref() == Some(region_id.as_str())),
             "mutar la receta debe materializar el cache de Norte"
         );
         let norte = costos
@@ -1167,6 +1166,10 @@ mod tests {
                 actualizado.cf_cargo_fijo_hora + Decimal::from(10)
             );
         }
-        assert!(costos.iter().any(|c| c.region_id.as_deref() == Some(region_id.as_str())));
+        assert!(
+            costos
+                .iter()
+                .any(|c| c.region_id.as_deref() == Some(region_id.as_str()))
+        );
     }
 }

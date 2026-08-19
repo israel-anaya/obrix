@@ -6,6 +6,7 @@
 
 pub mod categoria_fasar;
 pub mod cliente;
+pub mod csv_secciones;
 pub mod cuadrilla;
 pub mod cuadrilla_costo;
 pub mod cuadrilla_costo_detalle;
@@ -174,10 +175,7 @@ pub fn resolver_familia_csv(
 }
 
 /// Siguiente número de clave `PREFIJO-N` (p. ej. `HER-001` → 2).
-pub fn siguiente_consecutivo<'a>(
-    claves: impl Iterator<Item = &'a str>,
-    prefijo: &str,
-) -> u32 {
+pub fn siguiente_consecutivo<'a>(claves: impl Iterator<Item = &'a str>, prefijo: &str) -> u32 {
     claves
         .filter_map(|c| c.strip_prefix(prefijo)?.parse::<u32>().ok())
         .max()

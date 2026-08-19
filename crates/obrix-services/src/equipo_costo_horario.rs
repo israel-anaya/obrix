@@ -12,15 +12,25 @@
 
 use obrix_db::PortafolioRepository;
 use obrix_db::entities::insumo::{self, TipoInsumo};
-use obrix_db::entities::{equipo_costo_horario, equipo_costo_horario_costo, familia_insumo, unidad_medida};
+use obrix_db::entities::{
+    categoria_fasar, cuadrilla, equipo_costo_horario, equipo_costo_horario_costo, familia_insumo,
+    material, unidad_medida,
+};
 use rust_decimal::Decimal;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
 };
+use std::collections::{HashMap, HashSet};
 
+use crate::csv_secciones::{
+    buscar_columna, celda, parsear_decimal, parsear_secciones_maestro_detalle,
+};
 use crate::equipo_costo_horario_costo::EquipoCostoHorarioCostoService;
+use crate::equipo_costo_horario_detalle::{
+    EquipoCostoHorarioDetalleData, EquipoCostoHorarioDetalleService,
+};
 use crate::unidad_medida::UnidadMedidaService;
-use crate::{ServiceError, nuevo_id};
+use crate::{ServiceError, clave_cruce, mapas_familia, nuevo_id, resolver_familia_csv};
 
 #[derive(serde::Deserialize)]
 pub struct EquipoCostoHorarioData {
@@ -419,6 +429,25 @@ impl EquipoCostoHorarioService {
         crate::marcar_insumo_eliminado(repo, &id, "equipo_costo_horario", eliminado_por).await
     }
 
+    /// Importa equipos de costo horario desde un CSV de dos secciones
+    /// (`MAESTRO` / `DETALLE`).
+    ///
+    /// **MAESTRO**: `Clave` es obligatoria y es la única llave de cruce (sin
+    /// distinguir mayúsculas). Si existe se actualizan descripción, unidad,
+    /// familia, subfamilia y los 9 cargos fijos de captura; si no, se da de
+    /// alta. `Región` en el archivo se ignora (la valuación regional no vive
+    /// en esta extensión).
+    ///
+    /// **DETALLE** (`Clave Máquina,Sección,Clave Insumo,Descripción
+    /// Insumo,Unidad,Cantidad` y `Naturaleza` opcional): la receta existente
+    /// es la referencia. Cada renglón del archivo actualiza solo `cantidad`
+    /// si el insumo ya está, o se agrega si no. Los renglones de referencia
+    /// que no vienen en el CSV se eliminan. `CONSUMO` se resuelve contra
+    /// `material`; `OPERACION` contra `cuadrilla` o `categoria_fasar`. El
+    /// insumo se busca por `Clave Insumo` si trae valor; si no, por
+    /// descripción. En consumo, `Naturaleza` (combustible, lubricante,
+    /// llantas, piezas especiales, otras fuentes) se toma del archivo; si
+    /// viene vacía en un alta se infiere de la descripción.
     pub async fn importar_csv(
         repo: &dyn PortafolioRepository,
         organizacion_id: &str,
@@ -437,149 +466,339 @@ impl EquipoCostoHorarioService {
         mut on_progreso: impl FnMut(u32, u32) + Send,
     ) -> Result<crate::material::ResultadoImportacion, ServiceError> {
         use crate::material::ResultadoImportacion;
-        use crate::{
-            id_insumo_existente, mapas_familia, recordar_insumo, resolver_familia_csv,
-            siguiente_consecutivo,
-        };
-        use std::collections::HashMap;
+
+        let contenido = contenido_csv.trim_start_matches('\u{feff}');
+        let (maestro, detalle) = parsear_secciones_maestro_detalle(contenido)?;
+
+        let col_clave = buscar_columna(&maestro.encabezados, &["clave"]).ok_or_else(|| {
+            ServiceError::Validacion("el MAESTRO debe tener la columna \"Clave\"".into())
+        })?;
+        let col_descripcion = buscar_columna(&maestro.encabezados, &["descripción", "descripcion"])
+            .ok_or_else(|| {
+                ServiceError::Validacion("el MAESTRO debe tener la columna \"Descripción\"".into())
+            })?;
+        let col_unidad = buscar_columna(&maestro.encabezados, &["unidad"]).ok_or_else(|| {
+            ServiceError::Validacion("el MAESTRO debe tener la columna \"Unidad\"".into())
+        })?;
+        let col_familia = buscar_columna(&maestro.encabezados, &["familia"]);
+        let col_subfamilia = buscar_columna(&maestro.encabezados, &["subfamilia"]);
+        let col_costo_maquina =
+            buscar_columna(&maestro.encabezados, &["costo máquina", "costo maquina"]);
+        let col_valor_llantas = buscar_columna(&maestro.encabezados, &["valor llantas"]);
+        let col_valor_piezas = buscar_columna(&maestro.encabezados, &["valor piezas especiales"]);
+        let col_rescate = buscar_columna(&maestro.encabezados, &["rescate %", "rescate"]);
+        let col_vida = buscar_columna(
+            &maestro.encabezados,
+            &[
+                "vida económica (años)",
+                "vida economica (años)",
+                "vida económica",
+                "vida economica",
+            ],
+        );
+        let col_horas = buscar_columna(&maestro.encabezados, &["horas de uso anual"]);
+        let col_interes = buscar_columna(
+            &maestro.encabezados,
+            &[
+                "interés anual %",
+                "interes anual %",
+                "interés anual",
+                "interes anual",
+            ],
+        );
+        let col_seguros =
+            buscar_columna(&maestro.encabezados, &["seguros anual %", "seguros anual"]);
+        let col_mantenimiento =
+            buscar_columna(&maestro.encabezados, &["mantenimiento %", "mantenimiento"]);
+
+        let col_det_clave = buscar_columna(
+            &detalle.encabezados,
+            &["clave máquina", "clave maquina", "clave equipo", "clave"],
+        )
+        .ok_or_else(|| {
+            ServiceError::Validacion("el DETALLE debe tener la columna \"Clave Máquina\"".into())
+        })?;
+        let col_seccion = buscar_columna(&detalle.encabezados, &["sección", "seccion"])
+            .ok_or_else(|| {
+                ServiceError::Validacion("el DETALLE debe tener la columna \"Sección\"".into())
+            })?;
+        let col_clave_insumo = buscar_columna(&detalle.encabezados, &["clave insumo"]);
+        let col_desc_insumo = buscar_columna(
+            &detalle.encabezados,
+            &[
+                "descripción insumo",
+                "descripcion insumo",
+                "descripción",
+                "descripcion",
+            ],
+        )
+        .ok_or_else(|| {
+            ServiceError::Validacion(
+                "el DETALLE debe tener la columna \"Descripción Insumo\"".into(),
+            )
+        })?;
+        let col_cantidad =
+            buscar_columna(&detalle.encabezados, &["cantidad"]).ok_or_else(|| {
+                ServiceError::Validacion("el DETALLE debe tener la columna \"Cantidad\"".into())
+            })?;
+        let col_naturaleza = buscar_columna(&detalle.encabezados, &["naturaleza"]);
 
         let unidades = unidad_medida::Entity::find()
             .filter(unidad_medida::Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?;
         let unidad_id_por_texto = UnidadMedidaService::mapa_id_por_texto(&unidades);
-
         let familias = familia_insumo::Entity::find()
             .filter(familia_insumo::Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?;
         let (raiz_id_por_nombre, hija_id_por_padre_y_nombre) = mapas_familia(&familias);
 
-        let extension: std::collections::HashSet<String> = equipo_costo_horario::Entity::find()
-            .all(repo.conexion())
-            .await?
-            .into_iter()
-            .map(|e| e.insumo_id)
-            .collect();
         let insumos = insumo::Entity::find()
             .filter(insumo::Column::OrganizacionId.eq(organizacion_id))
             .filter(insumo::Column::Deleted.eq(false))
             .all(repo.conexion())
             .await?;
-        let mut clave_por_id: HashMap<String, String> = HashMap::new();
+        let materiales: HashSet<String> = material::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|m| m.insumo_id)
+            .collect();
+        let categorias: HashSet<String> = categoria_fasar::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|c| c.insumo_id)
+            .collect();
+        let cuadrillas: HashSet<String> = cuadrilla::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|c| c.insumo_id)
+            .collect();
+        let equipos_existentes: HashSet<String> = equipo_costo_horario::Entity::find()
+            .all(repo.conexion())
+            .await?
+            .into_iter()
+            .map(|e| e.insumo_id)
+            .collect();
+
+        let mut material_id_por_clave = HashMap::new();
+        let mut material_id_por_descripcion = HashMap::new();
+        let mut categoria_id_por_clave = HashMap::new();
+        let mut categoria_id_por_descripcion = HashMap::new();
+        let mut cuadrilla_id_por_clave = HashMap::new();
+        let mut cuadrilla_id_por_descripcion = HashMap::new();
         let mut por_clave: HashMap<String, String> = HashMap::new();
-        let mut por_descripcion: HashMap<String, String> = HashMap::new();
         for ins in &insumos {
-            if !extension.contains(&ins.id) {
+            if materiales.contains(&ins.id) {
+                material_id_por_clave.insert(clave_cruce(&ins.clave), ins.id.clone());
+                material_id_por_descripcion.insert(clave_cruce(&ins.descripcion), ins.id.clone());
+            }
+            if categorias.contains(&ins.id) {
+                categoria_id_por_clave.insert(clave_cruce(&ins.clave), ins.id.clone());
+                categoria_id_por_descripcion.insert(clave_cruce(&ins.descripcion), ins.id.clone());
+            }
+            if cuadrillas.contains(&ins.id) {
+                cuadrilla_id_por_clave.insert(clave_cruce(&ins.clave), ins.id.clone());
+                cuadrilla_id_por_descripcion.insert(clave_cruce(&ins.descripcion), ins.id.clone());
+            }
+            if equipos_existentes.contains(&ins.id) {
+                por_clave.insert(clave_cruce(&ins.clave), ins.id.clone());
+            }
+        }
+
+        let mut errores = Vec::new();
+        let mut maestros: Vec<FilaMaestroEquipoCsv> = Vec::new();
+        let mut indice_maestro: HashMap<String, usize> = HashMap::new();
+        for (fila, registro) in maestro.filas {
+            let clave = celda(&registro, col_clave);
+            let descripcion = celda(&registro, col_descripcion);
+            let unidad = celda(&registro, col_unidad);
+            if clave.is_empty() && descripcion.is_empty() {
                 continue;
             }
-            clave_por_id.insert(ins.id.clone(), ins.clave.clone());
-            recordar_insumo(
-                &mut por_clave,
-                &mut por_descripcion,
-                &ins.id,
-                &ins.clave,
-                &ins.descripcion,
-            );
-        }
-        let mut siguiente = siguiente_consecutivo(clave_por_id.values().map(String::as_str), "EQ-");
-
-        let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
-        let mut creados = 0u32;
-        let mut actualizados = 0u32;
-        let mut se_autogenero_clave = false;
-        let mut errores = Vec::new();
-        let tiene_columna_clave = lector
-            .headers()
-            .map(|h| {
-                h.iter()
-                    .any(|columna| columna.trim().eq_ignore_ascii_case("clave"))
-            })
-            .unwrap_or(false);
-
-        let registros: Vec<Result<RegistroCsvEquipo, csv::Error>> =
-            lector.deserialize::<RegistroCsvEquipo>().collect();
-        let total = registros.len() as u32;
-        for (i, registro) in registros.into_iter().enumerate() {
-            on_progreso(i as u32 + 1, total);
-            let fila = i + 2;
-            let registro = match registro {
-                Ok(r) => r,
-                Err(e) => {
-                    errores.push(format!("fila {fila}: {e}"));
-                    continue;
-                }
-            };
-            let descripcion = registro.descripcion.trim().to_string();
+            if clave.is_empty() {
+                errores.push(format!("fila {fila}: clave vacía, se omitió"));
+                continue;
+            }
             if descripcion.is_empty() {
                 errores.push(format!("fila {fila}: descripción vacía, se omitió"));
                 continue;
             }
-            let unidad_texto = registro.unidad.trim().to_lowercase();
+            let item = FilaMaestroEquipoCsv {
+                fila,
+                clave: clave.clone(),
+                descripcion,
+                unidad,
+                familia: col_familia.map(|c| celda(&registro, c)).unwrap_or_default(),
+                subfamilia: col_subfamilia
+                    .map(|c| celda(&registro, c))
+                    .unwrap_or_default(),
+                costo_maquina: col_costo_maquina
+                    .map(|c| celda(&registro, c))
+                    .unwrap_or_default(),
+                valor_llantas: col_valor_llantas
+                    .map(|c| celda(&registro, c))
+                    .unwrap_or_default(),
+                valor_piezas: col_valor_piezas
+                    .map(|c| celda(&registro, c))
+                    .unwrap_or_default(),
+                rescate: col_rescate.map(|c| celda(&registro, c)).unwrap_or_default(),
+                vida_economica: col_vida.map(|c| celda(&registro, c)).unwrap_or_default(),
+                horas_uso_anual: col_horas.map(|c| celda(&registro, c)).unwrap_or_default(),
+                interes_anual: col_interes.map(|c| celda(&registro, c)).unwrap_or_default(),
+                seguros_anual: col_seguros.map(|c| celda(&registro, c)).unwrap_or_default(),
+                mantenimiento: col_mantenimiento
+                    .map(|c| celda(&registro, c))
+                    .unwrap_or_default(),
+            };
+            let llave = clave_cruce(&clave);
+            if let Some(&idx) = indice_maestro.get(&llave) {
+                errores.push(format!(
+                    "fila {fila}: clave \"{}\" repetida en MAESTRO, se usó la última",
+                    item.clave
+                ));
+                maestros[idx] = item;
+            } else {
+                indice_maestro.insert(llave, maestros.len());
+                maestros.push(item);
+            }
+        }
+
+        let mut detalles_por_clave: HashMap<String, Vec<FilaDetalleEquipoCsv>> = HashMap::new();
+        for (fila, registro) in detalle.filas {
+            let clave_maquina = celda(&registro, col_det_clave);
+            let seccion = celda(&registro, col_seccion);
+            let clave_insumo = col_clave_insumo
+                .map(|c| celda(&registro, c))
+                .unwrap_or_default();
+            let descripcion = celda(&registro, col_desc_insumo);
+            let cantidad = celda(&registro, col_cantidad);
+            let naturaleza = col_naturaleza
+                .map(|c| celda(&registro, c))
+                .unwrap_or_default();
+            if clave_maquina.is_empty()
+                && seccion.is_empty()
+                && descripcion.is_empty()
+                && clave_insumo.is_empty()
+            {
+                continue;
+            }
+            if clave_maquina.is_empty() {
+                errores.push(format!(
+                    "fila {fila}: clave de máquina vacía en DETALLE, se omitió"
+                ));
+                continue;
+            }
+            detalles_por_clave
+                .entry(clave_cruce(&clave_maquina))
+                .or_default()
+                .push(FilaDetalleEquipoCsv {
+                    fila,
+                    seccion,
+                    clave_insumo,
+                    descripcion,
+                    cantidad,
+                    naturaleza,
+                });
+        }
+
+        for (llave, filas) in &detalles_por_clave {
+            if !indice_maestro.contains_key(llave) {
+                let muestra = filas.first().map(|f| f.fila).unwrap_or(0);
+                errores.push(format!(
+                    "fila {muestra}: clave de DETALLE no aparece en MAESTRO, se omitió el grupo"
+                ));
+            }
+        }
+
+        let mut creados = 0u32;
+        let mut actualizados = 0u32;
+        let total = maestros.len() as u32;
+
+        for (i, grupo) in maestros.into_iter().enumerate() {
+            on_progreso(i as u32 + 1, total.max(1));
+            let llave = clave_cruce(&grupo.clave);
+            let filas_detalle = detalles_por_clave.remove(&llave).unwrap_or_default();
+            let filas_csv = filas_detalle.len();
+
+            let mut detalles_ok = Vec::new();
+            for fila in &filas_detalle {
+                match resolver_detalle_equipo_csv(
+                    fila,
+                    &material_id_por_clave,
+                    &material_id_por_descripcion,
+                    &categoria_id_por_clave,
+                    &categoria_id_por_descripcion,
+                    &cuadrilla_id_por_clave,
+                    &cuadrilla_id_por_descripcion,
+                ) {
+                    Ok(detalle) => {
+                        detalles_ok.push((fila.fila, etiqueta_detalle_equipo(fila), detalle))
+                    }
+                    Err(e) => errores.push(e),
+                }
+            }
+            if filas_csv > 0 && detalles_ok.is_empty() {
+                errores.push(format!(
+                    "equipo \"{}\": ningún renglón de detalle pudo resolverse, no se modificó el detalle",
+                    grupo.clave
+                ));
+            }
+
+            let unidad_texto = grupo.unidad.trim().to_lowercase();
             let Some(unidad_id) = unidad_id_por_texto.get(&unidad_texto).cloned() else {
                 errores.push(format!(
-                    "fila {fila}: unidad \"{}\" no encontrada, se omitió",
-                    registro.unidad.trim()
+                    "fila {}: unidad \"{}\" no encontrada, se omitió",
+                    grupo.fila,
+                    grupo.unidad.trim()
                 ));
                 continue;
             };
             let (familia_id, sub_familia_id) = resolver_familia_csv(
-                registro.familia.as_deref().unwrap_or(""),
-                registro.subfamilia.as_deref().unwrap_or(""),
+                &grupo.familia,
+                &grupo.subfamilia,
                 &raiz_id_por_nombre,
                 &hija_id_por_padre_y_nombre,
-                fila,
+                grupo.fila,
                 &mut errores,
             );
-            let horas_uso = decimal_o_cero(&registro.horas_uso_anual);
-            let clave_archivo = registro
-                .clave
-                .as_deref()
-                .map(str::trim)
-                .filter(|c| !c.is_empty());
-            let existente_id =
-                id_insumo_existente(clave_archivo, &descripcion, &por_clave, &por_descripcion);
-            let clave = match (clave_archivo, existente_id.as_deref()) {
-                (Some(clave_archivo), _) => clave_archivo.to_string(),
-                (None, Some(id)) => clave_por_id
-                    .get(id)
-                    .cloned()
-                    .unwrap_or_else(|| id.to_string()),
-                (None, None) => {
-                    let clave = format!("EQ-{siguiente:03}");
-                    siguiente += 1;
-                    se_autogenero_clave = true;
-                    clave
-                }
-            };
+            let horas_uso = decimal_o_cero(&grupo.horas_uso_anual);
             let datos = EquipoCostoHorarioData {
-                clave: clave.clone(),
-                descripcion: descripcion.clone(),
+                clave: grupo.clave.clone(),
+                descripcion: grupo.descripcion.clone(),
                 unidad_id,
                 familia_id,
                 sub_familia_id,
-                cf_costo_maquina: decimal_o_cero(&registro.costo_maquina),
-                cf_valor_llantas: decimal_o_cero(&registro.valor_llantas),
-                cf_valor_piezas_especiales: decimal_o_cero(&registro.valor_piezas_especiales),
-                cf_valor_rescate_porcentaje: decimal_o_cero(&registro.rescate),
-                cf_vida_economica_anios: decimal_o_cero(&registro.vida_economica),
+                cf_costo_maquina: decimal_o_cero(&grupo.costo_maquina),
+                cf_valor_llantas: decimal_o_cero(&grupo.valor_llantas),
+                cf_valor_piezas_especiales: decimal_o_cero(&grupo.valor_piezas),
+                cf_valor_rescate_porcentaje: decimal_o_cero(&grupo.rescate),
+                cf_vida_economica_anios: decimal_o_cero(&grupo.vida_economica),
                 cf_horas_uso_anual: if horas_uso > Decimal::ZERO {
                     horas_uso
                 } else {
                     Decimal::ONE
                 },
-                cf_tasa_interes_anual_porcentaje: decimal_o_cero(&registro.interes_anual),
-                cf_tasa_seguros_anual_porcentaje: decimal_o_cero(&registro.seguros_anual),
-                cf_mantenimiento_porcentaje: decimal_o_cero(&registro.mantenimiento),
+                cf_tasa_interes_anual_porcentaje: decimal_o_cero(&grupo.interes_anual),
+                cf_tasa_seguros_anual_porcentaje: decimal_o_cero(&grupo.seguros_anual),
+                cf_mantenimiento_porcentaje: decimal_o_cero(&grupo.mantenimiento),
             };
-            let item = if let Some(id) = existente_id {
+
+            let existente_id = por_clave.get(&llave).cloned();
+            let equipo = if let Some(id) = existente_id {
                 match Self::actualizar(repo, id, datos, Some(creado_por.clone())).await {
                     Ok(e) => {
                         actualizados += 1;
                         e
                     }
                     Err(e) => {
-                        errores.push(format!("fila {fila}: no se pudo actualizar el equipo ({e})"));
+                        errores.push(format!(
+                            "equipo \"{}\": no se pudo actualizar ({e})",
+                            grupo.clave
+                        ));
                         continue;
                     }
                 }
@@ -590,34 +809,117 @@ impl EquipoCostoHorarioService {
                         e
                     }
                     Err(e) => {
-                        errores.push(format!("fila {fila}: no se pudo crear el equipo ({e})"));
+                        errores.push(format!(
+                            "equipo \"{}\": no se pudo crear ({e})",
+                            grupo.clave
+                        ));
                         continue;
                     }
                 }
             };
-            clave_por_id.insert(item.id.clone(), item.clave.clone());
-            recordar_insumo(
-                &mut por_clave,
-                &mut por_descripcion,
-                &item.id,
-                &item.clave,
-                &item.descripcion,
-            );
-        }
-        let aviso = if !tiene_columna_clave && se_autogenero_clave {
-            Some(
-                "El archivo no tiene columna \"Clave\"; se generarán claves automáticas con el prefijo EQ-."
-                    .to_string(),
+            por_clave.insert(llave, equipo.id.clone());
+
+            if filas_csv > 0 && detalles_ok.is_empty() {
+                continue;
+            }
+
+            Self::sincronizar_detalles_importados(
+                repo,
+                &equipo.id,
+                detalles_ok,
+                &creado_por,
+                &mut errores,
             )
-        } else {
-            None
-        };
+            .await;
+        }
+
         Ok(ResultadoImportacion::nuevo(
             creados,
             actualizados,
             errores,
-            aviso,
+            None,
         ))
+    }
+
+    async fn sincronizar_detalles_importados(
+        repo: &dyn PortafolioRepository,
+        equipo_id: &str,
+        detalles_ok: Vec<(usize, String, EquipoCostoHorarioDetalleData)>,
+        creado_por: &str,
+        errores: &mut Vec<String>,
+    ) {
+        let existentes =
+            match EquipoCostoHorarioDetalleService::listar_por_equipo(repo, equipo_id).await {
+                Ok(d) => d,
+                Err(e) => {
+                    errores.push(format!("no se pudo leer el detalle del equipo ({e})"));
+                    return;
+                }
+            };
+        let mut detalle_id_por_insumo: HashMap<String, String> = existentes
+            .iter()
+            .map(|d| (d.detalle_insumo_id.clone(), d.id.clone()))
+            .collect();
+        let mut vistos: HashSet<String> = HashSet::new();
+
+        for (fila, _descripcion, detalle) in detalles_ok {
+            let insumo_id = detalle.detalle_insumo_id.clone();
+            vistos.insert(insumo_id.clone());
+
+            if let Some(detalle_id) = detalle_id_por_insumo.get(&insumo_id).cloned() {
+                if let Err(e) = EquipoCostoHorarioDetalleService::actualizar(
+                    repo,
+                    detalle_id,
+                    EquipoCostoHorarioDetalleData {
+                        detalle_insumo_id: insumo_id,
+                        cantidad: detalle.cantidad,
+                        naturaleza: None,
+                    },
+                    Some(creado_por.to_string()),
+                )
+                .await
+                {
+                    errores.push(format!(
+                        "fila {fila}: no se pudo actualizar el detalle ({e})"
+                    ));
+                }
+                continue;
+            }
+
+            if let Err(e) = EquipoCostoHorarioDetalleService::crear(
+                repo,
+                equipo_id,
+                detalle,
+                creado_por.to_string(),
+            )
+            .await
+            {
+                errores.push(format!("fila {fila}: no se pudo agregar el detalle ({e})"));
+            } else if let Ok(lista) =
+                EquipoCostoHorarioDetalleService::listar_por_equipo(repo, equipo_id).await
+            {
+                if let Some(d) = lista.iter().find(|d| d.detalle_insumo_id == insumo_id) {
+                    detalle_id_por_insumo.insert(insumo_id, d.id.clone());
+                }
+            }
+        }
+
+        for existente in existentes {
+            if vistos.contains(&existente.detalle_insumo_id) {
+                continue;
+            }
+            if let Err(e) = EquipoCostoHorarioDetalleService::eliminar(
+                repo,
+                existente.id,
+                creado_por.to_string(),
+            )
+            .await
+            {
+                errores.push(format!(
+                    "no se pudo eliminar un renglón de detalle que ya no viene en el CSV ({e})"
+                ));
+            }
+        }
     }
 
     async fn buscar_costo_nacional(
@@ -626,7 +928,8 @@ impl EquipoCostoHorarioService {
     ) -> Result<Option<equipo_costo_horario_costo::Model>, ServiceError> {
         Ok(equipo_costo_horario_costo::Entity::find()
             .filter(
-                equipo_costo_horario_costo::Column::EquipoCostoHorarioId.eq(equipo_costo_horario_id),
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
             )
             .filter(equipo_costo_horario_costo::Column::RegionId.is_null())
             .filter(equipo_costo_horario_costo::Column::Deleted.eq(false))
@@ -635,47 +938,190 @@ impl EquipoCostoHorarioService {
     }
 }
 
-#[derive(serde::Deserialize)]
-struct RegistroCsvEquipo {
-    #[serde(rename = "Clave", default)]
-    clave: Option<String>,
-    #[serde(rename = "Descripción")]
+struct FilaMaestroEquipoCsv {
+    fila: usize,
+    clave: String,
     descripcion: String,
-    #[serde(rename = "Unidad")]
     unidad: String,
-    #[serde(rename = "Familia", default)]
-    familia: Option<String>,
-    #[serde(rename = "Subfamilia", default)]
-    subfamilia: Option<String>,
-    #[serde(rename = "Costo máquina", default)]
+    familia: String,
+    subfamilia: String,
     costo_maquina: String,
-    #[serde(rename = "Valor llantas", default)]
     valor_llantas: String,
-    #[serde(rename = "Valor piezas especiales", default)]
-    valor_piezas_especiales: String,
-    #[serde(rename = "Rescate %", default)]
+    valor_piezas: String,
     rescate: String,
-    #[serde(rename = "Vida económica (años)", default)]
     vida_economica: String,
-    #[serde(rename = "Horas de uso anual", default)]
     horas_uso_anual: String,
-    #[serde(rename = "Interés anual %", default)]
     interes_anual: String,
-    #[serde(rename = "Seguros anual %", default)]
     seguros_anual: String,
-    #[serde(rename = "Mantenimiento %", default)]
     mantenimiento: String,
 }
 
-fn decimal_o_cero(texto: &str) -> Decimal {
-    let limpio: String = texto
-        .chars()
-        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
-        .collect();
-    if limpio.is_empty() || limpio == "-" || limpio == "." {
-        return Decimal::ZERO;
+struct FilaDetalleEquipoCsv {
+    fila: usize,
+    seccion: String,
+    clave_insumo: String,
+    descripcion: String,
+    cantidad: String,
+    naturaleza: String,
+}
+
+fn etiqueta_detalle_equipo(fila: &FilaDetalleEquipoCsv) -> String {
+    if !fila.descripcion.is_empty() {
+        fila.descripcion.clone()
+    } else {
+        fila.clave_insumo.clone()
     }
-    limpio.parse().unwrap_or(Decimal::ZERO)
+}
+
+fn decimal_o_cero(texto: &str) -> Decimal {
+    parsear_decimal(texto).unwrap_or(Decimal::ZERO)
+}
+
+fn parsear_seccion_equipo(
+    seccion: &str,
+) -> Option<obrix_db::entities::equipo_costo_horario_detalle::TipoEquipoCostoHorarioDetalle> {
+    use obrix_db::entities::equipo_costo_horario_detalle::TipoEquipoCostoHorarioDetalle;
+    match seccion.trim().to_lowercase().replace('_', " ").as_str() {
+        "consumo" => Some(TipoEquipoCostoHorarioDetalle::Consumo),
+        "operacion" | "operación" => Some(TipoEquipoCostoHorarioDetalle::Operacion),
+        _ => None,
+    }
+}
+
+fn parsear_naturaleza_consumo(
+    texto: &str,
+) -> Result<
+    Option<obrix_db::entities::equipo_costo_horario_detalle::NaturalezaEquipoCostoHorarioDetalle>,
+    String,
+> {
+    use obrix_db::entities::equipo_costo_horario_detalle::NaturalezaEquipoCostoHorarioDetalle;
+    let n = texto.trim().to_lowercase().replace(' ', "_");
+    if n.is_empty() {
+        return Ok(None);
+    }
+    match n.as_str() {
+        "combustible" => Ok(Some(NaturalezaEquipoCostoHorarioDetalle::Combustible)),
+        "lubricante" => Ok(Some(NaturalezaEquipoCostoHorarioDetalle::Lubricante)),
+        "llantas" | "llanta" => Ok(Some(NaturalezaEquipoCostoHorarioDetalle::Llantas)),
+        "piezas_especiales" | "pieza_especial" => {
+            Ok(Some(NaturalezaEquipoCostoHorarioDetalle::PiezasEspeciales))
+        }
+        "otras_fuentes" | "otra_fuente" => {
+            Ok(Some(NaturalezaEquipoCostoHorarioDetalle::OtrasFuentes))
+        }
+        _ => Err(format!(
+            "naturaleza \"{texto}\" no reconocida (use combustible, lubricante, llantas, piezas especiales u otras fuentes)"
+        )),
+    }
+}
+
+fn inferir_naturaleza_consumo(
+    descripcion: &str,
+) -> obrix_db::entities::equipo_costo_horario_detalle::NaturalezaEquipoCostoHorarioDetalle {
+    use obrix_db::entities::equipo_costo_horario_detalle::NaturalezaEquipoCostoHorarioDetalle;
+    let d = clave_cruce(descripcion);
+    if d.contains("diesel") || d.contains("diésel") || d.contains("gasolina") {
+        NaturalezaEquipoCostoHorarioDetalle::Combustible
+    } else if d.contains("aceite") || d.contains("lubricante") {
+        NaturalezaEquipoCostoHorarioDetalle::Lubricante
+    } else if d.contains("llanta") {
+        NaturalezaEquipoCostoHorarioDetalle::Llantas
+    } else if d.contains("manguera") || d.contains("pieza especial") {
+        NaturalezaEquipoCostoHorarioDetalle::PiezasEspeciales
+    } else {
+        NaturalezaEquipoCostoHorarioDetalle::OtrasFuentes
+    }
+}
+
+fn resolver_detalle_equipo_csv(
+    fila: &FilaDetalleEquipoCsv,
+    material_id_por_clave: &HashMap<String, String>,
+    material_id_por_descripcion: &HashMap<String, String>,
+    categoria_id_por_clave: &HashMap<String, String>,
+    categoria_id_por_descripcion: &HashMap<String, String>,
+    cuadrilla_id_por_clave: &HashMap<String, String>,
+    cuadrilla_id_por_descripcion: &HashMap<String, String>,
+) -> Result<EquipoCostoHorarioDetalleData, String> {
+    use obrix_db::entities::equipo_costo_horario_detalle::TipoEquipoCostoHorarioDetalle;
+    let n = fila.fila;
+    let Some(tipo) = parsear_seccion_equipo(&fila.seccion) else {
+        return Err(format!(
+            "fila {n}: sección \"{}\" no reconocida (use CONSUMO o OPERACION), se omitió",
+            fila.seccion
+        ));
+    };
+    if fila.clave_insumo.is_empty() && fila.descripcion.is_empty() {
+        return Err(format!(
+            "fila {n}: detalle sin clave ni descripción de insumo, se omitió"
+        ));
+    }
+    let Some(cantidad) = parsear_decimal(&fila.cantidad) else {
+        return Err(format!(
+            "fila {n}: cantidad \"{}\" no es un número válido, se omitió",
+            fila.cantidad
+        ));
+    };
+    let (por_clave, por_descripcion, etiqueta) = match tipo {
+        TipoEquipoCostoHorarioDetalle::Consumo => (
+            material_id_por_clave,
+            material_id_por_descripcion,
+            "material",
+        ),
+        TipoEquipoCostoHorarioDetalle::Operacion => {
+            // Preferir cuadrilla; si no hay match se intenta categoría FASAR abajo.
+            (
+                cuadrilla_id_por_clave,
+                cuadrilla_id_por_descripcion,
+                "cuadrilla o categoría FASAR",
+            )
+        }
+    };
+    let mut detalle_insumo_id = if !fila.clave_insumo.is_empty() {
+        por_clave.get(&clave_cruce(&fila.clave_insumo)).cloned()
+    } else {
+        por_descripcion
+            .get(&clave_cruce(&fila.descripcion))
+            .cloned()
+    };
+    if detalle_insumo_id.is_none() && tipo == TipoEquipoCostoHorarioDetalle::Operacion {
+        detalle_insumo_id = if !fila.clave_insumo.is_empty() {
+            categoria_id_por_clave
+                .get(&clave_cruce(&fila.clave_insumo))
+                .cloned()
+        } else {
+            categoria_id_por_descripcion
+                .get(&clave_cruce(&fila.descripcion))
+                .cloned()
+        };
+    }
+    let detalle_insumo_id = detalle_insumo_id.ok_or_else(|| {
+        if !fila.clave_insumo.is_empty() {
+            format!(
+                "fila {n}: {etiqueta} con clave \"{}\" no encontrada, se omitió",
+                fila.clave_insumo
+            )
+        } else {
+            format!(
+                "fila {n}: {etiqueta} \"{}\" no encontrada, se omitió",
+                fila.descripcion
+            )
+        }
+    })?;
+    let naturaleza = match tipo {
+        TipoEquipoCostoHorarioDetalle::Consumo => {
+            match parsear_naturaleza_consumo(&fila.naturaleza) {
+                Ok(Some(natz)) => Some(natz),
+                Ok(None) => Some(inferir_naturaleza_consumo(&fila.descripcion)),
+                Err(e) => return Err(format!("fila {n}: {e}, se omitió")),
+            }
+        }
+        TipoEquipoCostoHorarioDetalle::Operacion => None,
+    };
+    Ok(EquipoCostoHorarioDetalleData {
+        detalle_insumo_id,
+        cantidad,
+        naturaleza,
+    })
 }
 
 #[cfg(test)]
@@ -901,8 +1347,18 @@ mod tests {
         assert!(listado_tras_borrar.iter().all(|e| e.id != creado.id));
     }
 
-    #[tokio::test]
-    async fn importar_csv_resuelve_unidad_por_variantes() {
+    fn csv_equipos(maestro: &str, detalle: &str) -> String {
+        format!(
+            "MAESTRO\nClave,Descripción,Unidad,Familia,Subfamilia,Costo máquina,Valor llantas,Valor piezas especiales,Rescate %,Vida económica (años),Horas de uso anual,Interés anual %,Seguros anual %,Mantenimiento %\n{maestro}\n\nDETALLE\nClave Máquina,Sección,Clave Insumo,Descripción Insumo,Unidad,Cantidad\n{detalle}"
+        )
+    }
+
+    async fn portafolio_listo_para_importar() -> (
+        PortafolioSqliteRepository,
+        String,
+        String,
+        std::collections::HashMap<String, String>,
+    ) {
         let portafolio = PortafolioSqliteRepository::crear(Path::new(":memory:"))
             .await
             .expect("crear portafolio");
@@ -915,33 +1371,250 @@ mod tests {
         let admin = crate::usuario::UsuarioService::buscar_admin_obrix(&portafolio)
             .await
             .expect("admin");
-
-        let csv = "Descripción,Unidad,Horas de uso anual,Vida económica (años)\n\
-                    Camión de prueba,h,1500,6\n";
-        let resultado = EquipoCostoHorarioService::importar_csv(
-            &portafolio,
-            &org.id,
-            csv,
-            admin.id.clone(),
-        )
-        .await
-        .expect("importar");
-        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
-        assert_eq!(resultado.creados, 1);
-
-        let item = EquipoCostoHorarioService::listar(&portafolio, &org.id)
-            .await
-            .unwrap()
-            .into_iter()
-            .find(|e| e.descripcion == "Camión de prueba")
-            .expect("importado");
         let unidades = unidad_medida::Entity::find()
             .all(portafolio.conexion())
             .await
             .unwrap();
         let mapa = UnidadMedidaService::mapa_id_por_texto(&unidades);
+        (portafolio, org.id, admin.id, mapa)
+    }
+
+    #[tokio::test]
+    async fn importar_csv_resuelve_unidad_por_variantes() {
+        let (portafolio, org_id, admin_id, mapa) = portafolio_listo_para_importar().await;
+        let csv = csv_equipos("EQ-1,Camión de prueba,h,,,0,0,0,10,6,1500,16,3,75\n", "");
+        let resultado =
+            EquipoCostoHorarioService::importar_csv(&portafolio, &org_id, &csv, admin_id)
+                .await
+                .expect("importar");
+        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
+        assert_eq!(resultado.creados, 1);
+
+        let item = EquipoCostoHorarioService::listar(&portafolio, &org_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|e| e.clave == "EQ-1")
+            .expect("importado");
         assert_eq!(item.unidad_id, mapa["hr"]);
         assert_eq!(item.unidad_id, mapa["h"]);
         assert_eq!(item.cf_horas_uso_anual, Decimal::from(1500));
+        assert_eq!(item.cf_vida_economica_anios, Decimal::from(6));
+    }
+
+    #[tokio::test]
+    async fn importar_csv_clave_es_obligatoria_y_no_busca_por_descripcion() {
+        let (portafolio, org_id, admin_id, _) = portafolio_listo_para_importar().await;
+        let alta = csv_equipos("EQ-1,Camión de prueba,h,,,0,0,0,10,6,1500,16,3,75\n", "");
+        EquipoCostoHorarioService::importar_csv(&portafolio, &org_id, &alta, admin_id.clone())
+            .await
+            .expect("alta");
+
+        let sin_clave = csv_equipos(",Otra descripción,h,,,0,0,0,10,6,1500,16,3,75\n", "");
+        let omitida = EquipoCostoHorarioService::importar_csv(
+            &portafolio,
+            &org_id,
+            &sin_clave,
+            admin_id.clone(),
+        )
+        .await
+        .expect("clave vacía");
+        assert_eq!(omitida.importados, 0);
+        assert!(omitida.errores.iter().any(|e| e.contains("clave vacía")));
+
+        let otra = csv_equipos("EQ-2,Camión de prueba,h,,,0,0,0,10,6,1500,16,3,75\n", "");
+        let resultado =
+            EquipoCostoHorarioService::importar_csv(&portafolio, &org_id, &otra, admin_id)
+                .await
+                .expect("misma descripción");
+        assert_eq!(resultado.creados, 1);
+        assert_eq!(resultado.actualizados, 0);
+        let listado = EquipoCostoHorarioService::listar(&portafolio, &org_id)
+            .await
+            .unwrap();
+        let mut claves: Vec<_> = listado.iter().map(|e| e.clave.as_str()).collect();
+        claves.sort();
+        assert_eq!(claves, vec!["EQ-1", "EQ-2"]);
+    }
+
+    #[tokio::test]
+    async fn importar_csv_sincroniza_detalle_cantidad_alta_y_baja() {
+        use crate::cuadrilla::{CuadrillaData, CuadrillaService};
+        use crate::equipo_costo_horario_detalle::EquipoCostoHorarioDetalleService;
+        use crate::material::{MaterialData, MaterialService};
+        use obrix_db::entities::equipo_costo_horario_detalle::TipoEquipoCostoHorarioDetalle;
+        use std::str::FromStr;
+
+        let (portafolio, org_id, admin_id, mapa) = portafolio_listo_para_importar().await;
+        MaterialService::crear(
+            &portafolio,
+            &org_id,
+            MaterialData {
+                clave: "MAT-D".into(),
+                descripcion: "Diesel".into(),
+                unidad_id: mapa["l"].clone(),
+                familia_id: None,
+                sub_familia_id: None,
+                proveedor_id: None,
+                merma_porcentaje: None,
+                marca: None,
+            },
+            admin_id.clone(),
+        )
+        .await
+        .expect("diesel");
+        MaterialService::crear(
+            &portafolio,
+            &org_id,
+            MaterialData {
+                clave: "MAT-A".into(),
+                descripcion: "Aceite lubricante para motor SAE 25W50, de 5 litros".into(),
+                unidad_id: mapa["l"].clone(),
+                familia_id: None,
+                sub_familia_id: None,
+                proveedor_id: None,
+                merma_porcentaje: None,
+                marca: None,
+            },
+            admin_id.clone(),
+        )
+        .await
+        .expect("aceite");
+        CuadrillaService::crear(
+            &portafolio,
+            &org_id,
+            CuadrillaData {
+                clave: "00-M0017".into(),
+                descripcion: "Cuadrilla 17 (Operador de equipo ligero)".into(),
+                unidad_id: mapa["jor"].clone(),
+                familia_id: None,
+                sub_familia_id: None,
+            },
+            admin_id.clone(),
+        )
+        .await
+        .expect("cuadrilla");
+
+        let inicial = csv_equipos(
+            "EQ-S,Equipo sync,h,,,1000,0,0,10,5,1500,16,3,75\n",
+            "EQ-S,CONSUMO,,Diesel,l,18\n\
+             EQ-S,CONSUMO,,\"Aceite lubricante para motor SAE 25W50, de 5 litros\",l,0.26\n\
+             EQ-S,OPERACION,,Cuadrilla 17 (Operador de equipo ligero),jor,0.156250\n",
+        );
+        let alta = EquipoCostoHorarioService::importar_csv(
+            &portafolio,
+            &org_id,
+            &inicial,
+            admin_id.clone(),
+        )
+        .await
+        .expect("alta");
+        assert!(alta.errores.is_empty(), "{:?}", alta.errores);
+
+        let segundo = csv_equipos(
+            "EQ-S,Equipo sync nueva,h,,,2000,0,0,10,5,1500,16,3,75\n",
+            "EQ-S,CONSUMO,,Diesel,l,20\n\
+             EQ-S,OPERACION,,Cuadrilla 17 (Operador de equipo ligero),jor,0.2\n",
+        );
+        let resultado =
+            EquipoCostoHorarioService::importar_csv(&portafolio, &org_id, &segundo, admin_id)
+                .await
+                .expect("sync");
+        assert_eq!(resultado.creados, 0);
+        assert_eq!(resultado.actualizados, 1);
+        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
+
+        let equipo = EquipoCostoHorarioService::listar(&portafolio, &org_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|e| e.clave == "EQ-S")
+            .expect("EQ-S");
+        assert_eq!(equipo.descripcion, "Equipo sync nueva");
+        assert_eq!(equipo.cf_costo_maquina, Decimal::from(2000));
+
+        let detalles = EquipoCostoHorarioDetalleService::listar_por_equipo(&portafolio, &equipo.id)
+            .await
+            .expect("detalles");
+        assert_eq!(detalles.len(), 2);
+        assert_eq!(
+            detalles
+                .iter()
+                .filter(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Consumo)
+                .count(),
+            1
+        );
+        let diesel = detalles
+            .iter()
+            .find(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Consumo)
+            .expect("diesel");
+        assert_eq!(diesel.cantidad, Decimal::from(20));
+        let op = detalles
+            .iter()
+            .find(|d| d.tipo == TipoEquipoCostoHorarioDetalle::Operacion)
+            .expect("operacion");
+        assert_eq!(op.cantidad, Decimal::from_str("0.2").unwrap());
+    }
+
+    #[tokio::test]
+    async fn importar_csv_resuelve_detalle_por_clave_insumo() {
+        use crate::equipo_costo_horario_detalle::EquipoCostoHorarioDetalleService;
+        use crate::material::{MaterialData, MaterialService};
+
+        let (portafolio, org_id, admin_id, mapa) = portafolio_listo_para_importar().await;
+        let diesel = MaterialService::crear(
+            &portafolio,
+            &org_id,
+            MaterialData {
+                clave: "MAT-D".into(),
+                descripcion: "Diesel".into(),
+                unidad_id: mapa["l"].clone(),
+                familia_id: None,
+                sub_familia_id: None,
+                proveedor_id: None,
+                merma_porcentaje: None,
+                marca: None,
+            },
+            admin_id.clone(),
+        )
+        .await
+        .expect("diesel");
+
+        let csv = csv_equipos(
+            "EQ-C,Equipo clave,h,,,1000,0,0,10,5,1500,16,3,75\n",
+            &format!("EQ-C,CONSUMO,{},no debe usarse,l,11\n", diesel.clave),
+        );
+        let resultado =
+            EquipoCostoHorarioService::importar_csv(&portafolio, &org_id, &csv, admin_id)
+                .await
+                .expect("importar");
+        assert!(resultado.errores.is_empty(), "{:?}", resultado.errores);
+
+        let equipo = EquipoCostoHorarioService::listar(&portafolio, &org_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|e| e.clave == "EQ-C")
+            .expect("EQ-C");
+        let detalles = EquipoCostoHorarioDetalleService::listar_por_equipo(&portafolio, &equipo.id)
+            .await
+            .unwrap();
+        assert_eq!(detalles.len(), 1);
+        assert_eq!(detalles[0].detalle_insumo_id, diesel.id);
+        assert_eq!(detalles[0].cantidad, Decimal::from(11));
+    }
+
+    #[tokio::test]
+    async fn importar_csv_requiere_secciones_maestro_y_detalle() {
+        let (portafolio, org_id, admin_id, _) = portafolio_listo_para_importar().await;
+        let err = EquipoCostoHorarioService::importar_csv(
+            &portafolio,
+            &org_id,
+            "Clave,Descripción,Unidad\nEQ-1,Sin secciones,h\n",
+            admin_id,
+        )
+        .await
+        .expect_err("sin secciones");
+        assert!(err.to_string().contains("MAESTRO"), "{err}");
     }
 }

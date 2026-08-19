@@ -102,15 +102,8 @@ impl CuadrillaCostoService {
             if !r.visible || cubiertas.contains(&r.id) {
                 continue;
             }
-            Self::insertar_cache_regional(
-                txn,
-                cuadrilla_id,
-                &r.id,
-                &recetas,
-                creado_por,
-                &ahora,
-            )
-            .await?;
+            Self::insertar_cache_regional(txn, cuadrilla_id, &r.id, &recetas, creado_por, &ahora)
+                .await?;
         }
         Self::valuaciones_activas(txn, cuadrilla_id).await
     }
@@ -935,14 +928,11 @@ mod tests {
             "Norte no tiene tabulador propio"
         );
 
-        let costo_nacional = CuadrillaCostoService::resolver_costo_total(
-            portafolio.conexion(),
-            &cuadrilla_id,
-            None,
-        )
-        .await
-        .expect("resolver nacional")
-        .expect("debe existir");
+        let costo_nacional =
+            CuadrillaCostoService::resolver_costo_total(portafolio.conexion(), &cuadrilla_id, None)
+                .await
+                .expect("resolver nacional")
+                .expect("debe existir");
         assert_eq!(costo_nacional, Decimal::from(700));
 
         let otra_region_id = crear_region(&portafolio, "Sur").await;

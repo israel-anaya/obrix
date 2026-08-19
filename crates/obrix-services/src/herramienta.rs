@@ -285,7 +285,8 @@ impl HerramientaService {
                 &ins.descripcion,
             );
         }
-        let mut siguiente = siguiente_consecutivo(clave_por_id.values().map(String::as_str), "HER-");
+        let mut siguiente =
+            siguiente_consecutivo(clave_por_id.values().map(String::as_str), "HER-");
 
         let mut lector = csv::ReaderBuilder::new().from_reader(contenido_csv.as_bytes());
         let mut creados = 0u32;
@@ -300,8 +301,9 @@ impl HerramientaService {
             })
             .unwrap_or(false);
 
-        let registros: Vec<Result<RegistroCsvImportHerramienta, csv::Error>> =
-            lector.deserialize::<RegistroCsvImportHerramienta>().collect();
+        let registros: Vec<Result<RegistroCsvImportHerramienta, csv::Error>> = lector
+            .deserialize::<RegistroCsvImportHerramienta>()
+            .collect();
         let total = registros.len() as u32;
         for (i, registro) in registros.into_iter().enumerate() {
             on_progreso(i as u32 + 1, total);
@@ -384,7 +386,9 @@ impl HerramientaService {
                         h
                     }
                     Err(e) => {
-                        errores.push(format!("fila {fila}: no se pudo crear la herramienta ({e})"));
+                        errores.push(format!(
+                            "fila {fila}: no se pudo crear la herramienta ({e})"
+                        ));
                         continue;
                     }
                 }

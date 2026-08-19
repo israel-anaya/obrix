@@ -71,8 +71,7 @@ impl EquipoCostoHorarioDetalleService {
         let txn = repo.conexion().begin().await?;
 
         let (tipo, derivada) = Self::clasificar(&txn, &datos.detalle_insumo_id).await?;
-        let naturaleza =
-            Self::resolver_naturaleza(tipo.clone(), derivada, datos.naturaleza, None)?;
+        let naturaleza = Self::resolver_naturaleza(tipo.clone(), derivada, datos.naturaleza, None)?;
         Self::validar_referencia(
             &txn,
             equipo_costo_horario_insumo_id,
@@ -218,7 +217,8 @@ impl EquipoCostoHorarioDetalleService {
 
         let detalles_costo = equipo_costo_horario_costo_detalle::Entity::find()
             .filter(
-                equipo_costo_horario_costo_detalle::Column::EquipoCostoHorarioDetalleId.eq(id.clone()),
+                equipo_costo_horario_costo_detalle::Column::EquipoCostoHorarioDetalleId
+                    .eq(id.clone()),
             )
             .filter(equipo_costo_horario_costo_detalle::Column::Deleted.eq(false))
             .all(&txn)
@@ -758,7 +758,10 @@ mod tests {
         .await
         .expect("agregar consumo de diesel");
         let costo = tras_consumo.costo_nacional.as_ref().unwrap();
-        assert_eq!(costo.cargo_variable_hora, Decimal::from_str("180.00").unwrap());
+        assert_eq!(
+            costo.cargo_variable_hora,
+            Decimal::from_str("180.00").unwrap()
+        );
         assert_eq!(
             costo.costo_total,
             equipo.cf_cargo_fijo_hora + Decimal::from_str("180.00").unwrap()
@@ -800,15 +803,16 @@ mod tests {
             TipoEquipoCostoHorarioDetalle::Operacion
         );
 
-        let valuacion = crate::equipo_costo_horario_costo::EquipoCostoHorarioCostoService::listar_por_equipo(
-            &portafolio,
-            &equipo.id,
-        )
-        .await
-        .unwrap()
-        .into_iter()
-        .find(|c| c.region_id.is_none())
-        .unwrap();
+        let valuacion =
+            crate::equipo_costo_horario_costo::EquipoCostoHorarioCostoService::listar_por_equipo(
+                &portafolio,
+                &equipo.id,
+            )
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|c| c.region_id.is_none())
+            .unwrap();
         let costo_detalles =
             crate::equipo_costo_horario_costo_detalle::EquipoCostoHorarioCostoDetalleService::listar_por_costo(
                 &portafolio,

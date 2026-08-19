@@ -123,6 +123,46 @@ export function plantillaCsv(columnas: string[]): string {
   return generarCsv(columnas, []);
 }
 
+/** Une bloques `MAESTRO` / `DETALLE` (u otras etiquetas) en un solo CSV. */
+export function generarCsvConSecciones(
+  secciones: { nombre: string; encabezados: string[]; filas: string[][] }[],
+): string {
+  return secciones
+    .map((s) => `${s.nombre}\n${generarCsv(s.encabezados, s.filas).trimEnd()}`)
+    .join("\n\n") + "\n";
+}
+
+/**
+ * Parte un CSV de secciones (`MAESTRO` / `DETALLE` en una línea sola).
+ * Las líneas vacías se ignoran; el resto se parsea como tabla de esa sección.
+ */
+export function parsearCsvConSecciones(contenido: string): {
+  maestro?: CsvTabla;
+  detalle?: CsvTabla;
+} {
+  const lineas = quitarBom(contenido).split("\n");
+  const bloques: Record<string, string[]> = {};
+  let actual: "maestro" | "detalle" | null = null;
+  for (const linea of lineas) {
+    const recortada = linea.trim();
+    if (!recortada) continue;
+    const campos = partirCampos(recortada);
+    if (campos.length === 1) {
+      const etiqueta = normalizarEncabezado(campos[0]);
+      if (etiqueta === "maestro" || etiqueta === "detalle") {
+        actual = etiqueta;
+        if (!bloques[actual]) bloques[actual] = [];
+        continue;
+      }
+    }
+    if (actual) bloques[actual].push(linea);
+  }
+  const out: { maestro?: CsvTabla; detalle?: CsvTabla } = {};
+  if (bloques.maestro?.length) out.maestro = parsearCsv(bloques.maestro.join("\n"));
+  if (bloques.detalle?.length) out.detalle = parsearCsv(bloques.detalle.join("\n"));
+  return out;
+}
+
 /** Convierte una fila de campos en un mapa encabezado-normalizado → valor. */
 export function filaComoMapa(tabla: CsvTabla, fila: string[]): Record<string, string> {
   const mapa: Record<string, string> = {};
