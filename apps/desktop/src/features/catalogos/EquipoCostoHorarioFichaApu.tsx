@@ -1247,7 +1247,6 @@ export function EquipoCostoHorarioFichaApu({
                 [
                   ["Consumo", "subtotal_consumo"],
                   ["Operación", "subtotal_operacion"],
-                  ["Variable", "cargo_variable_hora"],
                 ] as const
               ).map(([etiqueta, campo]) => (
                 <tr key={campo}>
