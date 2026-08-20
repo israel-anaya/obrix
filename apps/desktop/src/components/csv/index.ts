@@ -1,19 +1,19 @@
-export { CsvOperacionDialog } from "@/components/csv/CsvOperacionDialog";
-export { useCsvOperacion } from "@/components/csv/useCsvOperacion";
-export { elegirArchivoCsv, elegirDestinoCsv, escribirCsvElegido, leerCsvElegido } from "@/components/csv/archivos";
-export { EVENTO_CSV_PROGRESO, escucharProgresoCsv } from "@/components/csv/progreso";
+export { CsvOperationDialog } from "@/components/csv/CsvOperationDialog";
+export { useCsvOperation } from "@/components/csv/useCsvOperation";
+export { pickCsvFile, pickCsvDestination, writeChosenCsv, readChosenCsv } from "@/components/csv/files";
+export { CSV_PROGRESS_EVENT, listenCsvProgress } from "@/components/csv/progress";
 export {
-  CsvCancelado,
-  problemasDeTextos,
-  resultadoVacio,
-  type CsvAdaptador,
-  type CsvColumna,
-  type CsvContextoEjecucion,
-  type CsvExtraCamposProps,
-  type CsvModo,
-  type CsvPolitica,
-  type CsvPrevisualizacion,
-  type CsvProblema,
-  type CsvProgreso,
-  type CsvResultado,
-} from "@/components/csv/tipos";
+  CsvCancelled,
+  issuesFromTexts,
+  emptyResult,
+  type CsvAdapter,
+  type CsvColumn,
+  type CsvExecutionContext,
+  type CsvExtraFieldsProps,
+  type CsvMode,
+  type CsvPolicy,
+  type CsvPreview,
+  type CsvIssue,
+  type CsvProgress,
+  type CsvResult,
+} from "@/components/csv/types";

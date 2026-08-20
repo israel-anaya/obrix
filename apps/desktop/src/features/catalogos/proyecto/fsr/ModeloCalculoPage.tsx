@@ -1,0 +1,418 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, HelpCircle, ListTree, Plus, Save, Trash2 } from "lucide-react";
+import { ActionBar } from "@/components/ActionBar";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { GrafoCalculados } from "@/features/catalogos/proyecto/fsr/GrafoCalculados";
+import { PruebaModeloCalculo } from "@/features/catalogos/proyecto/fsr/PruebaModeloCalculo";
+import { RangoEditor } from "@/features/catalogos/proyecto/fsr/RangoEditor";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { evaluarModelo, validarModelo } from "@/lib/modeloCalculo";
+import { getFactorSalarioReal, updateFactorSalarioReal } from "@/lib/tauri";
+import {
+  TIPOS_PARAMETRO,
+  type CampoCalculado,
+  type FactorSalarioReal,
+  type ModeloCalculo,
+  type Parametro,
+  type TipoParametro,
+  type ValorRango,
+} from "@/lib/types";
+
+function filaAParametro(fila: Row): Parametro {
+  const tipo = (TIPOS_PARAMETRO as readonly string[]).includes(String(fila.tipo))
+    ? (fila.tipo as TipoParametro)
+    : "numero";
+  const base: Omit<Parametro, "valor_default"> = {
+    id: String(fila.id).trim(),
+    etiqueta: String(fila.etiqueta),
+    grupo: String(fila.grupo) || "General",
+    tipo,
+    referencia_legal: String(fila.referencia_legal) || undefined,
+    descripcion: String(fila.descripcion) || undefined,
+  };
+  if (tipo === "rango") {
+    return { ...base, valor_default: [{ clasificacion: "", inferior: 0, superior: null, valor: 0 }] };
+  }
+  if (tipo === "booleano") {
+    return { ...base, valor_default: Number(fila.valor_default) !== 0 };
+  }
+  return { ...base, valor_default: Number(fila.valor_default) || 0 };
+}
+
+function filaACalculado(fila: Row): CampoCalculado {
+  return {
+    id: String(fila.id).trim(),
+    etiqueta: String(fila.etiqueta),
+    tipo: "formula",
+    formula: String(fila.formula),
+    referencia_legal: String(fila.referencia_legal) || undefined,
+    descripcion: String(fila.descripcion) || undefined,
+  };
+}
+
+const COLUMNAS_PARAMETROS: DataGridConfig["columns"] = [
+  { field: "grupo", header: "Categoría", width: 94, noFilter: true },
+  { field: "id", header: "Id", width: 200 },
+  { field: "etiqueta", header: "Etiqueta", width: 260 },
+  { field: "tipo", header: "Tipo", width: 75, options: TIPOS_PARAMETRO, noFilter: true },
+  { field: "valor_default", header: "Default", width: 88, numeric: true, noFilter: true },
+  { field: "referencia_legal", header: "Referencia legal", width: 220, noFilter: true },
+  { field: "descripcion", header: "Descripción", width: 420, noFilter: true },
+];
+
+const COLUMNAS_CALCULADOS: DataGridConfig["columns"] = [
+  { field: "id", header: "Id", width: 220 },
+  { field: "etiqueta", header: "Etiqueta", width: 260 },
+  { field: "formula", header: "Fórmula", width: 400, noFilter: true },
+  { field: "referencia_legal", header: "Referencia legal", width: 220, noFilter: true },
+  { field: "descripcion", header: "Descripción", width: 420, noFilter: true },
+];
+
+// Constantes de módulo, no objetos literales en el JSX: `DataGrid` memoiza
+// sus columnas por la identidad de `config.columns`, así que un literal nuevo
+// en cada render rehace las `ColumnDef` y con ellas todas las celdas.
+const CONFIG_PARAMETROS: DataGridConfig = { title: "Parámetros", columns: COLUMNAS_PARAMETROS };
+const CONFIG_CALCULADOS: DataGridConfig = { title: "Campos calculados", columns: COLUMNAS_CALCULADOS };
+
+export function ModeloCalculoPage({ factorSalarioRealId }: { factorSalarioRealId: string }) {
+  const [fila, setFila] = useState<FactorSalarioReal | null>(null);
+  const [parametros, setParametros] = useState<Parametro[]>([]);
+  const [calculados, setCalculados] = useState<CampoCalculado[]>([]);
+  const [pestaña, setPestaña] = useState<"parametros" | "calculados" | "grafo">("parametros");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [guardadoAt, setGuardadoAt] = useState<string | null>(null);
+  const [indiceRangoAbierto, setIndiceRangoAbierto] = useState<number | null>(null);
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
+
+  const gridParametrosRef = useRef<DataGridHandle>(null);
+  const gridCalculadosRef = useRef<DataGridHandle>(null);
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState<number | null>(null);
+
+  useEffect(() => {
+    getFactorSalarioReal(factorSalarioRealId)
+      .then((f) => {
+        setFila(f);
+        try {
+          const modelo: ModeloCalculo = JSON.parse(f.modelo_calculo_json);
+          setParametros(modelo.parametros ?? []);
+          setCalculados(modelo.calculados ?? []);
+        } catch {
+          setParametros([]);
+          setCalculados([]);
+        }
+      })
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
+  }, [factorSalarioRealId]);
+
+  const errorValidacion = useMemo(() => validarModelo(parametros, calculados), [parametros, calculados]);
+
+  // Valores del modelo evaluado con los `valor_default` de cada parámetro — solo para mostrar
+  // en el grafo de campos calculados, no está atado a ninguna fila de prueba de la pestaña Probar.
+  const resultadoBaseGrafo = useMemo(() => {
+    if (errorValidacion) return null;
+    try {
+      return evaluarModelo(parametros, calculados, {}).scope;
+    } catch {
+      return null;
+    }
+  }, [parametros, calculados, errorValidacion]);
+
+  const filasParametros: Row[] = useMemo(
+    () =>
+      parametros.map((v, i) => ({
+        _id: String(i),
+        id: v.id,
+        etiqueta: v.etiqueta,
+        grupo: v.grupo,
+        tipo: v.tipo,
+        valor_default: v.tipo === "numero" ? (typeof v.valor_default === "number" ? v.valor_default : 0) : v.tipo === "booleano" ? (v.valor_default ? 1 : 0) : 0,
+        referencia_legal: v.referencia_legal ?? "",
+        descripcion: v.descripcion ?? "",
+      })),
+    [parametros],
+  );
+
+  const filasCalculados: Row[] = useMemo(
+    () =>
+      calculados.map((v, i) => ({
+        _id: String(i),
+        id: v.id,
+        etiqueta: v.etiqueta,
+        formula: v.formula ?? "",
+        referencia_legal: v.referencia_legal ?? "",
+        descripcion: v.descripcion ?? "",
+      })),
+    [calculados],
+  );
+
+  const patchParametro = (indice: number, patch: Partial<Parametro>) => {
+    setParametros((vs) => vs.map((v, i) => (i === indice ? { ...v, ...patch } : v)));
+  };
+  const patchCalculado = (indice: number, patch: Partial<CampoCalculado>) => {
+    setCalculados((vs) => vs.map((v, i) => (i === indice ? { ...v, ...patch } : v)));
+  };
+  const eliminarParametros = (indices: number[]) => {
+    const set = new Set(indices);
+    setParametros((vs) => vs.filter((_, i) => !set.has(i)));
+    setIndiceSeleccionado(null);
+  };
+  const eliminarCalculados = (indices: number[]) => {
+    const set = new Set(indices);
+    setCalculados((vs) => vs.filter((_, i) => !set.has(i)));
+    setIndiceSeleccionado(null);
+  };
+
+  const aplicarEdicionParametro = (fila: Row) => {
+    const indice = Number(fila._id);
+    const previo = parametros[indice];
+    const tipo = fila.tipo as TipoParametro;
+    const patch: Partial<Parametro> = {
+      id: String(fila.id).trim(),
+      etiqueta: String(fila.etiqueta),
+      grupo: String(fila.grupo) || "General",
+      tipo,
+      referencia_legal: String(fila.referencia_legal) || undefined,
+      descripcion: String(fila.descripcion) || undefined,
+    };
+    if (tipo === "rango") {
+      patch.valor_default = previo?.tipo === "rango" ? previo.valor_default : [{ clasificacion: "", inferior: 0, superior: null, valor: 0 }];
+    } else if (tipo === "booleano") {
+      patch.valor_default = Number(fila.valor_default) !== 0;
+    } else {
+      patch.valor_default = Number(fila.valor_default) || 0;
+    }
+    patchParametro(indice, patch);
+  };
+
+  const aplicarEdicionCalculado = (fila: Row) => {
+    const indice = Number(fila._id);
+    patchCalculado(indice, {
+      id: String(fila.id).trim(),
+      etiqueta: String(fila.etiqueta),
+      formula: String(fila.formula),
+      referencia_legal: String(fila.referencia_legal) || undefined,
+      descripcion: String(fila.descripcion) || undefined,
+    });
+  };
+
+  const guardar = async () => {
+    if (!fila || errorValidacion) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      const modelo: ModeloCalculo = { parametros, calculados };
+      const actualizado = await updateFactorSalarioReal(factorSalarioRealId, {
+        nombre: fila.nombre,
+        region_id: fila.region_id,
+        parametros_json: fila.parametros_json,
+        modelo_calculo_json: JSON.stringify(modelo),
+      });
+      setFila(actualizado);
+      setGuardadoAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const puedeEditarRango = pestaña === "parametros" && indiceSeleccionado !== null && parametros[indiceSeleccionado]?.tipo === "rango";
+
+  if (cargando) return <div className="p-6 text-sm text-muted-foreground">Cargando modelo de cálculo…</div>;
+  if (!fila) return <div className="p-6 text-sm text-destructive">{error ?? "No se pudo cargar esta configuración de FSR."}</div>;
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-end border-b border-border px-4 py-2">
+        <div className="flex items-center gap-3">
+          {guardadoAt && !guardando && <span className="text-xs text-muted-foreground">Guardado a las {guardadoAt}</span>}
+          <ActionBar
+            actions={[
+              {
+                icon: Plus,
+                title: pestaña === "calculados" ? "Agregar campo calculado" : "Agregar parámetro",
+                onClick: () => (pestaña === "parametros" ? gridParametrosRef : gridCalculadosRef).current?.addRow(),
+                disabled: pestaña === "grafo",
+              },
+              {
+                icon: ListTree,
+                title: "Editar rango",
+                onClick: () => setIndiceRangoAbierto(indiceSeleccionado),
+                disabled: !puedeEditarRango,
+              },
+              {
+                icon: Trash2,
+                title: "Eliminar seleccionado",
+                onClick: () => (pestaña === "parametros" ? gridParametrosRef : gridCalculadosRef).current?.deleteSelectedRows(),
+                disabled: pestaña === "grafo" || indiceSeleccionado === null,
+              },
+              { icon: Save, title: guardando ? "Guardando…" : "Guardar cambios", onClick: guardar, disabled: guardando || !!errorValidacion },
+              { icon: HelpCircle, title: "Ayuda sobre fórmulas", onClick: () => setAyudaAbierta(true), disabled: pestaña === "grafo" },
+            ]}
+          />
+        </div>
+      </div>
+
+      {error && <p className="border-b border-border px-4 py-1.5 text-xs text-destructive">{error}</p>}
+      {errorValidacion && (
+        <div className="flex items-center gap-2 border-b border-border bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-400">
+          <AlertTriangle size={16} className="shrink-0" />
+          {errorValidacion}
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+        <div className="flex gap-1 border-b border-border">
+          <button
+            type="button"
+            className={cn(
+              "px-3 py-1.5 text-sm",
+              pestaña === "parametros" ? "border-b-2 border-primary font-medium text-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => {
+              setPestaña("parametros");
+              setIndiceSeleccionado(null);
+            }}
+          >
+            Parámetros ({parametros.length})
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "px-3 py-1.5 text-sm",
+              pestaña === "calculados" ? "border-b-2 border-primary font-medium text-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => {
+              setPestaña("calculados");
+              setIndiceSeleccionado(null);
+            }}
+          >
+            Campos calculados ({calculados.length})
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "px-3 py-1.5 text-sm",
+              pestaña === "grafo" ? "border-b-2 border-primary font-medium text-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => {
+              setPestaña("grafo");
+              setIndiceSeleccionado(null);
+            }}
+          >
+            Grafo
+          </button>
+        </div>
+
+        {pestaña === "parametros" && (
+          <div className="min-h-0 flex-1">
+            <DataGrid
+              key="parametros"
+              ref={gridParametrosRef}
+              config={CONFIG_PARAMETROS}
+              initialRows={filasParametros}
+              selectionMode="single"
+              onRowSelected={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
+              onAddRow={(fila) => setParametros((vs) => [...vs, filaAParametro(fila)])}
+              onDeleteRows={(ids) => eliminarParametros(ids.map(Number))}
+              onEditRow={aplicarEdicionParametro}
+            />
+          </div>
+        )}
+
+        {pestaña === "calculados" && (
+          <div className="flex min-h-0 flex-1 flex-col gap-2">
+            <div className="h-1/4 min-h-0">
+              <DataGrid
+                key="calculados"
+                ref={gridCalculadosRef}
+                config={CONFIG_CALCULADOS}
+                initialRows={filasCalculados}
+                selectionMode="single"
+                onRowSelected={(fila) => setIndiceSeleccionado(fila ? Number(fila._id) : null)}
+                onAddRow={(fila) => setCalculados((vs) => [...vs, filaACalculado(fila)])}
+                onDeleteRows={(ids) => eliminarCalculados(ids.map(Number))}
+                onEditRow={aplicarEdicionCalculado}
+              />
+            </div>
+            <div className="flex h-3/4 min-h-0 flex-col">
+              <PruebaModeloCalculo parametros={parametros} calculados={calculados} />
+            </div>
+          </div>
+        )}
+
+        {pestaña === "grafo" && (
+          <div className="min-h-0 flex-1">
+            <GrafoCalculados parametros={parametros} calculados={calculados} resultadoBase={resultadoBaseGrafo} />
+          </div>
+        )}
+      </div>
+
+      <Sheet open={indiceRangoAbierto !== null} onOpenChange={(open) => !open && setIndiceRangoAbierto(null)}>
+        <SheetContent className="w-full max-w-[128rem] overflow-y-auto p-4 data-[side=right]:sm:max-w-[128rem]">
+          <SheetHeader>
+            <SheetTitle>Renglones de "{indiceRangoAbierto !== null ? parametros[indiceRangoAbierto]?.etiqueta : ""}"</SheetTitle>
+            <SheetDescription>
+              Cada renglón cubre un rango de valores (inferior a superior). El renglón sin "superior" queda abierto
+              por arriba.
+            </SheetDescription>
+          </SheetHeader>
+          {indiceRangoAbierto !== null && parametros[indiceRangoAbierto]?.tipo === "rango" && (
+            <div className="mt-4">
+              <RangoEditor
+                renglones={(parametros[indiceRangoAbierto].valor_default as ValorRango) ?? []}
+                onCambiar={(renglones) => patchParametro(indiceRangoAbierto, { valor_default: renglones })}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={ayudaAbierta} onOpenChange={setAyudaAbierta}>
+        <SheetContent className="w-full max-w-md overflow-y-auto p-4">
+          <SheetHeader>
+            <SheetTitle>Ayuda sobre fórmulas</SheetTitle>
+            <SheetDescription>Cómo escribir la fórmula de un campo calculado.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 space-y-4 text-xs">
+            <p className="text-muted-foreground">
+              Usa el id de cualquier otra variable (parámetro o campo calculado) directamente en la fórmula.
+            </p>
+            <div>
+              <p className="mb-1.5 font-medium">Funciones disponibles</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">round(x, n)</code> — redondea{" "}
+                  <code className="text-foreground">x</code> a <code className="text-foreground">n</code> decimales.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">min(a, b)</code> /{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">max(a, b)</code> — el menor o mayor de dos valores.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">abs(x)</code> — valor absoluto.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">if(cond, a, b)</code> — <code className="text-foreground">a</code> si{" "}
+                  <code className="text-foreground">cond</code> es verdadero, si no <code className="text-foreground">b</code>.
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">rango('id_variable', valor)</code> — busca el renglón de un
+                  parámetro tipo "rango" que cubre <code className="text-foreground">valor</code> y devuelve su valor.
+                </li>
+              </ul>
+            </div>
+            <p className="text-muted-foreground">
+              Para capturar los renglones de un parámetro tipo "rango", selecciónalo en la pestaña Parámetros y usa el
+              ícono "Editar rango".
+            </p>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}

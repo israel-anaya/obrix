@@ -1,0 +1,222 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { ActionBar } from "@/components/ActionBar";
+import { SearchInput } from "@/components/SearchInput";
+import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { toast } from "@/hooks/use-toast";
+import { OrganizacionFormPanel } from "@/features/catalogos/portafolio/organizaciones/OrganizacionFormPanel";
+import { useCatalogGeneral } from "@/hooks/useCatalogGeneral";
+import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
+import {
+  createOrganizacion,
+  deleteOrganizacion,
+  listMonedas,
+  listOrganizaciones,
+  listUsuarios,
+  updateOrganizacion,
+} from "@/lib/tauri";
+import { ordenarPor } from "@/lib/ordenar";
+import type { Moneda } from "@/lib/types";
+import { TIPOS_ORGANIZACION, type TipoOrganizacion } from "@/lib/types";
+
+const ORGANIZACION_API = {
+  list: listOrganizaciones,
+  create: createOrganizacion,
+  update: updateOrganizacion,
+  remove: deleteOrganizacion,
+};
+
+const COLUMNAS_CONTROL = [
+  { field: "created_at", header: "Creado", width: 126, readOnly: true, date: true },
+  { field: "created_by", header: "Creado por", width: 220, readOnly: true },
+  { field: "updated_at", header: "Actualizado", width: 126, readOnly: true, date: true },
+  { field: "updated_by", header: "Actualizado por", width: 220, readOnly: true },
+];
+
+/**
+ * Bespoke, igual que `FamiliasInsumoSeccion` — el descriptor genérico de
+ * `catalogosGenerales.ts` no puede resolver `moneda_default` porque sus
+ * opciones dependen del catálogo `Moneda`, cargado en tiempo de ejecución.
+ */
+export function OrganizacionSeccion() {
+  const gridRef = useRef<DataGridHandle>(null);
+  const [puedeEliminar, setPuedeEliminar] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
+  const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
+  const { items, error, loading, create, update, remove, reload, refresh } = useCatalogGeneral(ORGANIZACION_API);
+  // `useCatalogGeneral` solo refresca su propia lista local (`items`) — el
+  // resto de la app lee organizaciones de `OrganizacionContext`, que no se
+  // entera de estos cambios por su cuenta (ver `App.recargarOrganizaciones`).
+  const { reload: recargarOrganizacionContext } = useOrganizacionActiva();
+
+  useEffect(() => {
+    if (error) toast({ description: error, variant: "destructive" });
+  }, [error]);
+
+  const [monedas, setMonedas] = useState<Moneda[]>([]);
+  const recargarMonedas = () => listMonedas().then(setMonedas).catch(() => {});
+  useEffect(() => {
+    recargarMonedas();
+  }, []);
+
+  const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
+  const recargarUsuarios = () =>
+    listUsuarios().then((usuarios) => {
+      setNombresPorUsuarioId(Object.fromEntries(usuarios.map((u) => [u.id, u.nombre])));
+    });
+  useEffect(() => {
+    recargarUsuarios();
+  }, []);
+
+  // Recarga todo lo que se muestra en esta vista — el catálogo en sí, y las
+  // dos listas auxiliares (monedas, nombres de usuario) que alimentan sus
+  // columnas.
+  const recargarTodo = () => {
+    void reload();
+    void recargarMonedas();
+    void recargarUsuarios();
+  };
+
+  const codigoPorMonedaId = useMemo(() => Object.fromEntries(monedas.map((m) => [m.id, m.codigo])), [monedas]);
+  const monedaIdPorCodigo = useMemo(() => Object.fromEntries(monedas.map((m) => [m.codigo, m.id])), [monedas]);
+
+  const config: DataGridConfig = useMemo(
+    () => ({
+      title: "Organización",
+      columns: [
+        { field: "razon_social", header: "Razón social", width: 260 },
+        { field: "rfc", header: "RFC", width: 140 },
+        { field: "tipo", header: "Tipo", width: 160, options: TIPOS_ORGANIZACION },
+        {
+          field: "moneda_default",
+          header: "Moneda default",
+          width: 160,
+          options: ordenarPor(monedas, (m) => m.codigo).map((m) => m.codigo),
+        },
+        { field: "horas_jornada", header: "Horas por jornada", numeric: true, width: 150, default: 8 },
+        ...COLUMNAS_CONTROL,
+      ],
+    }),
+    [monedas],
+  );
+
+  const filas: Row[] = useMemo(
+    () =>
+      items.map((o) => ({
+        _id: o.id,
+        razon_social: o.razon_social,
+        rfc: o.rfc,
+        tipo: o.tipo,
+        moneda_default: codigoPorMonedaId[o.moneda_default_id] ?? "",
+        horas_jornada: o.horas_jornada,
+        created_at: o.created_at,
+        created_by: nombresPorUsuarioId[o.created_by] ?? o.created_by,
+        updated_at: o.updated_at ?? "",
+        updated_by: (o.updated_by && nombresPorUsuarioId[o.updated_by]) ?? o.updated_by ?? "",
+      })),
+    [items, codigoPorMonedaId, nombresPorUsuarioId],
+  );
+
+  const filaAOrganizacionData = (fila: Row) => ({
+    razon_social: String(fila.razon_social),
+    rfc: String(fila.rfc),
+    // La celda usa un selector (opciones: TIPOS_ORGANIZACION), así que el
+    // valor siempre es uno de los válidos — el cast solo recupera el tipo literal.
+    tipo: String(fila.tipo) as TipoOrganizacion,
+    // La celda usa un selector (opciones: monedas.map(m => m.codigo)), así
+    // que el valor siempre es un código válido salvo en una fila nueva sin
+    // tocar todavía — mismo caso límite que ya existe hoy para `tipo`.
+    moneda_default_id: monedaIdPorCodigo[String(fila.moneda_default)] ?? "",
+    horas_jornada: String(fila.horas_jornada ?? 8),
+  });
+
+  const itemSeleccionado = items.find((o) => o.id === seleccionadoId) ?? null;
+
+  const grid = (
+    <DataGrid
+      ref={gridRef}
+      config={config}
+      initialRows={filas}
+      loading={loading}
+      selectionMode="single"
+      highlightSelection={panelFichaAbierto}
+      initialSelectedId={seleccionadoId}
+      search={busqueda}
+      onSearchChange={setBusqueda}
+      onSelectionChange={setPuedeEliminar}
+      onRowSelected={(fila) => setSeleccionadoId(fila?._id ?? null)}
+      onAddRow={(fila) => create(filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())}
+      onDeleteRows={(ids) => remove(ids).then(() => recargarOrganizacionContext())}
+      onEditRow={(fila) =>
+        update(fila._id, filaAOrganizacionData(fila)).then(() => recargarOrganizacionContext())
+      }
+    />
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+        <h2 className="text-sm font-semibold">Organización</h2>
+        <div className="flex items-center gap-2">
+          <SearchInput value={busqueda} onChange={setBusqueda} />
+          <ActionBar
+            actions={[
+              { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icon: FileText,
+                title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
+              },
+            ]}
+            menu={[
+              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+              {
+                icon: Trash2,
+                title: "Eliminar seleccionado",
+                onClick: () => gridRef.current?.deleteSelectedRows(),
+                disabled: !puedeEliminar,
+                destructive: true,
+              },
+            ]}
+          />
+        </div>
+      </div>
+      <div className="min-h-0 flex-1">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="organizaciones-grid"
+            defaultSize="65"
+            minSize="40"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            {grid}
+          </ResizablePanel>
+          {panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="organizaciones-detalle"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <OrganizacionFormPanel
+                  organizacion={itemSeleccionado}
+                  monedas={monedas}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={() => {
+                    void refresh();
+                    void recargarOrganizacionContext();
+                  }}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
+      </div>
+    </div>
+  );
+}

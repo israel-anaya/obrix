@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen, FileText, FolderKanban, Grid3x3, LayoutGrid, type LucideIcon, Package, Plus, Settings2, Table2, Trash2, Users } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { BarraAcciones } from "@/components/BarraAcciones";
+import { ActionBar } from "@/components/ActionBar";
 import { CuentaFooter } from "@/components/CuentaFooter";
 import { EditorTabs, type EditorTabInfo } from "@/components/EditorTabs";
 import { LoginGate } from "@/components/LoginGate";
 import { MenuBar, type MenuDef } from "@/components/MenuBar";
-import { OperacionProgresoDialog } from "@/components/OperacionProgresoDialog";
+import { OperationProgressDialog } from "@/components/OperationProgressDialog";
 import { SidebarHeader } from "@/components/SidebarHeader";
 import { WindowFrame } from "@/components/WindowFrame";
 import { PlaceholderTab } from "@/components/PlaceholderTab";
@@ -28,34 +28,34 @@ import {
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
 import { activeGridClipboard } from "@/components/grid/gridClipboard";
-import { CatalogosSidebar } from "@/features/catalogos/CatalogosSidebar";
-import { ClientesSeccion } from "@/features/catalogos/ClientesSeccion";
-import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/costosDirectosTree";
-import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/CuadrillasSeccion";
-import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/EquipoCostoHorarioSeccion";
-import { EscalafonSalarioSeccion } from "@/features/catalogos/EscalafonSalarioSeccion";
-import { HerramientaSeccion } from "@/features/catalogos/HerramientaSeccion";
-import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/MaterialesCatalogoSeccion";
-import { MatrizOficioRegionSeccion } from "@/features/catalogos/MatrizOficioRegionSeccion";
-import { MesaEquivalentesSeccion } from "@/features/catalogos/MesaEquivalentesSeccion";
-import { PerfilInactividadEquipoSeccion, type PerfilInactividadVista } from "@/features/catalogos/PerfilInactividadEquipoSeccion";
-import { PuenteBaseRealSeccion } from "@/features/catalogos/PuenteBaseRealSeccion";
-import { RadarMaterialesSeccion } from "@/features/catalogos/RadarMaterialesSeccion";
-import { ProveedoresSeccion } from "@/features/catalogos/ProveedoresSeccion";
-import { TabuladoresSalarioSeccion, type TabuladoresSalarioVista } from "@/features/catalogos/TabuladoresSalarioSeccion";
+import { CatalogosSidebar } from "@/features/catalogos/compartido/CatalogosSidebar";
+import { ClientesSeccion } from "@/features/catalogos/portafolio/clientes/ClientesSeccion";
+import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/compartido/costosDirectosTree";
+import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/proyecto/cuadrillas/CuadrillasSeccion";
+import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/proyecto/equipo/EquipoCostoHorarioSeccion";
+import { EscalafonSalarioSeccion } from "@/features/catalogos/proyecto/mano-obra/EscalafonSalarioSeccion";
+import { HerramientaSeccion } from "@/features/catalogos/proyecto/equipo/HerramientaSeccion";
+import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/proyecto/materiales/MaterialesCatalogoSeccion";
+import { MatrizOficioRegionSeccion } from "@/features/catalogos/proyecto/mano-obra/MatrizOficioRegionSeccion";
+import { MesaEquivalentesSeccion } from "@/features/catalogos/proyecto/materiales/MesaEquivalentesSeccion";
+import { PerfilInactividadEquipoSeccion, type PerfilInactividadVista } from "@/features/catalogos/proyecto/equipo/PerfilInactividadEquipoSeccion";
+import { PuenteBaseRealSeccion } from "@/features/catalogos/proyecto/mano-obra/PuenteBaseRealSeccion";
+import { RadarMaterialesSeccion } from "@/features/catalogos/proyecto/materiales/RadarMaterialesSeccion";
+import { ProveedoresSeccion } from "@/features/catalogos/portafolio/proveedores/ProveedoresSeccion";
+import { TabuladoresSalarioSeccion, type TabuladoresSalarioVista } from "@/features/catalogos/proyecto/mano-obra/TabuladoresSalarioSeccion";
 import { SettingsPage } from "@/features/configuracion/SettingsPage";
-import { CatalogoGeneralSeccion } from "@/features/configuracion/CatalogoGeneralSeccion";
-import { CATALOGOS_GENERALES } from "@/features/configuracion/catalogosGenerales";
-import { FamiliasInsumoSeccion } from "@/features/configuracion/FamiliasInsumoSeccion";
-import { fichaCatalogoMaestro } from "@/features/configuracion/fichaCatalogoMaestro";
-import { OrganizacionSeccion } from "@/features/configuracion/OrganizacionSeccion";
+import { CatalogoGeneralSeccion } from "@/features/catalogos/compartido/CatalogoGeneralSeccion";
+import { CATALOGOS_GENERALES } from "@/features/catalogos/compartido/catalogosGenerales";
+import { FamiliasInsumoSeccion } from "@/features/catalogos/portafolio/familias-insumo/FamiliasInsumoSeccion";
+import { fichaCatalogoMaestro } from "@/features/catalogos/compartido/fichaCatalogoMaestro";
+import { OrganizacionSeccion } from "@/features/catalogos/portafolio/organizaciones/OrganizacionSeccion";
 import { PortafolioConfigSidebar } from "@/features/configuracion/PortafolioConfigSidebar";
-import { UsuariosSeccion } from "@/features/configuracion/UsuariosSeccion";
+import { UsuariosSeccion } from "@/features/catalogos/portafolio/usuarios/UsuariosSeccion";
 import { ArbolDemo } from "@/features/demo/ArbolDemo";
 import { HojaCalculoPage } from "@/features/hoja-calculo/HojaCalculoPage";
-import { CalcularFsrPage } from "@/features/fsr/CalcularFsrPage";
-import { FactorSalarioRealSeccion } from "@/features/fsr/FactorSalarioRealSeccion";
-import { ModeloCalculoPage } from "@/features/fsr/ModeloCalculoPage";
+import { CalcularFsrPage } from "@/features/catalogos/proyecto/fsr/CalcularFsrPage";
+import { FactorSalarioRealSeccion } from "@/features/catalogos/proyecto/fsr/FactorSalarioRealSeccion";
+import { ModeloCalculoPage } from "@/features/catalogos/proyecto/fsr/ModeloCalculoPage";
 import { OrganizacionContext } from "@/features/organizacion/OrganizacionContext";
 import { ProyectosSidebar } from "@/features/proyectos/ProyectosSidebar";
 import type { Proyecto } from "@/features/proyectos/types";
@@ -597,12 +597,12 @@ export default function App() {
       : undefined;
 
   const tabActions = catalogoActivoConfig && (
-    <BarraAcciones
-      acciones={[
-        { icono: Plus, titulo: "Agregar fila", onClick: () => dataGridRef.current?.addRow() },
+    <ActionBar
+      actions={[
+        { icon: Plus, title: "Agregar fila", onClick: () => dataGridRef.current?.addRow() },
         {
-          icono: Trash2,
-          titulo: "Eliminar fila seleccionada",
+          icon: Trash2,
+          title: "Eliminar fila seleccionada",
           onClick: () => dataGridRef.current?.deleteSelectedRows(),
           disabled: !catalogoPuedeEliminar,
         },
@@ -780,12 +780,12 @@ export default function App() {
           </ResizablePanel>
         </ResizablePanelGroup>
 
-        <OperacionProgresoDialog
-          abierto={operacionPortafolio !== null}
-          titulo={operacionPortafolio?.titulo ?? ""}
-          mensaje={operacionPortafolio?.mensaje ?? ""}
+        <OperationProgressDialog
+          open={operacionPortafolio !== null}
+          title={operacionPortafolio?.titulo ?? ""}
+          message={operacionPortafolio?.mensaje ?? ""}
           error={operacionPortafolio?.error}
-          onCerrar={() => setOperacionPortafolio(null)}
+          onClose={() => setOperacionPortafolio(null)}
         />
 
         <AlertDialog

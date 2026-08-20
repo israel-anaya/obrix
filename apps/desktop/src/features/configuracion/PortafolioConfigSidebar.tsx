@@ -1,6 +1,6 @@
 import { Building2, CircleDollarSign, Contact, Layers, MapPin, Ruler, Store, type LucideIcon, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CATALOGOS_GENERALES } from "@/features/configuracion/catalogosGenerales";
+import { CATALOGOS_GENERALES } from "@/features/catalogos/compartido/catalogosGenerales";
 
 const ICONOS: Record<string, LucideIcon> = {
   organizaciones: Building2,
