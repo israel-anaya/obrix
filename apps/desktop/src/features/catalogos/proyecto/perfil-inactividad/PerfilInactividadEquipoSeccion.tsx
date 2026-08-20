@@ -1,5 +1,5 @@
-import { MatrizPerfilInactividadSeccion } from "@/features/catalogos/proyecto/equipo/MatrizPerfilInactividadSeccion";
-import { PerfilInactividadEquipoGridVista } from "@/features/catalogos/proyecto/equipo/PerfilInactividadEquipoGridVista";
+import { MatrizPerfilInactividadSeccion } from "@/features/catalogos/proyecto/perfil-inactividad/MatrizPerfilInactividadSeccion";
+import { PerfilInactividadEquipoGridVista } from "@/features/catalogos/proyecto/perfil-inactividad/PerfilInactividadEquipoGridVista";
 
 export type PerfilInactividadVista = "grid" | "matriz";
 

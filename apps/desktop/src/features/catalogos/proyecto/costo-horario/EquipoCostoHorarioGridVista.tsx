@@ -5,7 +5,7 @@ import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
-import { adaptadorExportEquipoCostoHorario, adaptadorImportEquipoCostoHorario } from "@/features/catalogos/proyecto/equipo/csv/adaptadorEquipoCostoHorario";
+import { adaptadorExportEquipoCostoHorario, adaptadorImportEquipoCostoHorario } from "@/features/catalogos/proyecto/costo-horario/csv/adaptadorEquipoCostoHorario";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createEquipoCostoHorario,

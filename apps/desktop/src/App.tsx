@@ -32,13 +32,13 @@ import { CatalogosSidebar } from "@/features/catalogos/compartido/CatalogosSideb
 import { ClientesSeccion } from "@/features/catalogos/portafolio/clientes/ClientesSeccion";
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/compartido/costosDirectosTree";
 import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/proyecto/cuadrillas/CuadrillasSeccion";
-import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/proyecto/equipo/EquipoCostoHorarioSeccion";
+import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioSeccion";
 import { EscalafonSalarioSeccion } from "@/features/catalogos/proyecto/mano-obra/EscalafonSalarioSeccion";
-import { HerramientaSeccion } from "@/features/catalogos/proyecto/equipo/HerramientaSeccion";
+import { HerramientaSeccion } from "@/features/catalogos/proyecto/herramienta/HerramientaSeccion";
 import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/proyecto/materiales/MaterialesCatalogoSeccion";
 import { MatrizOficioRegionSeccion } from "@/features/catalogos/proyecto/mano-obra/MatrizOficioRegionSeccion";
 import { MesaEquivalentesSeccion } from "@/features/catalogos/proyecto/materiales/MesaEquivalentesSeccion";
-import { PerfilInactividadEquipoSeccion, type PerfilInactividadVista } from "@/features/catalogos/proyecto/equipo/PerfilInactividadEquipoSeccion";
+import { PerfilInactividadEquipoSeccion, type PerfilInactividadVista } from "@/features/catalogos/proyecto/perfil-inactividad/PerfilInactividadEquipoSeccion";
 import { PuenteBaseRealSeccion } from "@/features/catalogos/proyecto/mano-obra/PuenteBaseRealSeccion";
 import { RadarMaterialesSeccion } from "@/features/catalogos/proyecto/materiales/RadarMaterialesSeccion";
 import { ProveedoresSeccion } from "@/features/catalogos/portafolio/proveedores/ProveedoresSeccion";

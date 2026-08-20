@@ -12,7 +12,7 @@ import {
   filaADatos,
   perfilAFila,
   promedioPorcentaje,
-} from "@/features/catalogos/proyecto/equipo/perfilInactividadGrid";
+} from "@/features/catalogos/proyecto/perfil-inactividad/perfilInactividadGrid";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {

@@ -5,9 +5,9 @@ import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { PerfilInactividadEquipoFormPanel } from "@/features/catalogos/proyecto/equipo/PerfilInactividadEquipoFormPanel";
-import { adaptadorExportPerfiles, adaptadorImportPerfiles } from "@/features/catalogos/proyecto/equipo/csv/adaptadorPerfiles";
-import { CONFIG, filaADatos, perfilAFila } from "@/features/catalogos/proyecto/equipo/perfilInactividadGrid";
+import { PerfilInactividadEquipoFormPanel } from "@/features/catalogos/proyecto/perfil-inactividad/PerfilInactividadEquipoFormPanel";
+import { adaptadorExportPerfiles, adaptadorImportPerfiles } from "@/features/catalogos/proyecto/perfil-inactividad/csv/adaptadorPerfiles";
+import { CONFIG, filaADatos, perfilAFila } from "@/features/catalogos/proyecto/perfil-inactividad/perfilInactividadGrid";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {

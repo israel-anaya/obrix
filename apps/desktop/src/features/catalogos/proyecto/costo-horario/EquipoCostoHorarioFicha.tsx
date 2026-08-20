@@ -16,7 +16,7 @@ import { SearchInput } from "@/components/SearchInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
-import { EquipoCostoHorarioFichaApu } from "@/features/catalogos/proyecto/equipo/EquipoCostoHorarioFichaApu";
+import { EquipoCostoHorarioFichaApu } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioFichaApu";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { formatearFecha } from "@/lib/fecha";
 import { ordenarPor } from "@/lib/ordenar";

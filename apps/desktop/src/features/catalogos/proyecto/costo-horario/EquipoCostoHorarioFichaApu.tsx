@@ -227,7 +227,7 @@ function CeldaCostoComposicion({
     <>
       <div className="inline-flex items-center justify-end gap-1">
         {mostrarGlobeCheck ? (
-          <span title={`Costo nacional (sin tabulador en ${nombreRegion})`}>
+          <span title={`Costo nacional (sin costo en ${nombreRegion})`}>
             <GlobeCheck size={16} className="shrink-0 text-primary" aria-label="Costo nacional" />
           </span>
         ) : null}

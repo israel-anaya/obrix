@@ -5,8 +5,8 @@ import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
-import { HerramientaFormPanel } from "@/features/catalogos/proyecto/equipo/HerramientaFormPanel";
-import { adaptadorExportHerramienta, adaptadorImportHerramienta } from "@/features/catalogos/proyecto/equipo/csv/adaptadorHerramienta";
+import { HerramientaFormPanel } from "@/features/catalogos/proyecto/herramienta/HerramientaFormPanel";
+import { adaptadorExportHerramienta, adaptadorImportHerramienta } from "@/features/catalogos/proyecto/herramienta/csv/adaptadorHerramienta";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createHerramienta,

@@ -1,5 +1,5 @@
-import { EquipoCostoHorarioFicha } from "@/features/catalogos/proyecto/equipo/EquipoCostoHorarioFicha";
-import { EquipoCostoHorarioGridVista } from "@/features/catalogos/proyecto/equipo/EquipoCostoHorarioGridVista";
+import { EquipoCostoHorarioFicha } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioFicha";
+import { EquipoCostoHorarioGridVista } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioGridVista";
 
 export type EquipoCostoHorarioVista = "grid" | "ficha";
 
