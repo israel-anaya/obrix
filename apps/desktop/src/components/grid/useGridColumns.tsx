@@ -127,6 +127,10 @@ export function useGridColumns(configColumns: DataGridColumn[], selectionMode: "
         // stretches into whatever space the fixed-width columns leave.
         flex: grows ? `1 1 ${width}` : `0 0 ${width}`,
         width: grows ? "auto" : width,
+        // Flex items default to `min-width: auto`, which for a shrinkable
+        // (`grow`) cell resolves to its unwrapped text width — long content
+        // then refuses to shrink and spills over the columns after it.
+        minWidth: 0,
         ...(left !== undefined ? { left: left } : { scrollMarginLeft: pinnedWidth }),
       });
       classes.set(

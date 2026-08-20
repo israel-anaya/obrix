@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Layers, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
 import { adaptadorExportEquipoCostoHorario, adaptadorImportEquipoCostoHorario } from "@/features/catalogos/proyecto/costo-horario/csv/adaptadorEquipoCostoHorario";
+import { EquipoCostoHorarioComposicionPanel } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioComposicionPanel";
+import { EquipoCostoHorarioFormPanel } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioFormPanel";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createEquipoCostoHorario,
@@ -49,6 +52,9 @@ export function EquipoCostoHorarioGridVista() {
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
+  const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
+  const [panelComposicionAbierto, setPanelComposicionAbierto] = useState(false);
+  const [equipoSeleccionadoId, setEquipoSeleccionadoId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   // Arranca en `true`: entre el montaje y la primera respuesta el grid tiene
   // cero filas, y sin esto diría "Sin registros" antes de haber preguntado.
@@ -230,6 +236,8 @@ export function EquipoCostoHorarioGridVista() {
     };
   };
 
+  const equipoSeleccionado = equipos.find((e) => e.id === equipoSeleccionadoId) ?? null;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
@@ -237,6 +245,11 @@ export function EquipoCostoHorarioGridVista() {
           <ActionBar
             actions={[
               { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
+              {
+                icon: FileText,
+                title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
+              },
               ACTION_BAR_SEPARATOR,
               {
                 icon: Download,
@@ -251,6 +264,13 @@ export function EquipoCostoHorarioGridVista() {
                 onClick: () =>
                   setCsvAdaptador(adaptadorImportEquipoCostoHorario()),
                 disabled: csvAdaptador !== null,
+              },
+              ACTION_BAR_SEPARATOR,
+              {
+                icon: Layers,
+                title: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
+                onClick: () => setPanelComposicionAbierto((v) => !v),
+                disabled: !panelComposicionAbierto && equipos.length === 0,
               },
             ]}
           />
@@ -271,19 +291,80 @@ export function EquipoCostoHorarioGridVista() {
         />
       </div>
       <div className="min-h-0 flex-1">
-        <DataGrid
-          ref={gridRef}
-          config={config}
-          initialRows={filas}
-          loading={cargando}
-          selectionMode="single"
-          search={busqueda}
-          onSearchChange={setBusqueda}
-          onSelectionChange={setPuedeEliminar}
-          onAddRow={(fila) => createEquipoCostoHorario(filaAEquipoCostoHorarioData(fila)).then(refrescarEquipos)}
-          onEditRow={(fila) => updateEquipoCostoHorario(fila._id, filaAEquipoCostoHorarioData(fila)).then(refrescarEquipos)}
-          onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteEquipoCostoHorario(id))).then(refrescarEquipos)}
-        />
+        {/* Los grupos viven siempre: si el grid pasa de hijo directo a panel
+            (o al revés) React lo desmonta, el virtualizador vuelve a scroll 0
+            y el renglón seleccionado deja de verse. */}
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel
+            id="equipo-costo-horario-principal"
+            defaultSize="65"
+            minSize="35"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          >
+            <ResizablePanelGroup orientation="vertical" className="h-full">
+              <ResizablePanel
+                id="equipo-costo-horario-grid"
+                defaultSize="30"
+                minSize="15"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <DataGrid
+                  ref={gridRef}
+                  config={config}
+                  initialRows={filas}
+                  loading={cargando}
+                  selectionMode="single"
+                  highlightSelection={panelFichaAbierto || panelComposicionAbierto}
+                  initialSelectedId={equipoSeleccionadoId}
+                  search={busqueda}
+                  onSearchChange={setBusqueda}
+                  onSelectionChange={setPuedeEliminar}
+                  onRowSelected={(fila) => setEquipoSeleccionadoId(fila?._id ?? null)}
+                  onAddRow={(fila) => createEquipoCostoHorario(filaAEquipoCostoHorarioData(fila)).then(refrescarEquipos)}
+                  onEditRow={(fila) => updateEquipoCostoHorario(fila._id, filaAEquipoCostoHorarioData(fila)).then(refrescarEquipos)}
+                  onDeleteRows={(ids) => Promise.all(ids.map((id) => deleteEquipoCostoHorario(id))).then(refrescarEquipos)}
+                />
+              </ResizablePanel>
+              {panelComposicionAbierto ? (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel
+                    id="equipo-costo-horario-composicion"
+                    defaultSize="70"
+                    minSize="40"
+                    className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                  >
+                    <EquipoCostoHorarioComposicionPanel
+                      equipo={equipoSeleccionado}
+                      onCerrar={() => setPanelComposicionAbierto(false)}
+                      onComposicionCambiada={refrescarEquipos}
+                    />
+                  </ResizablePanel>
+                </>
+              ) : null}
+            </ResizablePanelGroup>
+          </ResizablePanel>
+          {panelFichaAbierto ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="equipo-costo-horario-detalle"
+                defaultSize="35"
+                minSize="22"
+                className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+              >
+                <EquipoCostoHorarioFormPanel
+                  equipo={equipoSeleccionado}
+                  unidades={unidades}
+                  familias={familias}
+                  nombresPorUsuarioId={nombresPorUsuarioId}
+                  onCerrar={() => setPanelFichaAbierto(false)}
+                  onGuardado={refrescarEquipos}
+                />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </div>
       <CsvOperationDialog
         adapter={csvAdaptador}

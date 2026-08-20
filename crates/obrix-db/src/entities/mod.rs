@@ -1,3 +1,7 @@
+pub mod basico_auxiliar;
+pub mod basico_auxiliar_componente;
+pub mod basico_auxiliar_costo;
+pub mod basico_auxiliar_costo_detalle;
 pub mod categoria_fasar;
 pub mod cliente;
 pub mod comentario;

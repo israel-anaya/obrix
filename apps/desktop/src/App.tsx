@@ -35,6 +35,7 @@ import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/pr
 import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioSeccion";
 import { EscalafonSalarioSeccion } from "@/features/catalogos/proyecto/mano-obra/EscalafonSalarioSeccion";
 import { HerramientaSeccion } from "@/features/catalogos/proyecto/herramienta/HerramientaSeccion";
+import { BasicoAuxiliarSeccion, type BasicoAuxiliarVista } from "@/features/catalogos/proyecto/basicos-auxiliares/BasicoAuxiliarSeccion";
 import { MaterialesCatalogoSeccion, type MaterialesVista } from "@/features/catalogos/proyecto/materiales/MaterialesCatalogoSeccion";
 import { MatrizOficioRegionSeccion } from "@/features/catalogos/proyecto/mano-obra/MatrizOficioRegionSeccion";
 import { MesaEquivalentesSeccion } from "@/features/catalogos/proyecto/materiales/MesaEquivalentesSeccion";
@@ -151,6 +152,7 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState("");
   const [cuadrillasVista, setCuadrillasVista] = useState<CuadrillasVista>("grid");
   const [equipoCostoHorarioVista, setEquipoCostoHorarioVista] = useState<EquipoCostoHorarioVista>("grid");
+  const [basicoAuxiliarVista, setBasicoAuxiliarVista] = useState<BasicoAuxiliarVista>("grid");
   const [materialesVista, setMaterialesVista] = useState<MaterialesVista>("grid");
   const [tabuladoresSalarioVista, setTabuladoresSalarioVista] = useState<TabuladoresSalarioVista>("grid");
   const [perfilInactividadVista, setPerfilInactividadVista] = useState<PerfilInactividadVista>("grid");
@@ -534,6 +536,7 @@ export default function App() {
         return <CuadrillasSeccion vista={cuadrillasVista} />;
       }
       if (catalogoId === "herramienta") return <HerramientaSeccion />;
+      if (catalogoId === "basicos-auxiliares") return <BasicoAuxiliarSeccion vista={basicoAuxiliarVista} />;
       if (catalogoId === "costos-horarios") return <EquipoCostoHorarioSeccion vista={equipoCostoHorarioVista} />;
       if (catalogoId === "organizaciones") return <OrganizacionSeccion />;
       if (catalogoId === "usuarios") return <UsuariosSeccion />;
@@ -588,6 +591,7 @@ export default function App() {
     "tabuladores-puente",
     "cuadrillas-trabajo",
     "herramienta",
+    "basicos-auxiliares",
     "costos-horarios",
     ...CATALOGOS_GENERALES.map((d) => d.id),
   ];
@@ -625,6 +629,11 @@ export default function App() {
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
     { id: "ficha", icon: FileText, titulo: "Modo ficha" },
   ];
+  const BASICO_AUXILIAR_TAB_ID = `${CATALOGO_PREFIX}basicos-auxiliares`;
+  const BASICO_AUXILIAR_VISTAS: { id: BasicoAuxiliarVista; icon: LucideIcon; titulo: string }[] = [
+    { id: "grid", icon: Table2, titulo: "Vista Clásica" },
+    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
+  ];
   const TABULADORES_SALARIO_TAB_ID = `${CATALOGO_PREFIX}tabuladores-salario`;
   const TABULADORES_SALARIO_VISTAS: { id: TabuladoresSalarioVista; icon: LucideIcon; titulo: string }[] = [
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
@@ -640,6 +649,9 @@ export default function App() {
     if (tab.id === MATERIALES_TAB_ID) return renderVistaSwitcher(MATERIALES_VISTAS, materialesVista, setMaterialesVista);
     if (tab.id === EQUIPO_COSTO_HORARIO_TAB_ID) {
       return renderVistaSwitcher(EQUIPO_COSTO_HORARIO_VISTAS, equipoCostoHorarioVista, setEquipoCostoHorarioVista);
+    }
+    if (tab.id === BASICO_AUXILIAR_TAB_ID) {
+      return renderVistaSwitcher(BASICO_AUXILIAR_VISTAS, basicoAuxiliarVista, setBasicoAuxiliarVista);
     }
     if (tab.id === TABULADORES_SALARIO_TAB_ID) {
       return renderVistaSwitcher(TABULADORES_SALARIO_VISTAS, tabuladoresSalarioVista, setTabuladoresSalarioVista);

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { Boxes, ClipboardList, Gauge, HardHat, Package, PauseCircle, Percent, Truck, Users, Wrench } from "lucide-react";
+import { ClipboardList, Gauge, HardHat, Package, PauseCircle, Percent, Truck, Users, Wrench } from "lucide-react";
 import type { DataGridConfig } from "@/components/grid/DataGrid";
+import { ICONOS_FAMILIA } from "@/icons/familias";
 
 export interface NodoCatalogo {
   id: string;
@@ -44,7 +45,6 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
       },
     ],
   },
-  { id: "basicos-auxiliares", label: "Básicos y Auxiliares", icon: Boxes },
   {
     id: "maquinaria-equipo",
     label: "Maquinaria y Equipo",
@@ -55,6 +55,7 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
       { id: "equipo-rentado", label: "Equipo rentado", icon: Truck },
     ],
   },
+  { id: "basicos-auxiliares", label: "Básicos y Auxiliares", icon: ICONOS_FAMILIA["familia-basicos-auxiliares"] },
   { id: "conceptos", label: "Conceptos", icon: ClipboardList },
 ];
 

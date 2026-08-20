@@ -8,6 +8,7 @@ pub struct CsvProgresoPayload {
 
 pub mod archivo_json;
 pub mod auth;
+pub mod basicos_auxiliares;
 pub mod categorias_fasar;
 pub mod clientes;
 pub mod cuadrillas;

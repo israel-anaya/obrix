@@ -11,6 +11,13 @@ import type {
   CuadrillaDetalle,
   CuadrillaDetalleData,
   CuadrillaDetalleEditarData,
+  BasicoAuxiliar,
+  BasicoAuxiliarComponente,
+  BasicoAuxiliarComponenteData,
+  BasicoAuxiliarComponenteEditarData,
+  BasicoAuxiliarCosto,
+  BasicoAuxiliarCostoDetalle,
+  BasicoAuxiliarData,
   DireccionMovimiento,
   EquipoCostoHorario,
   EquipoCostoHorarioCosto,
@@ -352,6 +359,72 @@ export function recalculateCuadrillaZonas(cuadrillaId: string): Promise<Cuadrill
 }
 export function listCuadrillaCostoDetalles(cuadrillaCostoId: string): Promise<CuadrillaCostoDetalle[]> {
   return invoke("list_cuadrilla_costo_detalles", { cuadrillaCostoId });
+}
+
+export function listBasicosAuxiliares(): Promise<BasicoAuxiliar[]> {
+  return invoke("list_basicos_auxiliares");
+}
+export function createBasicoAuxiliar(basicoAuxiliar: BasicoAuxiliarData): Promise<BasicoAuxiliar> {
+  return invoke("create_basico_auxiliar", { basicoAuxiliar });
+}
+export function updateBasicoAuxiliar(id: string, basicoAuxiliar: BasicoAuxiliarData): Promise<BasicoAuxiliar> {
+  return invoke("update_basico_auxiliar", { id, basicoAuxiliar });
+}
+export function deleteBasicoAuxiliar(id: string): Promise<void> {
+  return invoke("delete_basico_auxiliar", { id });
+}
+export function listBasicoAuxiliarComponentes(basicoAuxiliarId: string): Promise<BasicoAuxiliarComponente[]> {
+  return invoke("list_basico_auxiliar_componentes", { basicoAuxiliarId });
+}
+export function createBasicoAuxiliarComponente(
+  basicoAuxiliarId: string,
+  componente: BasicoAuxiliarComponenteData,
+): Promise<BasicoAuxiliar> {
+  return invoke("create_basico_auxiliar_componente", { basicoAuxiliarId, componente });
+}
+export function updateBasicoAuxiliarComponente(
+  id: string,
+  componente: BasicoAuxiliarComponenteEditarData,
+): Promise<BasicoAuxiliar> {
+  return invoke("update_basico_auxiliar_componente", { id, componente });
+}
+export function deleteBasicoAuxiliarComponente(id: string): Promise<BasicoAuxiliar> {
+  return invoke("delete_basico_auxiliar_componente", { id });
+}
+export function moveBasicoAuxiliarComponente(id: string, direccion: DireccionMovimiento): Promise<BasicoAuxiliar> {
+  return invoke("move_basico_auxiliar_componente", { id, direccion });
+}
+export function listBasicoAuxiliarCostos(basicoAuxiliarId: string): Promise<BasicoAuxiliarCosto[]> {
+  return invoke("list_basico_auxiliar_costos", { basicoAuxiliarId });
+}
+export function createBasicoAuxiliarCostoRegional(
+  basicoAuxiliarId: string,
+  regionId: string,
+): Promise<BasicoAuxiliarCosto> {
+  return invoke("create_basico_auxiliar_costo_regional", { basicoAuxiliarId, regionId });
+}
+export function deleteBasicoAuxiliarCosto(id: string): Promise<void> {
+  return invoke("delete_basico_auxiliar_costo", { id });
+}
+export function recalculateBasicoAuxiliarZonas(basicoAuxiliarId: string): Promise<BasicoAuxiliarCosto[]> {
+  return invoke("recalculate_basico_auxiliar_zonas", { basicoAuxiliarId });
+}
+export function listBasicoAuxiliarCostoDetalles(
+  basicoAuxiliarCostoId: string,
+): Promise<BasicoAuxiliarCostoDetalle[]> {
+  return invoke("list_basico_auxiliar_costo_detalles", { basicoAuxiliarCostoId });
+}
+export function updateBasicoAuxiliarCostoDetalleCantidad(
+  id: string,
+  cantidad: string,
+): Promise<BasicoAuxiliarCosto> {
+  return invoke("update_basico_auxiliar_costo_detalle_cantidad", { id, detalle: { cantidad } });
+}
+export function updateBasicoAuxiliarCostoDetalleRendimiento(
+  id: string,
+  rendimiento: string,
+): Promise<BasicoAuxiliarCosto> {
+  return invoke("update_basico_auxiliar_costo_detalle_rendimiento", { id, detalle: { rendimiento } });
 }
 
 export function listEquiposCostoHorario(): Promise<EquipoCostoHorario[]> {

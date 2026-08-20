@@ -1100,7 +1100,7 @@ export const DataGrid = forwardRef<
 
   return (
     <GridUiContext.Provider value={uiStore}>
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col">
       {!isSearchControlled && (
         <div className="border-b border-border px-2 py-1.5">
           <SearchInput
@@ -1135,7 +1135,7 @@ export const DataGrid = forwardRef<
         // `group/grid`: de este contenedor cuelga el cursor de celda (ver
         // `RING_CURSOR` en `GridCell`) — es el elemento enfocable y, por
         // `asChild`, el disparador del menú contextual.
-        className="group/grid min-h-0 flex-1 overflow-auto outline-none"
+        className="group/grid min-h-0 min-w-0 flex-1 overflow-auto outline-none"
       >
         <table.Subscribe selector={(state) => state.columnSizing}>
           {(_columnSizing) => (
@@ -1161,7 +1161,13 @@ export const DataGrid = forwardRef<
               // su borde derecho e inferior, de modo que sin colapsar tampoco
               // se duplican entre vecinas, y las medidas no cambian: los bordes
               // van dentro de la caja de la celda (ver ROW_HEIGHT).
-              className="w-full border-separate border-spacing-0 border-l border-t border-border text-sm"
+              // `table-layout: fixed`: sin esto, el algoritmo nativo de layout
+              // de tablas calcula el ancho de cada columna a partir del
+              // contenido de sus celdas, ignorando el `flex`/`width` que le
+              // asignamos por CSS var más abajo — una columna `grow` con texto
+              // largo terminaba desbordando la tabla entera en vez de
+              // truncar dentro del ancho disponible.
+              className="w-full table-fixed border-separate border-spacing-0 border-l border-t border-border text-sm"
               style={tableStyle as React.CSSProperties}
             >
               <thead ref={theadRef} className="sticky top-0 z-20 bg-muted">

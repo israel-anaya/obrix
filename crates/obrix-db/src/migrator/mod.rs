@@ -16,6 +16,7 @@ mod m20260818_000002_organizacion_horas_jornada;
 mod m20260818_000003_region_visible;
 mod m20260818_000004_region_organizacion;
 mod m20260819_000001_equipo_costo_detalle_usa_costo_nacional;
+mod m20260820_000001_basico_auxiliar;
 
 use sea_orm_migration::prelude::*;
 
@@ -43,6 +44,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260818_000003_region_visible::Migration),
             Box::new(m20260818_000004_region_organizacion::Migration),
             Box::new(m20260819_000001_equipo_costo_detalle_usa_costo_nacional::Migration),
+            Box::new(m20260820_000001_basico_auxiliar::Migration),
         ]
     }
 }

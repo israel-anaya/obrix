@@ -329,7 +329,7 @@ export function EquipoCostoHorarioFichaApu({
   equipo: EquipoCostoHorario;
   onCambio: () => void;
 }) {
-  const { organizacionActivaId } = useOrganizacionActiva();
+  const { organizaciones, organizacionActivaId } = useOrganizacionActiva();
   const [detalles, setDetalles] = useState<EquipoCostoHorarioDetalle[]>([]);
   const [costos, setCostos] = useState<EquipoCostoHorarioCosto[]>([]);
   const [costoSeleccionadoId, setCostoSeleccionadoId] = useState<string | null>(null);
@@ -620,7 +620,10 @@ export function EquipoCostoHorarioFichaApu({
     if (!id) return;
     setError(null);
     try {
-      const actualizado = await createEquipoCostoHorarioDetalle(equipo.id, { detalle_insumo_id: id, cantidad: "1" });
+      const orgActiva = organizaciones.find((o) => o.id === organizacionActivaId);
+      const horasJornada = Number(orgActiva?.horas_jornada) || 8;
+      const cantidad = String(1 / horasJornada);
+      const actualizado = await createEquipoCostoHorarioDetalle(equipo.id, { detalle_insumo_id: id, cantidad });
       await trasMutar(actualizado);
     } catch (e) {
       setError(String(e));

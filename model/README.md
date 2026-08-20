@@ -133,9 +133,13 @@ insumo, y cada extensión solo lleva los campos que de verdad le aplican.
   de alta como insumos `material` separados, cada uno con su propio
   `proveedor_id`.
 - **`basico_auxiliar`** — material compuesto, mezcla o sistema (concreto,
-  mortero, cimbra, impermeabilización) con su propia matriz de insumos. A
-  diferencia de `cuadrilla`, **sí permite composición recursiva**: un
-  auxiliar puede usar otro auxiliar como componente.
+  mortero, cimbra, impermeabilización). La receta de primer nivel vive en
+  `basico_auxiliar_componente` — compartida entre regiones, **recursiva**
+  (un auxiliar puede usar otro auxiliar; la ficha no explota al hijo). El
+  costo se valúa por región en `basico_auxiliar_costo` /
+  `basico_auxiliar_costo_detalle`. A diferencia de cuadrilla y costo
+  horario, **la cantidad sí es de la zona**: el rendimiento cambia según
+  la región.
 
 ```mermaid
 erDiagram
@@ -170,23 +174,27 @@ erDiagram
     proveedor ||--o{ equipo_rentado : renta
 
     insumo ||--o| basico_auxiliar : extiende
-    basico_auxiliar ||--o{ basico_auxiliar_componente : compone
+    basico_auxiliar ||--o{ basico_auxiliar_componente : receta
     insumo ||--o{ basico_auxiliar_componente : integra
+    basico_auxiliar ||--o{ basico_auxiliar_costo : valua
+    region ||--o{ basico_auxiliar_costo : ubica
+    basico_auxiliar_costo ||--o{ basico_auxiliar_costo_detalle : desglosa
+    basico_auxiliar_componente ||--o{ basico_auxiliar_costo_detalle : valua
 ```
 
 ### 4. Estructura del presupuesto y APU
 
 `concepto` es **catálogo maestro** a nivel organización (igual que `insumo`):
 se define una vez (clave, descripción, unidad por defecto) y se reutiliza
-entre proyectos. Igual que `basico_auxiliar` tiene su propia matriz de
-componentes, `concepto` tiene la suya — `concepto_componente` — con el mismo
-patrón (insumo + rendimiento + costo, con sus mismos cuatro `sub_total_*`
-más `costo_total`); la diferencia es que `concepto` **no es un insumo**: no
-cuelga de una extensión 1:1 de `insumo` y no puede usarse como componente de
-otro concepto, cuadrilla o básico/auxiliar. Esta matriz de catálogo es una
-plantilla orientativa (`concepto.costo_total`) que se copia a
-`proyecto_presupuesto.precio_unitario` al instanciar el concepto en un nodo
-del presupuesto de un proyecto. No existe una matriz de insumos a nivel
+entre proyectos. Tiene su propia matriz — `concepto_componente` — con
+insumo + rendimiento + costo y los mismos cuatro `sub_total_*` más
+`costo_total`. La diferencia con `basico_auxiliar` es que `concepto` **no es
+un insumo**: no cuelga de una extensión 1:1 de `insumo` y no puede usarse
+como componente de otro concepto, cuadrilla o básico/auxiliar. Esta matriz
+de catálogo es una plantilla orientativa (`concepto.costo_total`) que se
+copia a `proyecto_presupuesto.precio_unitario` al instanciar el concepto en
+un nodo del presupuesto de un proyecto. No existe una matriz de insumos a
+nivel
 proyecto — el único desglose por insumo vive en `concepto_componente`, a
 nivel catálogo; el proyecto solo puede ajustar el `precio_unitario` ya
 copiado, sin editar insumo por insumo.

@@ -362,98 +362,94 @@ export function CuadrillaDetallePanel({
 
   return (
     <div className="flex h-full flex-col border-l-2 border-l-primary bg-muted/15">
-      <div className="border-b-2 border-foreground/20 bg-background/80 px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
+      <div className="flex items-center gap-3 border-b-2 border-foreground/20 bg-background/80 px-4 py-3">
+        <div className="flex shrink-0 items-center gap-2">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             <Users size={16} className="text-emerald-500" />
             Composición
           </span>
-          <div className="flex shrink-0 items-center gap-1">
-            <Select value={regionVistaId ?? NACIONAL_VALOR} onValueChange={elegirRegion}>
-              <SelectTrigger className="h-7 w-[9.5rem] border-border bg-background px-2 text-[11px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NACIONAL_VALOR}>
+          <Select value={regionVistaId ?? NACIONAL_VALOR} onValueChange={elegirRegion}>
+            <SelectTrigger className="h-7 w-[9.5rem] border-border bg-background px-2 text-[11px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NACIONAL_VALOR}>
+                <span className="flex items-center gap-1.5">
+                  <Globe size={14} className="text-primary" />
+                  {NACIONAL}
+                </span>
+              </SelectItem>
+              {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
+                <SelectItem key={r.id} value={r.id}>
                   <span className="flex items-center gap-1.5">
-                    <Globe size={14} className="text-primary" />
-                    {NACIONAL}
+                    <MapPinned size={14} className="text-teal-600 dark:text-teal-400" />
+                    {r.nombre}
                   </span>
                 </SelectItem>
-                {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="flex items-center gap-1.5">
-                      <MapPinned size={14} className="text-teal-600 dark:text-teal-400" />
-                      {r.nombre}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <button
-              type="button"
-              title={
-                !cuadrillaId
-                  ? "Selecciona una cuadrilla para sincronizar"
-                  : recalculando
-                    ? "Recalculando costos de todas las regiones…"
-                    : [
-                        "Recalcular todas las regiones con los salarios y la herramienta vigentes.",
-                        sincronizadoEn
-                          ? `Última sincronización: ${formatearFecha(sincronizadoEn)}`
-                          : "Aún no se ha sincronizado con los tabuladores vigentes.",
-                      ].join("\n")
-              }
-              onClick={() => void recalcularZonas()}
-              disabled={!cuadrillaId || recalculando}
-              className={cn(
-                "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium text-foreground hover:bg-muted",
-                (!cuadrillaId || recalculando) && "opacity-50",
-                !sincronizadoEn && cuadrillaId && "border-amber-500/40",
-              )}
-            >
-              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
-              {recalculando ? "Sincronizando…" : "Sincronizar"}
-            </button>
-            <button
-              type="button"
-              title="Cerrar"
-              onClick={onCerrar}
-              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
-          </div>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        <div className="h-5 w-px shrink-0 bg-border" />
         {cuadrilla ? (
-          <>
-            <div className="mt-1 flex min-w-0 items-center gap-2">
-              <span className="min-w-0 truncate font-mono text-base font-bold tracking-tight">{cuadrilla.clave}</span>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div
+              className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
+            >
+              <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
+              <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
             </div>
-            <p className="mt-0.5 truncate text-xs text-foreground" title={cuadrilla.descripcion}>
-              {cuadrilla.descripcion}
-            </p>
-            <div className="mt-2 flex items-center gap-3">
-              <div
-                className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
-                title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
-              >
-                <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
-                <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
-              </div>
-              <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <HardHat size={16} className="text-blue-500" />
-                  {pctMo.toFixed(0)}%
-                </span>
-                <span className="flex items-center gap-1">
-                  <Wrench size={16} className="text-amber-500" />
-                  {pctHe.toFixed(0)}%
-                </span>
+            <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <HardHat size={16} className="text-blue-500" />
+                {pctMo.toFixed(0)}%
               </span>
-            </div>
-          </>
-        ) : null}
+              <span className="flex items-center gap-1">
+                <Wrench size={16} className="text-amber-500" />
+                {pctHe.toFixed(0)}%
+              </span>
+            </span>
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+        <div className="h-5 w-px shrink-0 bg-border" />
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            title={
+              !cuadrillaId
+                ? "Selecciona una cuadrilla para sincronizar"
+                : recalculando
+                  ? "Recalculando costos de todas las regiones…"
+                  : [
+                      "Recalcular todas las regiones con los salarios y la herramienta vigentes.",
+                      sincronizadoEn
+                        ? `Última sincronización: ${formatearFecha(sincronizadoEn)}`
+                        : "Aún no se ha sincronizado con los tabuladores vigentes.",
+                    ].join("\n")
+            }
+            onClick={() => void recalcularZonas()}
+            disabled={!cuadrillaId || recalculando}
+            className={cn(
+              "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium text-foreground hover:bg-muted",
+              (!cuadrillaId || recalculando) && "opacity-50",
+              !sincronizadoEn && cuadrillaId && "border-amber-500/40",
+            )}
+          >
+            <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
+            {recalculando ? "Sincronizando…" : "Sincronizar"}
+          </button>
+          <button
+            type="button"
+            title="Cerrar"
+            onClick={onCerrar}
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {!cuadrillaId ? (
@@ -463,7 +459,8 @@ export function CuadrillaDetallePanel({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <section className="flex min-h-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <HardHat size={14} className="text-blue-500" />
                   Integrantes (mano de obra)
                 </h4>
                 <div className="flex items-center gap-0.5">
@@ -543,7 +540,10 @@ export function CuadrillaDetallePanel({
 
             <section className="flex min-h-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Herramienta</h4>
+                <h4 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Wrench size={14} className="text-amber-500" />
+                  Herramienta
+                </h4>
                 <div className="flex items-center gap-0.5">
                     <button
                       type="button"

@@ -597,6 +597,42 @@ impl EquipoCostoHorarioCostoService {
         };
         Ok(consulta.one(conn).await?.map(|c| c.costo_total))
     }
+
+    /// Igual que `resolver_costo_total`, más la `fecha_precio` más reciente
+    /// de los renglones de esa valuación — para quien cachea el costo del
+    /// equipo y necesita heredar su frescura.
+    pub async fn resolver_costo_y_fecha(
+        conn: &impl ConnectionTrait,
+        equipo_costo_horario_id: &str,
+        region_id: Option<&str>,
+    ) -> Result<Option<(Decimal, Option<String>)>, ServiceError> {
+        let mut consulta = equipo_costo_horario_costo::Entity::find()
+            .filter(
+                equipo_costo_horario_costo::Column::EquipoCostoHorarioId
+                    .eq(equipo_costo_horario_id),
+            )
+            .filter(equipo_costo_horario_costo::Column::Deleted.eq(false));
+        consulta = match region_id {
+            Some(region_id) => {
+                consulta.filter(equipo_costo_horario_costo::Column::RegionId.eq(region_id))
+            }
+            None => consulta.filter(equipo_costo_horario_costo::Column::RegionId.is_null()),
+        };
+        let Some(costo) = consulta.one(conn).await? else {
+            return Ok(None);
+        };
+        let fecha = equipo_costo_horario_costo_detalle::Entity::find()
+            .filter(
+                equipo_costo_horario_costo_detalle::Column::EquipoCostoHorarioCostoId.eq(&costo.id),
+            )
+            .filter(equipo_costo_horario_costo_detalle::Column::Deleted.eq(false))
+            .all(conn)
+            .await?
+            .into_iter()
+            .filter_map(|d| d.fecha_precio)
+            .max();
+        Ok(Some((costo.costo_total, fecha)))
+    }
 }
 
 #[cfg(test)]

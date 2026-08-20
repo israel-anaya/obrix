@@ -4,6 +4,10 @@
 //! `organizacion_id` activo) y devuelve `ServiceError`, no `String`; los
 //! comandos son quienes traducen ese error a texto para el frontend.
 
+pub mod basico_auxiliar;
+pub mod basico_auxiliar_componente;
+pub mod basico_auxiliar_costo;
+pub mod basico_auxiliar_costo_detalle;
 pub mod categoria_fasar;
 pub mod cliente;
 pub mod csv_secciones;

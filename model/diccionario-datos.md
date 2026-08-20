@@ -269,7 +269,7 @@ insumo:
 | `equipo_herramienta` | `equipo_costo_horario` | equipo propio, costo calculado por depreciación/consumo |
 | `equipo_herramienta` | `herramienta` | herramienta mayor/con motor, precio propio simple, sin cálculo de depreciación |
 | `equipo_herramienta` | `equipo_rentado` | equipo de terceros, tarifa de renta |
-| `basico_auxiliar` | `basico_auxiliar` | material compuesto, mezcla o sistema con matriz propia recursiva |
+| `basico_auxiliar` | `basico_auxiliar` | material compuesto, mezcla o sistema; receta de primer nivel recursiva, valuada por región |
 
 
 ### `material`
@@ -491,7 +491,7 @@ salarial (`valor` no aplica) y `afecta_rendimiento` debe ser verdadero.
 
 El FSR no cambia: se aplica al salario ya recargado, no se recalcula. El
 rendimiento base no vive aquí — es el de la matriz que consume la cuadrilla
-(`concepto_componente.rendimiento`, `basico_auxiliar_componente.cantidad`).
+(`concepto_componente.rendimiento`, `basico_auxiliar_costo_detalle.cantidad`).
 Esta tabla solo aporta el multiplicador cuando `afecta_rendimiento`.
 
 Orden al aplicar una o más condiciones vigentes sobre una
@@ -543,7 +543,7 @@ salario con el que se valúa.
 
 No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
 región por insumo. Quien consume el costo de la cuadrilla
-(`concepto_componente.precio_unitario`, `basico_auxiliar_componente.importe`,
+(`concepto_componente.precio_unitario`, `basico_auxiliar_costo_detalle.costo`,
 `equipo_costo_horario_costo_detalle.costo` si el operador es cuadrilla) toma
 `cuadrilla_costo.costo_total` resuelto por región, no un número en esta
 tabla.
@@ -565,7 +565,7 @@ varían por región (salarios) y cuelgan de `cuadrilla_costo_detalle`.
 región: la valuación regional solo aplica los salarios de esa región sobre
 esta misma composición. El rendimiento de la cuadrilla tampoco vive aquí —
 es el de la matriz que la consume (`concepto_componente.cantidad`,
-`basico_auxiliar_componente.cantidad`) o un `factor_rendimiento` de
+`basico_auxiliar_costo_detalle.cantidad`) o un `factor_rendimiento` de
 `condicion_trabajo`.
 
 | Campo | Tipo | Notas |
@@ -835,7 +835,7 @@ variables vive en `equipo_costo_horario_detalle`; la valuación por región
 
 No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
 región por insumo. Quien consume el costo del equipo
-(`concepto_componente.precio_unitario`, `basico_auxiliar_componente.importe`)
+(`concepto_componente.precio_unitario`, `basico_auxiliar_costo_detalle.costo`)
 toma `equipo_costo_horario_costo.costo_total` resuelto por región, no un
 número en esta tabla.
 
@@ -1088,38 +1088,200 @@ Extensión 1:1 de `insumo` cuando `insumo.tipo = basico_auxiliar`.
 
 Material compuesto, mezcla o sistema con su propia matriz de insumos (ej.
 concreto premezclado, mortero, cimbra común, sistema de impermeabilización).
-A diferencia de `cuadrilla`, **sí permite composición recursiva** — un
-auxiliar puede tener como componente a otro auxiliar (ej. un "aplanado" que
-usa "mortero" como componente).
+Tabla delgada: no guarda cantidades ni costos. La receta de **primer nivel**
+vive en `basico_auxiliar_componente`; la valuación por región (rendimiento,
+precio/costo, importe) vive en `basico_auxiliar_costo` /
+`basico_auxiliar_costo_detalle`.
+
+A diferencia de `cuadrilla` y `equipo_costo_horario`, **sí permite
+composición recursiva** — un auxiliar puede tener como componente a otro
+auxiliar (ej. un "aplanado" que usa "mortero"). La recursión es de receta,
+no de edición: la ficha del padre no explota al hijo; toma
+`basico_auxiliar_costo.costo_total` de esa región.
+
+No lleva `region_id`: un `region_id` en la extensión 1:1 dejaría una sola
+región por insumo. Quien consume el costo del auxiliar toma
+`basico_auxiliar_costo.costo_total` resuelto por región, no un número en
+esta tabla.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | insumo_id | uuid | PK, FK → insumo |
-| sub_total_material | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = material |
-| sub_total_mano_obra | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = mano_obra |
-| sub_total_equipo | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = equipo_herramienta |
-| sub_total_basico_auxiliar | decimal | cache = Σ basico_auxiliar_componente.importe donde basico_auxiliar_componente.tipo = basico_auxiliar |
-| costo_total | decimal | cache = sub_total_material + sub_total_mano_obra + sub_total_equipo + sub_total_basico_auxiliar (= Σ basico_auxiliar_componente.importe) |
 
 Sin columnas de auditoría propias — comparte el ciclo de vida de su `insumo` (ver nota en `material`).
 
 ### `basico_auxiliar_componente`
 
-Composición **recursiva** de un `basico_auxiliar` — a diferencia de
-`cuadrilla_detalle`, aquí sí se permite que un componente sea otro
-`basico_auxiliar` (o una `cuadrilla`), ya que un material compuesto puede
-usar otro material compuesto como parte de su receta (ej. un "aplanado" que
-usa "mortero" como componente, y "mortero" a su vez es otro auxiliar).
+Composición de **primer nivel**, compartida entre regiones. Cada fila es un
+insumo de la mezcla: material, mano de obra (categoría FASAR o cuadrilla),
+equipo (costo horario o rentado) u otro `basico_auxiliar`. No `herramienta`:
+esa extensión no tiene precio unitario, solo un % sobre mano de obra para
+cuadrillas.
+
+La receta no se copia por región: si un renglón entra o sale, entra o sale
+en todas. `cantidad` / `costo` / `importe` no viven aquí — el rendimiento
+cambia según la zona y cuelga de `basico_auxiliar_costo_detalle`.
+
+La recursión no se edita aquí. Si `componente_insumo_id` es otro auxiliar,
+este renglón es una hoja para la ficha: no se insertan los componentes del
+hijo. Insertar un componente que, transitivamente, vuelve a este auxiliar
+es un error de validación.
+
+`tipo` y `naturaleza` se derivan de la extensión de `componente_insumo_id`
+(el cliente puede mandarlas para confirmar; otra es error):
+
+- `tipo = material` → `naturaleza = material`
+- `tipo = mano_obra` → `naturaleza = categoria` o `cuadrilla`
+- `tipo = equipo_herramienta` → `naturaleza = costo_horario` o `rentado`
+- `tipo = basico_auxiliar` → `naturaleza = basico_auxiliar`
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| basico_auxiliar_insumo_id | uuid | FK → basico_auxiliar (insumo_id) |
-| componente_insumo_id | uuid | FK → insumo — cualquier tipo, incluyendo otro `basico_auxiliar` o `cuadrilla` (permite recursión) |
-| tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — denormalizado desde `insumo.tipo` del componente, evita un join para saber qué naturaleza tiene la línea |
-| cantidad | decimal | rendimiento del componente por unidad del auxiliar |
-| importe | decimal | cache = cantidad × precio/costo vigente del componente — si el componente es `cuadrilla`, el costo es `cuadrilla_costo.costo_total` resuelto por región (ver `cuadrilla_costo`) |
-| created_at / created_by / updated_at / updated_by | | |
+| basico_auxiliar_id | uuid | FK → basico_auxiliar (insumo_id) |
+| componente_insumo_id | uuid | FK → insumo — `material`, `mano_obra` (`categoria_fasar` o `cuadrilla`), `equipo_herramienta` (`equipo_costo_horario` o `equipo_rentado`) u otro `basico_auxiliar`. Nunca este mismo auxiliar |
+| tipo | enum | `material`, `mano_obra`, `equipo_herramienta`, `basico_auxiliar` — denormalizado de `insumo.tipo` |
+| naturaleza | enum | `material`, `categoria`, `cuadrilla`, `costo_horario`, `rentado`, `basico_auxiliar` — denormalizado de la extensión, para valuar el renglón sin join |
+| orden | int | orden de visualización |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+Restricción: única `(basico_auxiliar_id, componente_insumo_id)` entre filas no borradas.
+
+Al insertar un renglón de receta hay que insertar también un
+`basico_auxiliar_costo_detalle` en **cada** `basico_auxiliar_costo` de ese
+auxiliar (nacional y una por región del catálogo; las que falten se
+materializan antes), copiando la `cantidad` capturada a todas las zonas.
+Al borrar el renglón, se borran esos detalles de valuación. Cambiar la
+cantidad **después** es por valuación: no se propaga a las demás zonas.
+
+### `basico_auxiliar_costo`
+
+Valuación regional de un `basico_auxiliar`. **Sin vigencias**: el costo no
+se cotiza solo; se deriva de `precio_material`, `salario_categoria_fasar`,
+`cuadrilla_costo`, `equipo_costo_horario_costo`, `equipo_rentado.tarifa_hora`
+u otro `basico_auxiliar_costo`, que ya historizan o cachean por fecha.
+Duplicar la dimensión tiempo aquí desfasaría el cache al registrar un
+precio nuevo. El congelamiento sigue siendo de proyecto.
+
+`region_id` es **nullable**, igual que en `precio_material` y
+`salario_categoria_fasar`. El cache se deriva de receta × precios/costos de
+**esa** región, con caída al nacional en el **costo unitario** del renglón
+(no en la cantidad). **El total** no se sustituye: si no hay fila de cache
+de esa región, quien consume no hereda el `costo_total` nacional.
+
+- Todo auxiliar nace con la fila nacional (`region_id = NULL`).
+- Al agregar o quitar un renglón de receta — y al pulsar sincronizar en
+  Costo por región — se materializa una fila de cache por cada `region` del
+  catálogo y se recalculan los **costos**. Las cantidades ya capturadas no
+  se pisan. Una valuación regional nueva copia las cantidades de la
+  nacional; a partir de ahí viven solas.
+- Quien consume el costo pide la región concreta; no se sustituye el
+  `costo_total` nacional porque falte la fila de cache de esa región.
+
+`fecha_costo` no es una vigencia de la valuación: es la foto de la
+`fecha_precio` más reciente entre los renglones de **esta** valuación, para
+que quien cachee el costo herede su frescura. Un auxiliar padre la copia a
+su propio `basico_auxiliar_costo_detalle.fecha_precio` cuando el componente
+es este auxiliar.
+
+Al crearla se inserta un `basico_auxiliar_costo_detalle` por cada renglón
+de receta y se recalcula.
+
+El cálculo se corre **dentro de un** `basico_auxiliar_costo` (una región),
+solo sobre el primer nivel:
+
+1. Cada `basico_auxiliar_costo_detalle` toma `cantidad` de **sí mismo**
+   (la de esa zona) y `costo` según `naturaleza` del componente:
+   - `material`: `precio_material.precio` vigente de esa región, o el
+     nacional si falta. Si tampoco hay nacional, 0 y `fecha_precio` NULL.
+   - `categoria`: salario vigente de esa región, o el nacional si falta.
+   - `cuadrilla`: `cuadrilla_costo.costo_total` de esa región, o el
+     nacional cuando esa zona **no está valuada** (no hay fila, o está en
+     cero). El cero cuenta como "sin valuar" porque la cuadrilla no hereda
+     salarios nacionales en su propio recálculo.
+   - `costo_horario`: `equipo_costo_horario_costo.costo_total` de esa
+     región, o el nacional si esa zona no está valuada (misma señal de
+     cero/ausente).
+   - `rentado`: `equipo_rentado.tarifa_hora` (no es regional).
+   - `basico_auxiliar`: `basico_auxiliar_costo.costo_total` del hijo en
+     esa región, o el nacional si esa zona no está valuada (cero/ausente).
+     No se recorre la receta del hijo.
+2. `importe` = `cantidad` × `costo`.
+3. Subtotales por `tipo` del componente (`material`, `mano_obra`,
+   `equipo_herramienta`, `basico_auxiliar`) sobre **esta** valuación.
+4. `costo_total` = suma de los cuatro subtotales.
+5. `fecha_costo` = la `fecha_precio` más reciente de los renglones de
+   esta valuación; NULL si ninguno tiene fecha.
+
+Nota de implementación: igual que en `precio_material`, `NULL` no cuenta
+como igual a `NULL` en una restricción `UNIQUE` estándar, así que la
+unicidad de "una sola valuación por región" (incluyendo cuando `region_id
+IS NULL`) debe reforzarse con un índice único parcial o a nivel de
+aplicación.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| basico_auxiliar_id | uuid | FK → basico_auxiliar (insumo_id) |
+| region_id | uuid | FK → region, nullable — `null` = nacional |
+| sub_total_material | decimal | cache = Σ importe donde el componente es `tipo = material`, de **esta** valuación |
+| sub_total_mano_obra | decimal | cache = Σ importe donde el componente es `tipo = mano_obra` |
+| sub_total_equipo | decimal | cache = Σ importe donde el componente es `tipo = equipo_herramienta` |
+| sub_total_basico_auxiliar | decimal | cache = Σ importe donde el componente es `tipo = basico_auxiliar` |
+| costo_total | decimal | cache = suma de los cuatro subtotales |
+| fecha_costo | date | nullable — cache: la `fecha_precio` más reciente de **esta** valuación. NULL si ningún renglón tiene fecha |
+| sincronizado_en | datetime | nullable — última vez que se pulsó ⟳ en Costo por región. No es `updated_at` |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+### `basico_auxiliar_costo_detalle`
+
+Cache valuado de un renglón de receta **en una valuación**. `region_id` no
+se repite aquí: se hereda de `basico_auxiliar_costo`. Toda valuación tiene
+exactamente un renglón por cada `basico_auxiliar_componente` de ese
+auxiliar.
+
+`cantidad` y `rendimiento` son capturables e inversos entre sí —
+`rendimiento = 1 / cantidad`, `cantidad = 1 / rendimiento`; si uno se
+guarda en 0 el otro también queda en 0 (no hay inverso matemático de 0).
+Dos formas de capturar el mismo rendimiento del componente por unidad del
+auxiliar **en esa zona**; el servicio recalcula el que no se editó
+directamente. Al crear el renglón de receta se copia la misma cantidad (y
+su inverso) a todas las valuaciones; editarlos después no se propaga. El ⟳
+recálcula `costo` / `importe` / `fecha_precio`; no pisa `cantidad` ni
+`rendimiento`.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| basico_auxiliar_costo_id | uuid | FK → basico_auxiliar_costo |
+| basico_auxiliar_componente_id | uuid | FK → basico_auxiliar_componente — debe pertenecer al mismo auxiliar que `basico_auxiliar_costo.basico_auxiliar_id` |
+| cantidad | decimal | **capturable** — rendimiento de **esta** zona |
+| rendimiento | decimal | **capturable** — inverso de `cantidad` (`1 / cantidad`); 0 si `cantidad` es 0 |
+| costo | decimal | cache: precio/costo vigente del componente según `naturaleza` (ver recálculo de `basico_auxiliar_costo`); 0 si nada lo respalda |
+| importe | decimal | cache = cantidad × costo |
+| fecha_precio | date | nullable — foto de `precio_material.fecha_vigencia_desde`, `salario_categoria_fasar.fecha_vigencia_desde`, `cuadrilla_costo.fecha_costo` o `basico_auxiliar_costo.fecha_costo` del hijo; si el componente es `costo_horario`, la `fecha_precio` más reciente de los `equipo_costo_horario_costo_detalle` de esa valuación. `rentado` no aporta fecha. NULL si el renglón quedó en 0 o nada lo respalda con fecha |
+| usa_costo_nacional | bool | `true` solo en valuaciones regionales cuando el costo unitario salió del cache/tabulador nacional por fallback; siempre `false` en la valuación nacional |
+| deleted | bool | indica si el registro fue eliminado lógicamente |
+| created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
+
+Restricción: única `(basico_auxiliar_costo_id, basico_auxiliar_componente_id)`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### `concepto`
@@ -1147,15 +1309,13 @@ eso es responsabilidad de `proyecto_presupuesto`.
 
 ### `concepto_componente`
 
-**Matriz de insumos a nivel catálogo** — mismo patrón que
-`basico_auxiliar_componente` (un renglón por insumo con su rendimiento y
-costo), pero cuelga de `concepto` en lugar de un `insumo`: un concepto **no
-es un insumo**, no tiene `insumo_id` ni puede usarse como componente de otro
-concepto, otra cuadrilla o otro básico/auxiliar. Es la única matriz de
-insumos de un concepto — su `costo_total` es lo que se copia a
-`proyecto_presupuesto.precio_unitario` al instanciar el concepto en un nodo
-`partida`; el proyecto no tiene su propia matriz de insumos, solo puede
-editar el `precio_unitario` copiado.
+**Matriz de insumos a nivel catálogo**. Cuelga de `concepto` en lugar de un
+`insumo`: un concepto **no es un insumo**, no tiene `insumo_id` ni puede
+usarse como componente de otro concepto, otra cuadrilla o otro
+básico/auxiliar. Es la única matriz de insumos de un concepto — su
+`costo_total` es lo que se copia a `proyecto_presupuesto.precio_unitario`
+al instanciar el concepto en un nodo `partida`; el proyecto no tiene su
+propia matriz de insumos, solo puede editar el `precio_unitario` copiado.
 
 | Campo | Tipo | Notas |
 |---|---|---|

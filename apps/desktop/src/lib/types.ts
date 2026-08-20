@@ -476,6 +476,91 @@ export interface CuadrillaCostoDetalle {
   updated_by: string | null;
 }
 
+export interface BasicoAuxiliar extends CamposControl {
+  id: string;
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  sub_familia_id: string | null;
+  costo_nacional: BasicoAuxiliarCosto | null;
+}
+
+export interface BasicoAuxiliarData {
+  clave: string;
+  descripcion: string;
+  unidad_id: string;
+  familia_id: string | null;
+  sub_familia_id: string | null;
+}
+
+export type TipoBasicoAuxiliarComponente =
+  | "material"
+  | "mano_obra"
+  | "equipo_herramienta"
+  | "basico_auxiliar";
+
+export type NaturalezaBasicoAuxiliarComponente =
+  | "material"
+  | "categoria"
+  | "cuadrilla"
+  | "costo_horario"
+  | "rentado"
+  | "basico_auxiliar";
+
+export interface BasicoAuxiliarComponente {
+  id: string;
+  basico_auxiliar_id: string;
+  componente_insumo_id: string;
+  tipo: TipoBasicoAuxiliarComponente;
+  naturaleza: NaturalezaBasicoAuxiliarComponente;
+  orden: number;
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export interface BasicoAuxiliarComponenteData {
+  componente_insumo_id: string;
+  cantidad: string;
+  naturaleza?: NaturalezaBasicoAuxiliarComponente | null;
+}
+
+export interface BasicoAuxiliarComponenteEditarData {
+  componente_insumo_id: string;
+  naturaleza?: NaturalezaBasicoAuxiliarComponente | null;
+}
+
+export interface BasicoAuxiliarCosto extends CamposControl {
+  id: string;
+  basico_auxiliar_id: string;
+  region_id: string | null;
+  sub_total_material: string;
+  sub_total_mano_obra: string;
+  sub_total_equipo: string;
+  sub_total_basico_auxiliar: string;
+  costo_total: string;
+  fecha_costo: string | null;
+  sincronizado_en: string | null;
+}
+
+export interface BasicoAuxiliarCostoDetalle {
+  id: string;
+  basico_auxiliar_costo_id: string;
+  basico_auxiliar_componente_id: string;
+  cantidad: string;
+  rendimiento: string;
+  costo: string;
+  importe: string;
+  fecha_precio: string | null;
+  usa_costo_nacional: boolean;
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
 export type DireccionMovimiento = "arriba" | "abajo";
 
 /**
