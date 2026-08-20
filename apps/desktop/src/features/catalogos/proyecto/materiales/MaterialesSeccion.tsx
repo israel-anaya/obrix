@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DollarSign, Download, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -245,66 +245,70 @@ export function MaterialesSeccion() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold">Materiales</h2>
+          <div className="flex items-center gap-0.5">
+            <ActionBar
+              actions={[
+                { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
+                {
+                  icon: FileText,
+                  title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                  onClick: () =>
+                    setPanelFichaAbierto((v) => {
+                      if (!v) {
+                        setPanelPreciosAbierto(false);
+                        setPanelHistorialAbierto(false);
+                      }
+                      return !v;
+                    }),
+                },
+                ACTION_BAR_SEPARATOR,
+                {
+                  icon: Download,
+                  title: "Exportar a CSV",
+                  onClick: () => setCsvAdaptador(adaptadorExportMateriales(materiales, unidades, familias)),
+                  disabled: csvAdaptador !== null || materiales.length === 0,
+                },
+                {
+                  icon: Upload,
+                  title: "Importar desde CSV",
+                  onClick: () => setCsvAdaptador(adaptadorImportMateriales()),
+                  disabled: csvAdaptador !== null,
+                },
+                ACTION_BAR_SEPARATOR,
+                {
+                  icon: DollarSign,
+                  title: panelPreciosAbierto ? "Ocultar precios" : "Ver precios",
+                  onClick: () =>
+                    setPanelPreciosAbierto((v) => {
+                      if (!v) setPanelFichaAbierto(false);
+                      else setPanelHistorialAbierto(false);
+                      return !v;
+                    }),
+                },
+                {
+                  icon: FileSpreadsheet,
+                  title: "Actualizar costos en lote",
+                  onClick: () => setCsvAdaptador(adaptadorCostosLote(materiales)),
+                  disabled: csvAdaptador !== null || materiales.length === 0,
+                },
+              ]}
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[
-              { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icon: Upload,
-                title: "Importar desde CSV",
-                onClick: () => setCsvAdaptador(adaptadorImportMateriales()),
-                disabled: csvAdaptador !== null,
-              },
-              {
-                icon: Download,
-                title: "Exportar a CSV",
-                onClick: () => setCsvAdaptador(adaptadorExportMateriales(materiales, unidades, familias)),
-                disabled: csvAdaptador !== null || materiales.length === 0,
-              },
-              {
-                icon: FileSpreadsheet,
-                title: "Actualizar costos en lote",
-                onClick: () => setCsvAdaptador(adaptadorCostosLote(materiales)),
-                disabled: csvAdaptador !== null || materiales.length === 0,
-              },
-              {
-                icon: DollarSign,
-                title: panelPreciosAbierto ? "Ocultar precios" : "Ver precios",
-                onClick: () =>
-                  setPanelPreciosAbierto((v) => {
-                    if (!v) setPanelFichaAbierto(false);
-                    else setPanelHistorialAbierto(false);
-                    return !v;
-                  }),
-              },
-              {
-                icon: FileText,
-                title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
-                onClick: () =>
-                  setPanelFichaAbierto((v) => {
-                    if (!v) {
-                      setPanelPreciosAbierto(false);
-                      setPanelHistorialAbierto(false);
-                    }
-                    return !v;
-                  }),
-              },
-            ]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
-              {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-                destructive: true,
-              },
-            ]}
-          />
-        </div>
+        <ActionBarMenu
+          menu={[
+            { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !puedeEliminar,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
       <div className="min-h-0 flex-1">
         {/* Los grupos viven siempre para no desmontar el grid al abrir precios,

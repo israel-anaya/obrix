@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Globe2, MapPinned, RefreshCcw } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { DollarSign, Globe, MapPinned, RefreshCcw } from "lucide-react";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/proyecto/mano-obra/SalarioCategoriaFasarPanel";
@@ -210,28 +210,29 @@ export function MatrizOficioRegionSeccion() {
             {error ??
               `${filas.length} ${filas.length === 1 ? "oficio" : "oficios"} · ${columnas.length} ${columnas.length === 1 ? "región" : "regiones"} · ${llenas}/${celdas || 0} vigentes`}
           </p>
+          <div className="flex items-center gap-0.5">
+            <ActionBar
+              actions={[
+                {
+                  icon: DollarSign,
+                  title: panelAbierto ? "Ocultar salario" : "Ver salario",
+                  onClick: () =>
+                    setPanelAbierto((v) => {
+                      if (v) {
+                        setPanelHistorialAbierto(false);
+                        setCaptura(null);
+                      }
+                      return !v;
+                    }),
+                  disabled: filas.length === 0,
+                },
+              ]}
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[
-              {
-                icon: DollarSign,
-                title: panelAbierto ? "Ocultar salario" : "Ver salario",
-                onClick: () =>
-                  setPanelAbierto((v) => {
-                    if (v) {
-                      setPanelHistorialAbierto(false);
-                      setCaptura(null);
-                    }
-                    return !v;
-                  }),
-                disabled: filas.length === 0,
-              },
-            ]}
-            menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]}
-          />
-        </div>
+        <ActionBarMenu menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]} />
       </div>
 
       <div className="min-h-0 flex-1">
@@ -315,7 +316,7 @@ export function MatrizOficioRegionSeccion() {
                           {col.id ? (
                             <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
                           ) : (
-                            <Globe2 size={16} className="mx-auto text-primary" />
+                            <Globe size={16} className="mx-auto text-primary" />
                           )}
                         </th>
                       ))}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { exportCatalogAdapter, importCatalogAdapter } from "@/components/csv/catalogCsvAdapter";
 import { SearchInput } from "@/components/SearchInput";
@@ -97,14 +97,43 @@ export function CatalogoGeneralSeccion({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+        <div className="flex items-center gap-0.5">
           <ActionBar
             actions={[
               { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
+              ...(conFicha
+                ? [
+                    {
+                      icon: FileText,
+                      title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                      onClick: () => setPanelFichaAbierto((v) => !v),
+                    },
+                  ]
+                : []),
               ...(csv
                 ? [
+                    ACTION_BAR_SEPARATOR,
+                    {
+                      icon: Download,
+                      title: "Exportar a CSV",
+                      onClick: () =>
+                        setCsvAdaptador(
+                          exportCatalogAdapter(
+                            {
+                              title: descriptor.titulo,
+                              defaultFile: csv.archivoDefault,
+                              fields: csv.campos,
+                              naturalKeyFromModel: csv.claveNaturalModelo,
+                              naturalKeyFromRow: csv.claveNaturalFila,
+                              rowToNew: descriptor.filaANuevo,
+                              toRow: descriptor.aFila,
+                            },
+                            items,
+                          ),
+                        ),
+                      disabled: csvAdaptador !== null || items.length === 0,
+                    },
                     {
                       icon: Upload,
                       title: "Importar desde CSV",
@@ -126,50 +155,25 @@ export function CatalogoGeneralSeccion({
                         ),
                       disabled: csvAdaptador !== null,
                     },
-                    {
-                      icon: Download,
-                      title: "Exportar a CSV",
-                      onClick: () =>
-                        setCsvAdaptador(
-                          exportCatalogAdapter(
-                            {
-                              title: descriptor.titulo,
-                              defaultFile: csv.archivoDefault,
-                              fields: csv.campos,
-                              naturalKeyFromModel: csv.claveNaturalModelo,
-                              naturalKeyFromRow: csv.claveNaturalFila,
-                              rowToNew: descriptor.filaANuevo,
-                              toRow: descriptor.aFila,
-                            },
-                            items,
-                          ),
-                        ),
-                      disabled: csvAdaptador !== null || items.length === 0,
-                    },
                   ]
                 : []),
-              ...(conFicha
-                ? [
-                    {
-                      icon: FileText,
-                      title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
-                      onClick: () => setPanelFichaAbierto((v) => !v),
-                    },
-                  ]
-                : []),
-            ]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: () => reload() },
-              {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-                destructive: true,
-              },
             ]}
           />
+          <div className="mx-1 h-4 w-px bg-border" />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
         </div>
+        <ActionBarMenu
+          menu={[
+            { icon: RefreshCcw, title: "Recargar", onClick: () => reload() },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !puedeEliminar,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
       <div className="min-h-0 flex-1">
         {conFicha ? (

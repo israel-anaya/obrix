@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
-import { ActionBar, type BarAction } from "@/components/ActionBar";
+import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu, type BarAction } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -25,40 +25,77 @@ function PanelGrid({
   onAgregar,
   onEliminar,
   puedeEliminar,
-  extraAcciones,
+  fichaAccion,
+  otrasAcciones,
+  apilarBarra,
   children,
 }: {
-  titulo: string;
+  titulo?: string;
   busqueda: string;
   onBusquedaChange: (busqueda: string) => void;
   onRecargar: () => void;
   onAgregar: () => void;
   onEliminar: () => void;
   puedeEliminar: boolean;
-  extraAcciones?: BarAction[];
+  fichaAccion?: BarAction;
+  otrasAcciones?: BarAction[];
+  /** Baja la barra de acciones a una segunda fila — para paneles angostos donde no cabe junto al título. */
+  apilarBarra?: boolean;
   children: ReactNode;
 }) {
+  const acciones = (
+    <ActionBar
+      actions={[
+        { icon: Plus, title: "Agregar", onClick: onAgregar },
+        ...(fichaAccion ? [fichaAccion] : []),
+        ...(otrasAcciones && otrasAcciones.length > 0 ? [ACTION_BAR_SEPARATOR, ...otrasAcciones] : []),
+      ]}
+    />
+  );
+  const menu = (
+    <ActionBarMenu
+      menu={[
+        { icon: RefreshCcw, title: "Recargar", onClick: onRecargar },
+        {
+          icon: Trash2,
+          title: "Eliminar seleccionado",
+          onClick: onEliminar,
+          disabled: !puedeEliminar,
+          destructive: true,
+        },
+      ]}
+    />
+  );
+  const buscador = <SearchInput value={busqueda} onChange={onBusquedaChange} />;
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
-        <h2 className="text-sm font-semibold">{titulo}</h2>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={onBusquedaChange} />
-          <ActionBar
-            actions={[{ icon: Plus, title: "Agregar", onClick: onAgregar }, ...(extraAcciones ?? [])]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: onRecargar },
-              {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: onEliminar,
-                disabled: !puedeEliminar,
-                destructive: true,
-              },
-            ]}
-          />
+      {apilarBarra ? (
+        <div className="flex shrink-0 flex-col border-b border-border">
+          <div className="flex items-center justify-between px-3 pt-1.5 pb-1.5">
+            {titulo && <h2 className="text-sm font-semibold">{titulo}</h2>}
+            {menu}
+          </div>
+          <div className="border-t border-border" />
+          <div className="flex items-center gap-0.5 px-3 pt-1.5 pb-1.5">
+            {acciones}
+            <div className="mx-1 h-4 w-px bg-border" />
+            {buscador}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
+          <div className="flex items-center gap-2">
+            {titulo && <h2 className="text-sm font-semibold">{titulo}</h2>}
+            <div className="flex items-center gap-0.5">
+              {acciones}
+              <div className="mx-1 h-4 w-px bg-border" />
+              {buscador}
+            </div>
+          </div>
+          {menu}
+        </div>
+      )}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
     </div>
   );
@@ -170,20 +207,18 @@ export function FamiliasInsumoSeccion() {
             <ResizablePanelGroup orientation="vertical" className="h-full">
               <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <PanelGrid
-              titulo="Familias de insumo"
               busqueda={busquedaFamilia}
               onBusquedaChange={setBusquedaFamilia}
               onRecargar={recargar}
               onAgregar={() => familiaGridRef.current?.addRow()}
               onEliminar={() => familiaGridRef.current?.deleteSelectedRows()}
               puedeEliminar={puedeEliminarFamilia}
-              extraAcciones={[
-                {
-                  icon: Upload,
-                  title: "Importar desde CSV",
-                  onClick: () => setCsvAdaptador(adaptadorImportFamilias(familias)),
-                  disabled: csvAdaptador !== null,
-                },
+              fichaAccion={{
+                icon: FileText,
+                title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                onClick: () => setPanelFichaAbierto((v) => !v),
+              }}
+              otrasAcciones={[
                 {
                   icon: Download,
                   title: "Exportar a CSV",
@@ -191,9 +226,10 @@ export function FamiliasInsumoSeccion() {
                   disabled: csvAdaptador !== null || familias.length === 0,
                 },
                 {
-                  icon: FileText,
-                  title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
-                  onClick: () => setPanelFichaAbierto((v) => !v),
+                  icon: Upload,
+                  title: "Importar desde CSV",
+                  onClick: () => setCsvAdaptador(adaptadorImportFamilias(familias)),
+                  disabled: csvAdaptador !== null,
                 },
               ]}
             >
@@ -241,6 +277,7 @@ export function FamiliasInsumoSeccion() {
                 onAgregar={() => subfamiliaGridRef.current?.addRow()}
                 onEliminar={() => subfamiliaGridRef.current?.deleteSelectedRows()}
                 puedeEliminar={puedeEliminarSubfamilia}
+                apilarBarra
               >
                 <DataGrid
                   ref={subfamiliaGridRef}

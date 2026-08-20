@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
-import { SearchInput } from "@/components/SearchInput";
+import { ActionBarMenu } from "@/components/ActionBar";
 import type { DataGridHandle } from "@/components/grid/DataGrid";
 import { VerticalGrid, type VerticalGridGroup } from "@/components/grid/VerticalGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -118,22 +117,19 @@ export function MatrizPerfilInactividadSeccion() {
               `${perfiles.length} ${perfiles.length === 1 ? "perfil" : "perfiles"} · ${nRubros} ${nRubros === 1 ? "rubro" : "rubros"}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[{ icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() }]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: recargar },
-              {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-                destructive: true,
-              },
-            ]}
-          />
-        </div>
+        <ActionBarMenu
+          menu={[
+            { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
+            { icon: RefreshCcw, title: "Recargar", onClick: recargar },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !puedeEliminar,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
 
       <div className="min-h-0 flex-1">

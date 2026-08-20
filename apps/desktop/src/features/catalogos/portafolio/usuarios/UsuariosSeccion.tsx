@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -184,23 +184,25 @@ export function UsuariosSeccion() {
           <ResizablePanel defaultSize="50" minSize="20" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <div className="flex h-full min-h-0 flex-col overflow-hidden">
               <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
-                <h2 className="text-sm font-semibold">Usuarios</h2>
-                <div className="flex items-center gap-2">
-                  <SearchInput value={busquedaUsuario} onChange={setBusquedaUsuario} />
+                <div className="flex items-center gap-0.5">
                   <ActionBar
                     actions={[{ icon: Plus, title: "Agregar", onClick: () => usuarioGridRef.current?.addRow() }]}
-                    menu={[
-                      { icon: RefreshCcw, title: "Recargar", onClick: () => reload() },
-                      {
-                        icon: Trash2,
-                        title: "Eliminar seleccionado",
-                        onClick: () => usuarioGridRef.current?.deleteSelectedRows(),
-                        disabled: !puedeEliminarUsuario,
-                        destructive: true,
-                      },
-                    ]}
                   />
+                  <div className="mx-1 h-4 w-px bg-border" />
+                  <SearchInput value={busquedaUsuario} onChange={setBusquedaUsuario} />
                 </div>
+                <ActionBarMenu
+                  menu={[
+                    { icon: RefreshCcw, title: "Recargar", onClick: () => reload() },
+                    {
+                      icon: Trash2,
+                      title: "Eliminar seleccionado",
+                      onClick: () => usuarioGridRef.current?.deleteSelectedRows(),
+                      disabled: !puedeEliminarUsuario,
+                      destructive: true,
+                    },
+                  ]}
+                />
               </div>
               <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
                 <DataGrid
@@ -225,23 +227,28 @@ export function UsuariosSeccion() {
             {usuarioSeleccionadoId ? (
               <div className="flex h-full min-h-0 flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-1.5">
-                  <h2 className="text-sm font-semibold">Organizaciones</h2>
-                  <div className="flex items-center gap-2">
-                    <SearchInput value={busquedaMembresia} onChange={setBusquedaMembresia} />
-                    <ActionBar
-                      actions={[{ icon: Plus, title: "Agregar", onClick: () => membresiaGridRef.current?.addRow() }]}
-                      menu={[
-                        { icon: RefreshCcw, title: "Recargar", onClick: recargarMembresias },
-                        {
-                          icon: Trash2,
-                          title: "Eliminar seleccionado",
-                          onClick: () => membresiaGridRef.current?.deleteSelectedRows(),
-                          disabled: !puedeEliminarMembresia,
-                          destructive: true,
-                        },
-                      ]}
-                    />
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-semibold">Organizaciones</h2>
+                    <div className="flex items-center gap-0.5">
+                      <ActionBar
+                        actions={[{ icon: Plus, title: "Agregar", onClick: () => membresiaGridRef.current?.addRow() }]}
+                      />
+                      <div className="mx-1 h-4 w-px bg-border" />
+                      <SearchInput value={busquedaMembresia} onChange={setBusquedaMembresia} />
+                    </div>
                   </div>
+                  <ActionBarMenu
+                    menu={[
+                      { icon: RefreshCcw, title: "Recargar", onClick: recargarMembresias },
+                      {
+                        icon: Trash2,
+                        title: "Eliminar seleccionado",
+                        onClick: () => membresiaGridRef.current?.deleteSelectedRows(),
+                        disabled: !puedeEliminarMembresia,
+                        destructive: true,
+                      },
+                    ]}
+                  />
                 </div>
                 <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
                   <DataGrid

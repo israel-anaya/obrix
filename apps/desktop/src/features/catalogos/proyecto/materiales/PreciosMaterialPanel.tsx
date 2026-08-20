@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Globe2, MapPinned, Plus, X } from "lucide-react";
+import { DollarSign, Globe, MapPinned, Plus, X } from "lucide-react";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EnlaceHistorialCompleto } from "@/components/EnlaceHistorialCompleto";
@@ -316,7 +316,7 @@ export function PreciosMaterialPanel({
                     <SelectContent>
                       <SelectItem value={NACIONAL_VALOR}>
                         <span className="flex items-center gap-1.5">
-                          <Globe2 size={16} className="text-primary" />
+                          <Globe size={16} className="text-primary" />
                           {NACIONAL} (default)
                         </span>
                       </SelectItem>
@@ -370,7 +370,7 @@ export function PreciosMaterialPanel({
                         {p.region_id ? (
                           <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                         ) : (
-                          <Globe2 size={16} className="shrink-0 text-primary" />
+                          <Globe size={16} className="shrink-0 text-primary" />
                         )}
                         {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                       </span>
@@ -424,7 +424,7 @@ export function PreciosMaterialPanel({
                               {p.region_id ? (
                                 <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                               ) : (
-                                <Globe2 size={16} className="shrink-0 text-primary" />
+                                <Globe size={16} className="shrink-0 text-primary" />
                               )}
                               {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                             </span>

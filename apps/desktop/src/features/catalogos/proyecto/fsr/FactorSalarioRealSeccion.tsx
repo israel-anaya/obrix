@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { toast } from "@/hooks/use-toast";
@@ -173,9 +173,8 @@ export function FactorSalarioRealSeccion({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+        <div className="flex items-center gap-0.5">
           <ActionBar
             actions={[
               { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
@@ -198,18 +197,22 @@ export function FactorSalarioRealSeccion({
                 disabled: !filaSeleccionada,
               },
             ]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
-              {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !filaSeleccionada,
-                destructive: true,
-              },
-            ]}
           />
+          <div className="mx-1 h-4 w-px bg-border" />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
         </div>
+        <ActionBarMenu
+          menu={[
+            { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !filaSeleccionada,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
       <div className="min-h-0 flex-1">
         <DataGrid

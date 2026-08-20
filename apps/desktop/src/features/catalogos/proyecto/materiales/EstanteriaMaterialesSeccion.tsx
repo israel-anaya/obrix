@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, DollarSign, Pencil, Plus, RefreshCcw } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { FIELD_INPUT_CLASS, Field } from "@/components/Field";
 import { PercentageInput } from "@/components/PercentageInput";
 import { SearchInput } from "@/components/SearchInput";
@@ -356,35 +356,36 @@ export function EstanteriaMaterialesSeccion() {
           <p className={cn("truncate text-xs", error ? "font-medium text-destructive" : "text-muted-foreground")}>
             {error ?? `${tituloPasillo} · ${visibles.length} material${visibles.length === 1 ? "" : "es"}`}
           </p>
+          <div className="flex items-center gap-0.5">
+            <ActionBar
+              actions={[
+                { icon: Plus, title: "Nuevo material", onClick: agregar },
+                {
+                  icon: DollarSign,
+                  title: panel === "precios" ? "Ocultar precios" : "Ver precios",
+                  onClick: () =>
+                    setPanel((v) => {
+                      if (v === "precios") {
+                        setPanelHistorialAbierto(false);
+                        return null;
+                      }
+                      return "precios";
+                    }),
+                  disabled: visibles.length === 0,
+                },
+                {
+                  icon: Pencil,
+                  title: "Editar material seleccionado",
+                  onClick: () => materialSeleccionado && iniciarEdicion(materialSeleccionado),
+                  disabled: !materialSeleccionado,
+                },
+              ]}
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[
-              { icon: Plus, title: "Nuevo material", onClick: agregar },
-              {
-                icon: Pencil,
-                title: "Editar material seleccionado",
-                onClick: () => materialSeleccionado && iniciarEdicion(materialSeleccionado),
-                disabled: !materialSeleccionado,
-              },
-              {
-                icon: DollarSign,
-                title: panel === "precios" ? "Ocultar precios" : "Ver precios",
-                onClick: () =>
-                  setPanel((v) => {
-                    if (v === "precios") {
-                      setPanelHistorialAbierto(false);
-                      return null;
-                    }
-                    return "precios";
-                  }),
-                disabled: visibles.length === 0,
-              },
-            ]}
-            menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]}
-          />
-        </div>
+        <ActionBarMenu menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]} />
       </div>
 
       <div className="min-h-0 flex-1">

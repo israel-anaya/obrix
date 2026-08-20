@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridHandle } from "@/components/grid/DataGrid";
@@ -82,43 +82,46 @@ export function PerfilInactividadEquipoGridVista() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold">Perfiles de inactividad de equipo</h2>
+          <div className="flex items-center gap-0.5">
+            <ActionBar
+              actions={[
+                { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
+                {
+                  icon: FileText,
+                  title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
+                  onClick: () => setPanelFichaAbierto((v) => !v),
+                },
+                ACTION_BAR_SEPARATOR,
+                {
+                  icon: Download,
+                  title: "Exportar a CSV",
+                  onClick: () => setCsvAdaptador(adaptadorExportPerfiles(perfiles)),
+                  disabled: csvAdaptador !== null || perfiles.length === 0,
+                },
+                {
+                  icon: Upload,
+                  title: "Importar desde CSV",
+                  onClick: () => setCsvAdaptador(adaptadorImportPerfiles(perfiles)),
+                  disabled: csvAdaptador !== null,
+                },
+              ]}
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[
-              { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icon: Upload,
-                title: "Importar desde CSV",
-                onClick: () => setCsvAdaptador(adaptadorImportPerfiles(perfiles)),
-                disabled: csvAdaptador !== null,
-              },
-              {
-                icon: Download,
-                title: "Exportar a CSV",
-                onClick: () => setCsvAdaptador(adaptadorExportPerfiles(perfiles)),
-                disabled: csvAdaptador !== null || perfiles.length === 0,
-              },
-              {
-                icon: FileText,
-                title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
-                onClick: () => setPanelFichaAbierto((v) => !v),
-              },
-            ]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: recargar },
-              {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-                destructive: true,
-              },
-            ]}
-          />
-        </div>
+        <ActionBarMenu
+          menu={[
+            { icon: RefreshCcw, title: "Recargar", onClick: recargar },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !puedeEliminar,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
       <details className="border-b border-border px-3 py-2 text-xs text-muted-foreground open:bg-muted/30">
         <summary className="cursor-pointer select-none font-semibold text-foreground">

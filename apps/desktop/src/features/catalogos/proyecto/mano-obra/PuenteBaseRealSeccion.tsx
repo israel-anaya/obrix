@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { DollarSign, RefreshCcw } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/proyecto/mano-obra/SalarioCategoriaFasarPanel";
@@ -193,21 +193,22 @@ export function PuenteBaseRealSeccion() {
           <p className={cn("truncate text-xs", error ? "font-medium text-destructive" : "text-muted-foreground")}>
             {error ?? "Izquierda = base de nómina · derecha = aporte del FSR · color = qué FSR usa"}
           </p>
+          <div className="flex items-center gap-0.5">
+            <ActionBar
+              actions={[
+                {
+                  icon: DollarSign,
+                  title: panelAbierto ? "Ocultar salario" : "Ver salario",
+                  onClick: () => setPanelAbierto((v) => !v),
+                  disabled: !seleccionadaId && !panelAbierto,
+                },
+              ]}
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[
-              {
-                icon: DollarSign,
-                title: panelAbierto ? "Ocultar salario" : "Ver salario",
-                onClick: () => setPanelAbierto((v) => !v),
-                disabled: !seleccionadaId && !panelAbierto,
-              },
-            ]}
-            menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]}
-          />
-        </div>
+        <ActionBarMenu menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]} />
       </div>
 
       <div className="flex items-center gap-1.5 border-b border-border px-3 py-1.5">

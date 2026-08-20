@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -232,19 +232,12 @@ export function EquipoCostoHorarioGridVista() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+        <div className="flex items-center gap-0.5">
           <ActionBar
             actions={[
               { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icon: Upload,
-                title: "Importar desde CSV",
-                onClick: () =>
-                  setCsvAdaptador(adaptadorImportEquipoCostoHorario()),
-                disabled: csvAdaptador !== null,
-              },
+              ACTION_BAR_SEPARATOR,
               {
                 icon: Download,
                 title: "Exportar a CSV",
@@ -252,19 +245,30 @@ export function EquipoCostoHorarioGridVista() {
                   setCsvAdaptador(adaptadorExportEquipoCostoHorario(equipos, unidades, familias)),
                 disabled: csvAdaptador !== null || equipos.length === 0,
               },
-            ]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
               {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-                destructive: true,
+                icon: Upload,
+                title: "Importar desde CSV",
+                onClick: () =>
+                  setCsvAdaptador(adaptadorImportEquipoCostoHorario()),
+                disabled: csvAdaptador !== null,
               },
             ]}
           />
+          <div className="mx-1 h-4 w-px bg-border" />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
         </div>
+        <ActionBarMenu
+          menu={[
+            { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !puedeEliminar,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
       <div className="min-h-0 flex-1">
         <DataGrid

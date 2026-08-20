@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, RefreshCcw } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/proyecto/mano-obra/SalarioCategoriaFasarPanel";
@@ -152,21 +152,22 @@ export function EscalafonSalarioSeccion() {
             {error ??
               `${visibles.length} oficios · ${sinSalario} sin salario · tramo interior = base, resto = FSR`}
           </p>
+          <div className="flex items-center gap-0.5">
+            <ActionBar
+              actions={[
+                {
+                  icon: DollarSign,
+                  title: panelAbierto ? "Ocultar salario" : "Ver salario",
+                  onClick: () => setPanelAbierto((v) => !v),
+                  disabled: !seleccionadaId && !panelAbierto,
+                },
+              ]}
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar
-            actions={[
-              {
-                icon: DollarSign,
-                title: panelAbierto ? "Ocultar salario" : "Ver salario",
-                onClick: () => setPanelAbierto((v) => !v),
-                disabled: !seleccionadaId && !panelAbierto,
-              },
-            ]}
-            menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]}
-          />
-        </div>
+        <ActionBarMenu menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]} />
       </div>
 
       <div className="min-h-0 flex-1">

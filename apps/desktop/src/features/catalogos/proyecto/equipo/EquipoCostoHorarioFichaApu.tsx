@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe2, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -710,7 +710,7 @@ export function EquipoCostoHorarioFichaApu({
                 {regionVistaId ? (
                   <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
                 ) : (
-                  <Globe2 size={12} className="text-primary" />
+                  <Globe size={12} className="text-primary" />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
@@ -1215,7 +1215,7 @@ export function EquipoCostoHorarioFichaApu({
                     onClick={() => verRegion(z.regionId)}
                   >
                     {z.esNac ? (
-                      <Globe2 size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                      <Globe size={16} className="mx-auto text-primary" aria-label="Nacional" />
                     ) : (
                       <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
                     )}
@@ -1318,7 +1318,7 @@ export function EquipoCostoHorarioFichaApu({
             {regionVistaId ? (
               <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
             ) : (
-              <Globe2 size={12} className="shrink-0 text-primary" />
+              <Globe size={12} className="shrink-0 text-primary" />
             )}
             El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
           </p>

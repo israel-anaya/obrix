@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronRight, RefreshCcw } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listFamiliasInsumo, listMateriales, listProveedores, listUnidadesMedida } from "@/lib/tauri";
@@ -399,11 +399,10 @@ export function RadarMaterialesSeccion() {
           <p className={cn("truncate text-xs font-medium", error ? "text-destructive" : "text-muted-foreground")}>
             {error ?? "Ángulo = familia · distancia = precio · tamaño = merma"}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
+          <div className="mx-1 h-4 w-px bg-border" />
           <SearchInput value={busqueda} onChange={setBusqueda} />
-          <ActionBar actions={[]} menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]} />
         </div>
+        <ActionBarMenu menu={[{ icon: RefreshCcw, title: "Recargar", onClick: recargar }]} />
       </div>
 
       <div className="flex items-center gap-1.5 border-b border-border px-3 py-1.5">

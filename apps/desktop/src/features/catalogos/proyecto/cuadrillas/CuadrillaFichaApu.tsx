@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, Globe2, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Users, Wrench, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, Globe, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Users, Wrench, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -532,7 +532,7 @@ export function CuadrillaFichaApu({
                 {regionVistaId ? (
                   <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
                 ) : (
-                  <Globe2 size={12} className="text-primary" />
+                  <Globe size={12} className="text-primary" />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
@@ -931,7 +931,7 @@ export function CuadrillaFichaApu({
                     onClick={() => verRegion(z.regionId)}
                   >
                     {z.esNac ? (
-                      <Globe2 size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                      <Globe size={16} className="mx-auto text-primary" aria-label="Nacional" />
                     ) : (
                       <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
                     )}
@@ -1054,7 +1054,7 @@ export function CuadrillaFichaApu({
             {regionVistaId ? (
               <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
             ) : (
-              <Globe2 size={12} className="shrink-0 text-primary" />
+              <Globe size={12} className="shrink-0 text-primary" />
             )}
             El análisis usa los salarios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
           </p>

@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ActionBar } from "@/components/ActionBar";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { FIELD_INPUT_CLASS, Field } from "@/components/Field";
 import { SearchInput } from "@/components/SearchInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -256,17 +256,22 @@ export function CuadrillasFicha() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex w-72 shrink-0 flex-col border-r border-border">
           <div className="flex items-center justify-between gap-2 border-b border-border p-2">
-            <SearchInput value={busqueda} onChange={setBusqueda} />
-            <ActionBar
-              actions={[
-                { icon: Plus, title: "Nueva cuadrilla", onClick: iniciarCreacion },
-                {
-                  icon: Pencil,
-                  title: "Editar cuadrilla seleccionada",
-                  onClick: () => seleccionada && iniciarEdicion(seleccionada),
-                  disabled: !seleccionada,
-                },
-              ]}
+            <div className="flex items-center gap-0.5">
+              <ActionBar
+                actions={[
+                  { icon: Plus, title: "Nueva cuadrilla", onClick: iniciarCreacion },
+                  {
+                    icon: Pencil,
+                    title: "Editar cuadrilla seleccionada",
+                    onClick: () => seleccionada && iniciarEdicion(seleccionada),
+                    disabled: !seleccionada,
+                  },
+                ]}
+              />
+              <div className="mx-1 h-4 w-px bg-border" />
+              <SearchInput value={busqueda} onChange={setBusqueda} />
+            </div>
+            <ActionBarMenu
               menu={[
                 { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
                 {

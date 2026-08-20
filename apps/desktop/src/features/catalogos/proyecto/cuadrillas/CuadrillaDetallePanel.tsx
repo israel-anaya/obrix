@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Globe2, HardHat, MapPinned, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Globe, HardHat, MapPinned, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -376,7 +376,7 @@ export function CuadrillaDetallePanel({
               <SelectContent>
                 <SelectItem value={NACIONAL_VALOR}>
                   <span className="flex items-center gap-1.5">
-                    <Globe2 size={14} className="text-primary" />
+                    <Globe size={14} className="text-primary" />
                     {NACIONAL}
                   </span>
                 </SelectItem>

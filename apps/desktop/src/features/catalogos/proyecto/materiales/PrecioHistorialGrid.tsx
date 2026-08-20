@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Globe2, History, MapPinned } from "lucide-react";
+import { Globe, History, MapPinned } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listPreciosMaterial, listRegiones } from "@/lib/tauri";
@@ -144,7 +144,7 @@ export function PrecioHistorialGrid({
                       {p.region_id ? (
                         <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
                       ) : (
-                        <Globe2 size={16} className="shrink-0 text-primary" />
+                        <Globe size={16} className="shrink-0 text-primary" />
                       )}
                       {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                     </span>

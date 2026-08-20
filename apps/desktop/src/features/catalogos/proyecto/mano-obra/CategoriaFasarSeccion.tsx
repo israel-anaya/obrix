@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DollarSign, Download, FileSpreadsheet, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
-import { ActionBar } from "@/components/ActionBar";
+import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -230,41 +230,11 @@ export function CategoriaFasarSeccion() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-end border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <SearchInput value={busqueda} onChange={setBusqueda} />
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+        <div className="flex items-center gap-0.5">
           <ActionBar
             actions={[
               { icon: Plus, title: "Agregar", onClick: () => gridRef.current?.addRow() },
-              {
-                icon: Upload,
-                title: "Importar desde CSV",
-                onClick: () => setCsvAdaptador(adaptadorImportCategoriasFasar()),
-                disabled: csvAdaptador !== null,
-              },
-              {
-                icon: Download,
-                title: "Exportar a CSV",
-                onClick: () => setCsvAdaptador(adaptadorExportCategoriasFasar(categorias, unidades, familias)),
-                disabled: csvAdaptador !== null || categorias.length === 0,
-              },
-              {
-                icon: FileSpreadsheet,
-                title: "Actualizar salarios en lote",
-                onClick: () => setCsvAdaptador(adaptadorSalariosLote(categorias)),
-                disabled: csvAdaptador !== null || categorias.length === 0,
-              },
-              {
-                icon: DollarSign,
-                title: panelSalarioAbierto ? "Ocultar salario" : "Ver salario",
-                onClick: () =>
-                  setPanelSalarioAbierto((v) => {
-                    if (!v) setPanelFichaAbierto(false);
-                    else setPanelHistorialAbierto(false);
-                    return !v;
-                  }),
-                disabled: !panelSalarioAbierto && categorias.length === 0,
-              },
               {
                 icon: FileText,
                 title: panelFichaAbierto ? "Ocultar ficha" : "Ver ficha",
@@ -277,19 +247,54 @@ export function CategoriaFasarSeccion() {
                     return !v;
                   }),
               },
-            ]}
-            menu={[
-              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+              ACTION_BAR_SEPARATOR,
               {
-                icon: Trash2,
-                title: "Eliminar seleccionado",
-                onClick: () => gridRef.current?.deleteSelectedRows(),
-                disabled: !puedeEliminar,
-                destructive: true,
+                icon: Download,
+                title: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportCategoriasFasar(categorias, unidades, familias)),
+                disabled: csvAdaptador !== null || categorias.length === 0,
+              },
+              {
+                icon: Upload,
+                title: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportCategoriasFasar()),
+                disabled: csvAdaptador !== null,
+              },
+              ACTION_BAR_SEPARATOR,
+              {
+                icon: DollarSign,
+                title: panelSalarioAbierto ? "Ocultar salario" : "Ver salario",
+                onClick: () =>
+                  setPanelSalarioAbierto((v) => {
+                    if (!v) setPanelFichaAbierto(false);
+                    else setPanelHistorialAbierto(false);
+                    return !v;
+                  }),
+                disabled: !panelSalarioAbierto && categorias.length === 0,
+              },
+              {
+                icon: FileSpreadsheet,
+                title: "Actualizar salarios en lote",
+                onClick: () => setCsvAdaptador(adaptadorSalariosLote(categorias)),
+                disabled: csvAdaptador !== null || categorias.length === 0,
               },
             ]}
           />
+          <div className="mx-1 h-4 w-px bg-border" />
+          <SearchInput value={busqueda} onChange={setBusqueda} />
         </div>
+        <ActionBarMenu
+          menu={[
+            { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+            {
+              icon: Trash2,
+              title: "Eliminar seleccionado",
+              onClick: () => gridRef.current?.deleteSelectedRows(),
+              disabled: !puedeEliminar,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
       <div className="min-h-0 flex-1">
         {/* Los grupos viven siempre para no desmontar el grid al abrir salario,
