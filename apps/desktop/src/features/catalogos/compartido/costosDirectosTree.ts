@@ -25,6 +25,7 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
         hijos: [
           { id: "tabuladores-escalafon", label: "Escalafón" },
           { id: "tabuladores-puente", label: "Puente base → real" },
+          { id: "tabuladores-costo-mano-obra", label: "Costo de Mano de obra" },
         ],
       },
     ],

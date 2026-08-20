@@ -33,6 +33,7 @@ import { ClientesSeccion } from "@/features/catalogos/portafolio/clientes/Client
 import { CATALOGO_GRID_CONFIG } from "@/features/catalogos/compartido/costosDirectosTree";
 import { CuadrillasSeccion, type CuadrillasVista } from "@/features/catalogos/proyecto/cuadrillas/CuadrillasSeccion";
 import { EquipoCostoHorarioSeccion, type EquipoCostoHorarioVista } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioSeccion";
+import { CostoManoObraSeccion } from "@/features/catalogos/proyecto/mano-obra/CostoManoObraSeccion";
 import { EscalafonSalarioSeccion } from "@/features/catalogos/proyecto/mano-obra/EscalafonSalarioSeccion";
 import { HerramientaSeccion } from "@/features/catalogos/proyecto/herramienta/HerramientaSeccion";
 import { BasicoAuxiliarSeccion, type BasicoAuxiliarVista } from "@/features/catalogos/proyecto/basicos-auxiliares/BasicoAuxiliarSeccion";
@@ -532,6 +533,7 @@ export default function App() {
       if (catalogoId === "tabuladores-escalafon") return <EscalafonSalarioSeccion />;
       if (catalogoId === "tabuladores-matriz") return <MatrizOficioRegionSeccion />;
       if (catalogoId === "tabuladores-puente") return <PuenteBaseRealSeccion />;
+      if (catalogoId === "tabuladores-costo-mano-obra") return <CostoManoObraSeccion />;
       if (catalogoId === "cuadrillas-trabajo") {
         return <CuadrillasSeccion vista={cuadrillasVista} />;
       }
@@ -589,6 +591,7 @@ export default function App() {
     "tabuladores-escalafon",
     "tabuladores-matriz",
     "tabuladores-puente",
+    "tabuladores-costo-mano-obra",
     "cuadrillas-trabajo",
     "herramienta",
     "basicos-auxiliares",
