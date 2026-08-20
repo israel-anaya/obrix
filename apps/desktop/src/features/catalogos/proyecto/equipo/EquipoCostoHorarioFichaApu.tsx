@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe, GlobeCheck, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -204,6 +204,42 @@ function MarcadorInsercion() {
         </div>
       </td>
     </tr>
+  );
+}
+
+function CeldaCostoComposicion({
+  costo,
+  usaCostoNacional,
+  nombreRegion,
+  mostrarFechaPrecio,
+  fechaPrecio,
+  fechaSalarioVigente,
+}: {
+  costo: string;
+  usaCostoNacional: boolean;
+  nombreRegion: string | null;
+  mostrarFechaPrecio: boolean;
+  fechaPrecio: string | null | undefined;
+  fechaSalarioVigente?: string | null;
+}) {
+  const mostrarGlobeCheck = !!nombreRegion && usaCostoNacional;
+  return (
+    <>
+      <div className="inline-flex items-center justify-end gap-1">
+        {mostrarGlobeCheck ? (
+          <GlobeCheck
+            size={16}
+            className="shrink-0 text-primary"
+            title={`Costo nacional (sin tabulador en ${nombreRegion})`}
+            aria-label="Costo nacional"
+          />
+        ) : null}
+        <span>${fmt(costo)}</span>
+      </div>
+      {mostrarFechaPrecio && fechaPrecio ? (
+        <FechaPrecioFrescura fecha={fechaPrecio} fechaSalarioVigente={fechaSalarioVigente} />
+      ) : null}
+    </>
   );
 }
 
@@ -487,6 +523,11 @@ export function EquipoCostoHorarioFichaApu({
     ];
   }, [costos, regiones]);
 
+  const nombreRegionVista = useMemo(
+    () => (regionVistaId ? (zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? null) : null),
+    [regionVistaId, zonas],
+  );
+
   const coberturaPorCostoId = useMemo(() => {
     const idsReceta = new Set(detalles.map((d) => d.id));
     return Object.fromEntries(
@@ -708,9 +749,9 @@ export function EquipoCostoHorarioFichaApu({
               <span aria-hidden className="px-1.5 text-border">·</span>
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 {regionVistaId ? (
-                  <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
+                  <MapPinned size={16} className="text-teal-600 dark:text-teal-400" />
                 ) : (
-                  <Globe size={12} className="text-primary" />
+                  <Globe size={16} className="text-primary" />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
@@ -965,10 +1006,13 @@ export function EquipoCostoHorarioFichaApu({
                     />
                   </td>
                   <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
-                    <div>${fmt(cd?.costo ?? "0")}</div>
-                    {mostrarFechaPrecio && cd?.fecha_precio ? (
-                      <FechaPrecioFrescura fecha={cd.fecha_precio} />
-                    ) : null}
+                    <CeldaCostoComposicion
+                      costo={cd?.costo ?? "0"}
+                      usaCostoNacional={cd?.usa_costo_nacional ?? false}
+                      nombreRegion={nombreRegionVista}
+                      mostrarFechaPrecio={mostrarFechaPrecio}
+                      fechaPrecio={cd?.fecha_precio}
+                    />
                   </td>
                   <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
                   <td className="py-1 text-right">
@@ -1079,15 +1123,16 @@ export function EquipoCostoHorarioFichaApu({
                     />
                   </td>
                   <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
-                    <div>${fmt(cd?.costo ?? "0")}</div>
-                    {mostrarFechaPrecio && cd?.fecha_precio ? (
-                      <FechaPrecioFrescura
-                        fecha={cd.fecha_precio}
-                        fechaSalarioVigente={
-                          categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
-                        }
-                      />
-                    ) : null}
+                    <CeldaCostoComposicion
+                      costo={cd?.costo ?? "0"}
+                      usaCostoNacional={cd?.usa_costo_nacional ?? false}
+                      nombreRegion={nombreRegionVista}
+                      mostrarFechaPrecio={mostrarFechaPrecio}
+                      fechaPrecio={cd?.fecha_precio}
+                      fechaSalarioVigente={
+                        categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
+                      }
+                    />
                   </td>
                   <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
                   <td className="py-1 text-right">
@@ -1300,7 +1345,7 @@ export function EquipoCostoHorarioFichaApu({
                               title="sin precio en algún renglón"
                               className="inline-flex text-amber-800 dark:text-amber-300"
                             >
-                              <AlertTriangle size={12} className="shrink-0" />
+                              <AlertTriangle size={16} className="shrink-0" />
                             </span>
                           ) : null}
                           <span className="num block truncate font-semibold text-primary" title={monto}>
@@ -1316,9 +1361,9 @@ export function EquipoCostoHorarioFichaApu({
           </table>
           <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
             {regionVistaId ? (
-              <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
+              <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
             ) : (
-              <Globe size={12} className="shrink-0 text-primary" />
+              <Globe size={16} className="shrink-0 text-primary" />
             )}
             El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
           </p>

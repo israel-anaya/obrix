@@ -115,6 +115,7 @@ impl EquipoCostoHorarioDetalleService {
                 costo: Set(Decimal::ZERO),
                 importe: Set(Decimal::ZERO),
                 fecha_precio: Set(None),
+                usa_costo_nacional: Set(false),
                 deleted: Set(false),
                 created_at: Set(ahora.clone()),
                 created_by: Set(creado_por.clone()),

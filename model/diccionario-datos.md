@@ -1014,6 +1014,7 @@ No hay campos capturables. `cantidad` vive en `equipo_costo_horario_detalle`
 | costo | decimal | cache: si tipo = consumo, `precio_material.precio` vigente de la región (o nacional si falta; 0 si tampoco hay); si tipo = operacion, salario vigente de esa región (o nacional si falta) o `cuadrilla_costo.costo_total` de esa región (o nacional si falta; 0 si tampoco hay) |
 | importe | decimal | cache = `equipo_costo_horario_detalle.cantidad` × costo |
 | fecha_precio | date | nullable — foto de `precio_material.fecha_vigencia_desde`, de `salario_categoria_fasar.fecha_vigencia_desde` o, si el operador es cuadrilla, de `cuadrilla_costo.fecha_costo` de la valuación usada; NULL si el renglón quedó en 0 |
+| usa_costo_nacional | bool | `true` solo en valuaciones regionales cuando el costo unitario salió del tabulador nacional por fallback (precio, salario o cuadrilla); siempre `false` en la valuación nacional |
 | deleted | bool | indica si el registro fue eliminado lógicamente |
 | created_at / created_by / updated_at / updated_by / deleted_at / deleted_by | | |
 

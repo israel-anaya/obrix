@@ -211,6 +211,7 @@ impl EquipoCostoHorarioCostoService {
                 costo: Set(Decimal::ZERO),
                 importe: Set(Decimal::ZERO),
                 fecha_precio: Set(None),
+                usa_costo_nacional: Set(false),
                 deleted: Set(false),
                 created_at: Set(ahora.to_string()),
                 created_by: Set(creado_por.to_string()),
@@ -363,11 +364,11 @@ impl EquipoCostoHorarioCostoService {
 
         let mut subtotal_consumo = Decimal::ZERO;
         let mut subtotal_operacion = Decimal::ZERO;
-        let mut pendientes: Vec<(String, Decimal, Decimal, Option<String>)> = Vec::new();
+        let mut pendientes: Vec<(String, Decimal, Decimal, Option<String>, bool)> = Vec::new();
 
         for d in &detalles {
             let receta = &recetas[&d.equipo_costo_horario_detalle_id];
-            let (costo, fecha_precio) = match receta.tipo {
+            let (costo, fecha_precio, usa_costo_nacional) = match receta.tipo {
                 TipoEquipoCostoHorarioDetalle::Consumo => {
                     match Self::precio_vigente(
                         txn,
@@ -377,8 +378,10 @@ impl EquipoCostoHorarioCostoService {
                     )
                     .await?
                     {
-                        Some(precio) => (precio.precio, Some(precio.fecha_vigencia_desde)),
-                        None => (Decimal::ZERO, None),
+                        Some((precio, usa_nac)) => {
+                            (precio.precio, Some(precio.fecha_vigencia_desde), usa_nac)
+                        }
+                        None => (Decimal::ZERO, None, false),
                     }
                 }
                 TipoEquipoCostoHorarioDetalle::Operacion => {
@@ -396,10 +399,10 @@ impl EquipoCostoHorarioCostoService {
                 TipoEquipoCostoHorarioDetalle::Consumo => subtotal_consumo += importe,
                 TipoEquipoCostoHorarioDetalle::Operacion => subtotal_operacion += importe,
             }
-            pendientes.push((d.id.clone(), costo, importe, fecha_precio));
+            pendientes.push((d.id.clone(), costo, importe, fecha_precio, usa_costo_nacional));
         }
 
-        for (id, costo, importe, fecha_precio) in pendientes {
+        for (id, costo, importe, fecha_precio, usa_costo_nacional) in pendientes {
             let mut am: equipo_costo_horario_costo_detalle::ActiveModel =
                 equipo_costo_horario_costo_detalle::Entity::find_by_id(&id)
                     .one(txn)
@@ -413,6 +416,7 @@ impl EquipoCostoHorarioCostoService {
             am.costo = Set(costo);
             am.importe = Set(importe);
             am.fecha_precio = Set(fecha_precio);
+            am.usa_costo_nacional = Set(usa_costo_nacional);
             am.update(txn).await?;
         }
 
@@ -452,20 +456,25 @@ impl EquipoCostoHorarioCostoService {
     }
 
     /// Precio vigente de esa zona; si es regional y no hay, cae al nacional.
-    /// Sin precio nacional tampoco, el renglón queda en cero.
+    /// Sin precio nacional tampoco, el renglón queda en cero. El segundo
+    /// valor del par es `true` solo en valuación regional con fallback.
     async fn precio_vigente(
         txn: &DatabaseTransaction,
         material_id: &str,
         region_id: Option<&str>,
         moneda: &str,
-    ) -> Result<Option<precio_material::Model>, ServiceError> {
+    ) -> Result<Option<(precio_material::Model, bool)>, ServiceError> {
         if let Some(region_id) = region_id {
             let regional = Self::precio_de_zona(txn, material_id, Some(region_id), moneda).await?;
-            if regional.is_some() {
-                return Ok(regional);
+            if let Some(precio) = regional {
+                return Ok(Some((precio, false)));
             }
+            let nacional = Self::precio_de_zona(txn, material_id, None, moneda).await?;
+            return Ok(nacional.map(|p| (p, true)));
         }
-        Self::precio_de_zona(txn, material_id, None, moneda).await
+        Ok(Self::precio_de_zona(txn, material_id, None, moneda)
+            .await?
+            .map(|p| (p, false)))
     }
 
     async fn precio_de_zona(
@@ -499,45 +508,54 @@ impl EquipoCostoHorarioCostoService {
         detalle_insumo_id: &str,
         naturaleza: Option<&NaturalezaEquipoCostoHorarioDetalle>,
         region_id: Option<&str>,
-    ) -> Result<(Decimal, Option<String>), ServiceError> {
+    ) -> Result<(Decimal, Option<String>, bool), ServiceError> {
         if naturaleza != Some(&NaturalezaEquipoCostoHorarioDetalle::Cuadrilla) {
             return match Self::salario_vigente(txn, detalle_insumo_id, region_id).await? {
-                Some(salario) => Ok((
+                Some((salario, usa_nac)) => Ok((
                     salario.salario_real_diario,
                     Some(salario.fecha_vigencia_desde),
+                    usa_nac,
                 )),
-                None => Ok((Decimal::ZERO, None)),
+                None => Ok((Decimal::ZERO, None, false)),
             };
         }
         let de_la_zona =
             CuadrillaCostoService::resolver_costo_y_fecha(txn, detalle_insumo_id, region_id)
                 .await?
                 .filter(|(costo, _)| !costo.is_zero());
-        if let Some(valuacion) = de_la_zona {
-            return Ok(valuacion);
+        if let Some((costo, fecha)) = de_la_zona {
+            return Ok((costo, fecha, false));
         }
         if region_id.is_some() {
             let nacional =
                 CuadrillaCostoService::resolver_costo_y_fecha(txn, detalle_insumo_id, None).await?;
-            return Ok(nacional.unwrap_or((Decimal::ZERO, None)));
+            return Ok(match nacional {
+                Some((costo, fecha)) if !costo.is_zero() => (costo, fecha, true),
+                _ => (Decimal::ZERO, None, false),
+            });
         }
-        Ok((Decimal::ZERO, None))
+        Ok((Decimal::ZERO, None, false))
     }
 
     /// Salario vigente de esa zona; si es regional y no hay, cae al nacional.
-    /// Sin salario nacional tampoco, el renglón queda en cero.
+    /// Sin salario nacional tampoco, el renglón queda en cero. El segundo
+    /// valor del par es `true` solo en valuación regional con fallback.
     async fn salario_vigente(
         txn: &DatabaseTransaction,
         insumo_id: &str,
         region_id: Option<&str>,
-    ) -> Result<Option<salario_categoria_fasar::Model>, ServiceError> {
+    ) -> Result<Option<(salario_categoria_fasar::Model, bool)>, ServiceError> {
         if let Some(region_id) = region_id {
             let regional = Self::salario_de_zona(txn, insumo_id, Some(region_id)).await?;
-            if regional.is_some() {
-                return Ok(regional);
+            if let Some(salario) = regional {
+                return Ok(Some((salario, false)));
             }
+            let nacional = Self::salario_de_zona(txn, insumo_id, None).await?;
+            return Ok(nacional.map(|s| (s, true)));
         }
-        Self::salario_de_zona(txn, insumo_id, None).await
+        Ok(Self::salario_de_zona(txn, insumo_id, None)
+            .await?
+            .map(|s| (s, false)))
     }
 
     async fn salario_de_zona(
@@ -899,6 +917,21 @@ mod tests {
             .unwrap();
         // 2 × 20 (fallback nacional) = 40
         assert_eq!(norte.subtotal_consumo, Decimal::from(40));
+        let detalles_norte = crate::equipo_costo_horario_costo_detalle::EquipoCostoHorarioCostoDetalleService::listar_por_costo(
+            &portafolio,
+            &norte.id,
+        )
+        .await
+        .unwrap();
+        assert!(detalles_norte[0].usa_costo_nacional);
+        let nacional = costos.iter().find(|c| c.region_id.is_none()).unwrap();
+        let detalles_nacional = crate::equipo_costo_horario_costo_detalle::EquipoCostoHorarioCostoDetalleService::listar_por_costo(
+            &portafolio,
+            &nacional.id,
+        )
+        .await
+        .unwrap();
+        assert!(!detalles_nacional[0].usa_costo_nacional);
     }
 
     #[tokio::test]
@@ -933,6 +966,13 @@ mod tests {
             .unwrap();
         assert_eq!(nacional.subtotal_consumo, Decimal::from(40));
         assert_eq!(norte.subtotal_consumo, Decimal::from(60));
+        let detalles_norte = crate::equipo_costo_horario_costo_detalle::EquipoCostoHorarioCostoDetalleService::listar_por_costo(
+            &portafolio,
+            &norte.id,
+        )
+        .await
+        .unwrap();
+        assert!(!detalles_norte[0].usa_costo_nacional);
     }
 
     #[tokio::test]
@@ -965,6 +1005,13 @@ mod tests {
             .unwrap();
         assert_eq!(nacional.subtotal_operacion, Decimal::from(500));
         assert_eq!(norte.subtotal_operacion, Decimal::from(500));
+        let detalles_norte = crate::equipo_costo_horario_costo_detalle::EquipoCostoHorarioCostoDetalleService::listar_por_costo(
+            &portafolio,
+            &norte.id,
+        )
+        .await
+        .unwrap();
+        assert!(detalles_norte[0].usa_costo_nacional);
     }
 
     #[tokio::test]
@@ -1049,6 +1096,11 @@ mod tests {
                     .expect("listar detalles de la valuación");
             assert_eq!(detalles.len(), 1);
             assert_eq!(detalles[0].fecha_precio.as_deref(), Some("2026-01-01"));
+            assert_eq!(
+                detalles[0].usa_costo_nacional,
+                costo.region_id.is_some(),
+                "solo la valuación regional debe marcar fallback nacional"
+            );
         }
     }
 

@@ -27,6 +27,9 @@ pub struct Model {
     /// una cuadrilla, de `cuadrilla_costo.fecha_costo` de la valuación que
     /// se usó. NULL si el renglón quedó en 0 o si nada lo respalda con fecha.
     pub fecha_precio: Option<String>,
+    /// `true` solo en valuaciones regionales cuando el costo unitario salió
+    /// del tabulador nacional por fallback (precio, salario o cuadrilla).
+    pub usa_costo_nacional: bool,
     pub deleted: bool,
     pub created_at: String,
     pub created_by: String,

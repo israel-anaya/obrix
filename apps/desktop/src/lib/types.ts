@@ -617,6 +617,8 @@ export interface EquipoCostoHorarioCostoDetalle {
   costo: string;
   importe: string;
   fecha_precio: string | null;
+  /** Solo en valuaciones regionales: el costo unitario salió del tabulador nacional. */
+  usa_costo_nacional: boolean;
   created_at: string;
   created_by: string;
   updated_at: string | null;
