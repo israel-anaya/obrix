@@ -46,9 +46,9 @@ function fmt(valor: string): string {
 }
 
 /**
- * Vista "Ficha" de Equipo de costo horario — mismo patrón que
- * `CuadrillasFicha`: fichero angosto a la izquierda, tarjeta de análisis a
- * la derecha (`EquipoCostoHorarioFichaApu`). Enfoque alterno a
+ * Vista "Ficha" de Equipo de costo horario — franja de fichas horizontal
+ * arriba (mismo patrón que `CuadrillasFicha`), tarjeta de análisis debajo
+ * ocupando todo el ancho (`EquipoCostoHorarioFichaApu`). Enfoque alterno a
  * `EquipoCostoHorarioGridVista` (grid) — mismos datos y comandos de Tauri
  * por debajo.
  *
@@ -136,20 +136,20 @@ export function EquipoCostoHorarioFicha() {
     return lista.filter((e) => e.clave.toLowerCase().includes(q) || e.descripcion.toLowerCase().includes(q));
   }, [equipos, busqueda]);
 
-  // Navegación con ↑/↓ entre equipos — ignorada mientras el formulario de
+  // Navegación con ←/→ entre equipos — ignorada mientras el formulario de
   // alta/edición está abierto (vive en un `Sheet` modal, y también usa
   // flechas para moverse dentro de sus campos) o si el foco está en un campo
   // de texto suelto en otro lado.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       if (creando || editandoId) return;
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (equiposFiltrados.length === 0) return;
       e.preventDefault();
       const idxActual = equiposFiltrados.findIndex((e) => e.id === seleccionadaId);
-      const delta = e.key === "ArrowUp" ? -1 : 1;
+      const delta = e.key === "ArrowLeft" ? -1 : 1;
       const idxNuevo = idxActual === -1 ? 0 : Math.min(Math.max(idxActual + delta, 0), equiposFiltrados.length - 1);
       setSeleccionadaId(equiposFiltrados[idxNuevo].id);
     };
@@ -159,7 +159,7 @@ export function EquipoCostoHorarioFicha() {
 
   useEffect(() => {
     if (!seleccionadaId) return;
-    itemRefs.current.get(seleccionadaId)?.scrollIntoView({ block: "nearest" });
+    itemRefs.current.get(seleccionadaId)?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [seleccionadaId, equiposFiltrados]);
 
   const iniciarCreacion = () => {
@@ -273,10 +273,10 @@ export function EquipoCostoHorarioFicha() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-72 shrink-0 flex-col border-r border-border">
-          <div className="flex items-center justify-between gap-2 border-b border-border p-2">
-            <div className="flex items-center gap-0.5">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex flex-col gap-2 border-b border-border p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <ActionBar
                 actions={[
                   { icon: Plus, title: "Nuevo equipo", onClick: iniciarCreacion },
@@ -288,7 +288,6 @@ export function EquipoCostoHorarioFicha() {
                   },
                 ]}
               />
-              <div className="mx-1 h-4 w-px bg-border" />
               <SearchInput value={busqueda} onChange={setBusqueda} />
             </div>
             <ActionBarMenu
@@ -304,65 +303,63 @@ export function EquipoCostoHorarioFicha() {
               ]}
             />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+
+          <div className="min-w-0">
             {cargando && equipos.length === 0 ? (
-              <p className="p-3 text-xs text-muted-foreground">Cargando…</p>
+              <p className="py-1.5 text-xs text-muted-foreground">Cargando…</p>
             ) : equiposFiltrados.length === 0 ? (
-              <p className="p-3 text-xs text-muted-foreground">Sin equipos todavía.</p>
+              <p className="py-1.5 text-xs text-muted-foreground">Sin equipos todavía.</p>
             ) : (
-              equiposFiltrados.map((e) => {
-                const activa = seleccionadaId === e.id;
-                return (
-                  <button
-                    key={e.id}
-                    ref={(el) => {
-                      if (el) itemRefs.current.set(e.id, el);
-                      else itemRefs.current.delete(e.id);
-                    }}
-                    type="button"
-                    aria-current={activa ? "true" : undefined}
-                    onClick={() => setSeleccionadaId(e.id)}
-                    className={cn(
-                      "relative flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left outline-none hover:bg-muted/50",
-                      activa
-                        ? "bg-primary/10"
-                        : undefined,
-                    )}
-                  >
-                    {activa ? (
-                      <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
-                    ) : null}
-                    <div className="flex w-full items-start justify-between gap-2">
-                      <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
-                        {e.clave}
-                      </span>
-                      <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
-                        ${fmt(e.costo_nacional?.costo_total ?? "0")}
-                      </span>
-                    </div>
-                    <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{e.descripcion}</span>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />$
-                        {fmt(e.cf_cargo_fijo_hora)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />$
-                        {fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />$
-                        {fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
+              <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+                {equiposFiltrados.map((e) => {
+                  const activa = seleccionadaId === e.id;
+                  return (
+                    <button
+                      key={e.id}
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(e.id, el);
+                        else itemRefs.current.delete(e.id);
+                      }}
+                      type="button"
+                      aria-current={activa ? "true" : undefined}
+                      onClick={() => setSeleccionadaId(e.id)}
+                      className={cn(
+                        "relative flex w-64 shrink-0 flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left outline-none hover:bg-muted/50",
+                        activa ? "border-primary bg-primary/10" : "border-border",
+                      )}
+                    >
+                      <div className="flex w-full items-start justify-between gap-2">
+                        <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
+                          {e.clave}
+                        </span>
+                        <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                          ${fmt(e.costo_nacional?.costo_total ?? "0")}
+                        </span>
+                      </div>
+                      <span className="line-clamp-2 w-full font-mono text-xs font-normal text-muted-foreground">{e.descripcion}</span>
+                      <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />$
+                          {fmt(e.cf_cargo_fijo_hora)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />$
+                          {fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />$
+                          {fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-2">
           {seleccionada ? (
             <EquipoCostoHorarioFichaApu equipo={seleccionada} onCambio={recargarEquipos} />
           ) : (

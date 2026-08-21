@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, CalendarDays, GlobeCheck, GripVertical, Plus, RefreshCcw, X, type LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilterableCombobox } from "@/components/FilterableCombobox";
 import { APP_ICONS } from "@/lib/appIcons";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { QuantityInput } from "@/components/QuantityInput";
@@ -40,8 +39,6 @@ import {
   updateEquipoCostoHorarioDetalle,
 } from "@/lib/tauri";
 import { useRowDrag, type RowLabel } from "@/hooks/useRowDrag";
-import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
-import { ordenarPor } from "@/lib/ordenar";
 import type {
   CategoriaFasar,
   Cuadrilla,
@@ -58,21 +55,13 @@ import type {
 } from "@/lib/types";
 import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { fmt, fmtCantidad } from "../shared/analisis-insumo/formato";
+import { useRegionCosts } from "../shared/analisis-insumo/useRegionCosts";
+import { CostoPorRegionCard } from "../shared/analisis-insumo/CostoPorRegionCard";
+import { EncabezadoAnalisis } from "../shared/analisis-insumo/EncabezadoAnalisis";
+import { RecetaGrupoTabla, TablaReceta, type FilaReceta } from "../shared/analisis-insumo/RecetaGrupoTabla";
 
-function fmt(valor: string): string {
-  const numero = Number(valor);
-  if (!Number.isFinite(numero)) return valor;
-  return numero.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-/** Cantidad sin ceros de relleno: "1.000000" se lee mejor como "1". */
-function fmtCantidad(valor: string): string {
-  const numero = Number(valor);
-  if (!Number.isFinite(numero)) return valor;
-  return numero.toLocaleString("es-MX", { maximumFractionDigits: 6 });
-}
-
-const NACIONAL = "Nacional";
+type TipoEquipoDetalle = EquipoCostoHorarioDetalle["tipo"];
 
 const NATURALEZAS_CONSUMO: {
   id: NaturalezaConsumoEquipoCostoHorario;
@@ -141,19 +130,12 @@ function ComboNaturaleza({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          title={actual.etiqueta}
-          className="rounded p-0.5 hover:bg-muted"
-        >
+        <button type="button" title={actual.etiqueta} className="rounded p-0.5 hover:bg-muted">
           <Icono size={16} className={actual.clase} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuRadioGroup
-          value={actual.id}
-          onValueChange={(v) => onElegir(v as NaturalezaConsumoEquipoCostoHorario)}
-        >
+        <DropdownMenuRadioGroup value={actual.id} onValueChange={(v) => onElegir(v as NaturalezaConsumoEquipoCostoHorario)}>
           {NATURALEZAS_CONSUMO.map((n) => (
             <DropdownMenuRadioItem key={n.id} value={n.id}>
               <n.icono size={16} className={n.clase} />
@@ -178,99 +160,6 @@ function IconoNaturalezaOperacion({ naturaleza }: { naturaleza: string | null })
       <Icono size={16} className={info.clase} />
       <span className="sr-only">{info.etiqueta}</span>
     </span>
-  );
-}
-
-/** Hasta 30 días: vigente. Más de 30: ámbar. Más de 90, o el salario vigente ya no coincide: crítico. */
-const DIAS_PRECIO_FRESCO = 30;
-const DIAS_PRECIO_CRITICO = 90;
-
-function FechaPrecioFrescura({
-  fecha,
-  fechaSalarioVigente,
-}: {
-  fecha: string;
-  fechaSalarioVigente?: string | null;
-}) {
-  const salarioCambio =
-    !!fechaSalarioVigente && fecha.slice(0, 10) !== fechaSalarioVigente.slice(0, 10);
-  const dias = diasTranscurridos(fecha);
-  const nivel = salarioCambio || (dias != null && dias > DIAS_PRECIO_CRITICO)
-    ? "critica"
-    : dias != null && dias > DIAS_PRECIO_FRESCO
-      ? "desactualizada"
-      : "vigente";
-  const titulo = salarioCambio
-    ? `El salario vigente cambió (${formatearFecha(fechaSalarioVigente)}). Sincroniza para actualizar este costo.`
-    : nivel === "critica"
-      ? `Precio con más de ${DIAS_PRECIO_CRITICO} días de vigencia`
-      : nivel === "desactualizada"
-        ? `Precio con más de ${DIAS_PRECIO_FRESCO} días de vigencia`
-        : formatearFecha(fecha);
-
-  return (
-    <div
-      title={titulo}
-      className={cn(
-        "inline-flex items-center justify-end gap-0.5 leading-tight",
-        nivel === "vigente" && "text-[10px] font-normal text-muted-foreground/70",
-        nivel === "desactualizada" && "text-[11px] font-medium text-amber-700 dark:text-amber-400",
-        nivel === "critica" && "text-[11px] font-semibold text-rose-600 dark:text-rose-400",
-      )}
-    >
-      {nivel === "critica" ? <AlertTriangle size={16} className="shrink-0" /> : null}
-      {formatearFecha(fecha)}
-    </div>
-  );
-}
-
-function MarcadorInsercion() {
-  return (
-    <tr aria-hidden className="pointer-events-none">
-      <td colSpan={9} className="relative h-0 p-0">
-        <div className="absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 items-center gap-2 px-1">
-          <span className="size-2 shrink-0 rounded-full bg-primary ring-2 ring-background" />
-          <span className="h-0.5 flex-1 bg-primary" />
-          <span className="rounded-sm bg-primary px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
-            Soltar aquí
-          </span>
-          <span className="h-0.5 flex-1 bg-primary" />
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function CeldaCostoComposicion({
-  costo,
-  usaCostoNacional,
-  nombreRegion,
-  mostrarFechaPrecio,
-  fechaPrecio,
-  fechaSalarioVigente,
-}: {
-  costo: string;
-  usaCostoNacional: boolean;
-  nombreRegion: string | null;
-  mostrarFechaPrecio: boolean;
-  fechaPrecio: string | null | undefined;
-  fechaSalarioVigente?: string | null;
-}) {
-  const mostrarGlobeCheck = !!nombreRegion && usaCostoNacional;
-  return (
-    <>
-      <div className="inline-flex items-center justify-end gap-1">
-        {mostrarGlobeCheck ? (
-          <span title={`Costo nacional (sin costo en ${nombreRegion})`}>
-            <GlobeCheck size={16} className="shrink-0 text-primary" aria-label="Costo nacional" />
-          </span>
-        ) : null}
-        <span>${fmt(costo)}</span>
-      </div>
-      {mostrarFechaPrecio && fechaPrecio ? (
-        <FechaPrecioFrescura fecha={fechaPrecio} fechaSalarioVigente={fechaSalarioVigente} />
-      ) : null}
-    </>
   );
 }
 
@@ -365,10 +254,6 @@ export function EquipoCostoHorarioFichaApu({
 }) {
   const { organizaciones, organizacionActivaId } = useOrganizacionActiva();
   const [detalles, setDetalles] = useState<EquipoCostoHorarioDetalle[]>([]);
-  const [costos, setCostos] = useState<EquipoCostoHorarioCosto[]>([]);
-  const [costoSeleccionadoId, setCostoSeleccionadoId] = useState<string | null>(null);
-  const [costoDetalles, setCostoDetalles] = useState<EquipoCostoHorarioCostoDetalle[]>([]);
-  const [costoDetallesPorCostoId, setCostoDetallesPorCostoId] = useState<Record<string, EquipoCostoHorarioCostoDetalle[]>>({});
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [categorias, setCategorias] = useState<CategoriaFasar[]>([]);
   const [cuadrillas, setCuadrillas] = useState<Cuadrilla[]>([]);
@@ -377,17 +262,35 @@ export function EquipoCostoHorarioFichaApu({
   const [totales, setTotales] = useState<EquipoCostoHorario>(equipo);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
-  const [agregandoConsumo, setAgregandoConsumo] = useState(false);
-  const [agregandoOperacion, setAgregandoOperacion] = useState(false);
+  const [agregandoTipo, setAgregandoTipo] = useState<TipoEquipoDetalle | null>(null);
   const [pendingQuitar, setPendingQuitar] = useState<EquipoCostoHorarioDetalle | null>(null);
   const [recalculando, setRecalculando] = useState(false);
-  /** `null` = Nacional. No se persiste: solo elige qué cache ve el análisis. */
-  const [regionVistaId, setRegionVistaId] = useState<string | null>(null);
   const [mostrarFechaPrecio, setMostrarFechaPrecio] = useState(false);
+  const [gruposColapsados, setGruposColapsados] = useState<Set<TipoEquipoDetalle>>(new Set());
 
   const [camposCf, setCamposCf] = useState<CamposCf>(() => aCamposCf(equipo));
   const [guardandoCf, setGuardandoCf] = useState(false);
   const zonasMaterializadasId = useRef<string | null>(null);
+
+  const {
+    costos,
+    costoDetalles,
+    costoSeleccionado,
+    regionVistaId,
+    zonas,
+    coberturaPorCostoId,
+    sincronizadoEn,
+    cargarCostos,
+    verRegion,
+  } = useRegionCosts<EquipoCostoHorarioCosto, EquipoCostoHorarioCostoDetalle>({
+    entityId: equipo.id,
+    regiones,
+    listCostos: listEquipoCostoHorarioCostos,
+    listCostoDetalles: listEquipoCostoHorarioCostoDetalles,
+    detalleRowId: (cd) => cd.equipo_costo_horario_detalle_id,
+    filasCobertura: detalles,
+    onError: (e) => setError(String(e)),
+  });
 
   useEffect(() => {
     listMateriales().then(setMateriales).catch(() => {});
@@ -403,52 +306,19 @@ export function EquipoCostoHorarioFichaApu({
   }, [equipo]);
 
   useEffect(() => {
-    setAgregandoConsumo(false);
-    setAgregandoOperacion(false);
+    setAgregandoTipo(null);
   }, [equipo.id]);
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
   }, [error]);
 
-  const aplicarCostos = async (costosR: EquipoCostoHorarioCosto[], vistaId: string | null) => {
-    setCostos(costosR);
-    const pares = await Promise.all(
-      costosR.map(async (c) => {
-        const dets = await listEquipoCostoHorarioCostoDetalles(c.id).catch(() => [] as EquipoCostoHorarioCostoDetalle[]);
-        return [c.id, dets] as const;
-      }),
-    );
-    const porCosto = Object.fromEntries(pares);
-    setCostoDetallesPorCostoId(porCosto);
-    const nacionalId = costosR.find((c) => c.region_id === null)?.id ?? costosR[0]?.id ?? null;
-    const elegido = costosR.find((c) => (c.region_id ?? null) === vistaId) ?? null;
-    const seleccionadoId = elegido?.id ?? (vistaId === null ? nacionalId : null);
-    setCostoSeleccionadoId(seleccionadoId);
-    setCostoDetalles(seleccionadoId ? (porCosto[seleccionadoId] ?? []) : []);
-  };
-
-  const cargarCostos = (id: string, vistaId: string | null = regionVistaId) =>
-    listEquipoCostoHorarioCostos(id)
-      .then((costosR) => aplicarCostos(costosR, vistaId))
-      .catch((e) => {
-        setError(String(e));
-        setCostos([]);
-        setCostoDetalles([]);
-        setCostoDetallesPorCostoId({});
-      });
-
   useEffect(() => {
     setCargando(true);
     setError(null);
-    setCostoSeleccionadoId(null);
-    setRegionVistaId(null);
     zonasMaterializadasId.current = null;
-    Promise.all([listEquipoCostoHorarioDetalles(equipo.id), listEquipoCostoHorarioCostos(equipo.id)])
-      .then(async ([detallesR, costosR]) => {
-        setDetalles(detallesR);
-        await aplicarCostos(costosR, null);
-      })
+    Promise.all([listEquipoCostoHorarioDetalles(equipo.id), cargarCostos(equipo.id, null)])
+      .then(([detallesR]) => setDetalles(detallesR))
       .catch((e) => setError(String(e)))
       .finally(() => setCargando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -495,18 +365,6 @@ export function EquipoCostoHorarioFichaApu({
     [unidades, totales.unidad_id],
   );
 
-  const opcionPorMaterialId = useMemo(
-    () => Object.fromEntries(materiales.map((m) => [m.id, `${m.clave} — ${m.descripcion}`])),
-    [materiales],
-  );
-  const opcionPorOperacionId = useMemo(
-    () =>
-      Object.fromEntries([
-        ...categorias.map((c) => [c.id, `${c.clave} — ${c.descripcion}`]),
-        ...cuadrillas.map((c) => [c.id, `${c.clave} — ${c.descripcion}`]),
-      ]),
-    [categorias, cuadrillas],
-  );
   const materialPorId = useMemo(() => Object.fromEntries(materiales.map((m) => [m.id, m])), [materiales]);
   const categoriaPorId = useMemo(() => Object.fromEntries(categorias.map((c) => [c.id, c])), [categorias]);
   const cuadrillaPorId = useMemo(() => Object.fromEntries(cuadrillas.map((c) => [c.id, c])), [cuadrillas]);
@@ -516,8 +374,11 @@ export function EquipoCostoHorarioFichaApu({
     categoriaPorId[detalleInsumoId]?.unidad_id ?? cuadrillaPorId[detalleInsumoId]?.unidad_id ?? "";
 
   const idsUsados = useMemo(() => new Set(detalles.map((d) => d.detalle_insumo_id)), [detalles]);
-  const materialesDisponibles = useMemo(() => materiales.filter((m) => !idsUsados.has(m.id)), [materiales, idsUsados]);
-  const operacionesDisponibles = useMemo(
+  const opcionesConsumo = useMemo(
+    () => materiales.filter((m) => !idsUsados.has(m.id)).map((m) => ({ id: m.id, label: `${m.clave} — ${m.descripcion}` })),
+    [materiales, idsUsados],
+  );
+  const opcionesOperacion = useMemo(
     () => [
       ...categorias.filter((c) => !idsUsados.has(c.id)).map((c) => ({ id: c.id, label: `${c.clave} — ${c.descripcion}` })),
       ...cuadrillas.filter((c) => !idsUsados.has(c.id)).map((c) => ({ id: c.id, label: `${c.clave} — ${c.descripcion}` })),
@@ -525,63 +386,17 @@ export function EquipoCostoHorarioFichaApu({
     [categorias, cuadrillas, idsUsados],
   );
 
-  const consumos = useMemo(
-    () => detalles.filter((d) => d.tipo === "consumo").sort((a, b) => a.orden - b.orden),
-    [detalles],
-  );
-  const operaciones = useMemo(
-    () => detalles.filter((d) => d.tipo === "operacion").sort((a, b) => a.orden - b.orden),
-    [detalles],
-  );
+  const consumos = useMemo(() => detalles.filter((d) => d.tipo === "consumo").sort((a, b) => a.orden - b.orden), [detalles]);
+  const operaciones = useMemo(() => detalles.filter((d) => d.tipo === "operacion").sort((a, b) => a.orden - b.orden), [detalles]);
   const costoDetallePorDetalleId = useMemo(
     () => Object.fromEntries(costoDetalles.map((cd) => [cd.equipo_costo_horario_detalle_id, cd])),
     [costoDetalles],
   );
-  const costoSeleccionado = costos.find((c) => c.id === costoSeleccionadoId) ?? null;
-
-  const zonas = useMemo(() => {
-    const nacional = costos.find((c) => c.region_id === null) ?? null;
-    const regionales = ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => ({
-      key: r.id,
-      regionId: r.id as string | null,
-      nombre: r.nombre,
-      costo: costos.find((c) => c.region_id === r.id) ?? null,
-      esNac: false,
-    }));
-    return [
-      { key: "nacional", regionId: null as string | null, nombre: NACIONAL, costo: nacional, esNac: true },
-      ...regionales,
-    ];
-  }, [costos, regiones]);
 
   const nombreRegionVista = useMemo(
     () => (regionVistaId ? (zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? null) : null),
     [regionVistaId, zonas],
   );
-
-  const coberturaPorCostoId = useMemo(() => {
-    const idsReceta = new Set(detalles.map((d) => d.id));
-    return Object.fromEntries(
-      Object.entries(costoDetallesPorCostoId).map(([costoId, dets]) => {
-        const deReceta = dets.filter((d) => idsReceta.has(d.equipo_costo_horario_detalle_id));
-        const sin = deReceta.filter((d) => !d.fecha_precio).length;
-        return [costoId, { total: idsReceta.size, sin }];
-      }),
-    );
-  }, [costoDetallesPorCostoId, detalles]);
-
-  const sincronizadoEn = useMemo(() => {
-    const fechas = costos.map((c) => c.sincronizado_en).filter((f): f is string => !!f);
-    if (fechas.length === 0) return null;
-    return fechas.sort()[fechas.length - 1] ?? null;
-  }, [costos]);
-
-  const verRegion = (regionId: string | null) => {
-    setRegionVistaId(regionId);
-    const elegido = costos.find((c) => (c.region_id ?? null) === regionId) ?? null;
-    setCostoSeleccionadoId(elegido?.id ?? null);
-    setCostoDetalles(elegido ? (costoDetallesPorCostoId[elegido.id] ?? []) : []);
-  };
 
   const reordenar = async (filas: EquipoCostoHorarioDetalle[], id: string, indiceDestino: number) => {
     const fromIndex = filas.findIndex((d) => d.id === id);
@@ -599,24 +414,55 @@ export function EquipoCostoHorarioFichaApu({
     }
   };
 
-  const nombreDetalle = (detalle: EquipoCostoHorarioDetalle) =>
-    detalle.tipo === "consumo"
-      ? (opcionPorMaterialId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id)
-      : (opcionPorOperacionId[detalle.detalle_insumo_id] ?? detalle.detalle_insumo_id);
+  const nombreDetalle = (detalle: EquipoCostoHorarioDetalle) => {
+    if (detalle.tipo === "consumo") {
+      const m = materialPorId[detalle.detalle_insumo_id];
+      return m ? `${m.clave} — ${m.descripcion}` : detalle.detalle_insumo_id;
+    }
+    const info = categoriaPorId[detalle.detalle_insumo_id] ?? cuadrillaPorId[detalle.detalle_insumo_id];
+    return info ? `${info.clave} — ${info.descripcion}` : detalle.detalle_insumo_id;
+  };
+
+  const aFila = (d: EquipoCostoHorarioDetalle): FilaReceta => {
+    const cd = costoDetallePorDetalleId[d.id];
+    if (d.tipo === "consumo") {
+      const material = materialPorId[d.detalle_insumo_id];
+      return {
+        id: d.id,
+        clave: material?.clave ?? d.detalle_insumo_id,
+        descripcion: material?.descripcion ?? "",
+        unidad: simboloPorUnidadId[material?.unidad_id ?? ""] ?? "",
+        cantidad: d.cantidad,
+        costo: cd?.costo ?? "0",
+        importe: cd?.importe ?? "0",
+        fechaPrecio: cd?.fecha_precio ?? null,
+        usaCostoNacional: cd?.usa_costo_nacional ?? false,
+      };
+    }
+    const info = categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id];
+    return {
+      id: d.id,
+      clave: info?.clave ?? d.detalle_insumo_id,
+      descripcion: info?.descripcion ?? "",
+      unidad: simboloPorUnidadId[unidadDeOperacion(d.detalle_insumo_id)] ?? "",
+      cantidad: d.cantidad,
+      costo: cd?.costo ?? "0",
+      importe: cd?.importe ?? "0",
+      fechaPrecio: cd?.fecha_precio ?? null,
+      usaCostoNacional: cd?.usa_costo_nacional ?? false,
+      fechaSalarioVigente: categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde,
+    };
+  };
 
   const etiquetaDetalle = (lista: EquipoCostoHorarioDetalle[], id: string): RowLabel | null => {
     const detalle = lista.find((d) => d.id === id);
     if (!detalle) return null;
-    const costo = costoDetallePorDetalleId[detalle.id]?.costo;
-    const unidadId =
-      detalle.tipo === "consumo"
-        ? (materialPorId[detalle.detalle_insumo_id]?.unidad_id ?? "")
-        : unidadDeOperacion(detalle.detalle_insumo_id);
+    const fila = aFila(detalle);
     return {
       title: nombreDetalle(detalle),
       quantity: fmtCantidad(detalle.cantidad),
-      unit: simboloPorUnidadId[unidadId] ?? "",
-      cost: costo ? `$${fmt(costo)}` : undefined,
+      unit: fila.unidad,
+      cost: fila.costo !== "0" ? `$${fmt(fila.costo)}` : undefined,
     };
   };
 
@@ -632,32 +478,30 @@ export function EquipoCostoHorarioFichaApu({
     onMove: (id, dest) => void reordenar(operaciones, id, dest),
     label: (id) => etiquetaDetalle(operaciones, id),
   });
-
-  const agregarConsumo = async (id: string) => {
-    setAgregandoConsumo(false);
-    if (!id) return;
-    setError(null);
-    try {
-      const actualizado = await createEquipoCostoHorarioDetalle(equipo.id, {
-        detalle_insumo_id: id,
-        cantidad: "1",
-        naturaleza: "combustible",
-      });
-      await trasMutar(actualizado);
-    } catch (e) {
-      setError(String(e));
-    }
+  const dragPorTipo: Record<TipoEquipoDetalle, ReturnType<typeof useRowDrag>> = {
+    consumo: dragConsumos,
+    operacion: dragOperaciones,
   };
 
-  const agregarOperacion = async (id: string) => {
-    setAgregandoOperacion(false);
+  const agregarComponente = async (tipo: TipoEquipoDetalle, id: string) => {
     if (!id) return;
     setError(null);
     try {
-      const orgActiva = organizaciones.find((o) => o.id === organizacionActivaId);
-      const horasJornada = Number(orgActiva?.horas_jornada) || 8;
-      const cantidad = String(1 / horasJornada);
-      const actualizado = await createEquipoCostoHorarioDetalle(equipo.id, { detalle_insumo_id: id, cantidad });
+      let actualizado: EquipoCostoHorario;
+      if (tipo === "consumo") {
+        actualizado = await createEquipoCostoHorarioDetalle(equipo.id, {
+          detalle_insumo_id: id,
+          cantidad: "1",
+          naturaleza: "combustible",
+        });
+      } else {
+        const orgActiva = organizaciones.find((o) => o.id === organizacionActivaId);
+        const horasJornada = Number(orgActiva?.horas_jornada) || 8;
+        actualizado = await createEquipoCostoHorarioDetalle(equipo.id, {
+          detalle_insumo_id: id,
+          cantidad: String(1 / horasJornada),
+        });
+      }
       await trasMutar(actualizado);
     } catch (e) {
       setError(String(e));
@@ -686,10 +530,7 @@ export function EquipoCostoHorarioFichaApu({
     }
   };
 
-  const guardarNaturaleza = async (
-    detalle: EquipoCostoHorarioDetalle,
-    naturaleza: NaturalezaConsumoEquipoCostoHorario,
-  ) => {
+  const guardarNaturaleza = async (detalle: EquipoCostoHorarioDetalle, naturaleza: NaturalezaConsumoEquipoCostoHorario) => {
     if (detalle.naturaleza === naturaleza) return;
     setError(null);
     try {
@@ -726,10 +567,7 @@ export function EquipoCostoHorarioFichaApu({
     setCamposCf((actual) => ({ ...actual, [campo]: Math.max(0, numero).toFixed(2) }));
   };
 
-  const cfCambio = useMemo(
-    () => JSON.stringify(camposCf) !== JSON.stringify(aCamposCf(totales)),
-    [camposCf, totales],
-  );
+  const cfCambio = useMemo(() => JSON.stringify(camposCf) !== JSON.stringify(aCamposCf(totales)), [camposCf, totales]);
 
   const guardarCf = async () => {
     setGuardandoCf(true);
@@ -759,141 +597,87 @@ export function EquipoCostoHorarioFichaApu({
   const pctConsumo = costoTotalNum > 0 ? ((Number(costoSeleccionado?.subtotal_consumo) || 0) / costoTotalNum) * 100 : 0;
   const pctOperacion = costoTotalNum > 0 ? ((Number(costoSeleccionado?.subtotal_operacion) || 0) / costoTotalNum) * 100 : 0;
 
+  const abrirAgregar = (tipo: TipoEquipoDetalle) => {
+    setAgregandoTipo(tipo);
+    setGruposColapsados((prev) => {
+      if (!prev.has(tipo)) return prev;
+      const next = new Set(prev);
+      next.delete(tipo);
+      return next;
+    });
+  };
+
+  const gruposDef: { tipo: TipoEquipoDetalle; titulo: string; Icono: typeof APP_ICONS.grupo_consumo.icono; color: string; opciones: { id: string; label: string }[] }[] = [
+    { tipo: "consumo", titulo: APP_ICONS.grupo_consumo.titulo, Icono: APP_ICONS.grupo_consumo.icono, color: APP_ICONS.grupo_consumo.color, opciones: opcionesConsumo },
+    { tipo: "operacion", titulo: APP_ICONS.grupo_operacion.titulo, Icono: APP_ICONS.grupo_operacion.icono, color: APP_ICONS.grupo_operacion.color, opciones: opcionesOperacion },
+  ];
+
   return (
     <div className="w-full">
       <div className="rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
-        {/* Mismo indicador de carga indeterminado que usa DataGrid, para
-            avisar tanto al cargar el detalle como al recalcular. */}
         {(cargando || recalculando) && (
           <div aria-hidden className="h-[3px] overflow-hidden rounded-t-lg bg-primary/25">
             <div className="indeterminate-progress-bar h-full w-1/3 rounded-full bg-primary" />
           </div>
         )}
-        {/* Encabezado del análisis */}
-        <div className="border-b-2 border-foreground/20 px-4 py-3">
-          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <APP_ICONS.insumo_costo_horario.icono size={16} className={APP_ICONS.insumo_costo_horario.color} />
-            Análisis de costo horario
-          </span>
 
-          <div className="mt-1 flex items-baseline justify-between gap-3">
-            <span className="font-mono text-base font-bold tracking-tight">{totales.clave}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              Unidad: <span className="font-medium text-foreground">{simboloUnidad}</span>
-              <span aria-hidden className="px-1.5 text-border">·</span>
-              <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                {regionVistaId ? (
-                  <APP_ICONS.region_otra.icono size={16} className={APP_ICONS.region_otra.color} />
-                ) : (
-                  <APP_ICONS.region_nacional.icono size={16} className={APP_ICONS.region_nacional.color} />
-                )}
-                {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
-              </span>
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs text-foreground">{totales.descripcion}</p>
-          <div className="mt-2 flex items-center gap-3">
-            <div
-              className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
-              title={`Fijo ${pctFijo.toFixed(0)}% / Consumo ${pctConsumo.toFixed(0)}% / Operación ${pctOperacion.toFixed(0)}%`}
-            >
-              <div className={APP_ICONS.grupo_cargos_fijos.bg} style={{ width: `${pctFijo}%` }} />
-              <div className={APP_ICONS.grupo_consumo.bg} style={{ width: `${pctConsumo}%` }} />
-              <div className={APP_ICONS.grupo_operacion.bg} style={{ width: `${pctOperacion}%` }} />
-            </div>
-            <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />
-                {pctFijo.toFixed(0)}%
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />
-                {pctConsumo.toFixed(0)}%
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />
-                {pctOperacion.toFixed(0)}%
-              </span>
-            </span>
-          </div>
-        </div>
+        <EncabezadoAnalisis
+          tituloAnalisis="Análisis de costo horario"
+          IconoTitulo={APP_ICONS.insumo_costo_horario.icono}
+          colorTitulo={APP_ICONS.insumo_costo_horario.color}
+          clave={totales.clave}
+          descripcion={totales.descripcion}
+          simboloUnidad={simboloUnidad}
+          regionVistaId={regionVistaId}
+          nombreRegionVista={zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? "Nacional"}
+          segmentos={[
+            { pct: pctFijo, Icono: APP_ICONS.grupo_cargos_fijos.icono, color: APP_ICONS.grupo_cargos_fijos.color, bg: APP_ICONS.grupo_cargos_fijos.bg, etiqueta: "Fijo" },
+            { pct: pctConsumo, Icono: APP_ICONS.grupo_consumo.icono, color: APP_ICONS.grupo_consumo.color, bg: APP_ICONS.grupo_consumo.bg, etiqueta: "Consumo" },
+            { pct: pctOperacion, Icono: APP_ICONS.grupo_operacion.icono, color: APP_ICONS.grupo_operacion.color, bg: APP_ICONS.grupo_operacion.bg, etiqueta: "Operación" },
+          ]}
+          gruposDef={gruposDef}
+          onAbrirAgregar={abrirAgregar}
+          onExpandirTodos={() => setGruposColapsados(new Set())}
+          onColapsarTodos={() => setGruposColapsados(new Set(gruposDef.map((g) => g.tipo)))}
+          recalculando={recalculando}
+          sincronizadoEn={sincronizadoEn}
+          onRecalcular={() => void recalcularZonas()}
+          notaRecalcular="Recalcular todas las regiones con los precios y salarios vigentes."
+        />
 
         {/* Cargos fijos */}
         <div className="border-b-2 border-foreground/20 p-4">
           <div className="grid grid-cols-[3fr_2fr] gap-6">
-            {/* Captura + valores intermedios */}
             <div className="flex flex-col gap-1.5 text-xs">
               <FilaCf label="Costo de la máquina (Cm)">
-                <CurrencyInput
-                  value={camposCf.cf_costo_maquina}
-                  onCommit={(v) => redondearCampoCf("cf_costo_maquina", v)}
-                  className="w-28 shrink-0"
-                />
+                <CurrencyInput value={camposCf.cf_costo_maquina} onCommit={(v) => redondearCampoCf("cf_costo_maquina", v)} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Valor de las llantas (Pn)">
-                <CurrencyInput
-                  value={camposCf.cf_valor_llantas}
-                  onCommit={(v) => redondearCampoCf("cf_valor_llantas", v)}
-                  className="w-28 shrink-0"
-                />
+                <CurrencyInput value={camposCf.cf_valor_llantas} onCommit={(v) => redondearCampoCf("cf_valor_llantas", v)} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Valor de las piezas especiales (Pa)">
-                <CurrencyInput
-                  value={camposCf.cf_valor_piezas_especiales}
-                  onCommit={(v) => redondearCampoCf("cf_valor_piezas_especiales", v)}
-                  className="w-28 shrink-0"
-                />
+                <CurrencyInput value={camposCf.cf_valor_piezas_especiales} onCommit={(v) => redondearCampoCf("cf_valor_piezas_especiales", v)} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Valor de la máquina (Vm)" destacado>
                 <ValorCf valor={totales.cf_valor_maquina} />
               </FilaCf>
               <FilaCf label="Horas efectivas al año (Hea)">
-                <QuantityInput
-                  value={camposCf.cf_horas_uso_anual}
-                  onCommit={(v) => redondearCampoCf("cf_horas_uso_anual", v)}
-                  decimals={2}
-                  className="w-28 shrink-0"
-                />
+                <QuantityInput value={camposCf.cf_horas_uso_anual} onCommit={(v) => redondearCampoCf("cf_horas_uso_anual", v)} decimals={2} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Vida Económica (V)">
-                <QuantityInput
-                  value={camposCf.cf_vida_economica_anios}
-                  onCommit={(v) => redondearCampoCf("cf_vida_economica_anios", v)}
-                  decimals={2}
-                  className="w-28 shrink-0"
-                />
+                <QuantityInput value={camposCf.cf_vida_economica_anios} onCommit={(v) => redondearCampoCf("cf_vida_economica_anios", v)} decimals={2} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Tasa de Seguro (s)">
-                <QuantityInput
-                  value={camposCf.cf_tasa_seguros_anual_porcentaje}
-                  onCommit={(v) => redondearCampoCf("cf_tasa_seguros_anual_porcentaje", v)}
-                  decimals={2}
-                  className="w-28 shrink-0"
-                />
+                <QuantityInput value={camposCf.cf_tasa_seguros_anual_porcentaje} onCommit={(v) => redondearCampoCf("cf_tasa_seguros_anual_porcentaje", v)} decimals={2} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="% de Mantenimiento (Ko)">
-                <QuantityInput
-                  value={camposCf.cf_mantenimiento_porcentaje}
-                  onCommit={(v) => redondearCampoCf("cf_mantenimiento_porcentaje", v)}
-                  decimals={2}
-                  className="w-28 shrink-0"
-                />
+                <QuantityInput value={camposCf.cf_mantenimiento_porcentaje} onCommit={(v) => redondearCampoCf("cf_mantenimiento_porcentaje", v)} decimals={2} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="% de Rescate (r)">
-                <QuantityInput
-                  value={camposCf.cf_valor_rescate_porcentaje}
-                  onCommit={(v) => redondearCampoCf("cf_valor_rescate_porcentaje", v)}
-                  decimals={2}
-                  className="w-28 shrink-0"
-                />
+                <QuantityInput value={camposCf.cf_valor_rescate_porcentaje} onCommit={(v) => redondearCampoCf("cf_valor_rescate_porcentaje", v)} decimals={2} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Tasa de Interés (i)">
-                <QuantityInput
-                  value={camposCf.cf_tasa_interes_anual_porcentaje}
-                  onCommit={(v) => redondearCampoCf("cf_tasa_interes_anual_porcentaje", v)}
-                  decimals={2}
-                  className="w-28 shrink-0"
-                />
+                <QuantityInput value={camposCf.cf_tasa_interes_anual_porcentaje} onCommit={(v) => redondearCampoCf("cf_tasa_interes_anual_porcentaje", v)} decimals={2} className="w-28 shrink-0" />
               </FilaCf>
               <FilaCf label="Vr = Vm × r">
                 <ValorCf valor={totales.cf_valor_rescate} />
@@ -903,7 +687,6 @@ export function EquipoCostoHorarioFichaApu({
               </FilaCf>
             </div>
 
-            {/* Botón arriba, caja de resultado alineada abajo */}
             <div className="flex h-full flex-col">
               <div className="flex justify-end">
                 <button
@@ -942,467 +725,115 @@ export function EquipoCostoHorarioFichaApu({
         </div>
 
         <div className="p-4">
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-foreground/30 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-                <th className="w-6 py-1" />
-                <th className="w-20 py-1 pr-2 font-semibold">Código</th>
-                <th className="py-1 pr-2 font-semibold">Descripción</th>
-                <th className="w-8 py-1 pr-2 font-semibold" title="Naturaleza">
-                  <span className="sr-only">Naturaleza</span>
-                </th>
-                <th className="w-16 py-1 pr-2 font-semibold">Unidad</th>
-                <th className="w-20 py-1 pr-2 text-right font-semibold">Cantidad</th>
-                <th className="w-24 py-1 pr-2 text-right font-semibold">
-                  <span className="inline-flex items-center justify-end gap-1">
-                    Costo
-                    <button
-                      type="button"
-                      aria-pressed={mostrarFechaPrecio}
-                      title="Mostrar/ocultar fecha de precios"
-                      onClick={() => setMostrarFechaPrecio((v) => !v)}
-                      className={cn(
-                        "rounded p-0.5 normal-case tracking-normal",
-                        mostrarFechaPrecio
-                          ? "text-primary"
-                          : "text-muted-foreground/70 hover:text-foreground",
-                      )}
-                    >
-                      <CalendarDays
-                        size={16}
-                        className={mostrarFechaPrecio ? "fill-current" : undefined}
-                      />
-                    </button>
-                  </span>
-                </th>
-                <th className="w-24 py-1 text-right font-semibold">Importe</th>
-                <th className="w-8" />
-              </tr>
-            </thead>
-
-            {/* CONSUMO */}
-            <tbody>
-              <tr>
-                <td colSpan={9} className="pt-2 pb-1">
-                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />
-                    {APP_ICONS.grupo_consumo.titulo}
-                  </span>
-                </td>
-              </tr>
-              {consumos.length === 0 && !agregandoConsumo && (
-                <tr>
-                  <td colSpan={9} className="py-1.5 text-muted-foreground">
-                    Sin consumos todavía.
-                  </td>
-                </tr>
-              )}
-              {consumos.map((d, i) => {
-                const cd = costoDetallePorDetalleId[d.id];
+          <TablaReceta
+            columnas={{ mostrarNaturaleza: true }}
+            mostrarFechaPrecio={mostrarFechaPrecio}
+            onToggleFechaPrecio={() => setMostrarFechaPrecio((v) => !v)}
+          >
+            <RecetaGrupoTabla
+              titulo={APP_ICONS.grupo_consumo.titulo}
+              Icono={APP_ICONS.grupo_consumo.icono}
+              color={APP_ICONS.grupo_consumo.color}
+              filas={consumos.map(aFila)}
+              columnas={{ mostrarNaturaleza: true }}
+              agregando={agregandoTipo === "consumo"}
+              onCerrarAgregar={() => setAgregandoTipo(null)}
+              opciones={opcionesConsumo}
+              onAgregar={(id) => void agregarComponente("consumo", id)}
+              onQuitar={(fila) => {
+                const d = consumos.find((x) => x.id === fila.id);
+                if (d) setPendingQuitar(d);
+              }}
+              onCommitCantidad={(id, v) => {
+                const d = consumos.find((x) => x.id === id);
+                if (d) void guardarCantidad(d, v);
+              }}
+              mostrarFechaPrecio={mostrarFechaPrecio}
+              destello={null}
+              drag={dragPorTipo.consumo}
+              subtotal={costoSeleccionado?.subtotal_consumo ?? "0"}
+              colapsado={gruposColapsados.has("consumo") && agregandoTipo !== "consumo"}
+              onToggleColapsado={() =>
+                setGruposColapsados((prev) => {
+                  const next = new Set(prev);
+                  if (next.has("consumo")) next.delete("consumo");
+                  else next.add("consumo");
+                  return next;
+                })
+              }
+              nombreRegionVista={nombreRegionVista}
+              renderNaturaleza={(f) => {
+                const d = consumos.find((x) => x.id === f.id);
+                if (!d) return null;
                 return (
-                  <Fragment key={d.id}>
-                    {dragConsumos.gap === i && <MarcadorInsercion />}
-                    <tr
-                      className={cn(
-                        "group border-b border-border/50 hover:bg-muted/30",
-                        dragConsumos.rowClass(d.id),
-                      )}
-                      {...dragConsumos.rowProps(d.id)}
-                    >
-                  <td className="py-1 pr-1">
-                    <span
-                      title="Arrastra para reordenar"
-                      className="inline-flex cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-                      {...dragConsumos.handleProps(d.id)}
-                    >
-                      <GripVertical size={16} />
-                    </span>
-                  </td>
-                  <td className="py-1 pr-2 font-mono text-muted-foreground">
-                    {materialPorId[d.detalle_insumo_id]?.clave ?? d.detalle_insumo_id}
-                  </td>
-                  <td className="py-1 pr-2">{materialPorId[d.detalle_insumo_id]?.descripcion ?? ""}</td>
-                  <td className="py-1 pr-2">
-                    <ComboNaturaleza
-                      valor={(d.naturaleza as NaturalezaConsumoEquipoCostoHorario | null) ?? "combustible"}
-                      onElegir={(naturaleza) => void guardarNaturaleza(d, naturaleza)}
-                    />
-                  </td>
-                  <td className="py-1 pr-2 text-muted-foreground">
-                    {simboloPorUnidadId[materialPorId[d.detalle_insumo_id]?.unidad_id ?? ""] ?? ""}
-                  </td>
-                  <td className="py-1 pr-2 text-right">
-                    <QuantityInput
-                      value={d.cantidad}
-                      onCommit={(v) => void guardarCantidad(d, v)}
-                      decimals={6}
-                      className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
-                    />
-                  </td>
-                  <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
-                    <CeldaCostoComposicion
-                      costo={cd?.costo ?? "0"}
-                      usaCostoNacional={cd?.usa_costo_nacional ?? false}
-                      nombreRegion={nombreRegionVista}
-                      mostrarFechaPrecio={mostrarFechaPrecio}
-                      fechaPrecio={cd?.fecha_precio}
-                    />
-                  </td>
-                  <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
-                  <td className="py-1 text-right">
-                    <button
-                      type="button"
-                      title="Quitar"
-                      onClick={() => setPendingQuitar(d)}
-                      className="rounded p-0.5 text-destructive opacity-0 pointer-events-none transition-opacity hover:bg-destructive/10 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                    >
-                      <X size={16} />
-                    </button>
-                  </td>
-                </tr>
-                    {dragConsumos.gap === consumos.length && i === consumos.length - 1 && (
-                      <MarcadorInsercion />
-                    )}
-                  </Fragment>
+                  <ComboNaturaleza
+                    valor={(d.naturaleza as NaturalezaConsumoEquipoCostoHorario | null) ?? "combustible"}
+                    onElegir={(naturaleza) => void guardarNaturaleza(d, naturaleza)}
+                  />
                 );
-              })}
-              <tr>
-                <td colSpan={9} className="pt-1.5">
-                  {agregandoConsumo ? (
-                    <FilterableCombobox
-                      options={materialesDisponibles.map((m) => ({
-                        id: m.id,
-                        label: `${m.clave} — ${m.descripcion}`,
-                      }))}
-                      onSelect={(id) => void agregarConsumo(id)}
-                      onCancel={() => setAgregandoConsumo(false)}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAgregandoConsumo(true)}
-                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-                    >
-                      <Plus size={16} /> Agregar renglón
-                    </button>
-                  )}
-                </td>
-              </tr>
-              <tr className="border-t-2 border-foreground/30 font-semibold">
-                <td colSpan={7} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Subtotal consumo
-                </td>
-                <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.subtotal_consumo ?? "0")}</td>
-                <td />
-              </tr>
-            </tbody>
-
-            {/* OPERACIÓN */}
-            <tbody>
-              <tr>
-                <td colSpan={9} className="pt-3 pb-1">
-                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />
-                    {APP_ICONS.grupo_operacion.titulo}
-                  </span>
-                </td>
-              </tr>
-              {operaciones.length === 0 && !agregandoOperacion && (
-                <tr>
-                  <td colSpan={9} className="py-1.5 text-muted-foreground">
-                    Sin operación todavía.
-                  </td>
-                </tr>
-              )}
-              {operaciones.map((d, i) => {
-                const cd = costoDetallePorDetalleId[d.id];
-                return (
-                  <Fragment key={d.id}>
-                    {dragOperaciones.gap === i && <MarcadorInsercion />}
-                    <tr
-                      className={cn(
-                        "group border-b border-border/50 hover:bg-muted/30",
-                        dragOperaciones.rowClass(d.id),
-                      )}
-                      {...dragOperaciones.rowProps(d.id)}
-                    >
-                  <td className="py-1 pr-1">
-                    <span
-                      title="Arrastra para reordenar"
-                      className="inline-flex cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-                      {...dragOperaciones.handleProps(d.id)}
-                    >
-                      <GripVertical size={16} />
-                    </span>
-                  </td>
-                  <td className="py-1 pr-2 font-mono text-muted-foreground">
-                    {(categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id])?.clave ??
-                      d.detalle_insumo_id}
-                  </td>
-                  <td className="py-1 pr-2">
-                    {(categoriaPorId[d.detalle_insumo_id] ?? cuadrillaPorId[d.detalle_insumo_id])?.descripcion ?? ""}
-                  </td>
-                  <td className="py-1 pr-2">
-                    <IconoNaturalezaOperacion naturaleza={d.naturaleza} />
-                  </td>
-                  <td className="py-1 pr-2 text-muted-foreground">
-                    {simboloPorUnidadId[unidadDeOperacion(d.detalle_insumo_id)] ?? ""}
-                  </td>
-                  <td className="py-1 pr-2 text-right">
-                    <QuantityInput
-                      value={d.cantidad}
-                      onCommit={(v) => void guardarCantidad(d, v)}
-                      decimals={6}
-                      className="w-24 border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:bg-background"
-                    />
-                  </td>
-                  <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
-                    <CeldaCostoComposicion
-                      costo={cd?.costo ?? "0"}
-                      usaCostoNacional={cd?.usa_costo_nacional ?? false}
-                      nombreRegion={nombreRegionVista}
-                      mostrarFechaPrecio={mostrarFechaPrecio}
-                      fechaPrecio={cd?.fecha_precio}
-                      fechaSalarioVigente={
-                        categoriaPorId[d.detalle_insumo_id]?.salario_vigente?.fecha_vigencia_desde
-                      }
-                    />
-                  </td>
-                  <td className="py-1 text-right font-medium tabular-nums">${fmt(cd?.importe ?? "0")}</td>
-                  <td className="py-1 text-right">
-                    <button
-                      type="button"
-                      title="Quitar"
-                      onClick={() => setPendingQuitar(d)}
-                      className="rounded p-0.5 text-destructive opacity-0 pointer-events-none transition-opacity hover:bg-destructive/10 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                    >
-                      <X size={16} />
-                    </button>
-                  </td>
-                </tr>
-                    {dragOperaciones.gap === operaciones.length && i === operaciones.length - 1 && (
-                      <MarcadorInsercion />
-                    )}
-                  </Fragment>
-                );
-              })}
-              <tr>
-                <td colSpan={9} className="pt-1.5">
-                  {agregandoOperacion ? (
-                    <FilterableCombobox
-                      options={operacionesDisponibles}
-                      onSelect={(id) => void agregarOperacion(id)}
-                      onCancel={() => setAgregandoOperacion(false)}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAgregandoOperacion(true)}
-                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-                    >
-                      <Plus size={16} /> Agregar renglón
-                    </button>
-                  )}
-                </td>
-              </tr>
-              <tr className="border-t-2 border-foreground/30 font-semibold">
-                <td colSpan={7} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Subtotal operación
-                </td>
-                <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.subtotal_operacion ?? "0")}</td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
+              }}
+            />
+            <RecetaGrupoTabla
+              titulo={APP_ICONS.grupo_operacion.titulo}
+              Icono={APP_ICONS.grupo_operacion.icono}
+              color={APP_ICONS.grupo_operacion.color}
+              filas={operaciones.map(aFila)}
+              columnas={{ mostrarNaturaleza: true }}
+              agregando={agregandoTipo === "operacion"}
+              onCerrarAgregar={() => setAgregandoTipo(null)}
+              opciones={opcionesOperacion}
+              onAgregar={(id) => void agregarComponente("operacion", id)}
+              onQuitar={(fila) => {
+                const d = operaciones.find((x) => x.id === fila.id);
+                if (d) setPendingQuitar(d);
+              }}
+              onCommitCantidad={(id, v) => {
+                const d = operaciones.find((x) => x.id === id);
+                if (d) void guardarCantidad(d, v);
+              }}
+              mostrarFechaPrecio={mostrarFechaPrecio}
+              destello={null}
+              drag={dragPorTipo.operacion}
+              subtotal={costoSeleccionado?.subtotal_operacion ?? "0"}
+              colapsado={gruposColapsados.has("operacion") && agregandoTipo !== "operacion"}
+              onToggleColapsado={() =>
+                setGruposColapsados((prev) => {
+                  const next = new Set(prev);
+                  if (next.has("operacion")) next.delete("operacion");
+                  else next.add("operacion");
+                  return next;
+                })
+              }
+              nombreRegionVista={nombreRegionVista}
+              renderNaturaleza={(f) => {
+                const d = operaciones.find((x) => x.id === f.id);
+                if (!d) return null;
+                return <IconoNaturalezaOperacion naturaleza={d.naturaleza} />;
+              }}
+            />
+          </TablaReceta>
 
           {cargando && detalles.length === 0 && <p className="mt-2 text-[11px] text-muted-foreground">Cargando…</p>}
         </div>
 
-        {/* Costo total */}
         <div className="flex items-center justify-between rounded-b-lg border-t-2 border-foreground/20 bg-muted/40 px-4 py-2.5">
           <span className="text-xs font-semibold uppercase tracking-widest">Costo horario total</span>
           <span className="text-xl font-bold tabular-nums">${fmt(costoSeleccionado?.costo_total ?? "0")}/hr</span>
         </div>
       </div>
 
-      <div className="mt-3 rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
-        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Costo por región
-            </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Calculado desde precios de materiales y salarios/cuadrillas vigentes. Clic en una región para ver su costo en el análisis.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <button
-              type="button"
-              title={
-                recalculando
-                  ? "Recalculando costos de todas las regiones…"
-                  : [
-                      "Recalcular todas las regiones con los precios y salarios vigentes.",
-                      sincronizadoEn
-                        ? `Última sincronización: ${formatearFecha(sincronizadoEn)}`
-                        : "Aún no se ha sincronizado con los catálogos vigentes.",
-                    ].join("\n")
-              }
-              onClick={() => void recalcularZonas()}
-              disabled={recalculando}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted",
-                recalculando && "opacity-50",
-              )}
-            >
-              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
-              {recalculando ? "Sincronizando…" : "Sincronizar"}
-            </button>
-            {sincronizadoEn ? (
-              <span className="text-right text-[9px] leading-tight text-muted-foreground tabular-nums">
-                {formatearFecha(sincronizadoEn)}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
-                <AlertTriangle size={16} className="shrink-0" />
-                Sin sincronizar
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="overflow-x-auto px-4 py-3">
-          <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
-            <thead>
-              <tr>
-                <th
-                  rowSpan={2}
-                  className="sticky left-0 top-0 z-30 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-                >
-                  Concepto
-                </th>
-                {zonas.map((z) => {
-                  const activa = (z.regionId ?? null) === regionVistaId;
-                  return (
-                  <th
-                    key={`${z.key}-grupo`}
-                    className={cn(
-                      "h-7 w-14 max-w-14 cursor-pointer border-b border-r border-border text-center hover:bg-muted/60",
-                      activa ? "bg-primary/10" : "bg-background",
-                    )}
-                    title={`Ver análisis en ${z.nombre}`}
-                    aria-pressed={activa}
-                    onClick={() => verRegion(z.regionId)}
-                  >
-                    {z.esNac ? (
-                      <APP_ICONS.region_nacional.icono size={16} className={cn("mx-auto", APP_ICONS.region_nacional.color)} aria-label="Nacional" />
-                    ) : (
-                      <APP_ICONS.region_otra.icono size={16} className={cn("mx-auto", APP_ICONS.region_otra.color)} />
-                    )}
-                  </th>
-                  );
-                })}
-              </tr>
-              <tr>
-                {zonas.map((z) => {
-                  const activa = (z.regionId ?? null) === regionVistaId;
-                  return (
-                  <th
-                    key={`${z.key}-nombre`}
-                    className={cn(
-                      "w-14 max-w-14 cursor-pointer border-b border-r border-border px-1 py-1 text-center text-[11px] font-semibold leading-tight hover:bg-muted/60",
-                      activa ? "bg-primary/10 text-foreground" : "bg-background text-muted-foreground",
-                    )}
-                    title={`Ver análisis en ${z.nombre}`}
-                    onClick={() => verRegion(z.regionId)}
-                  >
-                    <span className="line-clamp-2 break-words">{z.nombre}</span>
-                  </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {(
-                [
-                  [APP_ICONS.grupo_consumo.titulo, "subtotal_consumo"],
-                  [APP_ICONS.grupo_operacion.titulo, "subtotal_operacion"],
-                ] as const
-              ).map(([etiqueta, campo]) => (
-                <tr key={campo}>
-                  <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-normal text-muted-foreground">
-                    {etiqueta}
-                  </th>
-                  {zonas.map((z) => {
-                    const monto = z.costo ? `$${fmt(z.costo[campo])}` : "—";
-                    const activa = (z.regionId ?? null) === regionVistaId;
-                    return (
-                      <td
-                        key={z.key}
-                        className={cn(
-                          "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
-                          activa && "bg-primary/10",
-                        )}
-                        onClick={() => verRegion(z.regionId)}
-                      >
-                        <span className="num block truncate" title={z.costo ? monto : undefined}>
-                          {monto}
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              <tr>
-                <th className="sticky left-0 z-10 w-[5.5rem] min-w-[5.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-semibold">
-                  Costo Total
-                </th>
-                {zonas.map((z) => {
-                  const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
-                  const sin = cob?.sin ?? (detalles.length > 0 && !z.costo ? detalles.length : 0);
-                  const monto = z.costo ? `$${fmt(z.costo.costo_total)}` : undefined;
-                  const activa = (z.regionId ?? null) === regionVistaId;
-                  return (
-                    <td
-                      key={z.key}
-                      className={cn(
-                        "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
-                        activa && "bg-primary/10",
-                      )}
-                      onClick={() => verRegion(z.regionId)}
-                    >
-                      {!z.costo ? (
-                        "—"
-                      ) : (
-                        <span className="inline-flex items-center justify-end gap-0.5">
-                          {sin > 0 ? (
-                            <span
-                              title="sin precio en algún renglón"
-                              className="inline-flex text-amber-800 dark:text-amber-300"
-                            >
-                              <AlertTriangle size={16} className="shrink-0" />
-                            </span>
-                          ) : null}
-                          <span className="num block truncate font-semibold text-primary" title={monto}>
-                            {monto}
-                          </span>
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
-          <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            {regionVistaId ? (
-              <APP_ICONS.region_otra.icono size={16} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
-            ) : (
-              <APP_ICONS.region_nacional.icono size={16} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
-            )}
-            El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
-          </p>
-        </div>
-      </div>
+      <CostoPorRegionCard
+        colapsable
+        rows={[
+          { etiqueta: APP_ICONS.grupo_consumo.titulo, extraer: (c) => c?.subtotal_consumo },
+          { etiqueta: APP_ICONS.grupo_operacion.titulo, extraer: (c) => c?.subtotal_operacion },
+        ]}
+        zonas={zonas}
+        regionVistaId={regionVistaId}
+        onVerRegion={verRegion}
+        coberturaPorCostoId={coberturaPorCostoId}
+        totalFilas={detalles.length}
+      />
 
       {dragConsumos.preview}
       {dragOperaciones.preview}

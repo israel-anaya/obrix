@@ -45,10 +45,11 @@ function fmt(valor: string): string {
 }
 
 /**
- * Vista "Ficha" de Básicos y Auxiliares — mismo patrón que `CuadrillasFicha`:
- * fichero angosto a la izquierda, tarjeta de análisis a la derecha
- * (`BasicoAuxiliarFichaApu`). Enfoque alterno a `BasicoAuxiliarGridVista`
- * (grid) — mismos datos y comandos de Tauri por debajo.
+ * Vista "Ficha" de Básicos y Auxiliares — franja de fichas horizontal arriba
+ * (en vez del fichero vertical de `CuadrillasFicha`), tarjeta de análisis
+ * debajo ocupando todo el ancho (`BasicoAuxiliarFichaApu`, sin cambios).
+ * Enfoque alterno a `BasicoAuxiliarGridVista` (grid) — mismos datos y
+ * comandos de Tauri por debajo.
  *
  * Agregar/editar/eliminar/recargar viven todos juntos en la barra de
  * acciones del encabezado, junto al buscador — un solo formulario (en un
@@ -130,20 +131,20 @@ export function BasicoAuxiliarFicha() {
     return lista.filter((a) => a.clave.toLowerCase().includes(q) || a.descripcion.toLowerCase().includes(q));
   }, [auxiliares, busqueda]);
 
-  // Navegación con ↑/↓ entre auxiliares — ignorada mientras el formulario de
+  // Navegación con ←/→ entre auxiliares — ignorada mientras el formulario de
   // alta/edición está abierto (vive en un `Sheet` modal, y también usa
   // flechas para moverse dentro de sus campos) o si el foco está en un campo
   // de texto suelto en otro lado.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       if (creando || editandoId) return;
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (auxiliaresFiltrados.length === 0) return;
       e.preventDefault();
       const idxActual = auxiliaresFiltrados.findIndex((a) => a.id === seleccionadaId);
-      const delta = e.key === "ArrowUp" ? -1 : 1;
+      const delta = e.key === "ArrowLeft" ? -1 : 1;
       const idxNuevo =
         idxActual === -1 ? 0 : Math.min(Math.max(idxActual + delta, 0), auxiliaresFiltrados.length - 1);
       setSeleccionadaId(auxiliaresFiltrados[idxNuevo].id);
@@ -154,7 +155,7 @@ export function BasicoAuxiliarFicha() {
 
   useEffect(() => {
     if (!seleccionadaId) return;
-    itemRefs.current.get(seleccionadaId)?.scrollIntoView({ block: "nearest" });
+    itemRefs.current.get(seleccionadaId)?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [seleccionadaId, auxiliaresFiltrados]);
 
   const iniciarCreacion = () => {
@@ -243,10 +244,10 @@ export function BasicoAuxiliarFicha() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-1/5 shrink-0 flex-col border-r border-border">
-          <div className="flex flex-col gap-2 border-b border-border p-2">
-            <div className="flex items-center justify-between gap-2">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex flex-col gap-2 border-b border-border p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <ActionBar
                 actions={[
                   { icon: Plus, title: "Nuevo básico auxiliar", onClick: iniciarCreacion },
@@ -258,78 +259,78 @@ export function BasicoAuxiliarFicha() {
                   },
                 ]}
               />
-              <ActionBarMenu
-                menu={[
-                  { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
-                  {
-                    icon: Trash2,
-                    title: "Eliminar auxiliar seleccionado",
-                    onClick: () => setConfirmandoEliminar(true),
-                    disabled: !seleccionada,
-                    destructive: true,
-                  },
-                ]}
-              />
+              <SearchInput value={busqueda} onChange={setBusqueda} />
             </div>
-            <SearchInput value={busqueda} onChange={setBusqueda} />
+            <ActionBarMenu
+              menu={[
+                { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+                {
+                  icon: Trash2,
+                  title: "Eliminar auxiliar seleccionado",
+                  onClick: () => setConfirmandoEliminar(true),
+                  disabled: !seleccionada,
+                  destructive: true,
+                },
+              ]}
+            />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+
+          <div className="min-w-0">
             {cargando && auxiliares.length === 0 ? (
-              <p className="p-3 text-xs text-muted-foreground">Cargando…</p>
+              <p className="py-1.5 text-xs text-muted-foreground">Cargando…</p>
             ) : auxiliaresFiltrados.length === 0 ? (
-              <p className="p-3 text-xs text-muted-foreground">Sin básicos ni auxiliares todavía.</p>
+              <p className="py-1.5 text-xs text-muted-foreground">Sin básicos ni auxiliares todavía.</p>
             ) : (
-              auxiliaresFiltrados.map((a) => {
-                const activa = seleccionadaId === a.id;
-                return (
-                  <button
-                    key={a.id}
-                    ref={(el) => {
-                      if (el) itemRefs.current.set(a.id, el);
-                      else itemRefs.current.delete(a.id);
-                    }}
-                    type="button"
-                    aria-current={activa ? "true" : undefined}
-                    onClick={() => setSeleccionadaId(a.id)}
-                    className={cn(
-                      "relative flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2 text-left outline-none hover:bg-muted/50",
-                      activa ? "bg-primary/10" : undefined,
-                    )}
-                  >
-                    {activa ? (
-                      <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
-                    ) : null}
-                    <div className="flex w-full items-start justify-between gap-2">
-                      <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
-                        {a.clave}
-                      </span>
-                      <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
-                        ${fmt(a.costo_nacional?.costo_total ?? "0")}
-                      </span>
-                    </div>
-                    <span className="line-clamp-2 w-full font-mono text-xs font-normal text-muted-foreground">{a.descripcion}</span>
-                    <div className="mt-0.5 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />${fmt(a.costo_nacional?.sub_total_material ?? "0")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_mano_obra.icono size={16} className={APP_ICONS.grupo_mano_obra.color} />${fmt(a.costo_nacional?.sub_total_mano_obra ?? "0")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_equipo_herramienta.icono size={16} className={APP_ICONS.grupo_equipo_herramienta.color} />${fmt(a.costo_nacional?.sub_total_equipo ?? "0")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />${fmt(a.costo_nacional?.sub_total_basico_auxiliar ?? "0")}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
+              <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+                {auxiliaresFiltrados.map((a) => {
+                  const activa = seleccionadaId === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(a.id, el);
+                        else itemRefs.current.delete(a.id);
+                      }}
+                      type="button"
+                      aria-current={activa ? "true" : undefined}
+                      onClick={() => setSeleccionadaId(a.id)}
+                      className={cn(
+                        "relative flex w-64 shrink-0 flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left outline-none hover:bg-muted/50",
+                        activa ? "border-primary bg-primary/10" : "border-border",
+                      )}
+                    >
+                      <div className="flex w-full items-start justify-between gap-2">
+                        <span className="font-mono text-[15px] font-semibold tabular-nums tracking-tight text-foreground">
+                          {a.clave}
+                        </span>
+                        <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                          ${fmt(a.costo_nacional?.costo_total ?? "0")}
+                        </span>
+                      </div>
+                      <span className="line-clamp-2 w-full font-mono text-xs font-normal text-muted-foreground">{a.descripcion}</span>
+                      <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />${fmt(a.costo_nacional?.sub_total_material ?? "0")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_mano_obra.icono size={16} className={APP_ICONS.grupo_mano_obra.color} />${fmt(a.costo_nacional?.sub_total_mano_obra ?? "0")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_equipo_herramienta.icono size={16} className={APP_ICONS.grupo_equipo_herramienta.color} />${fmt(a.costo_nacional?.sub_total_equipo ?? "0")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />${fmt(a.costo_nacional?.sub_total_basico_auxiliar ?? "0")}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-2">
           {seleccionada ? (
             <BasicoAuxiliarFichaApu auxiliar={seleccionada} onCambio={recargarAuxiliares} />
           ) : (
