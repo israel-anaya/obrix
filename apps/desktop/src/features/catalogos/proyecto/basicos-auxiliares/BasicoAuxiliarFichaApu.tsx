@@ -786,10 +786,11 @@ export function BasicoAuxiliarFichaApu({
 
             <div className="w-[30%] text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                <span className="font-normal text-muted-foreground">Costo:</span>
                 {regionVistaId ? (
-                  <APP_ICONS.region_otra.icono size={12} className={APP_ICONS.region_otra.color} />
+                  <APP_ICONS.region_otra.icono size={16} className={APP_ICONS.region_otra.color} />
                 ) : (
-                  <APP_ICONS.region_nacional.icono size={12} className={APP_ICONS.region_nacional.color} />
+                  <APP_ICONS.region_nacional.icono size={16} className={APP_ICONS.region_nacional.color} />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
@@ -1121,14 +1122,6 @@ export function BasicoAuxiliarFichaApu({
               </tr>
             </tbody>
           </table>
-          <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            {regionVistaId ? (
-              <APP_ICONS.region_otra.icono size={12} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
-            ) : (
-              <APP_ICONS.region_nacional.icono size={12} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
-            )}
-            El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
-          </p>
         </div>
       </div>
 
