@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,6 +26,7 @@ export function FilterableCombobox({
   // combobox, so the blur that follows shouldn't trigger `onCancel` again.
   const resolvedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLUListElement>(null);
 
   // Un `autoFocus` normal pierde la carrera cuando este combobox aparece
   // tras cerrarse un menú (Radix Dropdown/Select devuelve el foco a su
@@ -39,6 +41,27 @@ export function FilterableCombobox({
     if (!q) return options;
     return options.filter((o) => o.label.toLowerCase().includes(q));
   }, [options, text]);
+
+  // Virtualized like `CardRail`/`useCardRail` — catalogs (materiales, etc.)
+  // can run into the hundreds/thousands, so only the visible rows (+
+  // overscan) are mounted. Rows aren't truncated (labels can wrap to more
+  // than one line), so sizes are measured dynamically instead of assumed
+  // fixed like `CardRail`'s cards.
+  const virtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 28,
+    overscan: 8,
+    getItemKey: (index) => filtered[index]?.id ?? index,
+  });
+
+  // Arrow-key navigation moves `active` without the browser scrolling the
+  // list on its own — the highlighted option can end up outside the
+  // scrollable area, and under virtualization it may not even be mounted
+  // yet, so `scrollToIndex` (not `scrollIntoView`) brings it into view.
+  useEffect(() => {
+    virtualizer.scrollToIndex(active, { align: "auto" });
+  }, [active, virtualizer]);
 
   const select = (id: string) => {
     resolvedRef.current = true;
@@ -60,6 +83,7 @@ export function FilterableCombobox({
         onChange={(e) => {
           setText(e.target.value);
           setActive(0);
+          virtualizer.scrollToOffset(0);
         }}
         onBlur={() => {
           // Gives time for an option's `onClick` to register before closing.
@@ -90,23 +114,43 @@ export function FilterableCombobox({
         }}
         className={cn("w-full rounded border border-border bg-background px-1.5 py-1 text-xs", className)}
       />
-      <ul className="absolute z-20 mt-0.5 max-h-48 w-full overflow-auto rounded border border-neutral-300 bg-white text-xs text-neutral-900 shadow-md">
+      <ul
+        ref={scrollRef}
+        className="absolute z-20 mt-0.5 max-h-48 w-full overflow-auto rounded border border-neutral-300 bg-white text-xs text-neutral-900 shadow-md"
+      >
         {filtered.length === 0 ? (
           <li className="px-2 py-1 text-neutral-500">Sin resultados</li>
         ) : (
-          filtered.map((o, i) => (
-            <li key={o.id}>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => select(o.id)}
-                onMouseEnter={() => setActive(i)}
-                className={cn("flex w-full px-2 py-1 text-left hover:bg-neutral-100", i === active && "bg-neutral-200")}
-              >
-                {o.label}
-              </button>
-            </li>
-          ))
+          (() => {
+            const virtualItems = virtualizer.getVirtualItems();
+            const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+            const paddingBottom =
+              virtualItems.length > 0 ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end : 0;
+            return (
+              <>
+                {paddingTop > 0 && <li aria-hidden style={{ height: paddingTop }} />}
+                {virtualItems.map((vi) => {
+                  const o = filtered[vi.index];
+                  if (!o) return null;
+                  const isActive = vi.index === active;
+                  return (
+                    <li key={vi.key} ref={virtualizer.measureElement} data-index={vi.index}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => select(o.id)}
+                        onMouseEnter={() => setActive(vi.index)}
+                        className={cn("flex w-full px-2 py-1 text-left hover:bg-neutral-100", isActive && "bg-neutral-200")}
+                      >
+                        {o.label}
+                      </button>
+                    </li>
+                  );
+                })}
+                {paddingBottom > 0 && <li aria-hidden style={{ height: paddingBottom }} />}
+              </>
+            );
+          })()
         )}
       </ul>
     </div>
