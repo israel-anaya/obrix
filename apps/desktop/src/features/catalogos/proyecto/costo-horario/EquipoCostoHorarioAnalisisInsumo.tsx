@@ -379,11 +379,8 @@ export function EquipoCostoHorarioAnalisisInsumo({
     [materiales, idsUsados],
   );
   const opcionesOperacion = useMemo(
-    () => [
-      ...categorias.filter((c) => !idsUsados.has(c.id)).map((c) => ({ id: c.id, label: `${c.clave} — ${c.descripcion}` })),
-      ...cuadrillas.filter((c) => !idsUsados.has(c.id)).map((c) => ({ id: c.id, label: `${c.clave} — ${c.descripcion}` })),
-    ],
-    [categorias, cuadrillas, idsUsados],
+    () => cuadrillas.filter((c) => !idsUsados.has(c.id)).map((c) => ({ id: c.id, label: `${c.clave} — ${c.descripcion}` })),
+    [cuadrillas, idsUsados],
   );
 
   const consumos = useMemo(() => detalles.filter((d) => d.tipo === "consumo").sort((a, b) => a.orden - b.orden), [detalles]);

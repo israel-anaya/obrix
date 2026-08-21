@@ -236,17 +236,19 @@ export function RecetaGrupoTabla({
                   )}
                 </td>
                 <td className="py-1 pr-2 text-right tabular-nums text-muted-foreground">
-                  <div className="inline-flex items-center justify-end gap-1">
-                    {f.usaCostoNacional && nombreRegionVista ? (
-                      <span title={`Costo nacional (sin costo en ${nombreRegionVista})`}>
-                        <GlobeCheck size={16} className="shrink-0 text-primary" aria-label="Costo nacional" />
-                      </span>
+                  <div className="flex flex-col items-end">
+                    <div className="inline-flex items-center justify-end gap-1">
+                      {f.usaCostoNacional && nombreRegionVista ? (
+                        <span title={`Costo nacional (sin costo en ${nombreRegionVista})`}>
+                          <GlobeCheck size={16} className="shrink-0 text-primary" aria-label="Costo nacional" />
+                        </span>
+                      ) : null}
+                      <span>${fmt(f.costo)}</span>
+                    </div>
+                    {verFechaPrecio && f.fechaPrecio ? (
+                      <FechaPrecioFrescura fecha={f.fechaPrecio} fechaSalarioVigente={f.fechaSalarioVigente} />
                     ) : null}
-                    <span>${fmt(f.costo)}</span>
                   </div>
-                  {verFechaPrecio && f.fechaPrecio ? (
-                    <FechaPrecioFrescura fecha={f.fechaPrecio} fechaSalarioVigente={f.fechaSalarioVigente} />
-                  ) : null}
                 </td>
                 <td
                   className={cn(
