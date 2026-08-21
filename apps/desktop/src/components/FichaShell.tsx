@@ -55,9 +55,9 @@ export function FichaShell({
         <p className="px-3 py-2 text-xs text-muted-foreground">{vacio}</p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
-          <div className="flex flex-col gap-3">
+          <div className="flex min-h-full flex-col gap-3">
             {children}
-            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+            <div className="mt-auto grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
               <span>Creado</span>
               <span className="text-right">{formatearFecha(item.created_at)}</span>
               <span>Creado por</span>

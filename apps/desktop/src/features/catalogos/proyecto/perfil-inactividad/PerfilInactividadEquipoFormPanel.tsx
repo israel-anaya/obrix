@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
 import { FIELD_INPUT_CLASS } from "@/components/Field";
+import { FichaShell } from "@/components/FichaShell";
 import { PercentageInput } from "@/components/PercentageInput";
 import { toast } from "@/hooks/use-toast";
-import { formatearFecha } from "@/lib/fecha";
 import { updatePerfilInactividadEquipo } from "@/lib/tauri";
 import type { PerfilInactividadEquipo, PerfilInactividadEquipoData } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -143,28 +142,19 @@ export function PerfilInactividadEquipoFormPanel({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border px-3 py-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="truncate text-xs font-semibold text-muted-foreground">
-            Ficha{perfil ? ` — ${perfil.nombre}` : ""}
-          </h3>
-          <button
-            type="button"
-            title="Cerrar"
-            onClick={onCerrar}
-            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      </div>
-
-      {!datos ? (
-        <p className="px-3 py-2 text-xs text-muted-foreground">Selecciona un perfil para ver su ficha.</p>
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-3">
-          <div className="flex flex-col gap-4">
+    <FichaShell
+      titulo={`Ficha${perfil ? ` — ${perfil.nombre}` : ""}`}
+      vacio="Selecciona un perfil para ver su ficha."
+      item={perfil}
+      nombresPorUsuarioId={nombresPorUsuarioId}
+      puedeGuardar={puedeGuardar}
+      guardando={guardando}
+      onCerrar={onCerrar}
+      onDescartar={() => setDatos(perfil ? aPerfilData(perfil) : datos)}
+      onGuardar={() => void guardar()}
+    >
+      {datos && (
+        <div className="flex flex-col gap-4">
             <CampoEnLinea label="Nombre">
               <input
                 value={datos.nombre}
@@ -298,50 +288,8 @@ export function PerfilInactividadEquipoFormPanel({
                 />
               </Subseccion>
             </Seccion>
-
-            {perfil && (
-              <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
-                <span>Creado</span>
-                <span className="text-right">{formatearFecha(perfil.created_at)}</span>
-                <span>Creado por</span>
-                <span className="truncate text-right">
-                  {nombresPorUsuarioId[perfil.created_by] ?? perfil.created_by}
-                </span>
-                <span>Actualizado</span>
-                <span className="text-right">{perfil.updated_at ? formatearFecha(perfil.updated_at) : "—"}</span>
-                <span>Actualizado por</span>
-                <span className="truncate text-right">
-                  {perfil.updated_by ? (nombresPorUsuarioId[perfil.updated_by] ?? perfil.updated_by) : "—"}
-                </span>
-              </div>
-            )}
-          </div>
         </div>
       )}
-
-      {datos && (
-        <div className="flex justify-end gap-2 border-t border-border px-3 py-2">
-          <button
-            type="button"
-            onClick={() => setDatos(perfil ? aPerfilData(perfil) : datos)}
-            disabled={!puedeGuardar || guardando}
-            className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-40"
-          >
-            Descartar
-          </button>
-          <button
-            type="button"
-            onClick={() => void guardar()}
-            disabled={!puedeGuardar || guardando}
-            className={cn(
-              "rounded bg-primary px-2 py-1 text-[11px] text-primary-foreground hover:opacity-90",
-              (!puedeGuardar || guardando) && "opacity-50",
-            )}
-          >
-            {guardando ? "Guardando…" : "Guardar"}
-          </button>
-        </div>
-      )}
-    </div>
+    </FichaShell>
   );
 }
