@@ -89,7 +89,9 @@ export function EncabezadoAnalisis<Tipo extends string>({
         </span>
       </div>
 
-      <div className="mt-1 flex items-start gap-3">
+      <div aria-hidden className="-mx-4 mt-2 h-px bg-border" />
+
+      <div className="mt-2 flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-mono text-base font-bold tracking-tight">{clave}</span>
@@ -104,14 +106,6 @@ export function EncabezadoAnalisis<Tipo extends string>({
 
         <div className="w-fit shrink-0 text-xs text-muted-foreground">
           <div className="flex flex-col gap-1">
-            <div
-              className="flex h-1.5 w-full min-w-0 overflow-hidden rounded-full bg-muted"
-              title={segmentos.map((s) => `${s.etiqueta} ${s.pct.toFixed(0)}%`).join(" / ")}
-            >
-              {segmentos.map((s) => (
-                <div key={s.etiqueta} className={s.bg} style={{ width: `${s.pct}%` }} />
-              ))}
-            </div>
             <span className="flex flex-wrap items-center gap-2 text-[10px]">
               {segmentos.map((s) => (
                 <span key={s.etiqueta} className="flex items-center gap-1">
@@ -120,6 +114,16 @@ export function EncabezadoAnalisis<Tipo extends string>({
                 </span>
               ))}
             </span>
+
+            <div
+              className="flex h-1.5 w-full min-w-0 overflow-hidden rounded-full bg-muted"
+              title={segmentos.map((s) => `${s.etiqueta} ${s.pct.toFixed(0)}%`).join(" / ")}
+            >
+              {segmentos.map((s) => (
+                <div key={s.etiqueta} className={s.bg} style={{ width: `${s.pct}%` }} />
+              ))}
+            </div>
+
             <div aria-hidden className="mt-1 h-px bg-border" />
 
             <div className="mt-2 flex items-center justify-end gap-2">
