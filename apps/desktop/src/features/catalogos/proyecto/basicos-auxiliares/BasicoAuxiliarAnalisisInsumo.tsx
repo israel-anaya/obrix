@@ -47,7 +47,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { listUnidadesMedida } from "@/lib/tauri";
 import { APP_ICONS } from "@/lib/appIcons";
-import { centavos, fmt, fmtCantidad } from "../shared/analisis-insumo/formato";
+import { centavos, fmt, fmtCantidad } from "@/lib/formato";
 import { ChipDelta } from "../shared/analisis-insumo/Indicadores";
 import { useRegionCosts } from "../shared/analisis-insumo/useRegionCosts";
 import { CostoPorRegionCard } from "../shared/analisis-insumo/CostoPorRegionCard";

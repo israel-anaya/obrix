@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatearFecha, diasTranscurridos } from "@/lib/fecha";
-import { fmtDelta } from "./formato";
+import { fmtDelta } from "@/lib/formato";
 
 export function ChipDelta({ valor, className }: { valor: number; className?: string }) {
   if (valor === 0) return null;

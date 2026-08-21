@@ -55,7 +55,7 @@ import type {
 } from "@/lib/types";
 import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { fmt, fmtCantidad } from "../shared/analisis-insumo/formato";
+import { fmt, fmtCantidad } from "@/lib/formato";
 import { useRegionCosts } from "../shared/analisis-insumo/useRegionCosts";
 import { CostoPorRegionCard } from "../shared/analisis-insumo/CostoPorRegionCard";
 import { EncabezadoAnalisis } from "../shared/analisis-insumo/EncabezadoAnalisis";

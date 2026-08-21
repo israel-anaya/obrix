@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { SearchInput } from "@/components/SearchInput";
 import { APP_ICONS } from "@/lib/appIcons";
 import {
   AlertDialog,
@@ -24,7 +27,7 @@ import {
   updateBasicoAuxiliar,
 } from "@/lib/tauri";
 import type { BasicoAuxiliar, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-import { fmt } from "../shared/analisis-insumo/formato";
+import { fmt } from "@/lib/formato";
 import { useAnalisisMaestroDetalle } from "../shared/analisis-maestro-detalle/useAnalisisMaestroDetalle";
 import { FranjaSuperior } from "../shared/analisis-maestro-detalle/FranjaSuperior";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
@@ -194,6 +197,34 @@ export function BasicoAuxiliarAnalisis() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex items-center justify-between gap-2 border-b border-border p-2">
+          <div className="flex items-center gap-2">
+            <ActionBar
+              actions={[
+                { icon: Plus, title: "Nuevo básico auxiliar", onClick: iniciarCreacion },
+                {
+                  icon: Pencil,
+                  title: "Editar auxiliar seleccionado",
+                  onClick: () => seleccionada && iniciarEdicion(seleccionada),
+                  disabled: !seleccionadaId,
+                },
+              ]}
+            />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
+          <ActionBarMenu
+            menu={[
+              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+              {
+                icon: Trash2,
+                title: "Eliminar auxiliar seleccionado",
+                onClick: () => setConfirmandoEliminar(true),
+                disabled: !seleccionadaId,
+                destructive: true,
+              },
+            ]}
+          />
+        </div>
         <FranjaSuperior
           items={auxiliaresFiltrados}
           seleccionadaId={seleccionadaId}
@@ -201,15 +232,6 @@ export function BasicoAuxiliarAnalisis() {
           itemRefs={itemRefs}
           cargando={cargando}
           mensajeVacio="Sin básicos ni auxiliares todavía."
-          busqueda={busqueda}
-          onBusquedaChange={setBusqueda}
-          tituloNuevo="Nuevo básico auxiliar"
-          onNuevo={iniciarCreacion}
-          tituloEditar="Editar auxiliar seleccionado"
-          onEditar={() => seleccionada && iniciarEdicion(seleccionada)}
-          tituloEliminar="Eliminar auxiliar seleccionado"
-          onEliminar={() => setConfirmandoEliminar(true)}
-          onRecargar={recargarTodo}
           costoTotal={(a) => a.costo_nacional?.costo_total ?? "0"}
           renderDesglose={(a) => (
             <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">

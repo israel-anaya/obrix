@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { APP_ICONS } from "@/lib/appIcons";
 import { cn } from "@/lib/utils";
-import { fmt } from "./formato";
+import { fmt } from "@/lib/formato";
 import type { Zona } from "./useRegionCosts";
 
 interface FilaCostoPorRegion<Costo> {

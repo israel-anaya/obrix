@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { SearchInput } from "@/components/SearchInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +27,7 @@ import {
   updateCuadrilla,
 } from "@/lib/tauri";
 import type { Cuadrilla, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-import { fmt } from "../shared/analisis-insumo/formato";
+import { fmt } from "@/lib/formato";
 import { useAnalisisMaestroDetalle } from "../shared/analisis-maestro-detalle/useAnalisisMaestroDetalle";
 import { FranjaSuperior } from "../shared/analisis-maestro-detalle/FranjaSuperior";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
@@ -205,6 +208,34 @@ export function CuadrillasAnalisis() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex items-center justify-between gap-2 border-b border-border p-2">
+          <div className="flex items-center gap-2">
+            <ActionBar
+              actions={[
+                { icon: Plus, title: "Nueva cuadrilla", onClick: iniciarCreacion },
+                {
+                  icon: Pencil,
+                  title: "Editar cuadrilla seleccionada",
+                  onClick: () => seleccionada && iniciarEdicion(seleccionada),
+                  disabled: !seleccionadaId,
+                },
+              ]}
+            />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
+          </div>
+          <ActionBarMenu
+            menu={[
+              { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+              {
+                icon: Trash2,
+                title: "Eliminar cuadrilla seleccionada",
+                onClick: () => setConfirmandoEliminar(true),
+                disabled: !seleccionadaId,
+                destructive: true,
+              },
+            ]}
+          />
+        </div>
         <FranjaSuperior
           items={cuadrillasFiltradas}
           seleccionadaId={seleccionadaId}
@@ -212,15 +243,6 @@ export function CuadrillasAnalisis() {
           itemRefs={itemRefs}
           cargando={cargando}
           mensajeVacio="Sin cuadrillas todavía."
-          busqueda={busqueda}
-          onBusquedaChange={setBusqueda}
-          tituloNuevo="Nueva cuadrilla"
-          onNuevo={iniciarCreacion}
-          tituloEditar="Editar cuadrilla seleccionada"
-          onEditar={() => seleccionada && iniciarEdicion(seleccionada)}
-          tituloEliminar="Eliminar cuadrilla seleccionada"
-          onEliminar={() => setConfirmandoEliminar(true)}
-          onRecargar={recargarTodo}
           costoTotal={(c) => c.costo_nacional?.costo_total ?? "0"}
           renderDesglose={(c) => (
             <div className="mt-0.5 flex w-full items-center gap-2 text-[10px] text-muted-foreground">

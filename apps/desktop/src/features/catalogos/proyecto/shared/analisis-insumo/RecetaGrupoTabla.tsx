@@ -7,7 +7,7 @@ import { QuantityInput } from "@/components/QuantityInput";
 import type { useRowDrag } from "@/hooks/useRowDrag";
 import { cn } from "@/lib/utils";
 import { ChipDelta, FechaPrecioFrescura, MarcadorInsercion } from "./Indicadores";
-import { fmt } from "./formato";
+import { fmt } from "@/lib/formato";
 
 export interface FilaReceta {
   id: string;
