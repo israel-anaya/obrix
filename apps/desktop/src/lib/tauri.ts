@@ -373,6 +373,9 @@ export function updateBasicoAuxiliar(id: string, basicoAuxiliar: BasicoAuxiliarD
 export function deleteBasicoAuxiliar(id: string): Promise<void> {
   return invoke("delete_basico_auxiliar", { id });
 }
+export function importarBasicosAuxiliaresCsv(path: string): Promise<ResultadoImportacion> {
+  return invoke("importar_basicos_auxiliares_csv", { path });
+}
 export function listBasicoAuxiliarComponentes(basicoAuxiliarId: string): Promise<BasicoAuxiliarComponente[]> {
   return invoke("list_basico_auxiliar_componentes", { basicoAuxiliarId });
 }

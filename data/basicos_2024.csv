@@ -1,0 +1,94 @@
+﻿MAESTRO
+Clave,Descripción,Unidad,Familia,Subfamilia
+V00.002,"Agua para terracerías, incluye: acarreo máximo a 4 km, no incluye descarga.",m³,,
+V00.003,"Colado de concreto en cimentación incluye: acarreo, vaciado a bote, vibrado, curado con agua, perfilado, artesa y desperdicios.",m³,,
+V00.060,"Fabricación de concreto con revolvedora tipo trompo de un saco de capacidad, de 320 litros incluye: equipo, cuadrilla con operador y cinco peones producción teórica de 3.5 m³/hora, eficiencia de 0.75, producción real de 3.5x0.75 de 2.63 m³/hora.",m³,,
+V00.055,"Concreto hecho en obra f'c=150 kg/cm², resistencia normal, con tamaño máximo de agregado de 38 mm incluye: MATERIAL, fabricación, acarreos y desperdicios.",m³,,
+V00.004,"Concreto f'c=150 kg/cm² tamaño máximo del agregado de 38 mm hecho en obra para cimentaciones y obras de urbanización incluye: MATERIAL, desperdicio, acarreo, vaciado, vibrado, artesa y curado de agua.",m³,,
+V00.005,"Concreto premezclado de f'c=150 kg/cm², resistencia normal, tamaño máximo de agregado de 38 mm incluye: MATERIAL, acarreos, vaciado a bote, curado con agua, artesa y desperdicios. Nota: este concepto se aplicará únicamente con la autorización de la subdirección técnica.",m³,,
+V00.006,"Concreto premezclado de f'c=200 kg/cm², resistencia normal, tamaño máximo de agregado de 19 mm incluye: MATERIAL, acarreos, vaciado a bote, curado con agua, artesa y desperdicios. Nota: este concepto se aplicará únicamente con la autorización de la subdirección técnica.",m³,,
+V00.031,"Equipo de topografía para trazo y nivelación, de calles y obras exteriores.",jor,,
+V00.032,"Mortero cemento arena 1:3, incluye: MATERIAL.",m³,,
+V00.033,"Mortero cemento arena 1:4, incluye: MATERIAL.",m³,,
+V00.034,"Mortero cemento arena 1:5, incluye: MATERIAL.",m³,,
+V00.036,Andamios de caballetes construido con madera de pino de 3a. para alturas de 1.50 a 3.00 m.,uso,,
+V00.037,"Cimbra común en losas con madera de pino de tercera, incluye cimbrado, descimbrado, chaflán, gotero y frentes (ochavos)",m²,,
+V00.038,"Cimbra aparente en losas con madera de pino de tercera, incluye cimbrado, descimbrado, chaflán, gotero y frentes (ochavos)",m²,,
+V00.039,"Acero refuerzo en estructura del No. 3, fy=4200 kg/cm², incluye: suministro, habilitado, armado, traslapes, ganchos y desperdicios.",kg,,
+V00.041,Concreto hecho en obra f'c=150 kg/cm²,m³,,
+V00.042,"Colado de concreto en estructura, incluye: acarreo, vaciado a bote, vibrado, curado con agua, perfilado, artesa y desperdicios.",m³,,
+V00.040,"Concreto hecho en obra f'c=150 kg/cm², resistencia normal, con tamaño máximo de agregado de 20 mm para estructura, incluye: MATERIAL, desperdicio, acarreo, vaciado, vibrado, artesa y curado de agua.",m³,,
+V00.043,Lechada cemento blanco agua,m³,,
+V00.045,"Acarreo en camión de volteo de material producto de la excavación o cascajo a kilómetros subsecuentes, en zona urbana.",m³/km,,
+V00.046,"Acarreo en camión de volteo de material producto de la excavación o cascajo a primer kilómetro, incluye: carga a manual.",m³,,
+V00.050,"Acarreo en carretilla a primera estación (20.00 m), de material producto de la excavación, cascajo o agregados, dentro de la obra en terreno sin pendiente. Incluye: carga y descarga del material.",m³,,
+
+DETALLE
+Clave Básico Auxiliar,Sección,Clave Insumo,Descripción Insumo,Unidad,Cantidad
+V00.002,MATERIAL,MAT-00220,Agua de toma municipal,m³,1.050000
+V00.002,EQUIPO Y HERRAMIENTA,EQV00.013,"Camión pipa de 8 m3, con chasis Famsa diesel perkins 132 h. p. tanque, pasillo lateral, barra para riego de terracerías, con válvula reguladora y bomba de 3"" de diámetro, Carter de 8 l., llantas 1000-20 para ciudad y carretera.",h,0.040000
+V00.002,EQUIPO Y HERRAMIENTA,EQV00.014,"Camión pipa de 8 m3, con chasis Famsa diesel perkins 132 h. p. tanque, pasillo lateral, barra para riego de terracerías, con válvula reguladora y bomba de 3"" de diámetro, Carter de 8 l., llantas 1000-20 para ciudad y carretera. (Hora inactiva)",h,0.049400
+V00.003,MATERIAL,MAT-05295,"Madera de pino de 3a de 3/4"" (19mm) x 12"" (30 cm) x 8-1/4' (2.50m)",pt,0.375000
+V00.003,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.060000
+V00.003,MANO DE OBRA,00-M0032,Cuadrilla 32 (Oficial albañil + 6 ayudantes),jor,0.153846
+V00.003,EQUIPO Y HERRAMIENTA,EQV00.030,"Vibrador ""ELBA"", modelo V.G.A. con chicote de 4.00m. por 38mm. (1 1/2"") y",h,1.250000
+V00.060,MANO DE OBRA,00-M0032,Cuadrilla 32 (Oficial albañil + 6 ayudantes),jor,0.058333
+V00.060,EQUIPO Y HERRAMIENTA,EQV00.028,"Revolvedora ""Elba"" de un saco, tipo trompo modelo RTB-320 con capacidad de mezcla de 320.00 litros y motor de gasolina de 8 H.P., carter de 1.18 litros.",h,0.466667
+V00.055,MATERIAL,MAT-00420,Arena,m³,0.544000
+V00.055,MATERIAL,MAT-04195,"Grava de 1-1/2"" (38 mm)",m³,0.653000
+V00.055,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.260681
+V00.055,MATERIAL,MAT-01435,"Cemento portland gris CPC 30R, saco de 50 kg",t,0.330000
+V00.055,BASICO AUXILIAR,V00.060,"Fabricación de concreto con revolvedora tipo trompo de un saco de capacidad, de 320 litros incluye: equipo, cuadrilla con operador y cinco peones producción teórica de 3.5 m³/hora, eficiencia de 0.75, producción real de 3.5x0.75 de 2.63 m³/hora.",m³,1.000000
+V00.004,BASICO AUXILIAR,V00.003,"Colado de concreto en cimentación incluye: acarreo, vaciado a bote, vibrado, curado con agua, perfilado, artesa y desperdicios.",m³,1.000000
+V00.004,BASICO AUXILIAR,V00.055,"Concreto hecho en obra f'c=150 kg/cm², resistencia normal, con tamaño máximo de agregado de 38 mm incluye: MATERIAL, fabricación, acarreos y desperdicios.",m³,1.030000
+V00.005,MATERIAL,112130-2005,"Concreto premezclado ""B"", f'c 150 kg/cm² resist. Normal tma 20 mm",m³,1.030000
+V00.005,BASICO AUXILIAR,V00.003,"Colado de concreto en cimentación incluye: acarreo, vaciado a bote, vibrado, curado con agua, perfilado, artesa y desperdicios.",m³,1.000000
+V00.006,MATERIAL,112130-2010,"Concreto premezclado ""B"", f'c 200 kg/cm² resist. Normal tma 20 mm",m³,1.030000
+V00.006,BASICO AUXILIAR,V00.003,"Colado de concreto en cimentación incluye: acarreo, vaciado a bote, vibrado, curado con agua, perfilado, artesa y desperdicios.",m³,1.000000
+V00.031,EQUIPO Y HERRAMIENTA,EQV00.087,"Transito para medición K+E, modelo CH5",h,8.000000
+V00.031,EQUIPO Y HERRAMIENTA,EQV00.086,"Nivel para medición K+E, tipo ""DUMPY"", modelo",h,8.000000
+V00.032,MATERIAL,MAT-00420,Arena,m³,1.071000
+V00.032,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.300000
+V00.032,MATERIAL,MAT-01435,"Cemento portland gris CPC 30R, saco de 50 kg",t,0.432000
+V00.033,MATERIAL,MAT-01435,"Cemento portland gris CPC 30R, saco de 50 kg",t,0.356000
+V00.033,MATERIAL,MAT-00420,Arena,m³,1.191000
+V00.033,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.248000
+V00.034,MATERIAL,MAT-00420,Arena,m³,1.26100         
+V00.034,MATERIAL,MAT-00420,"Cemento portland gris CPC 30R, saco de 50 kg",t,0.295000
+V00.034,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.300000
+V00.036,MATERIAL,MAT-05295,"Madera de pino de 3a de 3/4"" (19mm) x 12"" (30 cm) x 8-1/4' (2.50m)",pt,0.830000
+V00.036,MATERIAL,MAT-01630,"Clavo de 2 1/2"" (63 mm) con cabeza, calibre 11, clave 3120",kg,0.012000
+V00.036,MANO DE OBRA,00-M0006,Cuadrilla 06 (Oficial carpintero de obra negra + ayudante),jor,0.013333
+V00.037,MATERIAL,MAT-03285,Diesel,l,0.500000
+V00.037,MATERIAL,MAT-00265,"Alambre recocido de acero calibre 18, clave 1201",kg,0.200000
+V00.037,MATERIAL,MAT-01630,"Clavo de 2 1/2"" (63 mm) con cabeza, calibre 11, clave 3120",kg,0.300000
+V00.037,MATERIAL,MAT-05295,"Madera de pino de 3a de 3/4"" (19mm) x 12"" (30 cm) x 8-1/4' (2.50m)",pt,6.300000
+V00.037,MANO DE OBRA,00-M0006,Cuadrilla 06 (Oficial carpintero de obra negra + ayudante),jor,0.100000
+V00.038,MATERIAL,MAT-08000,Madera de pino (cimbra) de 1 cara de 15 mm x 1.22 m x 2.44 m,hoja,0.073905
+V00.038,MATERIAL,MAT-05295,"Madera de pino de 3a de 3/4"" (19mm) x 12"" (30 cm) x 8-1/4' (2.50m)",pt,6.345000
+V00.038,MATERIAL,MAT-01630,"Clavo de 2 1/2"" (63 mm) con cabeza, calibre 11, clave 3120",kg,0.090000
+V00.038,MATERIAL,MAT-00265,"Alambre recocido de acero calibre 18, clave 1201",kg,0.050000
+V00.038,MATERIAL,MAT-03285,Diesel,l,0.500000
+V00.038,MATERIAL,MAT-01515,"Chaflán de madera de pino de 3a de 3/4"" (19 mm) x 3/4"" (19 mm) x 8 1/4' (2.50 m)",m,2.500000
+V00.038,MANO DE OBRA,00-M0006,Cuadrilla 06 (Oficial carpintero de obra negra + ayudante),jor,0.171000
+V00.039,MATERIAL,MAT-00265,"Alambre recocido de acero calibre 18, clave 1201",kg,0.030000
+V00.039,MATERIAL,MAT-09380,"Varilla de acero corrugada, grado 42 del N° 3 (3/8"") clave 30764",t,0.001050
+V00.039,MANO DE OBRA,00-M0007,Cuadrilla 07 (Oficial fierrero + ayudante),jor,0.006667
+V00.041,MATERIAL,MAT-00420,Arena,m³,0.548733
+V00.041,MATERIAL,MAT-01435,"Cemento portland gris CPC 30R, saco de 50 kg",t,0.330018
+V00.041,MATERIAL,MAT-04200,"Grava de 3/4"" (19 mm)",m³,0.657864
+V00.041,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.260681
+V00.041,MANO DE OBRA,00-M0032,Cuadrilla 32 (Oficial albañil + 6 ayudantes),jor,0.058333
+V00.041,EQUIPO Y HERRAMIENTA,EQV00.028,"Revolvedora ""Elba"" de un saco, tipo trompo modelo RTB-320 con capacidad de mezcla de 320.00 litros y motor de gasolina de 8 H.P., carter de 1.18 litros.",h,0.523160
+V00.042,MATERIAL,MAT-00220,Agua de toma municipal,m³,0.072000
+V00.042,MATERIAL,MAT-05295,"Madera de pino de 3a de 3/4"" (19mm) x 12"" (30 cm) x 8-1/4' (2.50m)",pt,0.450000
+V00.042,MANO DE OBRA,00-M0032,Cuadrilla 32 (Oficial albañil + 6 ayudantes),jor,0.184615
+V00.042,EQUIPO Y HERRAMIENTA,EQV00.030,"Vibrador ""ELBA"", modelo V.G.A. con chicote de 4.00m. por 38mm. (1 1/2"") y",h,1.500000
+V00.040,BASICO AUXILIAR,V00.041,Concreto hecho en obra f'c=150 kg/cm²,m³,1.030000
+V00.040,BASICO AUXILIAR,V00.042,"Colado de concreto en estructura, incluye: acarreo, vaciado a bote, vibrado, curado con agua, perfilado, artesa y desperdicios.",m³,1.000000
+V00.043,MATERIAL,MAT-00220,Agua de toma municipal,m³,1.292550
+V00.043,MATERIAL,MAT-01425,"Cemento portland blanco CPC 30RB, saco de 50 kg",t,1.472900
+V00.045,EQUIPO Y HERRAMIENTA,EQV00.008,"Camión de volteo Ford S-1834 de 7.00 m3 y 13.00 toneladas con motor diesel Perkins de 132 H.P.carter de 13.50 litros, llantas 1000-20 para ciudad y carretera. (Hora activa).",h,0.014286
+V00.046,MANO DE OBRA,00-M0001,Cuadrilla 01 (Ayudante),jor,0.105182
+V00.046,EQUIPO Y HERRAMIENTA,EQV00.008,"Camión de volteo Ford S-1834 de 7.00 m3 y 13.00 toneladas con motor diesel Perkins de 132 H.P.carter de 13.50 litros, llantas 1000-20 para ciudad y carretera. (Hora activa).",h,0.090169
+V00.050,MANO DE OBRA,00-M0001,Cuadrilla 01 (Ayudante) Maquinaria y equipo Horas efectivas de trabajo en la operación de la maquinaria y equipo.,jor,0.166667

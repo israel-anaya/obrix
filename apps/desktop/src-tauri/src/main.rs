@@ -329,6 +329,7 @@ fn main() {
             commands::basicos_auxiliares::create_basico_auxiliar,
             commands::basicos_auxiliares::update_basico_auxiliar,
             commands::basicos_auxiliares::delete_basico_auxiliar,
+            commands::basicos_auxiliares::importar_basicos_auxiliares_csv,
             commands::basicos_auxiliares::list_basico_auxiliar_componentes,
             commands::basicos_auxiliares::create_basico_auxiliar_componente,
             commands::basicos_auxiliares::update_basico_auxiliar_componente,

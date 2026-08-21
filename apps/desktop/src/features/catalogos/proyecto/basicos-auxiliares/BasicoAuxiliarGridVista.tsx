@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { APP_ICONS } from "@/lib/appIcons";
 import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
 import { BasicoAuxiliarComposicionPanel } from "@/features/catalogos/proyecto/basicos-auxiliares/BasicoAuxiliarComposicionPanel";
 import { BasicoAuxiliarFormPanel } from "@/features/catalogos/proyecto/basicos-auxiliares/BasicoAuxiliarFormPanel";
+import {
+  adaptadorExportBasicosAuxiliares,
+  adaptadorImportBasicosAuxiliares,
+} from "@/features/catalogos/proyecto/basicos-auxiliares/csv/adaptadorBasicosAuxiliares";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
   createBasicoAuxiliar,
@@ -49,6 +54,7 @@ export function BasicoAuxiliarGridVista() {
   const [nombresPorUsuarioId, setNombresPorUsuarioId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [puedeEliminar, setPuedeEliminar] = useState(false);
+  const [csvAdaptador, setCsvAdaptador] = useState<CsvAdapter | null>(null);
   const [panelComposicionAbierto, setPanelComposicionAbierto] = useState(false);
   const [panelFichaAbierto, setPanelFichaAbierto] = useState(false);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
@@ -195,12 +201,24 @@ export function BasicoAuxiliarGridVista() {
               },
               ACTION_BAR_SEPARATOR,
               {
+                icon: Download,
+                title: "Exportar a CSV",
+                onClick: () => setCsvAdaptador(adaptadorExportBasicosAuxiliares(auxiliares, unidades, familias)),
+                disabled: csvAdaptador !== null || auxiliares.length === 0,
+              },
+              {
+                icon: Upload,
+                title: "Importar desde CSV",
+                onClick: () => setCsvAdaptador(adaptadorImportBasicosAuxiliares()),
+                disabled: csvAdaptador !== null,
+              },
+              ACTION_BAR_SEPARATOR,
+              {
                 icon: APP_ICONS.grupo_basico_auxiliar.icono,
                 title: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
                 onClick: () => setPanelComposicionAbierto((v) => !v),
                 disabled: !panelComposicionAbierto && auxiliares.length === 0,
               },
-              ACTION_BAR_SEPARATOR,
             ]}
           />
           <SearchInput value={busqueda} onChange={setBusqueda} />
@@ -293,6 +311,11 @@ export function BasicoAuxiliarGridVista() {
           ) : null}
         </ResizablePanelGroup>
       </div>
+      <CsvOperationDialog
+        adapter={csvAdaptador}
+        onClose={() => setCsvAdaptador(null)}
+        onDone={() => void refrescar()}
+      />
     </div>
   );
 }

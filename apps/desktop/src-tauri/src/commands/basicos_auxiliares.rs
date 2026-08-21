@@ -2,7 +2,7 @@ use obrix_db::entities::basico_auxiliar_componente::Model as BasicoAuxiliarCompo
 use obrix_db::entities::basico_auxiliar_costo::Model as BasicoAuxiliarCostoModel;
 use obrix_db::entities::basico_auxiliar_costo_detalle::Model as BasicoAuxiliarCostoDetalleModel;
 
-use crate::AppState;
+use crate::{commands, AppState};
 use obrix_services::basico_auxiliar::{BasicoAuxiliarCompleto, BasicoAuxiliarData, BasicoAuxiliarService};
 use obrix_services::basico_auxiliar_componente::{
     BasicoAuxiliarComponenteData, BasicoAuxiliarComponenteEditarData,
@@ -13,6 +13,8 @@ use obrix_services::basico_auxiliar_costo_detalle::{
     BasicoAuxiliarCostoDetalleCantidadData, BasicoAuxiliarCostoDetalleRendimientoData,
     BasicoAuxiliarCostoDetalleService,
 };
+use obrix_services::material::ResultadoImportacion;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn list_basicos_auxiliares(
@@ -71,6 +73,31 @@ pub async fn delete_basico_auxiliar(
         activo.portafolio.as_ref(),
         id,
         activo.usuario_id_activo.clone(),
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn importar_basicos_auxiliares_csv(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<ResultadoImportacion, String> {
+    let contenido = std::fs::read_to_string(&path).map_err(|e| format!("no se pudo leer el archivo: {e}"))?;
+    let guard = state.requerir().await?;
+    let activo = guard.as_ref().unwrap();
+    BasicoAuxiliarService::importar_csv_con_progreso(
+        activo.portafolio.as_ref(),
+        &activo.organizacion_id,
+        &contenido,
+        activo.usuario_id_activo.clone(),
+        move |actual, total| {
+            let _ = app.emit(
+                commands::EVENTO_CSV_PROGRESO,
+                commands::CsvProgresoPayload { actual, total },
+            );
+        },
     )
     .await
     .map_err(|e| e.to_string())

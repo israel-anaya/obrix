@@ -213,6 +213,8 @@ function GrupoTabla({
   onToggleColapsado: () => void;
   subtotal: string;
 }) {
+  if (filas.length === 0 && !agregando) return null;
+
   return (
     <tbody>
       <tr>
@@ -282,7 +284,7 @@ function GrupoTabla({
             </td>
             <td
               className={cn(
-                "w-28 py-1 pr-0 text-right font-medium tabular-nums transition-colors duration-700",
+                "w-[95px] py-1 pr-0 text-right font-medium tabular-nums transition-colors duration-700",
                 destello?.filaId === f.id && destello.fila > 0 && "bg-emerald-500/20",
                 destello?.filaId === f.id && destello.fila < 0 && "bg-rose-500/20",
               )}
@@ -329,7 +331,7 @@ function GrupoTabla({
               Subtotal {titulo.toLowerCase()}
             </span>
           </td>
-          <td className="w-28 py-1.5 pr-0 text-right font-semibold tabular-nums">${fmt(subtotal)}</td>
+          <td className="w-[95px] py-1.5 pr-0 text-right font-semibold tabular-nums">${fmt(subtotal)}</td>
           <td />
         </tr>
       )}
@@ -917,7 +919,7 @@ export function BasicoAuxiliarFichaApu({
               <col className="w-24" />
               <col className="w-24" />
               <col className="w-24" />
-              <col className="w-28" />
+              <col className="w-[95px]" />
               <col className="w-6" />
             </colgroup>
             <thead>
