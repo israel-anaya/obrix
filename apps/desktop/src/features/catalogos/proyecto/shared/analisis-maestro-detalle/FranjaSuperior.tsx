@@ -1,5 +1,5 @@
-import { type MutableRefObject, type ReactNode, useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { type ReactNode, type RefObject } from "react";
+import type { Virtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
 import { fmt } from "@/lib/formato";
 
@@ -9,11 +9,6 @@ interface ConClaveDescripcion {
   descripcion: string;
 }
 
-// Ancho de tarjeta (`w-64` = 256px) + separación (`gap-1.5` = 6px): tamaño
-// fijo, así que el virtualizador no necesita medir cada tarjeta.
-const ANCHO_TARJETA = 256;
-const GAP = 6;
-
 /**
  * Tira de tarjetas con scroll horizontal — una por elemento, con clave, costo
  * total en pastilla, descripción truncada y un desglose específico de
@@ -21,36 +16,35 @@ const GAP = 6;
  * "maestra" de una vista tipo Ficha; el header (acciones, buscador) lo arma
  * cada llamador por fuera, igual que hace cada `*Seccion.tsx` con su grid.
  * Compartido por básico auxiliar, cuadrilla y equipo de costo horario.
+ *
+ * `scrollRef`/`virtualizer` vienen de `useAnalisisMaestroDetalle` — ese hook
+ * es quien necesita `scrollToIndex` para la navegación con teclado, así que
+ * es dueño del virtualizador; este componente solo lo consume para pintar.
+ * `cursorId` (no `seleccionadaId`) es lo que se resalta: se mueve al
+ * instante con el teclado, sin esperar el debounce que confirma la
+ * selección real (ver el hook).
  */
 export function FranjaSuperior<T extends ConClaveDescripcion>({
   items,
-  seleccionadaId,
+  cursorId,
   onSeleccionar,
-  itemRefs,
+  scrollRef,
+  virtualizer,
   cargando,
   mensajeVacio,
   costoTotal,
   renderDesglose,
 }: {
   items: T[];
-  seleccionadaId: string | null;
+  cursorId: string | null;
   onSeleccionar: (id: string) => void;
-  itemRefs: MutableRefObject<Map<string, HTMLButtonElement>>;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
   cargando: boolean;
   mensajeVacio: string;
   costoTotal: (item: T) => string;
   renderDesglose: (item: T) => ReactNode;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    horizontal: true,
-    count: items.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ANCHO_TARJETA + GAP,
-    overscan: 8,
-    getItemKey: (index) => items[index]?.id ?? index,
-  });
-
   return (
     <div className="min-w-0 border-b border-border p-2">
       {cargando && items.length === 0 ? (
@@ -72,14 +66,10 @@ export function FranjaSuperior<T extends ConClaveDescripcion>({
                 {virtualItems.map((virtualItem) => {
                   const item = items[virtualItem.index];
                   if (!item) return null;
-                  const activa = seleccionadaId === item.id;
+                  const activa = cursorId === item.id;
                   return (
                     <button
                       key={item.id}
-                      ref={(el) => {
-                        if (el) itemRefs.current.set(item.id, el);
-                        else itemRefs.current.delete(item.id);
-                      }}
                       type="button"
                       aria-current={activa ? "true" : undefined}
                       onClick={() => onSeleccionar(item.id)}

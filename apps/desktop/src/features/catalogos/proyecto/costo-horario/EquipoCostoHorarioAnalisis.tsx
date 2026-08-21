@@ -69,7 +69,7 @@ export function EquipoCostoHorarioAnalisis() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
 
-  const { busqueda, setBusqueda, itemsFiltrados: equiposFiltrados, seleccionadaId, setSeleccionadaId, seleccionada, itemRefs, seleccionarSiVacia } =
+  const { busqueda, setBusqueda, itemsFiltrados: equiposFiltrados, seleccionadaId, setSeleccionadaId, seleccionada, cursorId, scrollRef, virtualizer, seleccionarSiVacia } =
     useAnalisisMaestroDetalle({ items: equipos, bloqueada: creando || !!editandoId });
 
   useEffect(() => {
@@ -259,9 +259,10 @@ export function EquipoCostoHorarioAnalisis() {
         </div>
         <FranjaSuperior
           items={equiposFiltrados}
-          seleccionadaId={seleccionadaId}
+          cursorId={cursorId}
           onSeleccionar={setSeleccionadaId}
-          itemRefs={itemRefs}
+          scrollRef={scrollRef}
+          virtualizer={virtualizer}
           cargando={cargando}
           mensajeVacio="Sin equipos todavía."
           costoTotal={(e) => e.costo_nacional?.costo_total ?? "0"}

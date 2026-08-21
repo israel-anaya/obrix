@@ -68,7 +68,7 @@ export function CuadrillasAnalisis() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
 
-  const { busqueda, setBusqueda, itemsFiltrados: cuadrillasFiltradas, seleccionadaId, setSeleccionadaId, seleccionada, itemRefs, seleccionarSiVacia } =
+  const { busqueda, setBusqueda, itemsFiltrados: cuadrillasFiltradas, seleccionadaId, setSeleccionadaId, seleccionada, cursorId, scrollRef, virtualizer, seleccionarSiVacia } =
     useAnalisisMaestroDetalle({ items: cuadrillas, bloqueada: creando || !!editandoId });
 
   useEffect(() => {
@@ -238,9 +238,10 @@ export function CuadrillasAnalisis() {
         </div>
         <FranjaSuperior
           items={cuadrillasFiltradas}
-          seleccionadaId={seleccionadaId}
+          cursorId={cursorId}
           onSeleccionar={setSeleccionadaId}
-          itemRefs={itemRefs}
+          scrollRef={scrollRef}
+          virtualizer={virtualizer}
           cargando={cargando}
           mensajeVacio="Sin cuadrillas todavía."
           costoTotal={(c) => c.costo_nacional?.costo_total ?? "0"}

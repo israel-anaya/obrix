@@ -66,7 +66,7 @@ export function BasicoAuxiliarAnalisis() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
 
-  const { busqueda, setBusqueda, itemsFiltrados: auxiliaresFiltrados, seleccionadaId, setSeleccionadaId, seleccionada, itemRefs, seleccionarSiVacia } =
+  const { busqueda, setBusqueda, itemsFiltrados: auxiliaresFiltrados, seleccionadaId, setSeleccionadaId, seleccionada, cursorId, scrollRef, virtualizer, seleccionarSiVacia } =
     useAnalisisMaestroDetalle({ items: auxiliares, bloqueada: creando || !!editandoId });
 
   useEffect(() => {
@@ -227,9 +227,10 @@ export function BasicoAuxiliarAnalisis() {
         </div>
         <FranjaSuperior
           items={auxiliaresFiltrados}
-          seleccionadaId={seleccionadaId}
+          cursorId={cursorId}
           onSeleccionar={setSeleccionadaId}
-          itemRefs={itemRefs}
+          scrollRef={scrollRef}
+          virtualizer={virtualizer}
           cargando={cargando}
           mensajeVacio="Sin básicos ni auxiliares todavía."
           costoTotal={(a) => a.costo_nacional?.costo_total ?? "0"}
