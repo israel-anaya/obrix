@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,15 +38,25 @@ export function CellCombobox({
   const visible = filtering ? matches : options;
   const last = Math.max(visible.length - 1, 0);
 
+  // Virtualized like `FilterableCombobox` — `options` columns (naturaleza,
+  // cuadrilla, …) can list hundreds/thousands of values, so only the visible
+  // rows (+ overscan) are mounted. Rows aren't truncated, so sizes are
+  // measured dynamically instead of assumed fixed.
+  const virtualizer = useVirtualizer({
+    count: visible.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 28,
+    overscan: 8,
+    getItemKey: (index) => visible[index] ?? index,
+  });
+
+  // Arrow-key/PageUp-Down/Home-End navigation moves `active` without the
+  // browser scrolling the list on its own, and under virtualization the
+  // target row may not even be mounted yet — `scrollToIndex` brings it into
+  // view.
   useLayoutEffect(() => {
-    const list = listRef.current;
-    const item = list?.querySelector("[data-combo-active]") as HTMLElement | null;
-    if (!list || !item) return;
-    const top = item.offsetTop;
-    const bottom = top + item.offsetHeight;
-    if (top < list.scrollTop) list.scrollTop = top;
-    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
-  }, [active, visible.length]);
+    virtualizer.scrollToIndex(active, { align: "auto" });
+  }, [active, virtualizer]);
 
   // The scroll listener is capturing (to hear the grid container's scroll,
   // which does not bubble), so it fires very often: it is marked passive and
@@ -121,6 +132,7 @@ export function CellCombobox({
             setText(e.target.value);
             setFiltering(true);
             setActive(0);
+            virtualizer.scrollToOffset(0);
           }}
           // Same as in `CellEditor`: when it was opened by typing
           // (`filterOnOpen`), the text is the key just pressed — selecting it
@@ -208,23 +220,39 @@ export function CellCombobox({
             {visible.length === 0 ? (
               <li className="px-2 py-1 text-neutral-500">Sin matches</li>
             ) : (
-              visible.map((o, i) => (
-                <li key={o}>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex w-full px-2 py-1 text-left text-neutral-900 hover:bg-neutral-100",
-                      i === active && "bg-neutral-200",
-                    )}
-                    data-combo-active={i === active ? "" : undefined}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => pick(o)}
-                  >
-                    {o}
-                  </button>
-                </li>
-              ))
+              (() => {
+                const virtualItems = virtualizer.getVirtualItems();
+                const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+                const paddingBottom =
+                  virtualItems.length > 0 ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end : 0;
+                return (
+                  <>
+                    {paddingTop > 0 && <li aria-hidden style={{ height: paddingTop }} />}
+                    {virtualItems.map((vi) => {
+                      const o = visible[vi.index];
+                      if (o === undefined) return null;
+                      const isActive = vi.index === active;
+                      return (
+                        <li key={vi.key} ref={virtualizer.measureElement} data-index={vi.index}>
+                          <button
+                            type="button"
+                            className={cn(
+                              "flex w-full px-2 py-1 text-left text-neutral-900 hover:bg-neutral-100",
+                              isActive && "bg-neutral-200",
+                            )}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onMouseEnter={() => setActive(vi.index)}
+                            onClick={() => pick(o)}
+                          >
+                            {o}
+                          </button>
+                        </li>
+                      );
+                    })}
+                    {paddingBottom > 0 && <li aria-hidden style={{ height: paddingBottom }} />}
+                  </>
+                );
+              })()
             )}
           </ul>,
           document.body,
