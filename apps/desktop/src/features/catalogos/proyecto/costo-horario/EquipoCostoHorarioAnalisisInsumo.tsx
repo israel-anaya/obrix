@@ -232,7 +232,7 @@ function aCamposCf(e: EquipoCostoHorario): CamposCf {
 
 /**
  * "Ficha" de un equipo de costo horario — mismo formato de tarjeta APU que
- * `CuadrillaFichaApu`, con un bloque adicional editable de "Cargos fijos"
+ * `CuadrillaAnalisisInsumo`, con un bloque adicional editable de "Cargos fijos"
  * (los 9 valores de captura de depreciación/inversión/seguro/mantenimiento,
  * metodología SCT/CMIC) antes de las dos tablas de composición (Consumo,
  * Operación) — así se ve el desglose recalculado mientras se ajustan los
@@ -242,10 +242,10 @@ function aCamposCf(e: EquipoCostoHorario): CamposCf {
  *
  * Agregar/editar/eliminar el equipo en sí (identidad: clave/descripción/
  * unidad/familia) vive en la barra de acciones de
- * `EquipoCostoHorarioFicha` — este componente administra los cargos fijos y
+ * `EquipoCostoHorarioAnalisis` — este componente administra los cargos fijos y
  * la composición.
  */
-export function EquipoCostoHorarioFichaApu({
+export function EquipoCostoHorarioAnalisisInsumo({
   equipo,
   onCambio,
 }: {

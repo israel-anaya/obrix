@@ -620,7 +620,7 @@ export default function App() {
   const CUADRILLAS_TAB_ID = `${CATALOGO_PREFIX}cuadrillas-trabajo`;
   const CUADRILLAS_VISTAS: { id: CuadrillasVista; icon: LucideIcon; titulo: string }[] = [
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
-    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
+    { id: "analisis", icon: FileText, titulo: "Modo análisis" },
   ];
   const MATERIALES_TAB_ID = `${CATALOGO_PREFIX}materiales-item`;
   const MATERIALES_VISTAS: { id: MaterialesVista; icon: LucideIcon; titulo: string }[] = [
@@ -630,12 +630,12 @@ export default function App() {
   const EQUIPO_COSTO_HORARIO_TAB_ID = `${CATALOGO_PREFIX}costos-horarios`;
   const EQUIPO_COSTO_HORARIO_VISTAS: { id: EquipoCostoHorarioVista; icon: LucideIcon; titulo: string }[] = [
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
-    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
+    { id: "analisis", icon: FileText, titulo: "Modo análisis" },
   ];
   const BASICO_AUXILIAR_TAB_ID = `${CATALOGO_PREFIX}basicos-auxiliares`;
   const BASICO_AUXILIAR_VISTAS: { id: BasicoAuxiliarVista; icon: LucideIcon; titulo: string }[] = [
     { id: "grid", icon: Table2, titulo: "Vista Clásica" },
-    { id: "ficha", icon: FileText, titulo: "Modo ficha" },
+    { id: "analisis", icon: FileText, titulo: "Modo análisis" },
   ];
   const TABULADORES_SALARIO_TAB_ID = `${CATALOGO_PREFIX}tabuladores-salario`;
   const TABULADORES_SALARIO_VISTAS: { id: TabuladoresSalarioVista; icon: LucideIcon; titulo: string }[] = [

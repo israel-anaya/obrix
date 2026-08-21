@@ -73,7 +73,7 @@ function columnasDeGrid(el: HTMLElement | null): number {
  * Catálogo visual de materiales: pasillos (familia/subfamilia) a la izquierda,
  * tarjetas al centro, precios a la derecha. No sustituye al grid — aquí se
  * recorre y se completa un material a la vez. Alta y edición abren un
- * `Sheet` (mismo patrón que `CuadrillasFicha`). Siempre hay una tarjeta
+ * `Sheet` (mismo patrón que `CuadrillasAnalisis`). Siempre hay una tarjeta
  * seleccionada si el anaquel no está vacío; elegir otra solo cambia la
  * marca, no abre el panel. Sin tarjetas, precios queda deshabilitado.
  */
@@ -95,7 +95,7 @@ export function EstanteriaMaterialesSeccion() {
   const [panelHistorialAbierto, setPanelHistorialAbierto] = useState(false);
   const [historialTicket, setHistorialTicket] = useState(0);
   const [historialFocoTicket, setHistorialFocoTicket] = useState(0);
-  // Alta y edición viven en un `Sheet` (mismo patrón que `CuadrillasFicha`).
+  // Alta y edición viven en un `Sheet` (mismo patrón que `CuadrillasAnalisis`).
   // `editandoId` es `null` cuando se está creando.
   const [alta, setAlta] = useState<MaterialData | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);

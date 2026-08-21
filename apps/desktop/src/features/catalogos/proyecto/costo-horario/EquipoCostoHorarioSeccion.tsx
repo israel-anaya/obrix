@@ -1,13 +1,13 @@
-import { EquipoCostoHorarioFicha } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioFicha";
+import { EquipoCostoHorarioAnalisis } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioAnalisis";
 import { EquipoCostoHorarioGridVista } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioGridVista";
 
-export type EquipoCostoHorarioVista = "grid" | "ficha";
+export type EquipoCostoHorarioVista = "grid" | "analisis";
 
 /**
  * Vista de "Equipo de costo horario" (Maquinaria y Equipo → Costos
  * Horarios) — dos formas de trabajar la misma composición de
- * `equipo_costo_horario`/`equipo_costo_horario_detalle`: "Ficha"
- * (`EquipoCostoHorarioFicha`, tarjeta de análisis de precio unitario) y
+ * `equipo_costo_horario`/`equipo_costo_horario_detalle`: "Análisis"
+ * (`EquipoCostoHorarioAnalisis`, tarjeta de análisis de precio unitario) y
  * "Vista Clásica" (`EquipoCostoHorarioGridVista`, edición de celdas al
  * estilo del resto de los catálogos). Mismos comandos de Tauri por debajo —
  * el usuario elige cuál interacción prefiere.
@@ -17,5 +17,5 @@ export type EquipoCostoHorarioVista = "grid" | "ficha";
  * activa ya resuelta, controlada desde afuera.
  */
 export function EquipoCostoHorarioSeccion({ vista }: { vista: EquipoCostoHorarioVista }) {
-  return <div className="h-full">{vista === "grid" ? <EquipoCostoHorarioGridVista /> : <EquipoCostoHorarioFicha />}</div>;
+  return <div className="h-full">{vista === "grid" ? <EquipoCostoHorarioGridVista /> : <EquipoCostoHorarioAnalisis />}</div>;
 }

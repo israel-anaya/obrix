@@ -42,8 +42,8 @@ const COLUMNAS_CONTROL = [
  * ficha de identidad (`BasicoAuxiliarFormPanel`). Los subtotales que se ven
  * en el grid son los de la valuación **nacional** (`basico_auxiliar.costo_nacional`),
  * cache que recalcula el backend a partir de la receta, no editable aquí. El
- * cache por región y el análisis completo se ven en modo ficha (Costo por
- * región). Alternativa a `BasicoAuxiliarFicha` (ver `BasicoAuxiliarSeccion`,
+ * cache por región y el análisis completo se ven en modo análisis (Costo por
+ * región). Alternativa a `BasicoAuxiliarAnalisis` (ver `BasicoAuxiliarSeccion`,
  * que alterna entre las dos).
  */
 export function BasicoAuxiliarGridVista() {

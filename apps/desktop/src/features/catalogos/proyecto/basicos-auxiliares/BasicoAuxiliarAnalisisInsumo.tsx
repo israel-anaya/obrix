@@ -65,7 +65,7 @@ import { RecetaGrupoTabla, TablaReceta, type FilaReceta } from "../shared/analis
  * aquí solo se cambia el rendimiento de la región elegida en Costo por
  * región (Nacional al abrir).
  */
-export function BasicoAuxiliarFichaApu({
+export function BasicoAuxiliarAnalisisInsumo({
   auxiliar,
   onCambio,
 }: {

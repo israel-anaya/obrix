@@ -34,7 +34,7 @@ function aMaterialData(m: Material): MaterialData {
  * columnas, pero en un formulario más legible para revisar/editar un
  * registro a la vez. En `MaterialesSeccion` y en la Estantería se
  * sincroniza con la fila/tarjeta. El alta de Estantería vive en un
- * `Sheet` aparte (mismo patrón que `CuadrillasFicha`). "Guardar" hace
+ * `Sheet` aparte (mismo patrón que `CuadrillasAnalisis`). "Guardar" hace
  * `updateMaterial` y avisa al padre vía `onGuardado`.
  */
 export function MaterialFormPanel({

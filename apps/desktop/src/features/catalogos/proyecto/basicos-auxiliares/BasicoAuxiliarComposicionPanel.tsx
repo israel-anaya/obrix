@@ -58,10 +58,10 @@ function fmt(valor: string, decimales = 2): string {
  * Panel: composición de un `basico_auxiliar` — cuatro matrices planas
  * (material, mano de obra vía `cuadrilla`, equipo y herramienta, y otros
  * básicos auxiliares, ver diccionario de datos) más los cuatro subtotales de
- * la región elegida. A diferencia de `CuadrillaDetallePanel`, aquí cantidad
+ * la región elegida. A diferencia de `CuadrillaComposicionPanel`, aquí cantidad
  * y rendimiento sí pueden variar por región — cada edición ocurre sobre el
  * `basico_auxiliar_costo_detalle` de la región vista, no sobre la receta en
- * abstracto. Mismo patrón de matriz plana que `CuadrillaDetallePanel`.
+ * abstracto. Mismo patrón de matriz plana que `CuadrillaComposicionPanel`.
  */
 export function BasicoAuxiliarComposicionPanel({
   auxiliar,
@@ -127,7 +127,7 @@ export function BasicoAuxiliarComposicionPanel({
         return [] as BasicoAuxiliarCosto[];
       });
 
-  // Igual que en `CuadrillaDetallePanel`: se espera un momento a que la
+  // Igual que en `CuadrillaComposicionPanel`: se espera un momento a que la
   // selección se quede quieta antes de cargar, para que navegar con flechas
   // por el grid maestro no dispare una consulta por cada fila de paso.
   useEffect(() => {

@@ -72,7 +72,7 @@ function fmt(valor: string, decimales = 2): string {
  * FASAR o cuadrilla que opera el equipo, ver diccionario de datos) más los
  * subtotales de la región elegida. Igual que en `cuadrilla`, `cantidad` es de
  * la receta (compartida entre regiones) — solo `costo`/`importe` varían por
- * región. Mismo patrón de matriz plana que `CuadrillaDetallePanel`.
+ * región. Mismo patrón de matriz plana que `CuadrillaComposicionPanel`.
  */
 export function EquipoCostoHorarioComposicionPanel({
   equipo,
@@ -132,7 +132,7 @@ export function EquipoCostoHorarioComposicionPanel({
         return [] as EquipoCostoHorarioCosto[];
       });
 
-  // Igual que en `CuadrillaDetallePanel`: se espera un momento a que la
+  // Igual que en `CuadrillaComposicionPanel`: se espera un momento a que la
   // selección se quede quieta antes de cargar, para que navegar con flechas
   // por el grid maestro no dispare una consulta por cada fila de paso.
   useEffect(() => {

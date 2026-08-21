@@ -41,8 +41,8 @@ const COLUMNAS_CONTROL = [
  * costado por depreciación) con los 9 valores de captura de cargos fijos
  * como columnas editables y los caches de cargos fijos más
  * `costo_nacional` (subtotales y total) como columnas de solo lectura. La composición (consumo/operación) solo se
- * edita desde `EquipoCostoHorarioFicha` — mismo patrón que
- * `HerramientaSeccion`. Alternativa a `EquipoCostoHorarioFicha` (ver
+ * edita desde `EquipoCostoHorarioAnalisis` — mismo patrón que
+ * `HerramientaSeccion`. Alternativa a `EquipoCostoHorarioAnalisis` (ver
  * `EquipoCostoHorarioSeccion`, que alterna entre las dos).
  */
 export function EquipoCostoHorarioGridVista() {

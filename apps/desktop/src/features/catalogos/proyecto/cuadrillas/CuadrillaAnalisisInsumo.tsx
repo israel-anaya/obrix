@@ -58,7 +58,7 @@ type TipoCuadrillaDetalle = CuadrillaDetalle["tipo"];
  * análisis son los de la región elegida en Costo por región (Nacional al
  * abrir). Ese cuadro es cache de receta × tabulador de cada región.
  */
-export function CuadrillaFichaApu({
+export function CuadrillaAnalisisInsumo({
   cuadrilla,
   onCambio,
 }: {

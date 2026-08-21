@@ -6,7 +6,7 @@ import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
-import { CuadrillaDetallePanel } from "@/features/catalogos/proyecto/cuadrillas/CuadrillaDetallePanel";
+import { CuadrillaComposicionPanel } from "@/features/catalogos/proyecto/cuadrillas/CuadrillaComposicionPanel";
 import { CuadrillaFormPanel } from "@/features/catalogos/proyecto/cuadrillas/CuadrillaFormPanel";
 import { adaptadorExportCuadrillas, adaptadorImportCuadrillas } from "@/features/catalogos/proyecto/cuadrillas/csv/adaptadorCuadrillas";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -45,7 +45,7 @@ const COLUMNAS_CONTROL = [
  * que se ven en el grid son los de la valuación **nacional**
  * (`cuadrilla.costo_nacional`) — cache que recalcula el backend a partir de
  * la composición, no son editables aquí. El cache por región se ve en modo
- * ficha (Costo por región). Alternativa a `CuadrillasFicha`
+ * análisis (Costo por región). Alternativa a `CuadrillasAnalisis`
  * (ver `CuadrillasSeccion`, que alterna entre las dos).
  */
 export function CuadrillasGridVista() {
@@ -306,7 +306,7 @@ export function CuadrillasGridVista() {
                     minSize="40"
                     className="flex min-h-0 min-w-0 flex-col overflow-hidden"
                   >
-                    <CuadrillaDetallePanel
+                    <CuadrillaComposicionPanel
                       cuadrilla={cuadrillaSeleccionada}
                       onCerrar={() => setPanelComposicionAbierto(false)}
                       onComposicionCambiada={refrescarCuadrillas}

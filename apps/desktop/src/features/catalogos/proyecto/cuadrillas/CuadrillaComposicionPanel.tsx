@@ -55,7 +55,7 @@ function fmt(valor: string, decimales = 2): string {
  * importe del cache de esa valuación. Cada mutación recalcula en el backend, este panel solo
  * refleja lo que vuelve de ahí.
  */
-export function CuadrillaDetallePanel({
+export function CuadrillaComposicionPanel({
   cuadrilla,
   onCerrar,
   onComposicionCambiada,
