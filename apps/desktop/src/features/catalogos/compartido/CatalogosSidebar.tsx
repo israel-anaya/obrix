@@ -39,12 +39,15 @@ function NodoArbolFijo({
   const tieneHijos = !!nodo.hijos && nodo.hijos.length > 0;
   const abierto = expandidos.has(nodo.id);
   const Icono = nodo.icon ?? (tieneHijos ? Folder : FileText);
+  const [hover, setHover] = useState(false);
 
   return (
     <div>
       <button
         type="button"
         onClick={() => (tieneHijos ? onToggle(nodo.id) : onAbrir(nodo.id, nodo.label, nodo.icon))}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
         style={{ paddingLeft: `${8 + nivel * 14}px` }}
         className={cn(
           "flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left text-[13px] text-muted-foreground hover:bg-background/80 hover:text-foreground",
@@ -55,7 +58,7 @@ function NodoArbolFijo({
         ) : (
           <span className="inline-block w-4 shrink-0" />
         )}
-        <Icono size={16} className="shrink-0" />
+        <Icono size={16} className={cn("shrink-0", hover && nodo.color)} />
         <span className="truncate">{nodo.label}</span>
       </button>
       {tieneHijos && abierto && (

@@ -1,16 +1,14 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Boxes,
   CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  ChevronsDown,
+  ChevronsUp,
   GripVertical,
-  Globe,
-  HardHat,
-  Layers,
-  MapPinned,
   Plus,
   RefreshCcw,
-  Wrench,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +24,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FilterableCombobox } from "@/components/FilterableCombobox";
 import { QuantityInput } from "@/components/QuantityInput";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import {
@@ -65,6 +69,7 @@ import type {
 import { regionesVisibles } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { listUnidadesMedida } from "@/lib/tauri";
+import { APP_ICONS } from "@/lib/appIcons";
 
 const NACIONAL = "Nacional";
 
@@ -177,7 +182,6 @@ function GrupoTabla({
   color,
   filas,
   agregando,
-  onAbrirAgregar,
   onCerrarAgregar,
   opciones,
   onAgregar,
@@ -187,13 +191,15 @@ function GrupoTabla({
   mostrarFechaPrecio,
   destello,
   drag,
+  colapsado,
+  onToggleColapsado,
+  subtotal,
 }: {
   titulo: string;
   Icono: LucideIcon;
   color: string;
   filas: FilaGrupo[];
   agregando: boolean;
-  onAbrirAgregar: () => void;
   onCerrarAgregar: () => void;
   opciones: { id: string; label: string }[];
   onAgregar: (id: string) => void;
@@ -203,17 +209,30 @@ function GrupoTabla({
   mostrarFechaPrecio: boolean;
   destello: { ticket: number; total: number; filaId: string; fila: number } | null;
   drag: ReturnType<typeof useRowDrag>;
+  colapsado: boolean;
+  onToggleColapsado: () => void;
+  subtotal: string;
 }) {
   return (
     <tbody>
       <tr>
         <td colSpan={9} className="pt-3 pb-1 first:pt-2">
-          <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <button
+            type="button"
+            onClick={onToggleColapsado}
+            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
+            {colapsado ? <ChevronRight size={14} className="shrink-0" /> : <ChevronDown size={14} className="shrink-0" />}
             <Icono size={16} className={color} />
             {titulo}
-          </span>
+            {colapsado && filas.length > 0 && (
+              <span className="normal-case tracking-normal text-muted-foreground/70">({filas.length})</span>
+            )}
+          </button>
         </td>
       </tr>
+      {colapsado ? null : (
+        <>
       {filas.length === 0 && !agregando && (
         <tr>
           <td colSpan={9} className="py-1.5 text-muted-foreground">
@@ -235,8 +254,8 @@ function GrupoTabla({
               </span>
             </td>
             <td className="py-1 pr-2 font-mono text-muted-foreground">{f.clave}</td>
-            <td className="py-1 pr-2">{f.descripcion}</td>
-            <td className="py-1 pr-2 text-muted-foreground">{f.unidad}</td>
+            <td className="py-1 px-2">{f.descripcion}</td>
+            <td className="py-1 px-2 text-left text-muted-foreground">{f.unidad}</td>
             <td className="py-1 pr-2 text-right">
               <QuantityInput
                 value={f.rendimiento}
@@ -259,7 +278,7 @@ function GrupoTabla({
             </td>
             <td
               className={cn(
-                "py-1 text-right font-medium tabular-nums transition-colors duration-700",
+                "w-28 py-1 pr-2 text-right font-medium tabular-nums transition-colors duration-700",
                 destello?.filaId === f.id && destello.fila > 0 && "bg-emerald-500/20",
                 destello?.filaId === f.id && destello.fila < 0 && "bg-rose-500/20",
               )}
@@ -283,9 +302,9 @@ function GrupoTabla({
           {drag.gap === filas.length && i === filas.length - 1 && <MarcadorInsercion />}
         </Fragment>
       ))}
-      <tr>
-        <td colSpan={9} className="pt-1.5">
-          {agregando ? (
+      {agregando && (
+        <tr>
+          <td colSpan={9} className="pt-1.5">
             <FilterableCombobox
               options={opciones}
               onSelect={(id) => {
@@ -294,18 +313,22 @@ function GrupoTabla({
               }}
               onCancel={onCerrarAgregar}
             />
-          ) : (
-            <button
-              type="button"
-              onClick={onAbrirAgregar}
-              disabled={opciones.length === 0}
-              className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted disabled:opacity-50"
-            >
-              <Plus size={16} /> Agregar renglón
-            </button>
-          )}
-        </td>
-      </tr>
+          </td>
+        </tr>
+      )}
+        </>
+      )}
+      {filas.length > 0 && (
+        <tr className="border-t-2 border-foreground/20">
+          <td colSpan={7} className="py-1.5 pr-3 text-right">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Subtotal {titulo.toLowerCase()}
+            </span>
+          </td>
+          <td className="w-28 py-1.5 pr-2 text-right font-semibold tabular-nums">${fmt(subtotal)}</td>
+          <td />
+        </tr>
+      )}
     </tbody>
   );
 }
@@ -350,6 +373,8 @@ export function BasicoAuxiliarFichaApu({
   /** `null` = Nacional. No se persiste: solo elige qué cache ve el análisis. */
   const [regionVistaId, setRegionVistaId] = useState<string | null>(null);
   const [destello, setDestello] = useState<{ ticket: number; total: number; filaId: string; fila: number } | null>(null);
+  const [gruposColapsados, setGruposColapsados] = useState<Set<TipoBasicoAuxiliarComponente>>(new Set());
+  const [costoRegionExpandido, setCostoRegionExpandido] = useState(false);
 
   useEffect(() => {
     listMateriales().then(setMateriales).catch(() => {});
@@ -413,6 +438,9 @@ export function BasicoAuxiliarFichaApu({
     Promise.all([listBasicoAuxiliarComponentes(auxiliar.id), listBasicoAuxiliarCostos(auxiliar.id)])
       .then(async ([componentesR, costosR]) => {
         setComponentes(componentesR);
+        const tiposConFilas = new Set(componentesR.map((c) => c.tipo));
+        const todosLosTipos: TipoBasicoAuxiliarComponente[] = ["material", "mano_obra", "equipo_herramienta", "basico_auxiliar"];
+        setGruposColapsados(new Set(todosLosTipos.filter((t) => !tiposConFilas.has(t))));
         await aplicarCostos(costosR, null);
       })
       .catch((e) => setError(String(e)))
@@ -648,11 +676,11 @@ export function BasicoAuxiliarFichaApu({
     return { title: `${fila.clave} — ${fila.descripcion}`, quantity: fmtCantidad(fila.cantidad), unit: fila.unidad, cost: fila.costo !== "0" ? `$${fmt(fila.costo)}` : undefined };
   };
 
-  const gruposDef: { tipo: TipoBasicoAuxiliarComponente; titulo: string; Icono: LucideIcon; color: string; opciones: { id: string; label: string }[] }[] = [
-    { tipo: "material", titulo: "Material", Icono: Boxes, color: "text-amber-500", opciones: opcionesMaterial },
-    { tipo: "mano_obra", titulo: "Mano de obra", Icono: HardHat, color: "text-blue-500", opciones: opcionesManoObra },
-    { tipo: "equipo_herramienta", titulo: "Equipo y herramienta", Icono: Wrench, color: "text-violet-500", opciones: opcionesEquipo },
-    { tipo: "basico_auxiliar", titulo: "Otros básicos auxiliares", Icono: Layers, color: "text-emerald-500", opciones: opcionesAuxiliar },
+  const gruposDef: { tipo: TipoBasicoAuxiliarComponente; titulo: string; Icono: LucideIcon; color: string; opciones: { id: string; label: string }[]; subtotal: string }[] = [
+    { tipo: "material", titulo: APP_ICONS.grupo_material.titulo, Icono: APP_ICONS.grupo_material.icono, color: APP_ICONS.grupo_material.color, opciones: opcionesMaterial, subtotal: costoSeleccionado?.sub_total_material ?? "0" },
+    { tipo: "mano_obra", titulo: APP_ICONS.grupo_mano_obra.titulo, Icono: APP_ICONS.grupo_mano_obra.icono, color: APP_ICONS.grupo_mano_obra.color, opciones: opcionesManoObra, subtotal: costoSeleccionado?.sub_total_mano_obra ?? "0" },
+    { tipo: "equipo_herramienta", titulo: APP_ICONS.grupo_equipo_herramienta.titulo, Icono: APP_ICONS.grupo_equipo_herramienta.icono, color: APP_ICONS.grupo_equipo_herramienta.color, opciones: opcionesEquipo, subtotal: costoSeleccionado?.sub_total_equipo ?? "0" },
+    { tipo: "basico_auxiliar", titulo: APP_ICONS.grupo_basico_auxiliar.titulo, Icono: APP_ICONS.grupo_basico_auxiliar.icono, color: APP_ICONS.grupo_basico_auxiliar.color, opciones: opcionesAuxiliar, subtotal: costoSeleccionado?.sub_total_basico_auxiliar ?? "0" },
   ];
 
   const componentesPorTipo = useMemo(() => {
@@ -703,6 +731,16 @@ export function BasicoAuxiliarFichaApu({
     basico_auxiliar: dragAuxiliar,
   };
 
+  const abrirAgregar = (tipo: TipoBasicoAuxiliarComponente) => {
+    setAgregandoTipo(tipo);
+    setGruposColapsados((prev) => {
+      if (!prev.has(tipo)) return prev;
+      const next = new Set(prev);
+      next.delete(tipo);
+      return next;
+    });
+  };
+
   const confirmarQuitar = async () => {
     if (!pendingQuitar) return;
     setError(null);
@@ -729,69 +767,123 @@ export function BasicoAuxiliarFichaApu({
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Layers size={16} className="text-emerald-500" />
+            <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />
             Análisis de básico auxiliar
           </span>
 
-          <div className="mt-1 flex items-baseline justify-between gap-3">
-            <span className="font-mono text-base font-bold tracking-tight">{auxiliar.clave}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              Unidad: <span className="font-medium text-foreground">{simboloUnidad}</span>
-              <span aria-hidden className="px-1.5 text-border">·</span>
+          <div className="mt-1 flex items-start gap-3">
+            <div className="w-[70%]">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-mono text-base font-bold tracking-tight">{auxiliar.clave}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  Unidad: <span className="font-medium text-foreground">{simboloUnidad}</span>
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-foreground">{auxiliar.descripcion}</p>
+            </div>
+
+            <div aria-hidden className="mt-0.5 self-stretch w-px shrink-0 bg-border" />
+
+            <div className="w-[30%] text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 {regionVistaId ? (
-                  <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
+                  <APP_ICONS.region_otra.icono size={12} className={APP_ICONS.region_otra.color} />
                 ) : (
-                  <Globe size={12} className="text-primary" />
+                  <APP_ICONS.region_nacional.icono size={12} className={APP_ICONS.region_nacional.color} />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs text-foreground">{auxiliar.descripcion}</p>
-          <div className="mt-2 flex items-center gap-3">
-            <div
-              className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
-              title={`Material ${pctMaterial.toFixed(0)}% / MO ${pctManoObra.toFixed(0)}% / Equipo ${pctEquipo.toFixed(0)}% / Otros ${pctAuxiliar.toFixed(0)}%`}
-            >
-              <div className="bg-amber-500" style={{ width: `${pctMaterial}%` }} />
-              <div className="bg-blue-500" style={{ width: `${pctManoObra}%` }} />
-              <div className="bg-violet-500" style={{ width: `${pctEquipo}%` }} />
-              <div className="bg-emerald-500" style={{ width: `${pctAuxiliar}%` }} />
+
+              <div className="mt-2 flex flex-col gap-1">
+                <div
+                  className="flex h-1.5 min-w-0 overflow-hidden rounded-full bg-muted"
+                  title={`Material ${pctMaterial.toFixed(0)}% / MO ${pctManoObra.toFixed(0)}% / Equipo ${pctEquipo.toFixed(0)}% / Otros ${pctAuxiliar.toFixed(0)}%`}
+                >
+                  <div className={APP_ICONS.grupo_material.bg} style={{ width: `${pctMaterial}%` }} />
+                  <div className={APP_ICONS.grupo_mano_obra.bg} style={{ width: `${pctManoObra}%` }} />
+                  <div className={APP_ICONS.grupo_equipo_herramienta.bg} style={{ width: `${pctEquipo}%` }} />
+                  <div className={APP_ICONS.grupo_basico_auxiliar.bg} style={{ width: `${pctAuxiliar}%` }} />
+                </div>
+                <span className="flex flex-wrap items-center gap-2 text-[10px]">
+                  <span className="flex items-center gap-1">
+                    <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />
+                    {pctMaterial.toFixed(0)}%
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <APP_ICONS.grupo_mano_obra.icono size={16} className={APP_ICONS.grupo_mano_obra.color} />
+                    {pctManoObra.toFixed(0)}%
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <APP_ICONS.grupo_equipo_herramienta.icono size={16} className={APP_ICONS.grupo_equipo_herramienta.color} />
+                    {pctEquipo.toFixed(0)}%
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />
+                    {pctAuxiliar.toFixed(0)}%
+                  </span>
+                </span>
+                <div aria-hidden className="mt-1 h-px bg-border" />
+
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+                      >
+                        <Plus size={16} /> Agregar renglón
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="text-xs" onCloseAutoFocus={(e) => e.preventDefault()}>
+                      {gruposDef.map((g) => (
+                        <DropdownMenuItem
+                          key={g.tipo}
+                          disabled={g.opciones.length === 0}
+                          onSelect={() => abrirAgregar(g.tipo)}
+                          className="text-xs"
+                        >
+                          <g.Icono size={16} className={g.color} />
+                          {g.titulo}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <span className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
+                    <button
+                      type="button"
+                      title="Expandir todo"
+                      onClick={() => setGruposColapsados(new Set())}
+                      className="rounded p-1 hover:bg-muted hover:text-foreground"
+                    >
+                      <ChevronsDown size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Colapsar todo"
+                      onClick={() => setGruposColapsados(new Set(gruposDef.map((g) => g.tipo)))}
+                      className="rounded p-1 hover:bg-muted hover:text-foreground"
+                    >
+                      <ChevronsUp size={16} />
+                    </button>
+                  </span>
+                </div>
+              </div>
             </div>
-            <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Boxes size={16} className="text-amber-500" />
-                {pctMaterial.toFixed(0)}%
-              </span>
-              <span className="flex items-center gap-1">
-                <HardHat size={16} className="text-blue-500" />
-                {pctManoObra.toFixed(0)}%
-              </span>
-              <span className="flex items-center gap-1">
-                <Wrench size={16} className="text-violet-500" />
-                {pctEquipo.toFixed(0)}%
-              </span>
-              <span className="flex items-center gap-1">
-                <Layers size={16} className="text-emerald-500" />
-                {pctAuxiliar.toFixed(0)}%
-              </span>
-            </span>
           </div>
         </div>
 
         <div className="p-4">
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="border-b border-foreground/30 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-                <th className="w-6 py-1" />
-                <th className="w-20 py-1 pr-2 font-semibold">Código</th>
-                <th className="py-1 pr-2 font-semibold">Descripción</th>
-                <th className="w-16 py-1 pr-2 font-semibold">Unidad</th>
-                <th className="w-20 py-1 pr-2 text-right font-semibold">Rendimiento</th>
-                <th className="w-20 py-1 pr-2 text-right font-semibold">Cantidad</th>
-                <th className="w-24 py-1 pr-2 text-right font-semibold">
-                  <span className="inline-flex items-center justify-end gap-1">
+              <tr className="text-xs font-semibold text-foreground">
+                <th colSpan={2} className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Clave</th>
+                <th className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Descripción</th>
+                <th className="w-16 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Unidad</th>
+                <th className="w-20 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Rendimiento</th>
+                <th className="w-20 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Cantidad</th>
+                <th className="w-24 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">
+                  <span className="inline-flex items-center justify-center gap-1">
                     Costo
                     <button
                       type="button"
@@ -799,7 +891,7 @@ export function BasicoAuxiliarFichaApu({
                       title="Mostrar/ocultar fecha de precios"
                       onClick={() => setMostrarFechaPrecio((v) => !v)}
                       className={cn(
-                        "rounded p-0.5 normal-case tracking-normal",
+                        "rounded p-0.5 font-normal",
                         mostrarFechaPrecio ? "text-primary" : "text-muted-foreground/70 hover:text-foreground",
                       )}
                     >
@@ -807,8 +899,7 @@ export function BasicoAuxiliarFichaApu({
                     </button>
                   </span>
                 </th>
-                <th className="w-24 py-1 text-right font-semibold">Importe</th>
-                <th className="w-8" />
+                <th colSpan={2} className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Importe</th>
               </tr>
             </thead>
 
@@ -820,7 +911,6 @@ export function BasicoAuxiliarFichaApu({
                 color={g.color}
                 filas={componentesPorTipo[g.tipo].map(aFila)}
                 agregando={agregandoTipo === g.tipo}
-                onAbrirAgregar={() => setAgregandoTipo(g.tipo)}
                 onCerrarAgregar={() => setAgregandoTipo(null)}
                 opciones={g.opciones}
                 onAgregar={(id) => void agregarComponente(id)}
@@ -833,6 +923,16 @@ export function BasicoAuxiliarFichaApu({
                 mostrarFechaPrecio={mostrarFechaPrecio}
                 destello={destello}
                 drag={dragPorTipo[g.tipo]}
+                subtotal={g.subtotal}
+                colapsado={gruposColapsados.has(g.tipo) && agregandoTipo !== g.tipo}
+                onToggleColapsado={() =>
+                  setGruposColapsados((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(g.tipo)) next.delete(g.tipo);
+                    else next.add(g.tipo);
+                    return next;
+                  })
+                }
               />
             ))}
           </table>
@@ -843,7 +943,7 @@ export function BasicoAuxiliarFichaApu({
         {/* Costo total */}
         <div
           className={cn(
-            "flex items-center justify-between rounded-b-lg border-t-2 border-foreground/20 px-4 py-2.5 transition-colors duration-700",
+            "flex items-center justify-between rounded-b-lg border-t-2 border-foreground/20 py-2.5 pr-10 pl-4 transition-colors duration-700",
             destello && destello.total > 0 && "bg-emerald-500/20",
             destello && destello.total < 0 && "bg-rose-500/20",
             (!destello || destello.total === 0) && "bg-muted/40",
@@ -860,12 +960,19 @@ export function BasicoAuxiliarFichaApu({
       <div className="mt-3 rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
         <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Costo por región</p>
+            <button
+              type="button"
+              onClick={() => setCostoRegionExpandido((v) => !v)}
+              className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+            >
+              {costoRegionExpandido ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+              Costo por región
+            </button>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Calculado desde los precios y salarios vigentes. Clic en una región para ver su costo en el análisis.
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex shrink-0 items-start">
             <button
               type="button"
               title={
@@ -879,21 +986,14 @@ export function BasicoAuxiliarFichaApu({
               onClick={() => void recalcularZonas()}
               disabled={recalculando}
               className={cn(
-                "inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted",
+                "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium text-foreground hover:bg-muted",
                 recalculando && "opacity-50",
+                !sincronizadoEn && "border-amber-500/40",
               )}
             >
               <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
               {recalculando ? "Sincronizando…" : "Sincronizar"}
             </button>
-            {sincronizadoEn ? (
-              <span className="text-right text-[9px] leading-tight text-muted-foreground tabular-nums">{formatearFecha(sincronizadoEn)}</span>
-            ) : (
-              <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
-                <AlertTriangle size={16} className="shrink-0" />
-                Sin sincronizar
-              </span>
-            )}
           </div>
         </div>
         <div className="overflow-x-auto px-4 py-3">
@@ -920,9 +1020,9 @@ export function BasicoAuxiliarFichaApu({
                       onClick={() => verRegion(z.regionId)}
                     >
                       {z.esNac ? (
-                        <Globe size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                        <APP_ICONS.region_nacional.icono size={16} className={cn("mx-auto", APP_ICONS.region_nacional.color)} aria-label="Nacional" />
                       ) : (
-                        <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
+                        <APP_ICONS.region_otra.icono size={16} className={cn("mx-auto", APP_ICONS.region_otra.color)} />
                       )}
                     </th>
                   );
@@ -948,40 +1048,41 @@ export function BasicoAuxiliarFichaApu({
               </tr>
             </thead>
             <tbody>
-              {(
-                [
-                  ["Material", (c: BasicoAuxiliarCosto | null) => c?.sub_total_material],
-                  ["Mano de obra", (c: BasicoAuxiliarCosto | null) => c?.sub_total_mano_obra],
-                  ["Equipo", (c: BasicoAuxiliarCosto | null) => c?.sub_total_equipo],
-                  ["Otros auxiliares", (c: BasicoAuxiliarCosto | null) => c?.sub_total_basico_auxiliar],
-                ] as const
-              ).map(([etiqueta, extraer]) => (
-                <tr key={etiqueta}>
-                  <th className="sticky left-0 z-10 w-[7.5rem] min-w-[7.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-normal text-muted-foreground">
-                    {etiqueta}
-                  </th>
-                  {zonas.map((z) => {
-                    const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
-                    const incompleta = !z.costo || (cob?.sin ?? 0) > 0;
-                    const monto = incompleta ? "—" : `$${fmt(extraer(z.costo) ?? "0")}`;
-                    const activa = (z.regionId ?? null) === regionVistaId;
-                    return (
-                      <td
-                        key={z.key}
-                        className={cn(
-                          "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
-                          activa && "bg-primary/10",
-                        )}
-                        onClick={() => verRegion(z.regionId)}
-                      >
-                        <span className="num block truncate" title={incompleta ? undefined : monto}>
-                          {monto}
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {costoRegionExpandido &&
+                (
+                  [
+                    [APP_ICONS.grupo_material.titulo, (c: BasicoAuxiliarCosto | null) => c?.sub_total_material],
+                    [APP_ICONS.grupo_mano_obra.titulo, (c: BasicoAuxiliarCosto | null) => c?.sub_total_mano_obra],
+                    [APP_ICONS.grupo_equipo_herramienta.titulo, (c: BasicoAuxiliarCosto | null) => c?.sub_total_equipo],
+                    [APP_ICONS.grupo_basico_auxiliar.titulo, (c: BasicoAuxiliarCosto | null) => c?.sub_total_basico_auxiliar],
+                  ] as const
+                ).map(([etiqueta, extraer]) => (
+                  <tr key={etiqueta}>
+                    <th className="sticky left-0 z-10 w-[7.5rem] min-w-[7.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-normal text-muted-foreground">
+                      {etiqueta}
+                    </th>
+                    {zonas.map((z) => {
+                      const cob = z.costo ? coberturaPorCostoId[z.costo.id] : undefined;
+                      const incompleta = !z.costo || (cob?.sin ?? 0) > 0;
+                      const monto = incompleta ? "—" : `$${fmt(extraer(z.costo) ?? "0")}`;
+                      const activa = (z.regionId ?? null) === regionVistaId;
+                      return (
+                        <td
+                          key={z.key}
+                          className={cn(
+                            "w-14 max-w-14 cursor-pointer overflow-hidden border-b border-r border-border px-1 py-1.5 text-right hover:bg-muted/60",
+                            activa && "bg-primary/10",
+                          )}
+                          onClick={() => verRegion(z.regionId)}
+                        >
+                          <span className="num block truncate" title={incompleta ? undefined : monto}>
+                            {monto}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
               <tr>
                 <th className="sticky left-0 z-10 w-[7.5rem] min-w-[7.5rem] border-b border-r border-border bg-background px-2 py-1.5 text-left font-semibold">
                   Costo Total
@@ -1022,9 +1123,9 @@ export function BasicoAuxiliarFichaApu({
           </table>
           <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
             {regionVistaId ? (
-              <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
+              <APP_ICONS.region_otra.icono size={12} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
             ) : (
-              <Globe size={12} className="shrink-0 text-primary" />
+              <APP_ICONS.region_nacional.icono size={12} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
             )}
             El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
           </p>

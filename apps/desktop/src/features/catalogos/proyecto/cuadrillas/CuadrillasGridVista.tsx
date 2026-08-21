@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileText, Plus, RefreshCcw, Trash2, Upload, Users } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { APP_ICONS } from "@/lib/appIcons";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -254,7 +255,7 @@ export function CuadrillasGridVista() {
               },
               ACTION_BAR_SEPARATOR,
               {
-                icon: Users,
+                icon: APP_ICONS.insumo_cuadrilla.icono,
                 title: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
                 onClick: () => setPanelComposicionAbierto((v) => !v),
                 disabled: !panelComposicionAbierto && cuadrillas.length === 0,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Boxes, Globe, HardHat, Layers, MapPinned, Plus, RefreshCcw, Trash2, Wrench, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, RefreshCcw, Trash2, X, type LucideIcon } from "lucide-react";
+import { APP_ICONS } from "@/lib/appIcons";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -355,19 +356,19 @@ export function BasicoAuxiliarComposicionPanel({
   ];
 
   const configMaterial: DataGridConfig = useMemo(
-    () => ({ title: "Material", columns: columnasBase("insumo", "Material", opcionesMaterial) }),
+    () => ({ title: APP_ICONS.grupo_material.titulo, columns: columnasBase("insumo", "Material", opcionesMaterial) }),
     [opcionesMaterial],
   );
   const configManoObra: DataGridConfig = useMemo(
-    () => ({ title: "Mano de obra", columns: columnasBase("insumo", "Cuadrilla", opcionesManoObra) }),
+    () => ({ title: APP_ICONS.grupo_mano_obra.titulo, columns: columnasBase("insumo", "Cuadrilla", opcionesManoObra) }),
     [opcionesManoObra],
   );
   const configEquipo: DataGridConfig = useMemo(
-    () => ({ title: "Equipo y herramienta", columns: columnasBase("insumo", "Equipo", opcionesEquipo) }),
+    () => ({ title: APP_ICONS.grupo_equipo_herramienta.titulo, columns: columnasBase("insumo", "Equipo", opcionesEquipo) }),
     [opcionesEquipo],
   );
   const configAuxiliar: DataGridConfig = useMemo(
-    () => ({ title: "Otros básicos auxiliares", columns: columnasBase("insumo", "Básico auxiliar", opcionesAuxiliar) }),
+    () => ({ title: APP_ICONS.grupo_basico_auxiliar.titulo, columns: columnasBase("insumo", "Básico auxiliar", opcionesAuxiliar) }),
     [opcionesAuxiliar],
   );
 
@@ -435,7 +436,7 @@ export function BasicoAuxiliarComposicionPanel({
 
   const grupos: {
     key: string;
-    Icono: typeof Boxes;
+    Icono: LucideIcon;
     color: string;
     titulo: string;
     ref: typeof materialRef;
@@ -451,9 +452,9 @@ export function BasicoAuxiliarComposicionPanel({
   }[] = [
     {
       key: "material",
-      Icono: Boxes,
-      color: "text-amber-500",
-      titulo: "Material",
+      Icono: APP_ICONS.grupo_material.icono,
+      color: APP_ICONS.grupo_material.color,
+      titulo: APP_ICONS.grupo_material.titulo,
       ref: materialRef,
       config: configMaterial,
       filas: filasMaterial,
@@ -470,9 +471,9 @@ export function BasicoAuxiliarComposicionPanel({
     },
     {
       key: "mano_obra",
-      Icono: HardHat,
-      color: "text-blue-500",
-      titulo: "Mano de obra",
+      Icono: APP_ICONS.grupo_mano_obra.icono,
+      color: APP_ICONS.grupo_mano_obra.color,
+      titulo: APP_ICONS.grupo_mano_obra.titulo,
       ref: manoObraRef,
       config: configManoObra,
       filas: filasManoObra,
@@ -489,9 +490,9 @@ export function BasicoAuxiliarComposicionPanel({
     },
     {
       key: "equipo_herramienta",
-      Icono: Wrench,
-      color: "text-violet-500",
-      titulo: "Equipo y herramienta",
+      Icono: APP_ICONS.grupo_equipo_herramienta.icono,
+      color: APP_ICONS.grupo_equipo_herramienta.color,
+      titulo: APP_ICONS.grupo_equipo_herramienta.titulo,
       ref: equipoRef,
       config: configEquipo,
       filas: filasEquipo,
@@ -508,9 +509,9 @@ export function BasicoAuxiliarComposicionPanel({
     },
     {
       key: "basico_auxiliar",
-      Icono: Layers,
-      color: "text-emerald-500",
-      titulo: "Otros básicos auxiliares",
+      Icono: APP_ICONS.grupo_basico_auxiliar.icono,
+      color: APP_ICONS.grupo_basico_auxiliar.color,
+      titulo: APP_ICONS.grupo_basico_auxiliar.titulo,
       ref: auxiliarRef,
       config: configAuxiliar,
       filas: filasAuxiliar,
@@ -540,7 +541,7 @@ export function BasicoAuxiliarComposicionPanel({
         <div className="flex items-center gap-3">
           <div className="flex shrink-0 items-center gap-2">
             <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              <Layers size={16} className="text-emerald-500" />
+              <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />
               Composición
             </span>
             <Select value={regionVistaId ?? NACIONAL_VALOR} onValueChange={elegirRegion}>
@@ -550,14 +551,14 @@ export function BasicoAuxiliarComposicionPanel({
               <SelectContent>
                 <SelectItem value={NACIONAL_VALOR}>
                   <span className="flex items-center gap-1.5">
-                    <Globe size={14} className="text-primary" />
+                    <APP_ICONS.region_nacional.icono size={14} className={APP_ICONS.region_nacional.color} />
                     {NACIONAL}
                   </span>
                 </SelectItem>
                 {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     <span className="flex items-center gap-1.5">
-                      <MapPinned size={14} className="text-teal-600 dark:text-teal-400" />
+                      <APP_ICONS.region_otra.icono size={14} className={APP_ICONS.region_otra.color} />
                       {r.nombre}
                     </span>
                   </SelectItem>
@@ -572,26 +573,26 @@ export function BasicoAuxiliarComposicionPanel({
                 className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
                 title={`Material ${pctMaterial.toFixed(0)}% / MO ${pctManoObra.toFixed(0)}% / Equipo ${pctEquipo.toFixed(0)}% / Básicos ${pctAuxiliar.toFixed(0)}%`}
               >
-                <div className="bg-amber-500" style={{ width: `${pctMaterial}%` }} />
-                <div className="bg-blue-500" style={{ width: `${pctManoObra}%` }} />
-                <div className="bg-violet-500" style={{ width: `${pctEquipo}%` }} />
-                <div className="bg-emerald-500" style={{ width: `${pctAuxiliar}%` }} />
+                <div className={APP_ICONS.grupo_material.bg} style={{ width: `${pctMaterial}%` }} />
+                <div className={APP_ICONS.grupo_mano_obra.bg} style={{ width: `${pctManoObra}%` }} />
+                <div className={APP_ICONS.grupo_equipo_herramienta.bg} style={{ width: `${pctEquipo}%` }} />
+                <div className={APP_ICONS.grupo_basico_auxiliar.bg} style={{ width: `${pctAuxiliar}%` }} />
               </div>
               <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Boxes size={16} className="text-amber-500" />
+                  <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />
                   {pctMaterial.toFixed(0)}%
                 </span>
                 <span className="flex items-center gap-1">
-                  <HardHat size={16} className="text-blue-500" />
+                  <APP_ICONS.grupo_mano_obra.icono size={16} className={APP_ICONS.grupo_mano_obra.color} />
                   {pctManoObra.toFixed(0)}%
                 </span>
                 <span className="flex items-center gap-1">
-                  <Wrench size={16} className="text-violet-500" />
+                  <APP_ICONS.grupo_equipo_herramienta.icono size={16} className={APP_ICONS.grupo_equipo_herramienta.color} />
                   {pctEquipo.toFixed(0)}%
                 </span>
                 <span className="flex items-center gap-1">
-                  <Layers size={16} className="text-emerald-500" />
+                  <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />
                   {pctAuxiliar.toFixed(0)}%
                 </span>
               </span>
@@ -715,19 +716,19 @@ export function BasicoAuxiliarComposicionPanel({
             <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Totales</h4>
             <dl className="flex flex-col gap-1 text-xs">
               <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Material</dt>
+                <dt className="text-muted-foreground">{APP_ICONS.grupo_material.titulo}</dt>
                 <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.sub_total_material ?? "0")}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Mano de obra</dt>
+                <dt className="text-muted-foreground">{APP_ICONS.grupo_mano_obra.titulo}</dt>
                 <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.sub_total_mano_obra ?? "0")}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Equipo</dt>
+                <dt className="text-muted-foreground">{APP_ICONS.grupo_equipo_herramienta.titulo}</dt>
                 <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.sub_total_equipo ?? "0")}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Otros básicos auxiliares</dt>
+                <dt className="text-muted-foreground">{APP_ICONS.grupo_basico_auxiliar.titulo}</dt>
                 <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.sub_total_basico_auxiliar ?? "0")}</dd>
               </div>
               <div className={cn("flex items-center justify-between border-t border-border pt-1")}>

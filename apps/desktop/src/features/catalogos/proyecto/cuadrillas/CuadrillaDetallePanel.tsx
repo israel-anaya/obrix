@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Globe, HardHat, MapPinned, Plus, RefreshCcw, Trash2, Users, Wrench, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, RefreshCcw, Trash2, X } from "lucide-react";
+import { APP_ICONS } from "@/lib/appIcons";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -287,7 +288,7 @@ export function CuadrillaDetallePanel({
 
   const configHerramienta: DataGridConfig = useMemo(
     () => ({
-      title: "Herramienta",
+      title: APP_ICONS.insumo_herramienta.titulo,
       columns: [
         {
           field: "herramienta",
@@ -365,7 +366,7 @@ export function CuadrillaDetallePanel({
       <div className="flex items-center gap-3 border-b-2 border-foreground/20 bg-background/80 px-4 py-3">
         <div className="flex shrink-0 items-center gap-2">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Users size={16} className="text-emerald-500" />
+            <APP_ICONS.insumo_cuadrilla.icono size={16} className={APP_ICONS.insumo_cuadrilla.color} />
             Composición
           </span>
           <Select value={regionVistaId ?? NACIONAL_VALOR} onValueChange={elegirRegion}>
@@ -375,14 +376,14 @@ export function CuadrillaDetallePanel({
             <SelectContent>
               <SelectItem value={NACIONAL_VALOR}>
                 <span className="flex items-center gap-1.5">
-                  <Globe size={14} className="text-primary" />
+                  <APP_ICONS.region_nacional.icono size={14} className={APP_ICONS.region_nacional.color} />
                   {NACIONAL}
                 </span>
               </SelectItem>
               {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   <span className="flex items-center gap-1.5">
-                    <MapPinned size={14} className="text-teal-600 dark:text-teal-400" />
+                    <APP_ICONS.region_otra.icono size={14} className={APP_ICONS.region_otra.color} />
                     {r.nombre}
                   </span>
                 </SelectItem>
@@ -397,16 +398,16 @@ export function CuadrillaDetallePanel({
               className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
               title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
             >
-              <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
-              <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
+              <div className={APP_ICONS.insumo_categoria_fasar.bg} style={{ width: `${pctMo}%` }} />
+              <div className={APP_ICONS.insumo_herramienta.bg} style={{ width: `${pctHe}%` }} />
             </div>
             <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <HardHat size={16} className="text-blue-500" />
+                <APP_ICONS.insumo_categoria_fasar.icono size={16} className={APP_ICONS.insumo_categoria_fasar.color} />
                 {pctMo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <Wrench size={16} className="text-amber-500" />
+                <APP_ICONS.insumo_herramienta.icono size={16} className={APP_ICONS.insumo_herramienta.color} />
                 {pctHe.toFixed(0)}%
               </span>
             </span>
@@ -460,8 +461,8 @@ export function CuadrillaDetallePanel({
             <section className="flex min-h-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
                 <h4 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <HardHat size={14} className="text-blue-500" />
-                  Integrantes (mano de obra)
+                  <APP_ICONS.insumo_categoria_fasar.icono size={14} className={APP_ICONS.insumo_categoria_fasar.color} />
+                  {APP_ICONS.insumo_categoria_fasar.titulo}
                 </h4>
                 <div className="flex items-center gap-0.5">
                     <button
@@ -541,8 +542,8 @@ export function CuadrillaDetallePanel({
             <section className="flex min-h-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
                 <h4 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Wrench size={14} className="text-amber-500" />
-                  Herramienta
+                  <APP_ICONS.insumo_herramienta.icono size={14} className={APP_ICONS.insumo_herramienta.color} />
+                  {APP_ICONS.insumo_herramienta.titulo}
                 </h4>
                 <div className="flex items-center gap-0.5">
                     <button
@@ -626,11 +627,11 @@ export function CuadrillaDetallePanel({
               <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Totales</h4>
               <dl className="flex flex-col gap-1 text-xs">
                 <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Mano de obra</dt>
+                  <dt className="text-muted-foreground">{APP_ICONS.insumo_categoria_fasar.titulo}</dt>
                   <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.sub_total_mano_obra ?? "0")}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Herramienta</dt>
+                  <dt className="text-muted-foreground">{APP_ICONS.insumo_herramienta.titulo}</dt>
                   <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.sub_total_herramienta ?? "0")}</dd>
                 </div>
                 <div className={cn("flex items-center justify-between border-t border-border pt-1")}>

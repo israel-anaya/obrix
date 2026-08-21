@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { FIELD_INPUT_CLASS, Field } from "@/components/Field";
+import { APP_ICONS } from "@/lib/appIcons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { formatearFecha } from "@/lib/fecha";
@@ -187,11 +188,11 @@ export function CuadrillaFormPanel({
 
             <div className="rounded-md border border-border bg-muted/30 p-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Mano de obra</span>
+                <span className="text-muted-foreground">{APP_ICONS.insumo_categoria_fasar.titulo}</span>
                 <span className="font-medium">${costo?.sub_total_mano_obra ?? "0"}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className="text-muted-foreground">Herramienta</span>
+                <span className="text-muted-foreground">{APP_ICONS.insumo_herramienta.titulo}</span>
                 <span className="font-medium">${costo?.sub_total_herramienta ?? "0"}</span>
               </div>
               <div className="mt-1 flex items-center justify-between">

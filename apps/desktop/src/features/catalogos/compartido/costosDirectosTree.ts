@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { ClipboardList, Gauge, HardHat, Package, PauseCircle, Percent, Truck, Users, Wrench } from "lucide-react";
+import { PauseCircle, Percent } from "lucide-react";
 import type { DataGridConfig } from "@/components/grid/DataGrid";
-import { ICONOS_FAMILIA } from "@/icons/familias";
+import { APP_ICONS } from "@/lib/appIcons";
 
 export interface NodoCatalogo {
   id: string;
@@ -9,16 +9,30 @@ export interface NodoCatalogo {
   hijos?: NodoCatalogo[];
   /** Icono propio para el nodo en el árbol — si no se da, se usa Folder/FileText según tenga hijos. */
   icon?: LucideIcon;
+  /** Clase Tailwind `text-*` del ícono (tomada de `APP_ICONS`) — se aplica al pasar el mouse. */
+  color?: string;
 }
 
 export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
   {
     id: "mano-de-obra",
-    label: "Mano de Obra",
+    label: APP_ICONS.grupo_mano_obra.titulo,
+    icon: APP_ICONS.grupo_mano_obra.icono,
+    color: APP_ICONS.grupo_mano_obra.color,
     hijos: [
       { id: "factores-salario-real", label: "Factores de Salario Real", icon: Percent },
-      { id: "tabuladores-salario", label: "Tabuladores de Salario", icon: HardHat },
-      { id: "cuadrillas-trabajo", label: "Cuadrillas de trabajo", icon: Users },
+      {
+        id: "tabuladores-salario",
+        label: APP_ICONS.insumo_categoria_fasar.titulo,
+        icon: APP_ICONS.insumo_categoria_fasar.icono,
+        color: APP_ICONS.insumo_categoria_fasar.color,
+      },
+      {
+        id: "cuadrillas-trabajo",
+        label: APP_ICONS.insumo_cuadrilla.titulo,
+        icon: APP_ICONS.insumo_cuadrilla.icono,
+        color: APP_ICONS.insumo_cuadrilla.color,
+      },
       {
         id: "analisis",
         label: "Análisis",
@@ -33,9 +47,16 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
   {
     id: "materiales",
     label: "Materiales",
+    icon: APP_ICONS.grupo_material.icono,
+    color: APP_ICONS.grupo_material.color,
     hijos: [
       { id: "fletes", label: "Fletes" },
-      { id: "materiales-item", label: "Materiales", icon: Package },
+      {
+        id: "materiales-item",
+        label: APP_ICONS.insumo_material.titulo,
+        icon: APP_ICONS.insumo_material.icono,
+        color: APP_ICONS.insumo_material.color,
+      },
       {
         id: "materiales-analisis",
         label: "Análisis",
@@ -48,16 +69,43 @@ export const COSTOS_DIRECTOS_TREE: NodoCatalogo[] = [
   },
   {
     id: "maquinaria-equipo",
-    label: "Maquinaria y Equipo",
+    label: APP_ICONS.grupo_equipo_herramienta.titulo,
+    icon: APP_ICONS.grupo_equipo_herramienta.icono,
+    color: APP_ICONS.grupo_equipo_herramienta.color,
     hijos: [
       { id: "perfiles-inactividad", label: "Inactividad de equipo", icon: PauseCircle },
-      { id: "herramienta", label: "Herramienta", icon: Wrench },
-      { id: "costos-horarios", label: "Costos Horarios", icon: Gauge },
-      { id: "equipo-rentado", label: "Equipo rentado", icon: Truck },
+      {
+        id: "herramienta",
+        label: APP_ICONS.insumo_herramienta.titulo,
+        icon: APP_ICONS.insumo_herramienta.icono,
+        color: APP_ICONS.insumo_herramienta.color,
+      },
+      {
+        id: "costos-horarios",
+        label: APP_ICONS.insumo_costo_horario.titulo,
+        icon: APP_ICONS.insumo_costo_horario.icono,
+        color: APP_ICONS.insumo_costo_horario.color,
+      },
+      {
+        id: "equipo-rentado",
+        label: APP_ICONS.insumo_equipo_rentado.titulo,
+        icon: APP_ICONS.insumo_equipo_rentado.icono,
+        color: APP_ICONS.insumo_equipo_rentado.color,
+      },
     ],
   },
-  { id: "basicos-auxiliares", label: "Básicos y Auxiliares", icon: ICONOS_FAMILIA["familia-basicos-auxiliares"] },
-  { id: "conceptos", label: "Conceptos", icon: ClipboardList },
+  {
+    id: "basicos-auxiliares",
+    label: APP_ICONS.insumo_basico_auxiliar.titulo,
+    icon: APP_ICONS.insumo_basico_auxiliar.icono,
+    color: APP_ICONS.insumo_basico_auxiliar.color,
+  },
+  {
+    id: "conceptos",
+    label: APP_ICONS.insumo_concepto.titulo,
+    icon: APP_ICONS.insumo_concepto.icono,
+    color: APP_ICONS.insumo_concepto.color,
+  },
 ];
 
 export const CATALOGO_GRID_CONFIG: Record<string, DataGridConfig> = {

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, Globe, GripVertical, HardHat, MapPinned, Plus, RefreshCcw, Users, Wrench, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, GripVertical, Plus, RefreshCcw, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FilterableCombobox } from "@/components/FilterableCombobox";
+import { APP_ICONS } from "@/lib/appIcons";
 import { PercentageInput } from "@/components/PercentageInput";
 import { QuantityInput } from "@/components/QuantityInput";
 import { toast } from "@/hooks/use-toast";
@@ -519,7 +520,7 @@ export function CuadrillaFichaApu({
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Users size={16} className="text-emerald-500" />
+            <APP_ICONS.insumo_cuadrilla.icono size={16} className={APP_ICONS.insumo_cuadrilla.color} />
             Análisis de cuadrilla
           </span>
 
@@ -530,9 +531,9 @@ export function CuadrillaFichaApu({
               <span aria-hidden className="px-1.5 text-border">·</span>
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 {regionVistaId ? (
-                  <MapPinned size={12} className="text-teal-600 dark:text-teal-400" />
+                  <APP_ICONS.region_otra.icono size={12} className={APP_ICONS.region_otra.color} />
                 ) : (
-                  <Globe size={12} className="text-primary" />
+                  <APP_ICONS.region_nacional.icono size={12} className={APP_ICONS.region_nacional.color} />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
@@ -544,16 +545,16 @@ export function CuadrillaFichaApu({
               className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
               title={`MO ${pctMo.toFixed(0)}% / Herramienta ${pctHe.toFixed(0)}%`}
             >
-              <div className="bg-blue-500" style={{ width: `${pctMo}%` }} />
-              <div className="bg-amber-500" style={{ width: `${pctHe}%` }} />
+              <div className={APP_ICONS.insumo_categoria_fasar.bg} style={{ width: `${pctMo}%` }} />
+              <div className={APP_ICONS.insumo_herramienta.bg} style={{ width: `${pctHe}%` }} />
             </div>
             <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <HardHat size={16} className="text-blue-500" />
+                <APP_ICONS.insumo_categoria_fasar.icono size={16} className={APP_ICONS.insumo_categoria_fasar.color} />
                 {pctMo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <Wrench size={16} className="text-amber-500" />
+                <APP_ICONS.insumo_herramienta.icono size={16} className={APP_ICONS.insumo_herramienta.color} />
                 {pctHe.toFixed(0)}%
               </span>
             </span>
@@ -601,8 +602,8 @@ export function CuadrillaFichaApu({
               <tr>
                 <td colSpan={8} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <HardHat size={16} className="text-blue-500" />
-                    Mano de obra
+                    <APP_ICONS.insumo_categoria_fasar.icono size={16} className={APP_ICONS.insumo_categoria_fasar.color} />
+                    {APP_ICONS.insumo_categoria_fasar.titulo}
                   </span>
                 </td>
               </tr>
@@ -715,7 +716,10 @@ export function CuadrillaFichaApu({
                 </tr>
               <tr className="border-t-2 border-foreground/30 font-semibold">
                 <td colSpan={6} className="py-1.5 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Subtotal mano de obra
+                  <span className="inline-flex items-center gap-1">
+                    <APP_ICONS.insumo_categoria_fasar.icono size={14} className={APP_ICONS.insumo_categoria_fasar.color} />
+                    Subtotal mano de obra
+                  </span>
                 </td>
                 <td className="py-1.5 text-right tabular-nums">${fmt(costoSeleccionado?.sub_total_mano_obra ?? "0")}</td>
                 <td />
@@ -727,8 +731,8 @@ export function CuadrillaFichaApu({
               <tr>
                 <td colSpan={8} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Wrench size={16} className="text-amber-500" />
-                    Herramienta
+                    <APP_ICONS.insumo_herramienta.icono size={16} className={APP_ICONS.insumo_herramienta.color} />
+                    {APP_ICONS.insumo_herramienta.titulo}
                   </span>
                 </td>
               </tr>
@@ -931,9 +935,9 @@ export function CuadrillaFichaApu({
                     onClick={() => verRegion(z.regionId)}
                   >
                     {z.esNac ? (
-                      <Globe size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                      <APP_ICONS.region_nacional.icono size={16} className={cn("mx-auto", APP_ICONS.region_nacional.color)} aria-label="Nacional" />
                     ) : (
-                      <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
+                      <APP_ICONS.region_otra.icono size={16} className={cn("mx-auto", APP_ICONS.region_otra.color)} />
                     )}
                   </th>
                   );
@@ -1052,9 +1056,9 @@ export function CuadrillaFichaApu({
           </table>
           <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
             {regionVistaId ? (
-              <MapPinned size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
+              <APP_ICONS.region_otra.icono size={12} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
             ) : (
-              <Globe size={12} className="shrink-0 text-primary" />
+              <APP_ICONS.region_nacional.icono size={12} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
             )}
             El análisis usa los salarios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
           </p>

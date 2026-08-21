@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Globe, MapPinned, Plus, X } from "lucide-react";
+import { DollarSign, Plus, X } from "lucide-react";
 import { CurrencyInput } from "@/components/CurrencyInput";
+import { APP_ICONS } from "@/lib/appIcons";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EnlaceHistorialCompleto } from "@/components/EnlaceHistorialCompleto";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -316,14 +317,14 @@ export function PreciosMaterialPanel({
                     <SelectContent>
                       <SelectItem value={NACIONAL_VALOR}>
                         <span className="flex items-center gap-1.5">
-                          <Globe size={16} className="text-primary" />
+                          <APP_ICONS.region_nacional.icono size={16} className={APP_ICONS.region_nacional.color} />
                           {NACIONAL} (default)
                         </span>
                       </SelectItem>
                       {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           <span className="flex items-center gap-1.5">
-                            <MapPinned size={16} className="text-teal-600 dark:text-teal-400" />
+                            <APP_ICONS.region_otra.icono size={16} className={APP_ICONS.region_otra.color} />
                             {r.nombre}
                           </span>
                         </SelectItem>
@@ -368,9 +369,9 @@ export function PreciosMaterialPanel({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-medium">
                         {p.region_id ? (
-                          <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
+                          <APP_ICONS.region_otra.icono size={16} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
                         ) : (
-                          <Globe size={16} className="shrink-0 text-primary" />
+                          <APP_ICONS.region_nacional.icono size={16} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
                         )}
                         {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                       </span>
@@ -422,9 +423,9 @@ export function PreciosMaterialPanel({
                           <td className="py-1 pr-2">
                             <span className="inline-flex items-center gap-1.5">
                               {p.region_id ? (
-                                <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
+                                <APP_ICONS.region_otra.icono size={16} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
                               ) : (
-                                <Globe size={16} className="shrink-0 text-primary" />
+                                <APP_ICONS.region_nacional.icono size={16} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
                               )}
                               {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                             </span>

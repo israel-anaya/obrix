@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, HardHat, Layers, Pencil, Plus, RefreshCcw, Trash2, Wrench } from "lucide-react";
+import { Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { APP_ICONS } from "@/lib/appIcons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -310,16 +311,16 @@ export function BasicoAuxiliarFicha() {
                     <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{a.descripcion}</span>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Boxes size={16} className="text-amber-500" />${fmt(a.costo_nacional?.sub_total_material ?? "0")}
+                        <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />${fmt(a.costo_nacional?.sub_total_material ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <HardHat size={16} className="text-blue-500" />${fmt(a.costo_nacional?.sub_total_mano_obra ?? "0")}
+                        <APP_ICONS.grupo_mano_obra.icono size={16} className={APP_ICONS.grupo_mano_obra.color} />${fmt(a.costo_nacional?.sub_total_mano_obra ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Wrench size={16} className="text-violet-500" />${fmt(a.costo_nacional?.sub_total_equipo ?? "0")}
+                        <APP_ICONS.grupo_equipo_herramienta.icono size={16} className={APP_ICONS.grupo_equipo_herramienta.color} />${fmt(a.costo_nacional?.sub_total_equipo ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Layers size={16} className="text-emerald-500" />${fmt(a.costo_nacional?.sub_total_basico_auxiliar ?? "0")}
+                        <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />${fmt(a.costo_nacional?.sub_total_basico_auxiliar ?? "0")}
                       </span>
                     </div>
                   </button>

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, Boxes, CalendarDays, CircleDot, Cog, Droplets, Fuel, Gauge, Globe, GlobeCheck, GripVertical, HardHat, Joystick, Layers, MapPinned, Plus, RefreshCcw, Timer, Users, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, CalendarDays, GlobeCheck, GripVertical, Plus, RefreshCcw, X, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FilterableCombobox } from "@/components/FilterableCombobox";
+import { APP_ICONS } from "@/lib/appIcons";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { QuantityInput } from "@/components/QuantityInput";
 import {
@@ -79,11 +80,36 @@ const NATURALEZAS_CONSUMO: {
   icono: LucideIcon;
   clase: string;
 }[] = [
-  { id: "combustible", etiqueta: "Combustible", icono: Fuel, clase: "text-amber-500" },
-  { id: "lubricante", etiqueta: "Lubricante", icono: Droplets, clase: "text-cyan-600 dark:text-cyan-400" },
-  { id: "llantas", etiqueta: "Llantas", icono: CircleDot, clase: "text-slate-500 dark:text-slate-400" },
-  { id: "piezas_especiales", etiqueta: "Piezas especiales", icono: Cog, clase: "text-orange-500" },
-  { id: "otras_fuentes", etiqueta: "Otras fuentes", icono: Layers, clase: "text-muted-foreground" },
+  {
+    id: "combustible",
+    etiqueta: APP_ICONS.naturaleza_consumo_combustible.titulo,
+    icono: APP_ICONS.naturaleza_consumo_combustible.icono,
+    clase: APP_ICONS.naturaleza_consumo_combustible.color,
+  },
+  {
+    id: "lubricante",
+    etiqueta: APP_ICONS.naturaleza_consumo_lubricante.titulo,
+    icono: APP_ICONS.naturaleza_consumo_lubricante.icono,
+    clase: APP_ICONS.naturaleza_consumo_lubricante.color,
+  },
+  {
+    id: "llantas",
+    etiqueta: APP_ICONS.naturaleza_consumo_llantas.titulo,
+    icono: APP_ICONS.naturaleza_consumo_llantas.icono,
+    clase: APP_ICONS.naturaleza_consumo_llantas.color,
+  },
+  {
+    id: "piezas_especiales",
+    etiqueta: APP_ICONS.naturaleza_consumo_piezas_especiales.titulo,
+    icono: APP_ICONS.naturaleza_consumo_piezas_especiales.icono,
+    clase: APP_ICONS.naturaleza_consumo_piezas_especiales.color,
+  },
+  {
+    id: "otras_fuentes",
+    etiqueta: APP_ICONS.naturaleza_consumo_otras_fuentes.titulo,
+    icono: APP_ICONS.naturaleza_consumo_otras_fuentes.icono,
+    clase: APP_ICONS.naturaleza_consumo_otras_fuentes.color,
+  },
 ];
 
 /** La naturaleza de operación no se captura: la deriva el backend de la extensión del insumo. */
@@ -91,8 +117,16 @@ const NATURALEZAS_OPERACION: Record<
   NaturalezaOperacionEquipoCostoHorario,
   { etiqueta: string; icono: LucideIcon; clase: string }
 > = {
-  categoria: { etiqueta: "Categoría FASAR", icono: HardHat, clase: "text-violet-500" },
-  cuadrilla: { etiqueta: "Cuadrilla", icono: Users, clase: "text-emerald-600 dark:text-emerald-400" },
+  categoria: {
+    etiqueta: "Categoría FASAR",
+    icono: APP_ICONS.insumo_categoria_fasar.icono,
+    clase: APP_ICONS.insumo_categoria_fasar.color,
+  },
+  cuadrilla: {
+    etiqueta: "Cuadrilla",
+    icono: APP_ICONS.insumo_cuadrilla.icono,
+    clase: APP_ICONS.insumo_cuadrilla.color,
+  },
 };
 
 function ComboNaturaleza({
@@ -738,7 +772,7 @@ export function EquipoCostoHorarioFichaApu({
         {/* Encabezado del análisis */}
         <div className="border-b-2 border-foreground/20 px-4 py-3">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Gauge size={16} className="text-emerald-500" />
+            <APP_ICONS.insumo_costo_horario.icono size={16} className={APP_ICONS.insumo_costo_horario.color} />
             Análisis de costo horario
           </span>
 
@@ -749,9 +783,9 @@ export function EquipoCostoHorarioFichaApu({
               <span aria-hidden className="px-1.5 text-border">·</span>
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 {regionVistaId ? (
-                  <MapPinned size={16} className="text-teal-600 dark:text-teal-400" />
+                  <APP_ICONS.region_otra.icono size={16} className={APP_ICONS.region_otra.color} />
                 ) : (
-                  <Globe size={16} className="text-primary" />
+                  <APP_ICONS.region_nacional.icono size={16} className={APP_ICONS.region_nacional.color} />
                 )}
                 {zonas.find((z) => z.regionId === regionVistaId)?.nombre ?? NACIONAL}
               </span>
@@ -763,21 +797,21 @@ export function EquipoCostoHorarioFichaApu({
               className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
               title={`Fijo ${pctFijo.toFixed(0)}% / Consumo ${pctConsumo.toFixed(0)}% / Operación ${pctOperacion.toFixed(0)}%`}
             >
-              <div className="bg-blue-500" style={{ width: `${pctFijo}%` }} />
-              <div className="bg-amber-500" style={{ width: `${pctConsumo}%` }} />
-              <div className="bg-violet-500" style={{ width: `${pctOperacion}%` }} />
+              <div className={APP_ICONS.grupo_cargos_fijos.bg} style={{ width: `${pctFijo}%` }} />
+              <div className={APP_ICONS.grupo_consumo.bg} style={{ width: `${pctConsumo}%` }} />
+              <div className={APP_ICONS.grupo_operacion.bg} style={{ width: `${pctOperacion}%` }} />
             </div>
             <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Timer size={16} className="text-blue-500" />
+                <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />
                 {pctFijo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <Boxes size={16} className="text-amber-500" />
+                <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />
                 {pctConsumo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <Joystick size={16} className="text-violet-500" />
+                <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />
                 {pctOperacion.toFixed(0)}%
               </span>
             </span>
@@ -887,8 +921,8 @@ export function EquipoCostoHorarioFichaApu({
 
               <div className="mt-auto rounded-md border border-border p-3">
                 <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  <Timer size={16} className="text-blue-500" />
-                  Cargos fijos
+                  <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />
+                  {APP_ICONS.grupo_cargos_fijos.titulo}
                 </span>
 
                 <div className="mt-2 flex flex-col gap-2 text-xs">
@@ -951,8 +985,8 @@ export function EquipoCostoHorarioFichaApu({
               <tr>
                 <td colSpan={9} className="pt-2 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Boxes size={16} className="text-amber-500" />
-                    Consumo
+                    <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />
+                    {APP_ICONS.grupo_consumo.titulo}
                   </span>
                 </td>
               </tr>
@@ -1068,8 +1102,8 @@ export function EquipoCostoHorarioFichaApu({
               <tr>
                 <td colSpan={9} className="pt-3 pb-1">
                   <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Joystick size={16} className="text-violet-500" />
-                    Operación
+                    <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />
+                    {APP_ICONS.grupo_operacion.titulo}
                   </span>
                 </td>
               </tr>
@@ -1260,9 +1294,9 @@ export function EquipoCostoHorarioFichaApu({
                     onClick={() => verRegion(z.regionId)}
                   >
                     {z.esNac ? (
-                      <Globe size={16} className="mx-auto text-primary" aria-label="Nacional" />
+                      <APP_ICONS.region_nacional.icono size={16} className={cn("mx-auto", APP_ICONS.region_nacional.color)} aria-label="Nacional" />
                     ) : (
-                      <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
+                      <APP_ICONS.region_otra.icono size={16} className={cn("mx-auto", APP_ICONS.region_otra.color)} />
                     )}
                   </th>
                   );
@@ -1290,8 +1324,8 @@ export function EquipoCostoHorarioFichaApu({
             <tbody>
               {(
                 [
-                  ["Consumo", "subtotal_consumo"],
-                  ["Operación", "subtotal_operacion"],
+                  [APP_ICONS.grupo_consumo.titulo, "subtotal_consumo"],
+                  [APP_ICONS.grupo_operacion.titulo, "subtotal_operacion"],
                 ] as const
               ).map(([etiqueta, campo]) => (
                 <tr key={campo}>
@@ -1361,9 +1395,9 @@ export function EquipoCostoHorarioFichaApu({
           </table>
           <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
             {regionVistaId ? (
-              <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
+              <APP_ICONS.region_otra.icono size={16} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
             ) : (
-              <Globe size={16} className="shrink-0 text-primary" />
+              <APP_ICONS.region_nacional.icono size={16} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
             )}
             El análisis usa los precios de {zonas.find((z) => (z.regionId ?? null) === regionVistaId)?.nombre ?? NACIONAL}.
           </p>

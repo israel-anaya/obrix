@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Layers, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { FileText, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { APP_ICONS } from "@/lib/appIcons";
 import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -194,7 +195,7 @@ export function BasicoAuxiliarGridVista() {
               },
               ACTION_BAR_SEPARATOR,
               {
-                icon: Layers,
+                icon: APP_ICONS.grupo_basico_auxiliar.icono,
                 title: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
                 onClick: () => setPanelComposicionAbierto((v) => !v),
                 disabled: !panelComposicionAbierto && auxiliares.length === 0,

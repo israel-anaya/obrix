@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HardHat, Pencil, Plus, RefreshCcw, Trash2, Wrench } from "lucide-react";
+import { Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { APP_ICONS } from "@/lib/appIcons";
 import { FIELD_INPUT_CLASS, Field } from "@/components/Field";
 import { SearchInput } from "@/components/SearchInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -323,10 +324,12 @@ export function CuadrillasFicha() {
                     <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{c.descripcion}</span>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <HardHat size={16} className="text-blue-500" />${fmt(c.costo_nacional?.sub_total_mano_obra ?? "0")}
+                        <APP_ICONS.insumo_categoria_fasar.icono size={16} className={APP_ICONS.insumo_categoria_fasar.color} />$
+                        {fmt(c.costo_nacional?.sub_total_mano_obra ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Wrench size={16} className="text-amber-500" />${fmt(c.costo_nacional?.sub_total_herramienta ?? "0")}
+                        <APP_ICONS.insumo_herramienta.icono size={16} className={APP_ICONS.insumo_herramienta.color} />$
+                        {fmt(c.costo_nacional?.sub_total_herramienta ?? "0")}
                       </span>
                     </div>
                   </button>

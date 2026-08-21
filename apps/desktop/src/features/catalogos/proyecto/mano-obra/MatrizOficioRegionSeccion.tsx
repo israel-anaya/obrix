@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Globe, MapPinned, RefreshCcw } from "lucide-react";
+import { DollarSign, RefreshCcw } from "lucide-react";
 import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { APP_ICONS } from "@/lib/appIcons";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { SalarioCategoriaFasarPanel } from "@/features/catalogos/proyecto/mano-obra/SalarioCategoriaFasarPanel";
@@ -314,9 +315,9 @@ export function MatrizOficioRegionSeccion() {
                           title={col.nombre}
                         >
                           {col.id ? (
-                            <MapPinned size={16} className="mx-auto text-teal-600 dark:text-teal-400" />
+                            <APP_ICONS.region_otra.icono size={16} className={cn("mx-auto", APP_ICONS.region_otra.color)} />
                           ) : (
-                            <Globe size={16} className="mx-auto text-primary" />
+                            <APP_ICONS.region_nacional.icono size={16} className={cn("mx-auto", APP_ICONS.region_nacional.color)} />
                           )}
                         </th>
                       ))}

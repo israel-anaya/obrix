@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,6 +24,15 @@ export function FilterableCombobox({
   // Avoids double-closing: Escape/clicking an option already resolves the
   // combobox, so the blur that follows shouldn't trigger `onCancel` again.
   const resolvedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Un `autoFocus` normal pierde la carrera cuando este combobox aparece
+  // tras cerrarse un menú (Radix Dropdown/Select devuelve el foco a su
+  // trigger después del commit); reforzarlo en un microtask lo gana.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = text.trim().toLowerCase();
@@ -44,6 +53,7 @@ export function FilterableCombobox({
   return (
     <div className="relative">
       <input
+        ref={inputRef}
         autoFocus
         value={text}
         placeholder={placeholder}

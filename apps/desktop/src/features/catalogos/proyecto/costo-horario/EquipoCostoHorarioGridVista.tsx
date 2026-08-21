@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileText, Layers, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Plus, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { ACTION_BAR_SEPARATOR, ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { APP_ICONS } from "@/lib/appIcons";
 import { CsvOperationDialog, type CsvAdapter } from "@/components/csv";
 import { SearchInput } from "@/components/SearchInput";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -267,7 +268,7 @@ export function EquipoCostoHorarioGridVista() {
               },
               ACTION_BAR_SEPARATOR,
               {
-                icon: Layers,
+                icon: APP_ICONS.insumo_costo_horario.icono,
                 title: panelComposicionAbierto ? "Ocultar composición" : "Ver composición",
                 onClick: () => setPanelComposicionAbierto((v) => !v),
                 disabled: !panelComposicionAbierto && equipos.length === 0,

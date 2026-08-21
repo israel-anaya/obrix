@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Globe, History, MapPinned } from "lucide-react";
+import { History } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
+import { APP_ICONS } from "@/lib/appIcons";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
 import { listPreciosMaterial, listRegiones } from "@/lib/tauri";
 import type { PrecioMaterial, Region } from "@/lib/types";
@@ -142,9 +143,9 @@ export function PrecioHistorialGrid({
                   <td className="py-1 pr-2">
                     <span className="inline-flex items-center gap-1.5">
                       {p.region_id ? (
-                        <MapPinned size={16} className="shrink-0 text-teal-600 dark:text-teal-400" />
+                        <APP_ICONS.region_otra.icono size={16} className={cn("shrink-0", APP_ICONS.region_otra.color)} />
                       ) : (
-                        <Globe size={16} className="shrink-0 text-primary" />
+                        <APP_ICONS.region_nacional.icono size={16} className={cn("shrink-0", APP_ICONS.region_nacional.color)} />
                       )}
                       {p.region_id ? (nombrePorRegionId[p.region_id] ?? p.region_id) : NACIONAL}
                     </span>

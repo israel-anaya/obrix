@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Fuel, Gauge, Globe, HardHat, MapPinned, Plus, RefreshCcw, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, RefreshCcw, Trash2, X } from "lucide-react";
+import { APP_ICONS } from "@/lib/appIcons";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataGrid, type DataGridConfig, type DataGridHandle, type Row } from "@/components/grid/DataGrid";
@@ -32,6 +33,7 @@ import type {
   EquipoCostoHorarioDetalle,
   Material,
   NaturalezaConsumoEquipoCostoHorario,
+  NaturalezaOperacionEquipoCostoHorario,
   Region,
   UnidadMedida,
 } from "@/lib/types";
@@ -51,6 +53,12 @@ const NATURALEZAS_CONSUMO: { id: NaturalezaConsumoEquipoCostoHorario; etiqueta: 
   { id: "otras_fuentes", etiqueta: "Otras fuentes" },
 ];
 const ETIQUETA_NATURALEZA_DEFECTO = NATURALEZAS_CONSUMO[0].etiqueta;
+
+/** La naturaleza de operación no se captura: la deriva el backend de la extensión del insumo. */
+const ETIQUETA_NATURALEZA_OPERACION: Record<NaturalezaOperacionEquipoCostoHorario, string> = {
+  categoria: "Categoría FASAR",
+  cuadrilla: "Cuadrilla",
+};
 
 function fmt(valor: string, decimales = 2): string {
   const numero = Number(valor);
@@ -303,7 +311,7 @@ export function EquipoCostoHorarioComposicionPanel({
 
   const configConsumo: DataGridConfig = useMemo(
     () => ({
-      title: "Consumo",
+      title: APP_ICONS.grupo_consumo.titulo,
       columns: [
         { field: "material", header: "Material", width: 240, grow: true, readOnlyOnEdit: true, options: opcionesMaterial },
         { field: "naturaleza", header: "Naturaleza", width: 140, options: opcionesNaturaleza, default: ETIQUETA_NATURALEZA_DEFECTO },
@@ -319,9 +327,10 @@ export function EquipoCostoHorarioComposicionPanel({
 
   const configOperacion: DataGridConfig = useMemo(
     () => ({
-      title: "Operación",
+      title: APP_ICONS.grupo_operacion.titulo,
       columns: [
         { field: "operacion", header: "Categoría / Cuadrilla", width: 240, grow: true, readOnlyOnEdit: true, options: opcionesOperacion },
+        { field: "naturaleza", header: "Naturaleza", width: 140, readOnly: true },
         { field: "unidad", header: "Unidad", width: 80, readOnly: true },
         { field: "cantidad", header: "Cantidad", width: 100, numeric: true, decimals: 6 },
         { field: "costo", header: "Costo", width: 120, numeric: true, readOnly: true },
@@ -357,6 +366,9 @@ export function EquipoCostoHorarioComposicionPanel({
         return {
           _id: d.id,
           operacion: opcionPorOperacionId[d.detalle_insumo_id] ?? ELEGIR_OPERACION,
+          naturaleza:
+            (d.naturaleza && ETIQUETA_NATURALEZA_OPERACION[d.naturaleza as NaturalezaOperacionEquipoCostoHorario]) ??
+            "",
           unidad: simboloPorUnidadId[unidadDeOperacion(d.detalle_insumo_id)] ?? "",
           cantidad: Number(d.cantidad),
           costo: `$${fmt(cd?.costo ?? "0")}`,
@@ -438,7 +450,7 @@ export function EquipoCostoHorarioComposicionPanel({
       <div className="flex items-center gap-3 border-b-2 border-foreground/20 bg-background/80 px-4 py-3">
         <div className="flex shrink-0 items-center gap-2">
           <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            <Gauge size={16} className="text-violet-500" />
+            <APP_ICONS.insumo_costo_horario.icono size={16} className={APP_ICONS.insumo_costo_horario.color} />
             Composición
           </span>
           <Select value={regionVistaId ?? NACIONAL_VALOR} onValueChange={elegirRegion}>
@@ -448,14 +460,14 @@ export function EquipoCostoHorarioComposicionPanel({
             <SelectContent>
               <SelectItem value={NACIONAL_VALOR}>
                 <span className="flex items-center gap-1.5">
-                  <Globe size={14} className="text-primary" />
+                  <APP_ICONS.region_nacional.icono size={14} className={APP_ICONS.region_nacional.color} />
                   {NACIONAL}
                 </span>
               </SelectItem>
               {ordenarPor(regionesVisibles(regiones), (r) => r.nombre).map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   <span className="flex items-center gap-1.5">
-                    <MapPinned size={14} className="text-teal-600 dark:text-teal-400" />
+                    <APP_ICONS.region_otra.icono size={14} className={APP_ICONS.region_otra.color} />
                     {r.nombre}
                   </span>
                 </SelectItem>
@@ -470,18 +482,21 @@ export function EquipoCostoHorarioComposicionPanel({
               className="flex h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
               title={`Fijo ${pctFijo.toFixed(0)}% / Consumo ${pctConsumo.toFixed(0)}% / Operación ${pctOperacion.toFixed(0)}%`}
             >
-              <div className="bg-blue-500" style={{ width: `${pctFijo}%` }} />
-              <div className="bg-amber-500" style={{ width: `${pctConsumo}%` }} />
-              <div className="bg-violet-500" style={{ width: `${pctOperacion}%` }} />
+              <div className={APP_ICONS.grupo_cargos_fijos.bg} style={{ width: `${pctFijo}%` }} />
+              <div className={APP_ICONS.grupo_consumo.bg} style={{ width: `${pctConsumo}%` }} />
+              <div className={APP_ICONS.grupo_operacion.bg} style={{ width: `${pctOperacion}%` }} />
             </div>
             <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
-              <span>Fijo {pctFijo.toFixed(0)}%</span>
               <span className="flex items-center gap-1">
-                <Fuel size={16} className="text-amber-500" />
+                <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />
+                {pctFijo.toFixed(0)}%
+              </span>
+              <span className="flex items-center gap-1">
+                <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />
                 {pctConsumo.toFixed(0)}%
               </span>
               <span className="flex items-center gap-1">
-                <HardHat size={16} className="text-violet-500" />
+                <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />
                 {pctOperacion.toFixed(0)}%
               </span>
             </span>
@@ -535,8 +550,8 @@ export function EquipoCostoHorarioComposicionPanel({
             <section className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
                 <h4 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Fuel size={14} className="text-amber-500" />
-                  Consumo
+                  <APP_ICONS.grupo_consumo.icono size={14} className={APP_ICONS.grupo_consumo.color} />
+                  {APP_ICONS.grupo_consumo.titulo}
                 </h4>
                 <div className="flex items-center gap-0.5">
                   <button
@@ -602,8 +617,8 @@ export function EquipoCostoHorarioComposicionPanel({
             <section className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border">
               <div className="flex items-center justify-between px-3 py-1.5">
                 <h4 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <HardHat size={14} className="text-violet-500" />
-                  Operación
+                  <APP_ICONS.grupo_operacion.icono size={14} className={APP_ICONS.grupo_operacion.color} />
+                  {APP_ICONS.grupo_operacion.titulo}
                 </h4>
                 <div className="flex items-center gap-0.5">
                   <button
@@ -670,11 +685,11 @@ export function EquipoCostoHorarioComposicionPanel({
               <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Totales</h4>
               <dl className="flex flex-col gap-1 text-xs">
                 <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Consumo</dt>
+                  <dt className="text-muted-foreground">{APP_ICONS.grupo_consumo.titulo}</dt>
                   <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.subtotal_consumo ?? "0")}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Operación</dt>
+                  <dt className="text-muted-foreground">{APP_ICONS.grupo_operacion.titulo}</dt>
                   <dd className="font-medium tabular-nums">${fmt(costoSeleccionado?.subtotal_operacion ?? "0")}</dd>
                 </div>
                 <div className="flex items-center justify-between">

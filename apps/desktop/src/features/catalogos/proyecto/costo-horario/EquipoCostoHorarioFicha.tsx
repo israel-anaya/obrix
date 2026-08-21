@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Joystick, Pencil, Plus, RefreshCcw, Timer, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
+import { APP_ICONS } from "@/lib/appIcons";
 import { FIELD_INPUT_CLASS, Field } from "@/components/Field";
 import { SearchInput } from "@/components/SearchInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -342,13 +343,16 @@ export function EquipoCostoHorarioFicha() {
                     <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{e.descripcion}</span>
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Timer size={16} className="text-blue-500" />${fmt(e.cf_cargo_fijo_hora)}
+                        <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />$
+                        {fmt(e.cf_cargo_fijo_hora)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Boxes size={16} className="text-amber-500" />${fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
+                        <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />$
+                        {fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Joystick size={16} className="text-violet-500" />${fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
+                        <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />$
+                        {fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
                       </span>
                     </div>
                   </button>
