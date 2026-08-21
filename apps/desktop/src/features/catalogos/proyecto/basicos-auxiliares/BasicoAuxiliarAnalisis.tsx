@@ -28,8 +28,8 @@ import {
 } from "@/lib/tauri";
 import type { BasicoAuxiliar, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 import { fmt } from "@/lib/formato";
-import { useAnalisisMaestroDetalle } from "../shared/analisis-maestro-detalle/useAnalisisMaestroDetalle";
-import { FranjaSuperior } from "../shared/analisis-maestro-detalle/FranjaSuperior";
+import { useCardRail } from "@/hooks/useCardRail";
+import { CardRail } from "@/components/CardRail";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
 
 /**
@@ -66,8 +66,8 @@ export function BasicoAuxiliarAnalisis() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
 
-  const { busqueda, setBusqueda, itemsFiltrados: auxiliaresFiltrados, seleccionadaId, setSeleccionadaId, seleccionada, cursorId, scrollRef, virtualizer, seleccionarSiVacia } =
-    useAnalisisMaestroDetalle({ items: auxiliares, bloqueada: creando || !!editandoId });
+  const { search: busqueda, setSearch: setBusqueda, filteredItems: auxiliaresFiltrados, selectedId: seleccionadaId, setSelectedId: setSeleccionadaId, selected: seleccionada, cursorId, scrollRef, virtualizer, selectIfEmpty: seleccionarSiVacia } =
+    useCardRail({ items: auxiliares, locked: creando || !!editandoId });
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -225,16 +225,16 @@ export function BasicoAuxiliarAnalisis() {
             ]}
           />
         </div>
-        <FranjaSuperior
+        <CardRail
           items={auxiliaresFiltrados}
           cursorId={cursorId}
-          onSeleccionar={setSeleccionadaId}
+          onSelect={setSeleccionadaId}
           scrollRef={scrollRef}
           virtualizer={virtualizer}
-          cargando={cargando}
-          mensajeVacio="Sin básicos ni auxiliares todavía."
-          costoTotal={(a) => a.costo_nacional?.costo_total ?? "0"}
-          renderDesglose={(a) => (
+          loading={cargando}
+          emptyMessage="Sin básicos ni auxiliares todavía."
+          totalCost={(a) => a.costo_nacional?.costo_total ?? "0"}
+          renderBreakdown={(a) => (
             <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />${fmt(a.costo_nacional?.sub_total_material ?? "0")}

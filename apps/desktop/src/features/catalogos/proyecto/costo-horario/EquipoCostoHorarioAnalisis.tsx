@@ -28,8 +28,8 @@ import {
 } from "@/lib/tauri";
 import type { EquipoCostoHorario, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 import { fmt } from "@/lib/formato";
-import { useAnalisisMaestroDetalle } from "../shared/analisis-maestro-detalle/useAnalisisMaestroDetalle";
-import { FranjaSuperior } from "../shared/analisis-maestro-detalle/FranjaSuperior";
+import { useCardRail } from "@/hooks/useCardRail";
+import { CardRail } from "@/components/CardRail";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
 
 const NOMBRE_FAMILIA_EQUIPO_HERRAMIENTA = "Equipo y herramienta";
@@ -69,8 +69,8 @@ export function EquipoCostoHorarioAnalisis() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
 
-  const { busqueda, setBusqueda, itemsFiltrados: equiposFiltrados, seleccionadaId, setSeleccionadaId, seleccionada, cursorId, scrollRef, virtualizer, seleccionarSiVacia } =
-    useAnalisisMaestroDetalle({ items: equipos, bloqueada: creando || !!editandoId });
+  const { search: busqueda, setSearch: setBusqueda, filteredItems: equiposFiltrados, selectedId: seleccionadaId, setSelectedId: setSeleccionadaId, selected: seleccionada, cursorId, scrollRef, virtualizer, selectIfEmpty: seleccionarSiVacia } =
+    useCardRail({ items: equipos, locked: creando || !!editandoId });
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -257,16 +257,16 @@ export function EquipoCostoHorarioAnalisis() {
             ]}
           />
         </div>
-        <FranjaSuperior
+        <CardRail
           items={equiposFiltrados}
           cursorId={cursorId}
-          onSeleccionar={setSeleccionadaId}
+          onSelect={setSeleccionadaId}
           scrollRef={scrollRef}
           virtualizer={virtualizer}
-          cargando={cargando}
-          mensajeVacio="Sin equipos todavía."
-          costoTotal={(e) => e.costo_nacional?.costo_total ?? "0"}
-          renderDesglose={(e) => (
+          loading={cargando}
+          emptyMessage="Sin equipos todavía."
+          totalCost={(e) => e.costo_nacional?.costo_total ?? "0"}
+          renderBreakdown={(e) => (
             <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />$

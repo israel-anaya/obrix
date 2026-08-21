@@ -28,8 +28,8 @@ import {
 } from "@/lib/tauri";
 import type { Cuadrilla, FamiliaInsumo, UnidadMedida } from "@/lib/types";
 import { fmt } from "@/lib/formato";
-import { useAnalisisMaestroDetalle } from "../shared/analisis-maestro-detalle/useAnalisisMaestroDetalle";
-import { FranjaSuperior } from "../shared/analisis-maestro-detalle/FranjaSuperior";
+import { useCardRail } from "@/hooks/useCardRail";
+import { CardRail } from "@/components/CardRail";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
 
 const NOMBRE_FAMILIA_MANO_OBRA = "Mano de obra";
@@ -68,8 +68,8 @@ export function CuadrillasAnalisis() {
   const [guardandoNueva, setGuardandoNueva] = useState(false);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
 
-  const { busqueda, setBusqueda, itemsFiltrados: cuadrillasFiltradas, seleccionadaId, setSeleccionadaId, seleccionada, cursorId, scrollRef, virtualizer, seleccionarSiVacia } =
-    useAnalisisMaestroDetalle({ items: cuadrillas, bloqueada: creando || !!editandoId });
+  const { search: busqueda, setSearch: setBusqueda, filteredItems: cuadrillasFiltradas, selectedId: seleccionadaId, setSelectedId: setSeleccionadaId, selected: seleccionada, cursorId, scrollRef, virtualizer, selectIfEmpty: seleccionarSiVacia } =
+    useCardRail({ items: cuadrillas, locked: creando || !!editandoId });
 
   useEffect(() => {
     if (error) toast({ description: error, variant: "destructive" });
@@ -236,16 +236,16 @@ export function CuadrillasAnalisis() {
             ]}
           />
         </div>
-        <FranjaSuperior
+        <CardRail
           items={cuadrillasFiltradas}
           cursorId={cursorId}
-          onSeleccionar={setSeleccionadaId}
+          onSelect={setSeleccionadaId}
           scrollRef={scrollRef}
           virtualizer={virtualizer}
-          cargando={cargando}
-          mensajeVacio="Sin cuadrillas todavía."
-          costoTotal={(c) => c.costo_nacional?.costo_total ?? "0"}
-          renderDesglose={(c) => (
+          loading={cargando}
+          emptyMessage="Sin cuadrillas todavía."
+          totalCost={(c) => c.costo_nacional?.costo_total ?? "0"}
+          renderBreakdown={(c) => (
             <div className="mt-0.5 flex w-full items-center gap-2 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <APP_ICONS.insumo_categoria_fasar.icono size={16} className={APP_ICONS.insumo_categoria_fasar.color} />$
