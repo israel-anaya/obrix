@@ -12,7 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { APP_ICONS } from "@/lib/appIcons";
 import { toast } from "@/hooks/use-toast";
 import { EquipoCostoHorarioAnalisisInsumo } from "@/features/catalogos/proyecto/costo-horario/EquipoCostoHorarioAnalisisInsumo";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -27,7 +26,6 @@ import {
   updateEquipoCostoHorario,
 } from "@/lib/tauri";
 import type { EquipoCostoHorario, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-import { fmt } from "@/lib/formato";
 import { useCardRail } from "@/hooks/useCardRail";
 import { CardRail } from "@/components/CardRail";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
@@ -266,22 +264,6 @@ export function EquipoCostoHorarioAnalisis() {
           loading={cargando}
           emptyMessage="Sin equipos todavía."
           totalCost={(e) => e.costo_nacional?.costo_total ?? "0"}
-          renderBreakdown={(e) => (
-            <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_cargos_fijos.icono size={16} className={APP_ICONS.grupo_cargos_fijos.color} />$
-                {fmt(e.cf_cargo_fijo_hora)}
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_consumo.icono size={16} className={APP_ICONS.grupo_consumo.color} />$
-                {fmt(e.costo_nacional?.subtotal_consumo ?? "0")}
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_operacion.icono size={16} className={APP_ICONS.grupo_operacion.color} />$
-                {fmt(e.costo_nacional?.subtotal_operacion ?? "0")}
-              </span>
-            </div>
-          )}
         />
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-2">

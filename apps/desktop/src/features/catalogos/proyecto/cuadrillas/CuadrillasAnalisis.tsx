@@ -12,7 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { APP_ICONS } from "@/lib/appIcons";
 import { toast } from "@/hooks/use-toast";
 import { CuadrillaAnalisisInsumo } from "@/features/catalogos/proyecto/cuadrillas/CuadrillaAnalisisInsumo";
 import { useOrganizacionActiva } from "@/features/organizacion/OrganizacionContext";
@@ -27,7 +26,6 @@ import {
   updateCuadrilla,
 } from "@/lib/tauri";
 import type { Cuadrilla, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-import { fmt } from "@/lib/formato";
 import { useCardRail } from "@/hooks/useCardRail";
 import { CardRail } from "@/components/CardRail";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
@@ -245,18 +243,6 @@ export function CuadrillasAnalisis() {
           loading={cargando}
           emptyMessage="Sin cuadrillas todavía."
           totalCost={(c) => c.costo_nacional?.costo_total ?? "0"}
-          renderBreakdown={(c) => (
-            <div className="mt-0.5 flex w-full items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <APP_ICONS.insumo_categoria_fasar.icono size={16} className={APP_ICONS.insumo_categoria_fasar.color} />$
-                {fmt(c.costo_nacional?.sub_total_mano_obra ?? "0")}
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.insumo_herramienta.icono size={16} className={APP_ICONS.insumo_herramienta.color} />$
-                {fmt(c.costo_nacional?.sub_total_herramienta ?? "0")}
-              </span>
-            </div>
-          )}
         />
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-2">

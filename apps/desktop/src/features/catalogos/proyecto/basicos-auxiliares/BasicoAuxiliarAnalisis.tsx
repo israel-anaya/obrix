@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { ActionBar, ActionBarMenu } from "@/components/ActionBar";
 import { SearchInput } from "@/components/SearchInput";
-import { APP_ICONS } from "@/lib/appIcons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +26,6 @@ import {
   updateBasicoAuxiliar,
 } from "@/lib/tauri";
 import type { BasicoAuxiliar, FamiliaInsumo, UnidadMedida } from "@/lib/types";
-import { fmt } from "@/lib/formato";
 import { useCardRail } from "@/hooks/useCardRail";
 import { CardRail } from "@/components/CardRail";
 import { IdentidadSheet } from "../shared/analisis-maestro-detalle/IdentidadSheet";
@@ -234,22 +232,6 @@ export function BasicoAuxiliarAnalisis() {
           loading={cargando}
           emptyMessage="Sin básicos ni auxiliares todavía."
           totalCost={(a) => a.costo_nacional?.costo_total ?? "0"}
-          renderBreakdown={(a) => (
-            <div className="mt-0.5 flex w-full items-center justify-between text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />${fmt(a.costo_nacional?.sub_total_material ?? "0")}
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_mano_obra.icono size={16} className={APP_ICONS.grupo_mano_obra.color} />${fmt(a.costo_nacional?.sub_total_mano_obra ?? "0")}
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_equipo_herramienta.icono size={16} className={APP_ICONS.grupo_equipo_herramienta.color} />${fmt(a.costo_nacional?.sub_total_equipo ?? "0")}
-              </span>
-              <span className="flex items-center gap-1">
-                <APP_ICONS.grupo_basico_auxiliar.icono size={16} className={APP_ICONS.grupo_basico_auxiliar.color} />${fmt(a.costo_nacional?.sub_total_basico_auxiliar ?? "0")}
-              </span>
-            </div>
-          )}
         />
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-muted/10 p-2">

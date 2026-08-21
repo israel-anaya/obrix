@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject } from "react";
+import { type RefObject } from "react";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
 import { fmt } from "@/lib/formato";
@@ -13,11 +13,10 @@ interface CardRailItem {
 
 /**
  * Horizontally scrolling, virtualized strip of cards — one per item, with a
- * key, total cost pill, truncated description, and a domain-specific
- * breakdown (`renderBreakdown`, the only non-generic slot). Used as the
- * "master" list of a master/detail Ficha view; the header (actions, search)
- * is built by each caller, the same way every `*Seccion.tsx` builds its own
- * around `DataGrid`.
+ * key, total cost pill, and truncated description. Used as the "master" list
+ * of a master/detail Ficha view; the header (actions, search) is built by
+ * each caller, the same way every `*Seccion.tsx` builds its own around
+ * `DataGrid`.
  *
  * `scrollRef`/`virtualizer` come from `useCardRail` — that hook needs
  * `scrollToIndex` for keyboard navigation, so it owns the virtualizer; this
@@ -34,7 +33,6 @@ export function CardRail<T extends CardRailItem>({
   loading,
   emptyMessage,
   totalCost,
-  renderBreakdown,
 }: {
   items: T[];
   cursorId: string | null;
@@ -44,7 +42,6 @@ export function CardRail<T extends CardRailItem>({
   loading: boolean;
   emptyMessage: string;
   totalCost: (item: T) => string;
-  renderBreakdown: (item: T) => ReactNode;
 }) {
   return (
     <div className="min-w-0 border-b border-border p-2">
@@ -88,7 +85,6 @@ export function CardRail<T extends CardRailItem>({
                         </span>
                       </div>
                       <span className="line-clamp-2 w-full font-mono text-xs font-normal text-muted-foreground">{item.descripcion}</span>
-                      {renderBreakdown(item)}
                     </button>
                   );
                 })}
