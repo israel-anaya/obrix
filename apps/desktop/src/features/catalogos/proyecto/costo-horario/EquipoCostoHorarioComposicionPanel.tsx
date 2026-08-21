@@ -256,12 +256,8 @@ export function EquipoCostoHorarioComposicionPanel({
     [categorias, cuadrillas],
   );
   const operacionIdPorOpcion = useMemo(
-    () =>
-      Object.fromEntries([
-        ...categorias.map((c) => [`${c.clave} — ${c.descripcion}`, c.id]),
-        ...cuadrillas.map((c) => [`${c.clave} — ${c.descripcion}`, c.id]),
-      ]),
-    [categorias, cuadrillas],
+    () => Object.fromEntries(cuadrillas.map((c) => [`${c.clave} — ${c.descripcion}`, c.id])),
+    [cuadrillas],
   );
   const categoriaPorId = useMemo(() => Object.fromEntries(categorias.map((c) => [c.id, c])), [categorias]);
   const cuadrillaPorId = useMemo(() => Object.fromEntries(cuadrillas.map((c) => [c.id, c])), [cuadrillas]);
@@ -280,10 +276,9 @@ export function EquipoCostoHorarioComposicionPanel({
   const opcionesOperacion = useMemo(
     () => [
       ELEGIR_OPERACION,
-      ...ordenarPor(categorias.filter((c) => !idsUsados.has(c.id)), (c) => c.clave).map((c) => opcionPorOperacionId[c.id]),
       ...ordenarPor(cuadrillas.filter((c) => !idsUsados.has(c.id)), (c) => c.clave).map((c) => opcionPorOperacionId[c.id]),
     ],
-    [categorias, cuadrillas, idsUsados, opcionPorOperacionId],
+    [cuadrillas, idsUsados, opcionPorOperacionId],
   );
   const opcionesNaturaleza = useMemo(() => NATURALEZAS_CONSUMO.map((n) => n.etiqueta), []);
   const naturalezaIdPorEtiqueta = useMemo(
@@ -329,7 +324,7 @@ export function EquipoCostoHorarioComposicionPanel({
     () => ({
       title: APP_ICONS.grupo_operacion.titulo,
       columns: [
-        { field: "operacion", header: "Categoría / Cuadrilla", width: 240, grow: true, readOnlyOnEdit: true, options: opcionesOperacion },
+        { field: "operacion", header: "Cuadrilla", width: 240, grow: true, readOnlyOnEdit: true, options: opcionesOperacion },
         { field: "naturaleza", header: "Naturaleza", width: 140, readOnly: true },
         { field: "unidad", header: "Unidad", width: 80, readOnly: true },
         { field: "cantidad", header: "Cantidad", width: 100, numeric: true, decimals: 6 },
