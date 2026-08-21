@@ -244,9 +244,9 @@ export function BasicoAuxiliarFicha() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-72 shrink-0 flex-col border-r border-border">
-          <div className="flex items-center justify-between gap-2 border-b border-border p-2">
-            <div className="flex items-center gap-0.5">
+        <div className="flex w-1/5 shrink-0 flex-col border-r border-border">
+          <div className="flex flex-col gap-2 border-b border-border p-2">
+            <div className="flex items-center justify-between gap-2">
               <ActionBar
                 actions={[
                   { icon: Plus, title: "Nuevo básico auxiliar", onClick: iniciarCreacion },
@@ -258,21 +258,20 @@ export function BasicoAuxiliarFicha() {
                   },
                 ]}
               />
-              <div className="mx-1 h-4 w-px bg-border" />
-              <SearchInput value={busqueda} onChange={setBusqueda} />
+              <ActionBarMenu
+                menu={[
+                  { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
+                  {
+                    icon: Trash2,
+                    title: "Eliminar auxiliar seleccionado",
+                    onClick: () => setConfirmandoEliminar(true),
+                    disabled: !seleccionada,
+                    destructive: true,
+                  },
+                ]}
+              />
             </div>
-            <ActionBarMenu
-              menu={[
-                { icon: RefreshCcw, title: "Recargar", onClick: recargarTodo },
-                {
-                  icon: Trash2,
-                  title: "Eliminar auxiliar seleccionado",
-                  onClick: () => setConfirmandoEliminar(true),
-                  disabled: !seleccionada,
-                  destructive: true,
-                },
-              ]}
-            />
+            <SearchInput value={busqueda} onChange={setBusqueda} />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {cargando && auxiliares.length === 0 ? (
@@ -308,8 +307,8 @@ export function BasicoAuxiliarFicha() {
                         ${fmt(a.costo_nacional?.costo_total ?? "0")}
                       </span>
                     </div>
-                    <span className="line-clamp-6 w-full font-mono text-xs font-normal text-muted-foreground">{a.descripcion}</span>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <span className="line-clamp-2 w-full font-mono text-xs font-normal text-muted-foreground">{a.descripcion}</span>
+                    <div className="mt-0.5 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <APP_ICONS.grupo_material.icono size={16} className={APP_ICONS.grupo_material.color} />${fmt(a.costo_nacional?.sub_total_material ?? "0")}
                       </span>

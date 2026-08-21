@@ -254,7 +254,11 @@ function GrupoTabla({
               </span>
             </td>
             <td className="py-1 pr-2 font-mono text-muted-foreground">{f.clave}</td>
-            <td className="py-1 px-2">{f.descripcion}</td>
+            <td className="py-1 px-2">
+              <span className="line-clamp-2 break-words" title={f.descripcion}>
+                {f.descripcion}
+              </span>
+            </td>
             <td className="py-1 px-2 text-left text-muted-foreground">{f.unidad}</td>
             <td className="py-1 pr-2 text-right">
               <QuantityInput
@@ -278,7 +282,7 @@ function GrupoTabla({
             </td>
             <td
               className={cn(
-                "w-28 py-1 pr-2 text-right font-medium tabular-nums transition-colors duration-700",
+                "w-28 py-1 pr-0 text-right font-medium tabular-nums transition-colors duration-700",
                 destello?.filaId === f.id && destello.fila > 0 && "bg-emerald-500/20",
                 destello?.filaId === f.id && destello.fila < 0 && "bg-rose-500/20",
               )}
@@ -325,7 +329,7 @@ function GrupoTabla({
               Subtotal {titulo.toLowerCase()}
             </span>
           </td>
-          <td className="w-28 py-1.5 pr-2 text-right font-semibold tabular-nums">${fmt(subtotal)}</td>
+          <td className="w-28 py-1.5 pr-0 text-right font-semibold tabular-nums">${fmt(subtotal)}</td>
           <td />
         </tr>
       )}
@@ -785,7 +789,7 @@ export function BasicoAuxiliarFichaApu({
             <div aria-hidden className="mt-0.5 self-stretch w-px shrink-0 bg-border" />
 
             <div className="w-[30%] text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+              <span className="inline-flex h-6 items-center gap-1 font-medium text-foreground">
                 <span className="font-normal text-muted-foreground">Costo:</span>
                 {regionVistaId ? (
                   <APP_ICONS.region_otra.icono size={16} className={APP_ICONS.region_otra.color} />
@@ -830,9 +834,10 @@ export function BasicoAuxiliarFichaApu({
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
+                        title="Agregar un insumo al análisis"
                         className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                       >
-                        <Plus size={16} /> Agregar renglón
+                        <Plus size={16} /> Agregar
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="text-xs" onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -850,10 +855,12 @@ export function BasicoAuxiliarFichaApu({
                     </DropdownMenuContent>
                   </DropdownMenu>
 
+                  <div aria-hidden className="h-5 w-px shrink-0 bg-border" />
+
                   <span className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
                     <button
                       type="button"
-                      title="Expandir todo"
+                      title="Expandir todos los grupos"
                       onClick={() => setGruposColapsados(new Set())}
                       className="rounded p-1 hover:bg-muted hover:text-foreground"
                     >
@@ -861,13 +868,36 @@ export function BasicoAuxiliarFichaApu({
                     </button>
                     <button
                       type="button"
-                      title="Colapsar todo"
+                      title="Colapsar todos los grupos"
                       onClick={() => setGruposColapsados(new Set(gruposDef.map((g) => g.tipo)))}
                       className="rounded p-1 hover:bg-muted hover:text-foreground"
                     >
                       <ChevronsUp size={16} />
                     </button>
                   </span>
+
+                  <div aria-hidden className="h-5 w-px shrink-0 bg-border" />
+
+                  <button
+                    type="button"
+                    title={
+                      recalculando
+                        ? "Recalculando costos de todas las regiones…"
+                        : [
+                            "Recalcular todas las regiones con los precios y salarios vigentes.",
+                            sincronizadoEn ? `Última sincronización: ${formatearFecha(sincronizadoEn)}` : "Aún no se ha sincronizado con los precios vigentes.",
+                          ].join("\n")
+                    }
+                    onClick={() => void recalcularZonas()}
+                    disabled={recalculando}
+                    className={cn(
+                      "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-muted",
+                      recalculando && "opacity-50",
+                      !sincronizadoEn && "border-amber-500/40",
+                    )}
+                  >
+                    <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -875,15 +905,29 @@ export function BasicoAuxiliarFichaApu({
         </div>
 
         <div className="p-4">
-          <table className="w-full border-collapse text-xs">
+          <table className="w-full table-fixed border-collapse text-xs">
+            {/* table-fixed: si cambias un ancho aquí, ajusta también el className de la celda
+                correspondiente en GrupoTabla (más abajo) para que coincidan; si no, el contenido
+                se desborda y descuadra las columnas siguientes. */}
+            <colgroup>
+              <col className="w-6" />
+              <col className="w-[98px]" />
+              <col />
+              <col className="w-[61px]" />
+              <col className="w-24" />
+              <col className="w-24" />
+              <col className="w-24" />
+              <col className="w-28" />
+              <col className="w-6" />
+            </colgroup>
             <thead>
               <tr className="text-xs font-semibold text-foreground">
                 <th colSpan={2} className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Clave</th>
                 <th className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Descripción</th>
-                <th className="w-16 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Unidad</th>
-                <th className="w-20 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Rendimiento</th>
-                <th className="w-20 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Cantidad</th>
-                <th className="w-24 border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">
+                <th className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Unidad</th>
+                <th className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Rendimiento</th>
+                <th className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">Cantidad</th>
+                <th className="border border-foreground/30 bg-muted/40 py-1.5 px-2 text-center">
                   <span className="inline-flex items-center justify-center gap-1">
                     Costo
                     <button
@@ -959,43 +1003,15 @@ export function BasicoAuxiliarFichaApu({
       </div>
 
       <div className="mt-3 rounded-lg border-2 border-foreground/20 bg-card shadow-sm">
-        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={() => setCostoRegionExpandido((v) => !v)}
-              className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground"
-            >
-              {costoRegionExpandido ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
-              Costo por región
-            </button>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Calculado desde los precios y salarios vigentes. Clic en una región para ver su costo en el análisis.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-start">
-            <button
-              type="button"
-              title={
-                recalculando
-                  ? "Recalculando costos de todas las regiones…"
-                  : [
-                      "Recalcular todas las regiones con los precios y salarios vigentes.",
-                      sincronizadoEn ? `Última sincronización: ${formatearFecha(sincronizadoEn)}` : "Aún no se ha sincronizado con los precios vigentes.",
-                    ].join("\n")
-              }
-              onClick={() => void recalcularZonas()}
-              disabled={recalculando}
-              className={cn(
-                "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium text-foreground hover:bg-muted",
-                recalculando && "opacity-50",
-                !sincronizadoEn && "border-amber-500/40",
-              )}
-            >
-              <RefreshCcw size={16} className={cn(recalculando && "animate-spin")} />
-              {recalculando ? "Sincronizando…" : "Sincronizar"}
-            </button>
-          </div>
+        <div className="border-b border-border px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setCostoRegionExpandido((v) => !v)}
+            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
+            {costoRegionExpandido ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+            Costo por región
+          </button>
         </div>
         <div className="overflow-x-auto px-4 py-3">
           <table className="w-max min-w-full table-fixed border-separate border-spacing-0 text-xs">
