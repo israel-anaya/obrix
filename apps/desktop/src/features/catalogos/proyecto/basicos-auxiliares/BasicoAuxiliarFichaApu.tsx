@@ -261,7 +261,7 @@ function GrupoTabla({
                 {f.descripcion}
               </span>
             </td>
-            <td className="py-1 px-2 text-left text-muted-foreground">{f.unidad}</td>
+            <td className="py-1 px-2 text-right text-muted-foreground">{f.unidad}</td>
             <td className="py-1 pr-2 text-right">
               <QuantityInput
                 value={f.rendimiento}
@@ -918,7 +918,7 @@ export function BasicoAuxiliarFichaApu({
               <col className="w-[61px]" />
               <col className="w-24" />
               <col className="w-24" />
-              <col className="w-24" />
+              <col className="w-[86px]" />
               <col className="w-[95px]" />
               <col className="w-6" />
             </colgroup>
